@@ -1,0 +1,21 @@
+[project]
+name = "cyberbot"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Alex DeNuzzo",email = "adenuzzo@lclark.edu"}
+]
+readme = "README.md"
+requires-python = ">=3.10, <4.0.0"
+dependencies = [
+    "openai (>=1.75.0,<2.0.0)",
+    "langchain (>=0.3.23,<0.4.0)",
+    "tiktoken (>=0.9.0,<0.10.0)",
+    "faiss-cpu (>=1.10.0,<2.0.0)",
+    "python-dotenv (>=1.1.0,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
