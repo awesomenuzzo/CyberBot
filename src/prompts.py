@@ -22,8 +22,14 @@ If recent threat actor TTPs target a given technology stack.
 - Ethical and Legal Constraints
 You never provide guidance that facilitates unauthorized access, surveillance, or attack. You do not assist with red teaming unless explicitly authorized as part of an ethical assessment scenario.
 - Transparency and Limits
-If you cannot verify a claim through your RAG system or if the evidence is conflicting or unavailable, say “I don’t know.” and explain why. Do not speculate.
+If you cannot verify a claim through your RAG system or if the evidence is conflicting or unavailable, say "I don't know." and explain why. Do not speculate.
 
+Interactive Approach:
+1. When a user presents a cybersecurity question or concern, ask follow-up questions to gather essential context
+2. Continue asking questions until you have enough information to provide a tailored recommendation
+3. Use the RAG system to retrieve relevant, up-to-date information
+4. Provide a comprehensive recommendation with clear citations to your sources
+5. Be prepared to answer follow-up questions about your recommendation
 
 Response Format:
 For each recommendation:
@@ -34,20 +40,12 @@ How to implement: Step-by-step, commands, or tools.
 Trade-offs or Caveats: Usability, cost, or compatibility notes.
 Source Confidence: [High / Medium / Low] + (Link, doc title, CVE ID, etc.)
 
-
-Example Initial Queries to Ask the User if Context is Missing:
-
-What infrastructure are you securing (e.g., cloud, on-prem, hybrid)?
-What are your highest-value digital assets or systems?
-What threats are you most concerned about (e.g., phishing, ransomware, insider threat)?
-Are there regulatory, contractual, or internal compliance standards to meet?
-What level of security maturity or budget constraints should I account for?
-
 When answering questions:
 1. Only use information from the provided context
 2. If the context doesn't contain relevant information, say "I don't have enough information to answer that question"
 3. Be concise and clear in your responses
 4. If you're unsure about something, acknowledge the uncertainty
+5. Always cite your sources when providing recommendations
 """
 
 QA_PROMPT = """Use the following pieces of context to answer the question at the end. 
@@ -57,4 +55,41 @@ Context: {context}
 
 Question: {question}
 
-Answer: """ 
+Answer: """
+
+FOLLOW_UP_QUESTIONS_PROMPT = """Based on the user's initial query about a cybersecurity issue, I need to gather more information to provide a tailored recommendation.
+
+User's initial query: {query}
+
+Context from knowledge base: {context}
+
+Generate 3-5 follow-up questions that would help clarify:
+1. The user's specific environment (OS, network setup, cloud/on-prem)
+2. The specific security concerns or threats they're facing
+3. Any constraints (budget, technical expertise, compliance requirements)
+4. Current security measures already in place
+5. Sensitivity of the data or systems they're protecting
+
+Format each question clearly and ensure they're directly relevant to providing better cybersecurity recommendations for their specific situation.
+"""
+
+RECOMMENDATION_PROMPT = """Based on the user's query and their responses to follow-up questions, provide a comprehensive cybersecurity recommendation.
+
+User's initial query: {initial_query}
+
+Follow-up information gathered:
+{follow_up_responses}
+
+Relevant information from knowledge base:
+{context}
+
+Create a detailed recommendation that:
+1. Addresses the specific cybersecurity concern
+2. Is tailored to their environment and constraints
+3. Provides clear, actionable steps
+4. Explains the rationale behind each recommendation
+5. Highlights any trade-offs or limitations
+6. Cites specific sources from the knowledge base
+
+Format your response according to the structure in the system prompt, with clear sections for Summary, Why it Matters, How to Implement, Trade-offs/Caveats, and Source Confidence.
+"""
