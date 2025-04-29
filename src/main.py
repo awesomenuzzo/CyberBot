@@ -1,6 +1,6 @@
 import os
 import time
-import logging
+import warnings
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -12,6 +12,12 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.documents import Document
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from prompts import SYSTEM_PROMPT, QA_PROMPT, FOLLOW_UP_QUESTIONS_PROMPT, RECOMMENDATION_PROMPT
+
+# Suppress all warnings
+warnings.filterwarnings("ignore")
+
+# Set HuggingFace tokenizers parallelism
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # Load environment variables
 load_dotenv()
@@ -25,10 +31,6 @@ class CybersecurityRAGBot:
             documents_path: Path to a directory containing cybersecurity knowledge documents
             model_name: Anthropic Claude model to use
         """
-        # Set up logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
-        
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         self.llm = ChatAnthropic(
             model_name=model_name,
@@ -58,8 +60,6 @@ class CybersecurityRAGBot:
         documents = loader.load()
         
         if not documents:
-            print("Warning: No documents found in the specified path.")
-            print("The bot will still work but won't have access to any document knowledge.")
             return
             
         # Split documents into chunks
@@ -70,13 +70,10 @@ class CybersecurityRAGBot:
         texts = text_splitter.split_documents(documents)
         
         if not texts:
-            print("Warning: No text chunks were generated from the documents.")
-            print("The bot will still work but won't have access to any document knowledge.")
             return
             
         # Create vector store
         self.vectorstore = FAISS.from_documents(texts, self.embeddings)
-        print(f"Loaded {len(texts)} document chunks into the vector store.")
     
     def retrieve_relevant_context(self, query: str, k: int = 5) -> List[Document]:
         """
@@ -90,8 +87,6 @@ class CybersecurityRAGBot:
             List of relevant documents
         """
         if not self.vectorstore:
-            print("No documents are available in the knowledge base.")
-            print("The bot will provide general cybersecurity advice without specific document references.")
             return []
         
         return self.vectorstore.similarity_search(query, k=k)
@@ -116,7 +111,6 @@ class CybersecurityRAGBot:
             )
             
             chain = LLMChain(llm=self.llm, prompt=prompt)
-            self.logger.info("Invoking LLM chain for follow-up questions")
             response = chain.invoke({"query": query, "context": context_text})
             
             # Handle both dict and string responses
@@ -125,10 +119,7 @@ class CybersecurityRAGBot:
             # Parse the response to extract questions
             questions = [q.strip() for q in response_text.split("\n") if q.strip() and "?" in q]
             return questions
-        except Exception as e:
-            self.logger.error(f"Error in generate_follow_up_questions: {str(e)}")
-            self.logger.error(f"Error type: {type(e)}")
-            self.logger.error(f"Error args: {e.args}")
+        except Exception:
             raise
     
     def generate_recommendation(self, initial_query: str, follow_up_responses: Dict[str, str], context: List[Document]) -> str:
@@ -181,10 +172,8 @@ class CybersecurityRAGBot:
                 
                 # Generate follow-up questions
                 try:
-                    self.logger.info("Generating follow-up questions")
                     follow_up_questions = self.generate_follow_up_questions(initial_query, context)
-                except Exception as e:
-                    self.logger.error(f"Failed to generate follow-up questions: {str(e)}")
+                except Exception:
                     print("\nI encountered an error while trying to generate follow-up questions.")
                     print("I'll proceed with generating a recommendation based on your initial query.")
                     follow_up_questions = []
@@ -206,14 +195,11 @@ class CybersecurityRAGBot:
                     print("="*80)
                     print(recommendation)
                     print("="*80)
-                except Exception as e:
-                    self.logger.error(f"Failed to generate recommendation: {str(e)}")
+                except Exception:
+                    print("\nI encountered an error while generating the recommendation.")
                 
-            except Exception as e:
-                self.logger.error(f"Error in interactive session: {str(e)}")
-                self.logger.error(f"Error type: {type(e)}")
+            except Exception:
                 print("\nI encountered an unexpected error. Please try again.")
-                print(f"Error details: {str(e)}")
 
 def main():
     """Main function to run the Cybersecurity RAG Bot"""
@@ -226,9 +212,9 @@ def main():
     # Use fixed documents path relative to the script location
     script_dir = os.path.dirname(os.path.abspath(__file__))
     documents_path = os.path.join(os.path.dirname(script_dir), "documents")
-    print(f"Using documents path: {documents_path}")
+    
     if not os.path.exists(documents_path):
-        print(f"Error: Documents directory '{documents_path}' does not exist.")
+        print("Error: Documents directory does not exist.")
         return
     
     # Initialize and run the bot
