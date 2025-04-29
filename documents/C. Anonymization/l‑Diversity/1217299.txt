@@ -1,0 +1,3991 @@
+-Diversity: Privacy Beyond k-Anonymity
+ASHWIN MACHANAVAJJHALA, DANIEL KIFER, JOHANNES GEHRKE,
+and MUTHURAMAKRISHNAN VENKITASUBRAMANIAM
+Cornell University
+
+Publishing data about individuals without revealing sensitive information about them is an important problem. In recent years, a new definition of privacy called k-anonymity has gained popularity.
+In a k-anonymized dataset, each record is indistinguishable from at least k − 1 other records with
+respect to certain identifying attributes.
+In this article, we show using two simple attacks that a k-anonymized dataset has some subtle
+but severe privacy problems. First, an attacker can discover the values of sensitive attributes when
+there is little diversity in those sensitive attributes. This is a known problem. Second, attackers
+often have background knowledge, and we show that k-anonymity does not guarantee privacy
+against attackers using background knowledge. We give a detailed analysis of these two attacks,
+and we propose a novel and powerful privacy criterion called -diversity that can defend against
+such attacks. In addition to building a formal foundation for -diversity, we show in an experimental
+evaluation that -diversity is practical and can be implemented efficiently.
+Categories and Subject Descriptors: E.m [Data]: Miscellaneous
+General Terms: Security
+Additional Key Words and Phrases: Data privacy, k-anonymity, -diversity, privacy-preserving data
+publishing
+ACM Reference Format:
+Machanavajjhala, A., Kifer, D., Gehrke, J., and Venkitasubramaniam, M. 2007. -Diversity: Privacy
+beyond k-anonymity. ACM Trans. Knowl. Discov. Data 1, 1, Article 3 (March 2007), 52 pages.
+DOI = 10.1145/1217299.1217302 http://doi.acm.org/10.1145/1217299.1217302
+
+1. INTRODUCTION
+Many organizations are increasingly publishing microdata, that is, tables that
+contain unaggregated information about individuals. These tables can include
+medical, voter registration, census, and customer data. Microdata is a valuable
+This work was supported by the National Science Foundation under Grants IIS-0636259, CNS0627680, and IIS-0541507; by a Sloan Foundation Fellowship; and by gifts from Yahoo! and
+Microsoft. Any opinions, findings, conclusions, or recommendations expressed in this material are
+those of the authors and do not necessarily reflect the views of the sponsors.
+Authors’ addresses: Department of Computer Science, Cornell University, Ithaca, NY; email:
+{mvnak, dkifer, johannes, vmuthu}@cs.cornell.edu.
+Permission to make digital or hard copies part or all of this work for personal or classroom use is
+granted without fee provided that copies are not made or distributed for profit or direct commercial
+advantage and that copies show this notice on the first page or initial screen of a display along
+with the full citation. Copyrights for components of this work owned by others than ACM must be
+honored. Abstracting with credit is permitted. To copy otherwise, to republish, to post on servers, to
+redistribute to lists, or to use any component of this work in other works requires prior specific permission and/or a fee. Permissions may be requested from the Publications Dept., ACM, Inc., 2 Penn
+Plaza, Suite 701, New York, NY 10121-0701 USA, fax +1 (212) 869-0481, or permissions@acm.org.
+
+C 2007 ACM 1556-4681/2007/03-ART3 $5.00. DOI 10.1145/1217299.1217302 http://doi.acm.org/
+10.1145/1217299.1217302
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+2
+
+•
+
+A. Machanavajjhala et al.
+
+source of information for the allocation of public funds, medical research, and
+trend analysis. However, if individuals can be uniquely identified in the microdata, then their private information (such as their medical condition) would be
+disclosed, and this is unacceptable.
+To avoid the identification of records in microdata, uniquely identifying information like names and social security numbers are removed from tables.
+However, this first sanitization still does not ensure the privacy of individuals
+in the data. A recent study estimated that 87% of the population of the United
+States can be uniquely identified using the seemingly innocuous attributes of
+gender, date of birth, and 5-digit zip code [Sweeney 2000]. In fact, these three
+attributes were used to link Massachusetts voter registration records (which included the name, gender, zip code, and date of birth) to supposedly anonymized
+medical data from GIC1 (which included gender, zip code, date of birth and diagnosis). This linking attack managed to uniquely identify the medical records
+of the governor of Massachusetts in the medical data [Sweeney 2002].
+Sets of attributes (like gender, date of birth, and zip code in the previous
+example) that can be linked with external data to uniquely identify individuals
+in the population are called quasi-identifiers. To counter linking attacks using
+quasi-identifiers, Samarati and Sweeney proposed a definition of privacy called
+k-anonymity [Samarati 2001; Sweeney 2002]. A table satisfies k-anonymity if
+every record in the table is indistinguishable from at least k − 1 other records
+with respect to every set of quasi-identifier attributes; such a table is called a kanonymous table. Hence, for every combination of values of the quasi-identifiers
+in the k-anonymous table, there are at least k records that share those values.
+This ensures that individuals cannot be uniquely identified by linking attacks.
+An Example. Figure 1 shows medical records from a fictitious hospital located
+in upstate New York. Note that the table contains no uniquely identifying attributes like name, social security number, etc. In this example, we divide the
+attributes into two groups: the sensitive attributes (consisting only of medical
+condition) and the nonsensitive attributes (zip code, age, and nationality). An
+attribute is marked sensitive if an adversary must not be allowed to discover
+the value of that attribute for any individual in the dataset. Attributes not
+marked sensitive are nonsensitive. Furthermore, let the collection of attributes
+{zip code, age, nationality} be the quasi-identifier for this dataset. Figure 2
+shows a 4-anonymous table derived from the table in Figure 1 (here “*” denotes
+a suppressed value so, e.g., “zip code = 1485*” means that the zip code is in the
+range [14850–14859] and “age = 3*” means the age is in the range [30–39]).
+Note that in the 4-anonymous table, each tuple has the same values for the
+quasi-identifier as at least three other tuples in the table.
+Because of its conceptual simplicity, k-anonymity has been widely discussed
+as a viable definition of privacy in data publishing, and due to algorithmic advances in creating k-anonymous versions of a dataset [Aggarwal et al. 2004;
+Bayardo and Agrawal 2005; LeFevre et al. 2005; Meyerson and Williams 2004;
+1 Group Insurance Company (GIC) is responsible for purchasing health insurance for Massachusetts
+
+state employees.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+Non-Sensitive
+Zip Code Age Nationality
+13053
+28
+Russian
+13068
+29
+American
+13068
+21
+Japanese
+13053
+23
+American
+14853
+50
+Indian
+14853
+55
+Russian
+14850
+47
+American
+14850
+49
+American
+13053
+31
+American
+13053
+37
+Indian
+13068
+36
+Japanese
+13068
+35
+American
+
+•
+
+3
+
+Sensitive
+Condition
+Heart Disease
+Heart Disease
+Viral Infection
+Viral Infection
+Cancer
+Heart Disease
+Viral Infection
+Viral Infection
+Cancer
+Cancer
+Cancer
+Cancer
+
+Fig. 1. Inpatient microdata.
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+Non-Sensitive
+Zip Code Age
+Nationality
+130**
+< 30
+∗
+130**
+< 30
+∗
+130**
+< 30
+∗
+130**
+< 30
+∗
+1485*
+≥ 40
+∗
+1485*
+≥ 40
+∗
+1485*
+≥ 40
+∗
+1485*
+≥ 40
+∗
+130**
+3∗
+∗
+130**
+3∗
+∗
+130**
+3∗
+∗
+130**
+3∗
+∗
+
+Sensitive
+Condition
+Heart Disease
+Heart Disease
+Viral Infection
+Viral Infection
+Cancer
+Heart Disease
+Viral Infection
+Viral Infection
+Cancer
+Cancer
+Cancer
+Cancer
+
+Fig. 2. 4-anonymous inpatient microdata.
+
+Samarati 2001; Sweeney 2002; Zhong et al. 2005], k-anonymity has grown in
+popularity. However, does k-anonymity really guarantee privacy? In the next
+section, we will show that the answer to this question is interestingly no. We
+give examples of two simple yet subtle attacks on a k-anonymous dataset that
+allow an attacker to identify individual records. Defending against these attacks requires a stronger notion of privacy that we call -diversity, the focus of
+this article. But we are jumping ahead in our story. Let us first show the two
+attacks to give the intuition behind the problems with k-anonymity.
+1.1 Attacks On k-Anonymity
+In this section, we present two attacks, the homogeneity attack and the background knowledge attack, and we show how they can be used to compromise a
+k-anonymous dataset.
+Homogeneity Attack. Alice and Bob are antagonistic neighbors. One day Bob
+falls ill and is taken by ambulance to the hospital. Having seen the ambulance,
+Alice sets out to discover what disease Bob is suffering from. Alice discovers
+the 4-anonymous table of current inpatient records published by the hospital
+(Figure 2), and so she knows that one of the records in this table contains Bob’s
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+4
+
+•
+
+A. Machanavajjhala et al.
+
+data. Since Alice is Bob’s neighbor, she knows that Bob is a 31-year old American male who lives in the zip code 13053 (the quiet town of Dryden). Therefore,
+Alice knows that Bob’s record number is 9, 10, 11, or 12. All of those patients
+have the same medical condition (cancer), and so Alice concludes that Bob has
+cancer.
+Observation 1. k-Anonymity can create groups that leak information due to
+lack of diversity in the sensitive attribute.
+Such a situation is not uncommon. As a back-of-the-envelope calculation,
+suppose we have a dataset containing 60,000 distinct tuples where the sensitive attribute can take three distinct values and is not correlated with the
+nonsensitive attributes. A 5-anonymization of this table will have around
+12,000 groups2 and, on average, 1 out of every 81 groups will have no diversity
+(the values for the sensitive attribute will all be the same). Thus we should
+expect about 148 groups with no diversity. Therefore, information about 740
+people would be compromised by a homogeneity attack. This suggests that, in
+addition to k-anonymity, the sanitized table should also ensure diversity, that
+is, all tuples that share the same values of their quasi-identifiers should have
+diverse values for their sensitive attributes.
+The possibility of a homogeneity attack has been previously discussed in the
+literature (e.g., Ohrn and Ohno-Machado [1999]). One solution to the homogeneity problem, as presented by Ohrn and Ohno-Machado [1999], turns out to
+be a specific instance of our general principle of -diversity (see Section 4). For
+reasons that will become clear in Section 4, we refer to this method as entropy
+-diversity. By examining privacy from a different perspective, we prove additional privacy-preserving properties of entropy -diversity. We also present
+other privacy definitions that satisfy the principle of -diversity that have
+greater flexibility.
+The next observation is that an adversary could use background knowledge
+to discover sensitive information.
+Background Knowledge Attack. Alice has a pen-friend named Umeko who is
+admitted to the same hospital as Bob and whose patient records also appear in
+the table shown in Figure 2. Alice knows that Umeko is a 21-year old Japanese
+female who currently lives in zip code 13068. Based on this information, Alice
+learns that Umeko’s information is contained in record number 1,2,3, or 4.
+Without additional information, Alice is not sure whether Umeko caught a
+virus or has heart disease. However, it is well known that Japanese have an
+extremely low incidence of heart disease. Therefore Alice concludes with near
+certainty that Umeko has a viral infection.
+Observation 2. k-Anonymity does not protect against attacks based on background knowledge.
+We have demonstrated (using the homogeneity and background knowledge
+attacks) that a k-anonymous table may disclose sensitive information. Since
+both of these attacks are plausible in real life, we need a stronger definition
+2 Our experiments on real data sets show that data is often very skewed, and a 5-anonymous table
+
+might not have so many groups
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+5
+
+of privacy that takes into account diversity and background knowledge. This
+article addresses this very issue.
+1.2 Contributions and Article Outline
+In the previous section, we showed that k-anonymity is susceptible to homogeneity and background knowledge attacks; thus a stronger definition of privacy
+is needed. In the remainder of the article, we derive our solution. We start by introducing an ideal notion of privacy called Bayes-optimal for the case that both
+data publisher and the adversary have knowledge of the complete joint distribution of the sensitive and nonsensitive attributes (Section 3). Unfortunately,
+in practice, the data publisher is unlikely to possess all this information, and,
+in addition, the adversary may have more specific background knowledge than
+the data publisher. Hence, while Bayes-optimal privacy sounds great in theory,
+it is unlikely that it can be guaranteed in practice. To address this problem,
+we show that the notion of Bayes-optimal privacy naturally leads to a novel
+practical criterion that we call -diversity. -Diversity provides privacy even
+when the data publisher does not know what kind of knowledge the adversary
+possesses. The main idea behind -diversity is the requirement that the values
+of the sensitive attributes are well represented in each group (Section 4).
+We show that existing algorithms for k-anonymity can be adapted to compute
+-diverse tables (Section 5), and, in an experimental evaluation, we show that diversity is practical and can be implemented efficiently (Section 6). We discuss
+related work in Section 7, and we conclude in Section 8. Before jumping into
+the contributions of this article, we introduce the notation needed to formally
+discuss data privacy in the next section.
+2. MODEL AND NOTATION
+In this section, we will introduce some basic notation that will be used in the
+remainder of the article. We will also discuss how a table can be anonymized
+and what kind of background knowledge an adversary may possess.
+Basic Notation. Let T = {t1 , t2 , . . . , tn } be a table with attributes A1 , . . . , Am .
+We assume that T is a subset of some larger population  where each tuple
+ti ∈ T represents an individual from the population. For example, if T is a
+medical dataset, then  could be the population of the Caribbean island, San
+Lorenzo. Let A denote the set of all attributes {A1 , A2 , . . . , Am } and t[Ai ] denote
+the value of attribute Ai for tuple t. If C = {C1 , C2 , . . . , C p } ⊆ A, then we use the
+notation t[C] to denote the tuple (t[C1 ], . . . , t[C p ]) which is the projection of t
+onto the attributes in C.
+In privacy-preserving data publishing, there exist several important subsets of A. A sensitive attribute is an attribute whose value for any particular
+individual must be kept secret from people who have no direct access to the
+original data. Let S denote the set of all sensitive attributes. An example
+of a sensitive attribute is Medical Condition from Figure 1. The association
+between individuals and Medical Condition should be kept secret; thus we
+should not disclose which particular patients have cancer, but it is permissible
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+6
+
+•
+
+A. Machanavajjhala et al.
+
+to disclose the information that cancer patients exist in the hospital. We assume that the data publisher knows which attributes are sensitive. To simplify the discussion, for much of this article we will also assume that there
+is only one sensitive attribute; the extension of our results to multiple sensitive attributes is not difficult and is handled in Section 4.3. All attributes that
+are not sensitive are called nonsensitive attributes. Let N denote the set of
+nonsensitive attributes. We are now ready to formally define the notion of a
+quasi-identifier.
+Definition 2.1 (Quasi-identifier). A set of nonsensitive attributes {Q 1 , . . . ,
+Q w } of a table is called a quasi-identifier if these attributes can be linked with
+external data to uniquely identify at least one individual in the general population .
+One example of a quasi-identifier is a primary key, like social security number. Another example is the set {gender, age, zip code} in the GIC dataset that
+was used to identify the governor of Massachusetts as described in the introduction. Let us denote the set of all quasi-identifiers by QI. We are now ready
+to formally define k-anonymity.
+Definition 2.2 (k-Anonymity). A table T satisfies k-anonymity if for every tuple t ∈ T there exist k − 1 other tuples ti1 , ti2 , . . . , tik − 1 ∈ T such that
+t[C] = ti1 [C] = ti2 [C] = · · · = tik − 1 [C] for all C ∈ QI.
+The Anonymized Table T  . Since the quasi-identifiers might uniquely identify tuples in T , the table T is not published; it is subjected to an anonymization
+procedure and the resulting table T  is published instead.
+There has been a lot of research on techniques for anonymization (see
+Section 7 for a discussion of related work). These techniques can be broadly
+classified into generalization techniques [Aggarwal et al. 2004; LeFevre et al.
+2005], generalization with tuple suppression techniques [Bayardo and Agrawal
+2005; Samarati and Sweeney 1998], and data swapping and randomization
+techniques [Adam and Wortmann 1989; Duncan and Feinberg 1997]. In this
+article we limit our discussion to generalization techniques.
+Definition 2.3 (Domain Generalization). A domain D  = {P1 , P2 , . . .} is a
+generalization (partition) of a domain D if Pi = D and Pi ∩ P j = ∅ whenever
+i = j . For x ∈ D we let φ D (x) denote the element P ∈ D  that contains x.
+Note that we can create a partial order ≺G on domains by requiring D≺G D 
+if and only if D  is a generalization of D. Given a table T = {t1 , . . . , tn } with
+the set of nonsensitive attributes N and a generalization D N of domain(N ), we
+can construct a table T  = {t1 , . . . , tn } by replacing the value of ti [N ] with the
+generalized value φ DN (ti [N ]) to get a new tuple ti . The tuple ti is called a gen
+eralization of the tuple ti and we use the notation ti →ti to mean ti generalizes
+
+ti . Extending the notation to tables, T →T  means T  is a generalization of
+T . Typically, ordered attributes are partitioned into intervals, and, categorical
+attributes are partitioned according to a user-defined hierarchy (e.g., cities are
+generalized to counties, counties to states, and states to regions).
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+7
+
+Example 1 (Continued). The table in Figure 2 is a generalization of the
+table in Figure 1. We generalized on the Zip Code attribute by partitioning it
+into two sets: 1485* (representing all zip codes whose first four digits are 1485)
+and 130** (representing all zip codes whose first three digits are 130). Then
+we partitioned Age into three groups: <30, 3* (representing all ages between
+30 and 39), and ≥40. Finally, we partitioned Nationality into just one set “*”
+representing all nationalities.
+The Adversary’s Background Knowledge. Since the background knowledge
+attack was due to the adversary’s additional knowledge about the table, let us
+briefly discuss the type of background knowledge that we are modeling.
+First, the adversary has access to the published table T  and she knows
+that T  is a generalization of some base table T . The adversary also knows the
+domain of each attribute of T .
+Second, the adversary may know that some individuals are in the table. This
+knowledge is often easy to acquire. For example, GIC published medical data
+about all Massachusetts state employees. If the adversary Alice knows that her
+neighbor Bob is a Massachusetts state employee, then Alice is almost certain
+that Bob’s information is contained in that table. In this case, we assume that
+Alice knows all of Bob’s nonsensitive attributes. In addition, the adversary
+could have knowledge about the sensitive attributes of specific individuals in
+the population and/or the table. For example, the adversary Alice might know
+that neighbor Bob does not have pneumonia since Bob does not show any of the
+symptoms of pneumonia. We call such knowledge instance-level background
+knowledge since it is associated with specific instances in the table. In addition,
+Alice may know complete information about some people in the table other than
+Bob (e.g., Alice’s data may be in the table).
+Third, the adversary could have partial knowledge about the distribution
+of sensitive and nonsensitive attributes in the population. We call this demographic background knowledge.
+For example, the adversary may know
+
+P (t[Condition] = “cancer” t[Age] ≥ 40) and may use it to make additional inferences about records in the table.
+Armed with the right notation, let us start looking into principles and definitions of privacy that leak little information.
+3. BAYES-OPTIMAL PRIVACY
+In this section, we analyze an ideal notion of privacy. We call it Bayes-Optimal
+Privacy since it involves modeling background knowledge as a probability distribution over the attributes and uses Bayesian inference techniques to reason
+about privacy. We introduce tools for reasoning about privacy (Section 3.1), use
+them to discuss theoretical principles of privacy (Section 3.2), and then point
+out the difficulties that need to be overcome to arrive at a practical definition
+of privacy (Section 3.3).
+3.1 Changes in Belief Due to Data Publishing
+For simplicity of discussion, we combine all the nonsensitive attributes into
+a single multidimensional quasi-identifier attribute Q whose values are
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+8
+
+•
+
+A. Machanavajjhala et al.
+
+generalized to create the anonymized table T  from the base table T . Since
+Bayes-optimal privacy is only used to motivate a practical definition, we make
+the following two simplifying assumptions. First, we assume that T is a simple random sample from some larger population  (a sample of size n drawn
+without replacement is called a simple random sample if every sample of size n
+is equally likely). Second, we assume that there is a single sensitive attribute.
+We would like to emphasize that both these assumptions will be dropped in
+Section 4 when we introduce a practical definition of privacy.
+Recall that in our attack model, the adversary Alice has partial knowledge
+of the distribution of the sensitive and nonsensitive attributes. Let us assume
+a worst-case scenario where Alice knows the complete joint distribution f of
+Q and S (i.e., she knows their frequency in the population ). Consider any
+individual Bob that Alice knows is in the table. She knows that Bob corresponds
+to a record t ∈ T that has been generalized to a record t ∗ in the published table
+T  . She also knows the value of Bob’s nonsensitive attributes (i.e., she knows
+that t[Q] = q). Alice’s goal is to use her background knowledge to discover Bob’s
+sensitive information, namely, the value of t[S]. We gauge her success using two
+quantities: Alice’s prior belief, and her posterior belief.
+Alice’s prior belief, α(q,s) that Bob’s sensitive attribute is s, given that his
+nonsensitive attribute is q, is just her background knowledge:
+
+α(q,s) = P f (t[S] = s t[Q] = q).
+After Alice observes the table T  , her belief about Bob’s sensitive attribute
+changes. This new belief, β(q,s,T  ) , is her posterior belief :
+
+
+β(q,s,T  ) = P f (t[S] = s t[Q] = q ∧ ∃t  ∈ T  , t →t  ).
+Given f and T  , we can derive a formula for β(q,s,T  ) which will help us formulate
+our new privacy definition in Section 4. The main idea behind the derivation is
+to find a set of equally likely disjoint random worlds (as in Bacchus et al. [1996])
+such that a conditional probability P (A|B) is the number of worlds satisfying
+the condition A ∧ B divided by the number of worlds satisfying the condition B.
+THEOREM 3.1. Let T  be a published table which is obtained by performing
+generalizations on a table T ; let X be an individual with X [Q] = q who appears
+in the table T (and also T  ); let q  be the generalized value of q in T  ; let s be a
+possible value of the sensitive attribute; let n(q  ,s ) be the number of tuples t  ∈ T 
+where t  [Q] = q  and t  [S] = s ; and let f (s | q  ) be the conditional probability
+of the sensitive attribute being s conditioned on the fact that the nonsensitive
+attribute Q is some q  which can be generalized to q  . Then the observed belief
+that X [S] = s is given by:
+f (s|q)
+f (s|q  )
+β(q,s,T  ) =
+.
+
+f (s |q)
+
+
+n
+s ∈ S (q ,s )
+f (s |q  )
+n(q  ,s)
+
+(1)
+
+PROOF. For ease of reference, we review the notation used in this proof in
+Figure 3.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+Notation
+T
+T
+Q
+Q
+S
+Ω
+X
+Nq
+N(q,s)
+N(q ,s)
+n
+n(q ,s)
+
+•
+
+9
+
+Description
+Unanonymized table
+The anonymized table
+Domain of the quasi-identiﬁer attribute
+Generalized domain of the quasi-identiﬁer attribute
+Domain of the sensitive attribute
+Population of individuals
+Bob, the individual in the population Ω with X[Q] = q and who is known to be in T
+Number of individuals w in the population Ω such that w[Q] = q
+Number of individuals w in the population Ω such that w[Q] = q and w[S] = s
+Number of individuals w in the population Ω such that w[S] = s and w[Q ] = q 
+Number of tuples in the anonymized table T 
+Number of tuples t in the anonymized table T  such that t [S] = s and t [Q ] = q 
+
+Fig. 3. Notation used in the proof of Theorem 3.1.
+
+To help us model the adversary’s uncertainty about the value of Bob’s sensitive attribute after seeing the anonymized table T  , we will construct a set
+of random worlds such that T  could have come from any one of these random
+worlds with equal probability. In all of these worlds, Bob (or X , as we will call
+him in this proof) appears in T  . In any two different random worlds, either
+some individual in the population has a different value for the sensitive attribute or a different set of individuals appear in T  . Since the random worlds
+are equally likely and mutually exclusive, the required conditional probability
+is the fraction of the total number of worlds in which X [S] = s (as in [Bacchus
+et al. 1996]).
+Constructing the set of random worlds. Formally, a random world is a pair
+(ψ, Z n ) where ψ :  → S is an assignment of sensitive values for each individual ω ∈ , and Z n is a simple random sample of n individuals from . We are
+interested in only those assignments ψ which are consistent with the adversary’s background knowledge. In particular, the adversary knows the size of 
+and the distribution of sensitive and nonsensitive attributes; in other words, for
+every (q, s), the adversary knows N(q,s) , the number of individuals with nonsensitive attribute q who have sensitive value s Therefore for every (q, s), ψ should
+assign the value s to exactly N(q,s) out of the Nq individuals who have the nonsensitive value q. Note that in any two distinct assignments ψ1 , ψ2 , there is
+some individual ω such that ψ1 (ω) = ψ2 (ω), that is, ω is assigned to different
+values of S. Moreover, given only knowledge of the distribution of sensitive and
+nonsensitive attributes, the adversary has no preference for any of the ψ and,
+invoking the principle of indifference, considers each ψ to be equally likely.
+The second component of a random world is Z n . Z n is a size n simple random
+sample from the population . By the definition of a simple random sample,
+each Z n is equally likely. Since the sample Z n is picked independent of the
+assignment ψ, each random world (ψ, Z n ) is equally likely.
+Each (ψ, Z n ) describes a table T(ψ, Z n ) containing n tuples with Q and S as
+attributes. We are interested in only those random worlds where X appears
+in T(ψ, Z n ) and where T(ψ, Z n ) → T  . We can rephrase this condition as follows.
+We say that a random world (ψ, Z n ) is compatible with the published table T 
+containing X , written as (ψ, Z n )  (T  , X ), if the following two conditions hold:
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+10
+
+•
+
+A. Machanavajjhala et al.
+
+(1) X ∈ Z n , where X is the individual with X [Q] = q who is known to be in the
+table; and
+(2) for every (q  , s) pair, there are n(q  ,s) individuals ω in Z n such that ω[Q] is
+generalized to q  and such that ψ(ω) = s.
+The set of compatible random worlds completely characterizes the set of worlds
+which give rise to the anonymized table T  containing X . It is clear that these
+worlds are equally likely. Also any two compatible random worlds are mutually exclusive because either some individual in the population is assigned a
+different value for S or the sample of individuals Z n is different.
+Calculating the conditional probability β(q,s,T  ) . To calculate the conditional
+probability β(q,s,T  ) , we need to find the fraction of the total number of compatible
+random worlds in which X is assigned the sensitive value s. Let T X = {(ψ, Z n ) 
+(T  , X )} be the set of random worlds which are compatible with T  containing X .
+
+
+Let T(X
+,s) = {(ψ, Z n )  (T , X )| ψ(X ) = s} be the set of random worlds compatible
+
+with T where X is assigned the sensitive value s. Then,
+β(q,s,T  ) =
+
+
+|T(X
+,s) |
+
+|T X |
+
+.
+
+
+
+Note that T(X
+,s1 ) and T(X ,s2 ) are disjoint sets of random worlds—in all the worlds
+
+
+in T(X , s1 ) , X is assigned the sensitive value s1 and, in all the world in T(X
+,s2 ) , X
+is assigned the sensitive value s2 . Thus
+
+
+|T X | =
+|T(X
+,s ) |.
+s ∈ S
+
+
+We now proceed to calculate the cardinality of T(X
+,s) for each s. First we will
+compute the number of assignments ψ such that ψ(X ) = s, and then for each
+ψ, we will compute the number of samples Z n such that (ψ, Z n )  (T  , X ). The
+number of assignments ψ compatible with the background knowledge such that
+ψ(X ) = s can be calculated as follows. X is assigned the sensitive value s. Since
+X [Q] = q, out of the remaining Nq −1 individuals having the nonsensitive value
+q, N(q,s) − 1 of them are assigned s. For every other sensitive value s , N(q,s ) out
+of the Nq − 1 individuals are assigned s . For every q  = q and every s , some
+N(q  ,s ) out of the Nq individuals having the nonsensitive value q  are assigned
+s . The number of these assignments is
+
+Nq  !
+(Nq − 1)!
+
+
+(N(q,s) − 1)!
+N(q,s ) ! q  = q
+N(q  ,s ) !
+
+=
+
+N(q,s) 
+Nq
+
+q ∈ Q
+
+s = s
+
+
+
+Nq  !
+.
+N(q  ,s ) !
+
+s ∈ S
+
+(2)
+
+s ∈ S
+
+For each mapping ψ such that ψ(X ) = s, we count the number of Z n ’s such
+that (ψ, Z n )  (T  , X ) as follows. Let q  be the generalized value of q = X [Q].
+X ’s record will appear as tX = (q  , s) in the table T  . Apart from tX , T  contains
+n(q  ,s) −1 other tuples of the form (q  , s). Hence, apart from X , Z n should contain
+n(q  ,s) − 1 other individuals ω with ψ(ω) = s and ω[Q] = q  , where q  generalizes
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+11
+
+to q  . For all other (q  , s ) such that q  = q  or s = s, Z n should contain n(q  ,s )
+individuals ω , where ψ(ω ) = s and q  is the generalized value of ω[Q]. The
+number of Z n ’s is given by
+
+
+=
+
+N(q  ,s) − 1
+n(q  ,s) − 1
+
+
+(q  ,s ) ∈ (Q  ×S)\{(q  ,s)}
+
+
+nq  ,s
+N(q  ,s )
+.
+N(q  ,s) (q  ,s ) ∈ Q  ×S n(q  ,s )
+
+
+
+N(q  ,s )
+n(q  ,s )
+
+
+
+(3)
+
+
+The cardinality of T(X
+,s) is therefore the product of Equations (2) and (3) and
+can be expressed as
+
+
+
+Nq  !
+N(q,s) 
+nq  ,s
+N(q  ,s )
+
+×
+Nq q  ∈ Q
+N(q  ,s ) !
+N(q  ,s) (q  ,s ) ∈ Q  ×S n(q  ,s )
+s ∈ S
+
+
+N(q,s)
+Nq  !
+N(q  ,s )
+1 
+
+= n(q  ,s)
+×
+×
+N(q  ,s)
+Nq q  ∈ Q
+N(q  ,s ) ! (q  ,s ) ∈ Q  ×S n(q  ,s )
+
+
+|T(X
+,s) | =
+
+s ∈ S
+
+N(q,s)
+= n(q  ,s)
+× E.
+N(q  ,s)
+The expression E is the same for all s ∈ S. Hence, the expression for the observed
+belief is
+β(q,s,T  ) = 
+
+
+|T(X
+,s) |
+
+s ∈ S |T(X ,s ) |
+
+N(q,s)
+N(q  ,s)
+=
+.
+
+N(q,s )
+ ,s )
+n
+
+(q
+s ∈S
+N(q  ,s )
+n(q  ,s)
+
+Using the substitutions f (q, s) = N(q,s) /N and f (q  , s) = N(q  ,s) /N , we get the
+required expression.
+f (q, s)
+f (q  , s)
+β(q,s,T  ) =
+
+f (q, s )
+s ∈ S n(q  ,s )
+f (q  , s )
+f (s|q)
+n(q  ,s)
+f (s|q  )
+=
+
+f (s |q)
+ ,s )
+n
+
+(q
+s ∈S
+f (s |q  )
+n(q  ,s)
+
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+12
+
+•
+
+A. Machanavajjhala et al.
+
+Note that in the special case when S and Q are independent, the expression
+for the observed belief simplifies to
+f (s|q)
+f (s|q  )
+β(q,s,T  ) =
+
+f (s |q)
+s ∈ S n(q  ,s )
+f (s |q  )
+f (s)
+n(q  ,s)
+f (s)
+=
+
+f (s )
+ ,s )
+n
+
+(q
+s ∈S
+f (s )
+n(q  ,s)
+= 
+s ∈ S n(q  ,s )
+n(q  ,s)
+
+Armed with a way of calculating Alice’s belief about Bob’s private data after
+she has seen T ∗ , let us now examine some principles for building definitions of
+privacy.
+3.2 Privacy Principles
+Given the adversary’s background knowledge, a published table T  might leak
+private information in two important ways: positive disclosure and negative
+disclosure.
+Definition 3.1 (Positive Disclosure). Publishing the table T  that was derived from T results in a positive disclosure if the adversary can correctly identify the value of a sensitive attribute with high probability, that is, given a δ > 0,
+there is a positive disclosure if β(q,s,T  ) > 1 − δ and there exists t ∈ T such that
+t[Q] = q and t[S] = s.
+Definition 3.2 (Negative Disclosure). Publishing the table T  that was derived from T results in a negative disclosure if the adversary can correctly
+eliminate some possible values of the sensitive attribute (with high probability); i.e., given an > 0, there is a negative disclosure if β(q,s,T  ) < and there
+exists a t ∈ T such that t[Q] = q but t[S] = s.
+The homogeneity attack in Section 1.1 where Alice determined that Bob has
+cancer is an example of a positive disclosure. Similarly, in the example from
+Section 1.1, even without background knowledge Alice can deduce that Umeko
+does not have cancer. This is an example of a negative disclosure.
+Note that not all positive disclosures are disastrous. If the prior belief was
+that α(q,s) > 1−δ, the adversary would not have learned anything new. Similarly,
+negative disclosures are not always bad: discovering that Bob does not have
+Ebola might not be very serious because the prior belief of this event was small.
+Hence, the ideal definition of privacy can be based on the following principle:
+Principle 1 (Uninformative Principle). The published table should provide
+the adversary with little additional information beyond the background knowledge. In other words, there should not be a large difference between the prior
+and posterior beliefs.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+13
+
+The uninformative principle can be instantiated in several ways, for example,
+with the (ρ1 , ρ2 )-privacy breach definition [Evfimievski et al. 2003].
+Definition 3.3 ((ρ1 , ρ2 )-Privacy). Given a table T ∗ and two constants ρ1
+and ρ2 , we say that a (ρ1 , ρ2 )-privacy breach has occurred when either
+α(q,s) < ρ1 ∧ β(q,s,T  ) > ρ2 or when α(q,s) > 1 − ρ1 ∧ β(q,s,T  ) < 1 − ρ2 . If a (ρ1 , ρ2 )privacy breach has not occurred, then table T ∗ satisfies (ρ1 , ρ2 )-privacy.
+An alternative privacy definition based on the uninformative principle would
+bound the maximum difference between α(q,s) and β(q,s,T  ) using any of the functions commonly used to measure the difference between probability distributions. Any privacy definition that is based on the uninformative principle and
+instantiated either by a (ρ1 , ρ2 )-privacy breach definition or by bounding the
+difference between α(q,s) and β(q,s,T  ) is a Bayes-optimal privacy definition. The
+specific choice of definition depends on the application.
+Note that any Bayes-optimal privacy definition captures diversity in addition
+to background knowledge. To see how it captures diversity, suppose that all the
+tuples whose nonsensitive attribute Q have been generalized to q  have the
+same value s for their sensitive attribute. Then n(q  ,s ) = 0 for all s = s, and
+hence the value of the observed belief β(q,s,T  ) becomes 1 in Equation (1). This
+will be flagged as a breach whenever the prior belief is not close to 1.
+3.3 Limitations of the Bayes-Optimal Privacy
+For the purposes of our discussion, we are more interested in the properties of
+Bayes-optimal privacy rather than its exact instantiation. In particular, Bayesoptimal privacy has several drawbacks that make it hard to use in practice.
+Insufficient Knowledge. The data publisher is unlikely to know the full distribution f of sensitive and nonsensitive attributes over the general population
+ from which T is a sample.
+The Adversary’s Knowledge is Unknown. It is also unlikely that the adversary
+has knowledge of the complete joint distribution between the nonsensitive and
+sensitive attributes. However, the data publisher does not know how much
+the adversary knows. For example, in the background knowledge attack in
+Section 1.1, Alice knew that Japanese have a low incidence of heart disease,
+but the data publisher did not know that Alice knew this piece of information.
+Instance-Level Knowledge. The theoretical definition does not protect against
+knowledge that cannot be modeled probabilistically. For example, suppose Bob’s
+son tells Alice that Bob does not have diabetes. The theoretical definition of
+privacy will not be able to protect against such adversaries.
+Multiple Adversaries. There will likely be multiple adversaries with different
+levels of knowledge, each of which is consistent with the full joint distribution.
+Suppose Bob has a disease that (a) is very likely among people in the age group
+[30–50], but (b) is very rare for people of that age group who are doctors. An
+adversary who only knows the interaction of age and illness will think that it is
+very likely for Bob to have that disease. However, an adversary who also knows
+that Bob is a doctor is more likely to think that Bob does not have that disease.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+14
+
+•
+
+A. Machanavajjhala et al.
+
+Thus, although additional knowledge can yield better inferences on average,
+there are specific instances where it does not. Thus the data publisher must
+take into account all possible levels of background knowledge.
+In the next section, we present a privacy definition that eliminates these
+drawbacks.
+4. -DIVERSITY: A PRACTICAL PRIVACY DEFINITION
+In this section, we discuss how to overcome the difficulties outlined at the end of
+the previous section. We derive the -diversity principle (Section 4.1), show how
+to instantiate it with specific definitions of privacy (Section 4.2), outline how to
+handle multiple sensitive attributes (Section 4.3), and discuss how -diversity
+addresses the issues raised in Section 3.3.
+4.1 The -Diversity Principle
+In this section, we will derive the principle of -diversity in two ways. First,
+we will derive it in an ideal theoretical setting where it can be shown that
+the adversary’s background knowledge will not lead to a privacy breach. Then
+we will rederive the -diversity principle from a more practical starting point
+and show that even under less than ideal circumstances, -diversity can still
+defend against background knowledge that is unknown to the data publisher.
+Although the arguments in this section can be made precise, we will keep our
+discussion at an intuitive level for the sake of clarity.
+Let us reexamine the expression for computing the adversary’s observed
+belief (Theorem 3.1):
+f (s|q)
+n(q  ,s)
+f (s|q  )
+β(q,s,T  ) =
+.
+(4)
+
+f (s |q)
+
+
+n
+
+s ∈ S (q ,s )
+f (s |q  )
+For the moment, let us consider an ideal setting where if two objects have
+“similar” nonsensitive attributes, then their sensitive attributes have similar
+probabilistic behavior. More formally, given a similarity measure d (·, ·), then
+∀ > 0, ∃δ such that if d (q1 , q2 ) < δ, then maxs | f (s|q1 ) − f (s|q2 )| < . This similarity assumption is implicit in all k-nearest neighbor classifiers.
+Now let us define a q  -block to be the set of tuples in T  whose nonsensitive
+attribute values generalize to q  . If all tuples in a q  -block are similar based on
+their nonsensitive attributes, then f (s|q) ≈ f (s|q  ) for those q that appear in
+the q  -block, and because of (approximate) cancellations, Equation (4) could be
+approximated arbitrarily well by Equation (5):
+n(q  ,s)
+L(q, s, T  ) = 
+.
+(5)
+s ∈ S n(q  ,s )
+Thus given enough data and a good partitioning, background knowledge
+cancels out and has no effect on the inferences that can be made from the table
+The only inferences that can be made are those that depend solely on the n(q ∗ ,s ) —
+the frequencies of each s ∈ S for each q ∗ -block. Therefore to prevent privacy
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+15
+
+breaches, we need to ensure for every q ∗ -block that the  most-frequent values
+of S have roughly the same frequencies. This guarantees that P (s|q ∗ ) ≤ 1/( + )
+for some small > 0 and for all s ∈ S and ensures that Alice will be uncertain
+about Bob’s true medical condition. This is the essence of -diversity.
+All of those arguments relied on the following three assumptions: (a) tuples
+with similar nonsensitive attributes values have similar sensitive attributes
+values, (b) there is a good partitioning of the data, and (c) there is a large
+amount of data so that many similar tuples fall into each partition. Let us
+reexamine privacy breaches when these assumptions do not hold.
+Recall that Theorem 3.1 allows us to calculate the observed belief of the
+adversary. Consider the case of positive disclosures that is, Alice wants to determine that Bob has t[S] = s with very high probability. From Theorem 3.1,
+this can happen only when:
+∃s, ∀s = s,
+
+n(q  ,s )
+
+f (s |q)
+f (s|q)
+ n(q  ,s)
+.
+
+
+f (s |q )
+f (s|q  )
+
+(6)
+
+The condition in Equation (6) could occur due to a combination of two factors: (i)
+a lack of diversity in the sensitive attributes in the q  -block, and/or (ii) strong
+background knowledge. Let us discuss these in turn.
+Lack of Diversity. Lack of diversity in the sensitive attribute manifests itself
+as follows:
+∀s = s,
+
+n(q  ,s )  n(q  ,s) .
+
+(7)
+
+In this case, almost all tuples have the same value s for the sensitive attribute
+S, and thus β(q,s,T  ) ≈ 1. Note that this condition can be easily checked since
+it only involves counting the values of S in the published table T  . We can
+ensure diversity by requiring that all the possible values s ∈ d omain(S) occur
+in the q  -block with roughly equal proportions. This, however, is likely to cause
+significant loss of information: if domain(S) is large, then the q  -blocks will
+necessarily be large, and the data will be partitioned into a small number of
+q  -blocks. Another way to ensure diversity and to guard against Equation (7) is
+to require that a q  -block has at least  ≥ 2 different sensitive values such that
+the  most-frequent values (in the q  -block) have roughly the same frequency.
+We say that such a q  -block is well-represented by  sensitive values.
+Strong Background Knowledge. The other factor that could lead to a positive disclosure (Equation (6)) is strong background knowledge. Even though a
+q  -block may have  well-represented sensitive values, Alice may still be able to
+use her background knowledge to eliminate sensitive values when the following
+is true:
+∃s ,
+
+f (s |q)
+≈ 0.
+f (s |q  )
+
+(8)
+
+This equation states that Bob with quasi-identifier t[Q] = q is much less likely
+to have sensitive value s than any other individual in the q  -block. For example, Alice may know that Bob never travels, and thus he is extremely unlikely
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+16
+
+•
+
+A. Machanavajjhala et al.
+
+to have Ebola. It is not possible for a data publisher to reveal some information about the data while still guarding against attacks employing arbitrary
+amounts of background knowledge (since the revealed information may be precisely what the adversary needs to recreate the entire table). However, the data
+publisher can still guard against many attacks, even without having access to
+Alice’s background knowledge. In our model, Alice might know the distribution
+f (q, s) over the sensitive and nonsensitive attributes in addition to the conditional distribution f (s|q). The most damaging type of such information has
+the form f (s|q) ≈ 0, for example, men do not have breast cancer, or the form of
+Equation (8), for example, Japanese have a very low incidence of heart disease.
+Note that a priori information of the form f (s|q) = 1 is not as harmful since
+this positive disclosure is independent of the published table T  . Alice can also
+eliminate sensitive values with instance-level knowledge such as Bob does not
+have diabetes.
+In spite of such background knowledge, if there are  well-represented sensitive values in a q  -block, then Alice needs  − 1 damaging pieces of background
+knowledge to eliminate  − 1 possible sensitive values and infer a positive disclosure. Thus, by setting the parameter , the data publisher can determine
+how much protection is provided against background knowledge even if this
+background knowledge is unknown to the publisher.
+Note that Alice may know  pieces of instance-level background knowledge
+of the form individual X i does not have disease Y (for i = 1 . . . ), where each X i
+is a different individual. However, we have been talking only about eliminating
+sensitive values for a single individual. It has been shown [Martin et al. 2006]
+that for a specific individual Bob, the worst-case disclosure occurs when X i =
+Bob in all the  pieces of information Alice possesses.
+Moreover, when inferring information about Bob, knowing the exact sensitive
+values of some other individuals in the table is less damaging than statements
+of the form Bob does not have cancer. This is because knowing the sensitive
+value for some other individual only eliminates from consideration one tuple
+that may have corresponded to Bob while the latter statement eliminates at
+least one tuple.
+Putting these two arguments together, we arrive at the following principle.
+Principle 2. (-Diversity Principle). A q  -block is -diverse if it contains at
+least  well-represented values for the sensitive attribute S. A table is -diverse
+if every q  -block is -diverse.
+Returning to our example, consider the inpatient records shown in Figure 1.
+We present a 3-diverse version of the table in Figure 4. Comparing it with the 4anonymous table in Figure 2, we see that the attacks against the 4-anonymous
+table are prevented by the 3-diverse table. For example, Alice cannot infer from
+the 3-diverse table that Bob (a 31-year old American from zip code 13053) has
+cancer. Even though Umeko (a 21-year old Japanese from zip code 13068) is
+extremely unlikely to have heart disease, Alice is still unsure whether Umeko
+has a viral infection or cancer.
+The -diversity principle advocates ensuring  well-represented values for
+the sensitive attribute in every q  -block, but does not clearly state what
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+1
+4
+9
+10
+5
+6
+7
+8
+2
+3
+11
+12
+
+Non-Sensitive
+Zip Code Age
+Nationality
+1305*
+≤ 40
+∗
+1305*
+≤ 40
+∗
+1305*
+≤ 40
+∗
+1305*
+≤ 40
+∗
+1485*
+> 40
+∗
+1485*
+> 40
+∗
+1485*
+> 40
+∗
+1485*
+> 40
+∗
+1306*
+≤ 40
+∗
+1306*
+≤ 40
+∗
+1306*
+≤ 40
+∗
+1306*
+≤ 40
+∗
+
+•
+
+17
+
+Sensitive
+Condition
+Heart Disease
+Viral Infection
+Cancer
+Cancer
+Cancer
+Heart Disease
+Viral Infection
+Viral Infection
+Heart Disease
+Viral Infection
+Cancer
+Cancer
+
+Fig. 4. 3-diverse inpatient microdata.
+
+well-represented means. Note that we called it a principle instead of a definition, we will use it to give two concrete instantiations of the -diversity principle
+and discuss their relative trade-offs.
+4.2 -Diversity: Instantiations
+In this section, we will give two instantiations of the -diversity principle: entropy -diversity and recursive -diversity. After presenting the basic definitions, we’ll extend them to cases where some positive disclosure is allowed.
+The first instantiation of the -diversity principle, and the simplest one to
+describe, uses the information-theoretic notion of entropy:
+Definition 4.1 (Entropy -Diversity). [Ohrn and Ohno-Machado 1999] A table is Entropy -Diverse if, for every q  -block,
+
+−
+p(q  ,s) log( p(q  ,s ) ) ≥ log(),
+s∈S
+n 
+where p(q  ,s) =   (q n,s)   is the fraction of tuples in the q  -block with sensitive
+s ∈ S (q ,s )
+
+attribute value equal to s.
+
+As a consequence of this condition, every q  -block has at least  distinct values
+for the sensitive attribute. Using this definition, Figure 4 is actually 2.8-diverse.
+Entropy -diversity was first proposed by Ohrn and Ohno-Machado [1999]
+as a way of defending against the homogeneity problem (without considering
+the role of background knowledge). Note that entropy -diversity captures the
+notion of well represented groups due to the fact that entropy increases as
+frequencies become more uniform. We can also capture the role of background
+knowledge more explicitly with an alternate definition.
+Let s1 , . . . , sm be the possible values of the sensitive attribute S in a q  -block.
+Assume that we sort the counts n(q  ,s1 ) , . . ., n(q  ,sm ) in descending order and name
+the elements of the resulting sequence r1 , . . . , rm . One way to think about diversity is the following: the adversary needs to eliminate at least −1 possible
+values of S in order to infer a positive disclosure. This means that, for example,
+in a 2-diverse table, none of the sensitive values should appear too frequently.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+18
+
+•
+
+A. Machanavajjhala et al.
+
+We say that a q  -block is (c, 2)-diverse if r1 < c(r2 + · · · + rm ) for some userspecified constant c. For  > 2, we say that a q  -block satisfies recursive (c, )diversity if we can eliminate one possible sensitive value in the q  -block and
+still have a (c,  − 1)-diverse block. This recursive definition can be succinctly
+stated as follows.
+Definition 4.2 (Recursive (c, )-Diversity). In a given q  -block, let ri denote
+the number of times the ith most-frequent sensitive value appears in that
+q  -block. Given a constant c, the q  -block satisfies recursive (c, )-diversity if
+r1 < c(r + r+1 + · · · + rm ). A table T  satisfies recursive (c, )-diversity if every q  -block satisfies recursive -diversity. We say that 1-diversity is always
+satisfied.
+Now, both entropy and recursive -diversity may be too restrictive. To see
+why, let us first look at entropy -diversity. Since −x log(x) is a concave function, it can be shown that if we split a q  -block into two subblocks qa and qb ,
+then entropy(q ) ≥ min(entropy(qa ), entropy(qb )). This implies that in order for
+entropy -diversity to be possible, the entropy of the entire table must be at
+least log(). This might not be the case, especially if one value of the sensitive attribute is very common, for example, if 90% of the patients have heart
+problems as the value for the Medical Condition attribute.
+This is also a problem with recursive -diversity. It is easy to see that if 90%
+of the patients have heart problems as the value for the Medical Condition
+attribute, then there will be at least one q ∗ -block where heart problems will
+have frequency of at least 90%. Therefore, if we choose c < 9 in Definition 4.2,
+no generalization of the base table will satisfy recursive (c, )-diversity.
+On the other hand, some positive disclosures may be acceptable. For example,
+a clinic might be allowed to disclose that a patient has a heart problem because
+it is well known that most patients who visit the clinic have heart problems. It
+may also be allowed to disclose that Medical Condition = Healthy if this is not
+considered an invasion of privacy.
+At this point, one may be tempted to remove tuples with nonsensitive Medical
+Condition values, publish them unaltered, and then create an -diverse version
+of the remaining dataset. In some cases, this is acceptable. However, there
+are three important issues why this suggestion may not be acceptable: the
+anonymity of the unaltered tuples, the privacy of the remaining tuples, and the
+utility of the resulting published data.
+First, publishing unaltered tuples gives an adversary the ability to link them
+to external data and identify the corresponding individuals. This may be considered a privacy breach [Chawla et al. 2005] since it is reasonable for individuals
+to object to being identified as respondents in a survey. To avoid this, one could
+publish a k-anonymous version of tuples with nonsensitive Medical Condition
+values and a -diverse version of the rest of the table.
+Second, separating individuals with nonsensitive medical conditions from
+the rest can impact the individuals with sensitive medical conditions. As an
+extreme case, suppose Medical Condition can only take two values: healthy
+and sick. There is no way to achieve 2-diversity on the table of patients that
+are sick; if Alice knows Bob is in the table and Bob is not listed as a healthy
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+19
+
+patient, he must then be sick. More generally, separating records with sensitive
+values from records with nonsensitive values reduces the possible choices for
+the security parameter .
+A third issue with partitioning the data into two tables is related to the utility of the data for a researcher. Since each of the tables is smaller than the
+whole dataset, to satisfy k-anonymity and -diversity, the tables might have to
+be generalized more than if a single table had been anonymized. For instance,
+consider a table reporting the Gender and Medical Condition of 2,000 individuals, where the attribute Medical Condition can take three values: healthy,
+cancer, and hepatitis. In this table, there are 1,000 males and 1,000 females.
+700 of the 1,000 males are healthy, and the other 300 have Hepatitis. 700 of the
+1,000 females are Healthy, while the other 300 have cancer. If the disclosure
+of Medical Condition = healthy is not considered an invasion of privacy, then
+this table satisfies 2-diversity (and thus requires no further generalizations).
+In contrast, if we were to publish the healthy patients separately, we would
+need to suppress the gender information of the unhealthy individuals in order
+to achieve 2-diversity on the table containing the unhealthy patients. Additionally, if the data is separated, then the two resulting tables are likely to have
+different schemas. For example, one table may be generalized so that age appears as an interval of length 5 (i.e., 30–34) and only the first 4 digits of zip code
+are given, while the second table may give the full zip code but may generalize
+age to intervals of length 10. Learning from such data is not as straightforward
+as learning from a single table.
+Thus an alternate approach is needed to handle the case when some of the
+values in the domain of the sensitive attribute need not be kept private. To
+capture this notion that some positive disclosure is acceptable, let Y be the
+set of those sensitive values for which positive disclosure is allowed. We call
+Y a don’t-care set. Note that we are not worried about those values being too
+frequent. Let s y be the most-frequent sensitive value in the q  -block that is
+not in Y , and let r y be the associated frequency. Then the q  -block satisfies
+-diversity if we can eliminate the  − 2 most-frequent values of S not including
+r y , without making s y too frequent in the resulting set. Thus, if we remove the
+sensitive values with counts r1 , . . . , r y−1 , then the result is ( − y + 1)-diverse.
+This brings us to the following definition.
+Definition 4.3 (Positive Disclosure-Recursive (c, )-Diversity). Let Y ⊂ S
+be a don’t-care set. In a given q  -block, let the most-frequent sensitive value not
+in Y be the yth most-frequent sensitive value. Let ri denote the frequency of
+the ith most-frequent sensitive value in the q  -block. Such a q  -block satisfies
+pd-recursive (c, )-diversity when one of the following holds:
+— y ≤  − 1 and r y < c
+— y >  − 1 and r y < c
+
+m
+
+j =
+
+rj,
+
+y−1
+
+j = −1
+
+rj + c
+
+m
+
+j = y+1
+
+rj
+
+We denote the summations on the right-hand side of both conditions by
+tail q  (s y ).
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+20
+
+•
+
+A. Machanavajjhala et al.
+
+Now, note that if r y = 0, then the q  -block only has sensitive values that can be
+disclosed and so both conditions in Definition 4.3 are trivially satisfied. Second,
+note that if c > 1, then the second condition clearly reduces to just the condition
+y > −1 because r y ≤ r−1 . The second condition states that even though the −1
+most-frequent values can be disclosed, we still do not want r y to be too frequent
+if  − 2 of them have been eliminated (i.e., we want the result to be 2-diverse).
+To see this definition in action, suppose there are two values for Medical
+Condition, healthy and not healthy. If healthy is a don’t-care value, then (c, 2)diversity states that the number of sick patients in a q ∗ -block is less than c
+times the number of healthy patients or, equivalently, at most c +c 1 patients in
+a q ∗ -block are sick. Thus if c = 0.03, then at most 3% of the patients in any
+q ∗ -block are not healthy, and if c = 1, then at most half the patients in any
+q ∗ -block are not healthy.
+Entropy -diversity can also be extended to handle don’t-care sets. The description of entropy -diversity with don’t-care sets is a bit more involved, so before we present it, we shall briefly touch upon the subject of negative disclosure.
+Until now, we have treated negative disclosure as relatively unimportant
+compared to positive disclosure. However, negative disclosure can also be important. If W is the set of values for the sensitive attribute for which negative
+disclosure is not allowed, then, given a user-specified constant c2 < 100, we require that each s ∈ W appear in at least c2 -percent of the tuples in every q  -block,
+resulting in the following definition. This is incorporated into -diversity definitions in a straightforward way:
+Definition 4.4 (NPD-Recursive (c1 , c2 , )-Diversity). Let W be the set of sensitive values for which negative disclosure is not allowed. A table satisfies negative/positive disclosure-recursive (c1 , c2 , )-diversity (npd-recursive (c1 , c2 , )diversity) if it satisfies pd-recursive (c1 , )-diversity and if every s ∈ W occurs in
+at least c2 percent of the tuples in every q  -block.
+We conclude this section with a definition of entropy -diversity that uses
+don’t-care sets. The extension of entropy -diversity is more complicated than
+for recursive -diversity, but the motivation is similar. Let S be a sensitive
+attribute. Suppose we have a q ∗ -block q A where the values of S are s1 , s2 , . . . , sn
+with corresponding counts p1 , . . . , pn (note that, unlike before, we don’t require
+the counts to be sorted; thus pi is shorthand for n(q A ,si ) ). Furthermore, suppose s1
+belongs to the don’t-care set so that we can safely disclose the value of S when it
+equals s1 . If in this hypothetical q ∗ -block, 90% of the tuples have sensitive value
+s1 , then this block has a low entropy. Now consider a q ∗ -block q B with sensitive
+values s1 , s2 , . . . , sn with counts p1 , p2 , p3 , . . . , pn (where p1 > p1 ). The block q B
+is just like q A except that there are more tuples with the don’t-care value s1 .
+Intuitively, since s1 is a don’t-care value, q B cannot pose more of a disclosure
+risk that q A . Thus if we were free to adjust the value p1 , we should expect that
+disclosure risk does not decrease when we decrease p1 , and disclosure risk does
+not increase when we increase p1 . Treating p1 as a variable, let’s lower it from
+its initial setting in q A to the unique value p∗ that would maximize the entropy
+of the q ∗ -block. The original disclosure risk of q A cannot be any higher than the
+disclosure risk at the optimum value p∗ . We will compute the entropy at this
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+21
+
+optimum value p∗ and set the disclosure risk of q A to be this value. In the more
+general case (with more than one don’t-care value), we determine what the
+maximum entropy is that we would get if we lowered the counts corresponding
+to don’t-care values from their initial values. We call this maximum entropy
+value the adjusted entropy, and it will serve as the disclosure risk of the q ∗ -block:
+if the adjusted entropy is larger than log , then the block is considered -diverse.
+Before we formalize this, we should note that this type of argument will also
+yield our original definition for recursive -diversity in the presence of don’t-care
+sets. One can easily check that if p is the count of the most-frequent sensitive
+value (not in the don’t-care set) and φ1 , . . . , φr are the counts of don’t-care values
+that appear more frequently, the recursive -diversity procedure for don’t-care
+sets lowers the values φ1 , . . . , φr to set them equal to p , and then checks if the
+resulting block satisfies ordinary recursive -diversity.
+To formalize the notion of adjusted entropy,
+ we need the following notation.
+For nonnegative values x1 , . . . , xn such that
+xi = 1, denote the entropy as:
+m
+
+H(x1 , . . . , xn ) = −
+xi log xi ,
+i=1
+
+with the understanding that 0 log 0 = 0. For arbitrary nonnegative numbers
+x1 , . . . , xn , denote the normalized entropy as:
+n
+
+xi
+xi
+n
+Ĥ(x1 , . . . , xn ) = −
+.
+(9)
+log n
+j =1 xj
+j =1 xj
+i=1
+First, we define adjusted entropy, and then show how to compute it.
+Definition 4.5 (Adjusted Entropy). Let S be a sensitive attribute with
+don’t-care values y 1 , . . . , yr and sensitive values s1 , . . . , sm . Let q A be a q ∗ -block
+where the don’t-care values y i have counts φi and the sensitive values s j have
+counts p j . The adjusted entropy of q A is defined as:
+Ĥ(x1 , . . . , xr , p1 , . . . , pm )
+sup
+(10)
+0≤xi ≤φi ; i = 1,...,r
+
+The maximizing values of the xi in Definition 4.5 are closely related to the
+function
+k
+k
+
+
+M (c1 , . . . , ck ) =
+ci log ci
+ci ,
+i=1
+
+i=1
+
+which we call the log-entropic mean of c1 , . . . , ck (because it is the weighted
+average of their logarithms).3 We show that there exists a unique vector
+(c1 , c2 , . . . , cr ) that maximizes Equation (10), and we can characterize it with
+the following theorem.
+THEOREM 4.1. There is a unique vector (c1 , c2 , . . . , cr ) such that the assignment xi = ci maximizes Equation (10). Furthermore, let θ = max({φi | ci = φi } ∪
+{0}). If φ j ≤ θ , then c j = φ j . If φ j > θ , then log c j is the log-entropic mean of the set
+{ p1 , . . . , pm } ∪ {φi | φi = ci }, and θ is the minimum value for which this condition
+can be satisfied.
+3 Note that the log-entropic mean is the logarithm of a weighted geometric mean of the c , which
+i
+
+itself belongs to a general class of means called the entropic means [Ben-Tal et al. 1989].
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+22
+
+•
+
+A. Machanavajjhala et al.
+
+Algorithm 1: AdjustedEntropy(φ1 , . . . , φr , p1 , . . . , pm )
+Require: φi ≥ 0, p j ≥ 0
+1: for all i = 1, . . . , r do
+2: xi ← φi
+3: end for
+4: fixed ← { p1 , . . . , pm }
+5: changeable ← {x1 , . . . , xr }
+6: m ← M (fixed)
+7: while log(min(changeable)) < m do
+8: i = argmin j :x j ∈ changeable x j
+9: fixed = fixed ∪ {xi }
+10: changeable = changeable \ {xi }
+11: m ← M (fixed)
+12: end while
+13: for all xi ∈ changeable do
+14: xi ← em
+15: end for
+16: return Ĥ(x1 , . . . , xr , p1 , . . . , pm )
+
+The proof of this theorem is rather technical and can be found in Appendix
+A. This theorem tells us that some coordinates will achieve their upper bound
+φi (i.e., they will not be lowered from their initial values). We call these the fixed
+coordinates. The rest of the coordinates, called the changeable coordinates, will
+be adjusted down until their logarithms equal the log-entropic mean of the fixed
+coordinates and the counts of the sensitive values (in particular, it means that
+if c j is the value of an unchangeable coordinate, then log φ j must be larger than
+that log-entropic mean). The theorem also tells us that there is a cutoff value
+θ such that all coordinates with upper bound > θ will be changeable and the
+rest will be fixed. Finally, the theorem also tells us that we should choose the
+minimum cutoff value for which this is possible.
+The computation of adjusted entropy is shown in Algorithm 1. We illustrate
+the algorithm with a sample run-through. Suppose there are four don’t-care
+values y 1 , y 2 , y 3 , and y 4 with counts 11, 10, 3, and 2, respectively, and suppose there are two sensitive values s1 and s2 with counts 3 and 4, respectively.
+Initially, we compute the log-entropic mean of s1 and s2 , which is 1.263. Now,
+y 4 has the smallest count among don’t-care values, and log y 4 = 0.693 which is
+less than the log-entropic mean. We conclude that y 4 is a fixed value, and we
+compute the log-entropic mean of { y 4 , s1 , s2 }, which is 1.136. Now, y 3 has the
+next smallest count among don’t-care values. The value log y 3 is 1.099, which is
+less than the new log-entropic mean. Thus y 3 is also fixed, and we compute the
+log-entropic mean of { y 4 , y 3 , s1 , s2 } which is 1.127. The next value we consider
+is y 2 . Now log y 2 = 2.30, which is greater than the log-entropic mean. Thus y 2
+and y 1 are the changeable values, and the cutoff θ described by Theorem 4.1
+must be 3 (the value of y 3 ). Thus the adjusted entropy should be the normalized
+entropy of {e1.127 , e1.127 , y 3 , y 4 , s1 , s2 }.
+Clearly the definition of adjusted entropy is consistent with entropy diversity when there are no don’t-care values. Thus to verify correctness of
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+23
+
+the algorithm, we just need to prove Theorem 4.1. The interested reader may
+find the proof in Appendix A.
+4.3 Multiple Sensitive Attributes
+Multiple sensitive attributes present some additional challenges. Suppose S
+and V are two sensitive attributes, and consider the q  -block with the following
+tuples: {(q  , s1 , v1 ), (q  , s1 , v2 ), (q  , s2 , v3 ), (q  , s3 , v3 )}. This q  -block is 3-diverse
+(actually recursive (2,3)-diverse) with respect to S (ignoring V ) and 3-diverse
+with respect to V (ignoring S). However, if we know that Bob is in this block
+and his value for S is not s1 , then his value for attribute V cannot be v1 or v2 ,
+and, therefore, must be v3 . One piece of information destroyed his privacy. Thus
+we see that a q ∗ -block that is -diverse in each sensitive attribute separately
+may still violate the principle of -diversity.
+Intuitively, the problem occurred because within the q ∗ -block, V was not well
+represented for each value of S. Had we treated S as part of the quasi-identifier
+when checking for diversity in V (and vice versa), we would have ensured that
+the -diversity principle held for the entire table. Formally, the definition is as
+follows.
+Definition 4.6 (Multi-Attribute -Diversity). Let T be a table with
+nonsensitive attributes Q 1 , . . . , Q m1 and sensitive attributes S1 , . . . , Sm2 . We
+say that T is -diverse if for all i = 1 . . . m2 , the table T is -diverse when Si is
+treated as the sole sensitive attribute and {Q 1 , . . . , Q m1 , S1 , . . . , Si−1 , Si+1 , . . . ,
+Sm2 } is treated as the quasi-identifier.
+As the number of sensitive attributes grows, it is not hard to see that we
+will necessarily need larger and larger q ∗ -blocks to ensure diversity. This
+problem may be ameliorated through tuple suppression, generalization on
+the sensitive attributes, and publishing marginals (rather than the full table) containing different sensitive attributes. This is a subject for future
+work.
+4.4 Discussion
+Recall that we started our journey into Section 4 motivated by the weaknesses
+of Bayes-optimal privacy. Let us now revisit these issues one by one.
+— -Diversity no longer requires knowledge of the full distribution of the sensitive and nonsensitive attributes.
+— -Diversity does not even require the data publisher to have as much information as the adversary. The parameter  protects against more knowledgeable
+adversaries; the larger the value of , the more information is needed to rule
+out possible values of the sensitive attribute.
+— Instance-level knowledge (Bob’s son tells Alice that Bob does not have diabetes) is automatically covered. It is treated as just another way of ruling out
+possible values of the sensitive attribute.
+— Different adversaries can have different background knowledge leading to
+different inferences. -Diversity simultaneously protects against all of them
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+24
+
+•
+
+A. Machanavajjhala et al.
+
+without the need for checking which inferences can be made with which levels
+of background knowledge.
+Overall, we believe that -diversity is practical, easy to understand, and addresses the shortcomings of k-anonymity with respect to the background knowledge and homogeneity attacks. Let us now see whether we can give efficient
+algorithms to implement -diversity. We will see that, unlike Bayes-optimal
+privacy, -diversity possesses a property called monotonicity. We define this
+concept in Section 5, and we show how this property can be used to efficiently
+generate -diverse tables.
+5. IMPLEMENTING PRIVACY-PRESERVING DATA PUBLISHING
+In this section we, discuss how to build algorithms for privacy-preserving data
+publishing using domain generalization. Let us first review the search space for
+privacy-preserving data publishing using domain generalization [Bayardo and
+Agrawal 2005; LeFevre et al. 2005]. For ease of explanation, we will combine
+all the nonsensitive attributes into a single multidimensional attribute Q. For
+attribute Q, there is a user-defined generalization lattice. Formally, we define a
+generalization lattice to be a set of domains partially ordered by a generalization
+relation ≺G (as described in Section 2). The bottom element of this lattice is
+domain(Q), and the top element is the domain where each dimension of Q is
+generalized to a single value. Given a base table T , each domain D Q in the
+lattice defines an anonymized table T  which is constructed by replacing each
+tuple t ∈ T by the tuple t  , such that the value t  [Q] ∈ D Q is the generalization
+of the value t[Q] ∈ domain(Q). An algorithm for data publishing should find a
+point on the lattice such that the corresponding generalized table T  preserves
+privacy and retains as much utility as possible. In the literature, the utility of
+a generalized table is usually defined as a distance metric on the lattice—the
+closer the lattice point is to the bottom, the larger the utility of the corresponding
+table T  . Hence, finding a a suitable anonymized table T  is essentially a lattice
+search problem. There has been work on search strategies for k-anonymous
+tables that explore the lattice top-down [Bayardo and Agrawal 2005] or bottomup [LeFevre et al. 2005].
+In general, searching the entire lattice is computationally intractable. However, lattice searches can be made efficient if there is a stopping condition of
+the form: if T  preserves privacy, then every generalization of T  also preserves
+privacy [LeFevre et al. 2005; Samarati and Sweeney 1998]. This is called the
+monotonicity property, and it has been used extensively in frequent itemset mining algorithms [Agrawal and Srikant 1994]. k-anonymity satisfies the monotonicity property, and it is this property which guarantees the correctness of all
+efficient algorithms [Bayardo and Agrawal 2005; LeFevre et al. 2005]. Thus, if
+we show that -diversity also possesses the monotonicity property, then we can
+reuse these efficient lattice search algorithms to find the -diverse table with
+optimal utility. The same cannot be said of Bayes-optimal privacy. The following theorem gives a computational reason why Bayes-optimal privacy does not
+lend itself to efficient algorithmic implementations.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+s1
+s2
+
+q1
+f (q1 , s1 ) = .15
+n(q1 ,s1 ) = 1
+f (q1 , s2 ) = .35
+n(q1 ,s2 ) = 1
+
+•
+
+25
+
+q2
+f (q2 , s1 ) = .25
+n(q2 ,s1 ) = 35
+f (q2 , s2 ) = .25
+n(q2 ,s2 ) = 15
+
+Fig. 5. Table T .
+
+s1
+s2
+
+q
+f (q  , s1 ) = .4
+n(q ,s1 ) = 36
+f (q  , s2 ) = .6
+n(q ,s2 ) = 16
+
+Fig. 6. Table T  .
+
+THEOREM 5.1.
+property.
+
+Bayes-optimal privacy does not satisfy the monotonicity
+
+PROOF. We shall prove this theorem for the ρ1 − ρ2 version of the Bayesoptimal privacy definition (see Definition 3.3 and Evfimievski et al. [2003]);
+the proof can easily be extended to other instantiations. We set ρ1 = 0.31 and
+ρ2 = 0.58, and we will create an example where the prior belief a(q,s) < ρ1 , but
+the observed belief is β(q,s,T  ) > ρ2 .
+First consider Figure 5 which shows a base table T , with two values for Q
+and two values for S.
+Based on this information, we can compute the prior and observed beliefs for
+table T :
+— α(q1 ,s1 ) = .3, β(q1 ,s1 ,T ) = .5,
+— α(q1 ,s2 ) = .7, β(q1 ,s2 ,T ) = .5,
+— α(q2 ,s1 ) = .5, β(q2 ,s1 ,T ) = .7,
+— α(q2 ,s2 ) = .5, β(q2 ,s2 ,T ) = .3.
+Clearly, publishing T does not breach privacy. However, suppose we generalized
+T by generalizing both q1 and q2 to q  , as in Figure 6.
+If Bob has nonsensitive value q1 , then as before, α(q1 ,s1 ) = .3 < ρ1 . However,
+β(q1 ,s1 ,T  ) =
+
+36 .15
+.4
+
+36 .15
++ 16 .35
+.4
+.6
+
+>
+
+13.5
+> .59 > ρ2 .
+13.5 + 9.34
+
+Thus while publishing T would not cause a privacy breach, publishing T  would.
+This counterexample proves that Bayes-optimal privacy is not monotonic.
+This seemingly counterintuitive result has a simple explanation. Note that
+there are many more tuples t with t[Q] = q2 than there are with t[Q] = q1 . This
+causes the probabilistic behavior of the q  -block in T  to be heavily influenced
+by the tuples with t[Q] = s2 and so it pulls the value of β(q1 ,s1 ,T  ) = β(q2 ,s1 ,T  ) closer
+to β(q2 ,s1 ,T ) (this can be verified with Equation (1) for observed belief). Since the
+prior belief α(q1 ,s1 ) doesn’t change, and since α(q1 ,s1 ) and α(q2 ,s1 ) are very different,
+we get a privacy breach from publishing T  but not from publishing T .
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+26
+
+•
+
+A. Machanavajjhala et al.
+
+-diversity
+THEOREM 5.2 (MONOTONICITY OF ENTROPY -DIVERSITY). Entropy
+satisfies the monotonicity property: if a table T  satisfies entropy -diversity,
+then any generalization T  of T  also satisfies entropy -diversity.
+Theorem 5.2 follows from the fact that entropy is a concave function. Thus if
+the q  -blocks q1 , . . . , qd from table T  are merged to form the q  -block q  of
+table T  , then the entropy(q ) ≥ mini (entropy(qi )).
+THEOREM 5.3 (MONOTONICITY OF NPD RECURSIVE -DIVERSITY). The npd recursive (c1 , c2 , )-diversity criterion satisfies the monotonicity property: if a table
+T  satisfies npd recursive (c1 , c2 , )-diversity, then any generalization T  of T 
+also satisfies npd recursive (c1 , c2 , )-diversity.
+PROOF. We shall prove this for the case where T ∗∗ is derived from T ∗ by
+merging two q  -blocks; the general case follows by induction. Let qa and qb
+be the q  -blocks of T  that are merged to form the q  -block q  of table T  .
+The frequencies of the sensitive values in q  is the sum of the corresponding
+frequencies in qa and qb .
+First, let us consider negative disclosures. If every sensitive value s ∈ W occurs in at least c2 percent of the tuples in qa and qb , then surely s should also
+occur in at least a c2 percent of the tuples in the q  .
+Next let us consider positive disclosures. Let Y be the set of sensitive values
+for which positive disclosure is allowed. Let s y be the most-frequent sensitive
+value in q  that does not appear in Y . Let s ya and s yb be the most-frequent
+sensitive values in qa and qb , respectively, which are not in Y . Clearly if r y , r ya ,
+and r yb are the respective counts, then
+r y ≤ r ya + r yb .
+We also know that the q -blocks qa and qb -block are (c1 , )-diverse (by hypothesis). Hence
+
+
+r ya ≤ c1 tailqa (s ya )
+r yb ≤ c1 tailqb (s yb ).
+We are done if we prove that r y ≤ c1 tailq  (s y ). Since s ya is at least as frequent
+as s y in qa (and similarly for s yb ), then by the definition of tailq  , we have
+tailqa (s y ) ≥ tailqa (s ya )
+tailqb (s y ) ≥ tailqb (s yb )
+tailq  (s y ) = tailqa (s y ) + tailqb (s y ).
+Hence
+r y ≤ r ya + r yb
+≤ c1 (tailqa (s ya ) + tailqb (s yb ))
+≤ c1 (tailqa (s y ) + tailqb (s y ))
+= c1 tailq  (s y )
+and so the q  -block q  is npd (c1 , c2 , )-diverse.
+We can also show that entropy -diversity with don’t-care sets satisfies
+the monotonicity property and is therefore amenable to efficient algorithms.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+27
+
+We will first need the following two results which will let us conclude that
+Ĥ(x + y ) ≥ min( Ĥ(x ), Ĥ( y )).
+LEMMA 5.1. Let a1 , . . . , an be nonnegative numbers that add up to 1. Let b1 ,
+. . . , bn be nonnegative numbers that add up to 1. Then for any t ∈ [0, 1],
+Ĥ(ta1 + (1 − t)b1 , . . . , tan + (1 − t)bn ) = −
+
+n
+
+
+[tai + (1 − t)bi ] log[tai + (1 − t)bi ]
+
+i=1
+n
+
+
+≥ −t
+
+−ai log ai
+
+− (1 − t)
+
+i=1
+
+n
+
+
+bi log bi
+
+i=1
+
+= t Ĥ(a1 , . . . , an ) + (1 − t) Ĥ(b1 , . . . , bn )
+≥ min( Ĥ(a1 , . . . , an ), Ĥ(b1 , . . . , bn ))
+with the understanding that 0 log 0 = 0.
+PROOF.
+
+This follows immediately from the fact that −x log x is concave.
+
+COROLLARY 5.1. Let a1 , . . . , an be nonnegative numbers (at least one of which
+is nonzero), and let b1 , . . . , bn be nonnegative numbers (at least one of which is
+nonzero). Then
+Ĥ(a1 + b1 , a2 + b2 , . . . , an + bn ) ≥ min( Ĥ(a1 , . . . , an ), Ĥ(b1 , . . . , bn )).
+
+
+PROOF. Let A = in= 1 ai and B = in= 1 bi . Then by definition,
+Ĥ(a1 , . . . , an ) =H(a1 /A, . . . , an /A), and Ĥ(b1 , . . . , bn ) = Ĥ(b1 /B, . . . , bn /B),
+and Ĥ(a1 + b1 , . . . , an + bn ) = Ĥ((a1 + b1 )/(A + B), . . . , (an + bn )/(A + B)).
+Furthermore, let t = A/(A + B). Then (ai + bi )/(A + B) = t(ai /A) + (1 − t)(bi /B).
+Applying Lemma 5.1, we get
+Ĥ(a1 + b1 , . . . , an + bn ) = Ĥ((a1 + b1 )/(A + B), . . . , (an + bn )/(A + B))
+≥ min( Ĥ(a1 /A, . . . , an /A), Ĥ(b1 /B, . . . , bn /B))
+= min( Ĥ(a1 , . . . , an ), Ĥ(b1 , . . . , bn )).
+THEOREM 5.4 (MONOTONICITY OF ENTROPY -DIVERSITY WITH DON’T-CARE SETS).
+Entropy -diversity with don’t-care sets satisfies the monotone property.
+Given a don’t-care set Y , if a table T  satisfies entropy -diversity, then any
+generalization T  of T  also satisfies entropy -diversity.
+PROOF. The proof of monotonicity is an easy consequence of the following
+result: if q1 and q2 are q  -blocks, and if q3 is the q  -block formed by merging q1
+and q2 , then the adjusted entropy of q3 is greater than or equal to the minimum
+of the adjusted entropies of q1 and q2 . Therefore, this is what we aim to prove.
+Let q1 and q2 be q  blocks. Let s1 , . . . , sn be the sensitive values that appear in
+q1 and q2 , and let a1 , . . . , an be their counts in q1 , and b1 , . . . , bn be their counts
+in q2 . Let ai be the values used to compute the adjusted entropy for q1 , and
+bi be the values used to compute adjusted entropy for q2 . Note that for all i,
+ai ≥ ai and bi ≥ bi . Furthermore ai > ai or bi > bi only if si is a don’t-care value
+(by construction). When we merge q1 and q2 , the new counts are (ai + bi ). By
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+28
+
+•
+
+A. Machanavajjhala et al.
+
+Corollary 5.1,
+
+
+
+
+Ĥ a1 + b1 , a2 + b2 , . . . , an + bn ≥ min Ĥ a1 , . . . , an , Ĥ b1 , . . . , bn .
+
+Now ai + bi ≥ ai + bi and ai + bi > ai + bi only if si is a don’t-care value. Since
+the adjusted entropy is the maximum entropy we can achieve by lowering the
+counts associated with the don’t-care values, this means that the adjusted entropy for the group with counts ai + bi is at least Ĥ(a1 + b1 , a2 + b2 , . . . , an + bn ).
+Thus the adjusted entropy of the merged group is larger than or equal to the
+minimum adjusted entropy of q1 and q2 .
+Thus to create an algorithm for -diversity, we can take an algorithm for
+k-anonymity that performs a lattice search, and we make the following change.
+Every time a table T  is tested for k-anonymity, we check for -diversity instead. Since -diversity is a property that is local to each q  -block, and since all
+-diversity tests are solely based on the counts of the sensitive values, this test
+can be performed very efficiently.
+We emphasize that this is only one way of generating -diverse tables and it is
+motivated by the structural similarities between k-anonymity and -diversity.
+Alternatively, one can postprocess a k-anonymous table and suppress groups
+that are not -diverse or suppress tuples in groups until all groups are -diverse,
+one can directly modify a k-anonymity algorithm that uses suppression into an
+-diversity algorithm, or one can devise a completely new algorithm.
+6. EXPERIMENTS
+In our experiments, we used an implementation of Incognito, as described in
+LeFevre et al. [2005], for generating k-anonymous tables. We modified this
+implementation so that it produces -diverse tables as well. Incognito is implemented in Java and uses the database manager IBM DB2 v8.1 to store its data.
+All experiments were run under Linux (Fedora Core 3) on a machine with a
+3GHz Intel Pentium 4 processor and 1GB RAM.
+We ran our experiments on the Adult Database from the UCI Machine Learning Repository [Repository] and the Lands End Database. The Adult Database
+contains 45,222 tuples from US Census data and the Lands End Database contains 4,591,581 tuples of point-of-sale information. We removed tuples with
+missing values and adopted the same domain generalizations as LeFevre et al.
+[2005]. Figures 7 and 8 provide a brief description of the data including the
+attributes we used, the number of distinct values for each attribute, the type
+of generalization that was used (for nonsensitive attributes), and the height of
+the generalization hierarchy for each attribute.
+Homogeneity Attack. In Figures 9, 10, 11, and 12, we illustrate the homogeneity attacks on k-anonymized datasets using the Lands End and Adult databases.
+For the Lands End Database, we treated {zipcode, order date, gender, style,
+price} as the quasi-identifier. We partitioned the cost attribute into 147 buckets
+by rounding to the nearest 100 and used this as the sensitive attribute. For
+the Adults database, we used {age, gender, race, marital status, education} as
+the quasi-identifier and salary class as the sensitive attribute. For values of
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+Attribute
+1
+2
+3
+4
+5
+6
+7
+8
+9
+
+Domain
+size
+74
+2
+5
+7
+16
+41
+7
+2
+14
+
+Age
+Gender
+Race
+Marital Status
+Education
+Native Country
+Work Class
+Salary class
+Occupation
+
+Generalizations
+type
+ranges-5,10,20
+Suppression
+Suppression
+Taxonomy tree
+Taxonomy tree
+Taxonomy tree
+Taxonomy tree
+Sensitive att.
+Sensitive att.
+
+•
+
+29
+
+Ht.
+4
+1
+1
+2
+3
+2
+2
+
+Fig. 7. Description of Adults database.
+
+Attribute
+1
+2
+3
+4
+5
+6
+7
+8
+
+Zipcode
+Order date
+Gender
+Style
+Price
+Quantity
+Shipment
+Cost
+
+Domain
+size
+31953
+320
+2
+1509
+346
+1
+2
+147
+
+Generalizations
+type
+Round each digit
+Taxonomy tree
+Suppression
+Suppression
+Round each digit
+Suppression
+Suppression
+Sensitive att.
+
+Ht.
+5
+3
+1
+1
+4
+1
+1
+
+Fig. 8. Description of Lands End database.
+
+k
+2
+5
+10
+15
+20
+30
+50
+
+Aﬀected
+/Total tables
+8/8
+11/12
+10/12
+7/8
+8/10
+7/10
+5/5
+
+Avg. Gps.
+Aﬀected
+7.38
+3.58
+1.75
+2.12
+1.20
+0.90
+1.00
+
+Avg. Tuples
+Aﬀected
+558.00
+381.58
+300.42
+317.25
+228.20
+215.40
+202.80
+
+Fig. 9. Effect of homogeneity attack on the Adults database.
+k
+2
+5
+10
+15
+20
+30
+50
+
+Aﬀected
+/Total tables
+2/3
+2/3
+2/2
+2/2
+1/2
+1/2
+1/3
+
+Avg. Gps.
+Aﬀected
+12.3
+12.3
+18.5
+18.5
+2.5
+2.5
+0.6
+
+Avg. Tuples
+Aﬀected
+2537.6
+2537.6
+3806.5
+3806.5
+1750
+1750
+1156
+
+Fig. 10. Effect of homogeneity attack on the Lands End database.
+
+k = 2, 5, 10, 15, 20, 30, 50, we then generated all k-anonymous tables that were
+minimal with respect to the generalization lattice (i.e., no table at a lower level
+of generalization was k-anonymous).
+Figures 9 and 10 show an analysis of groups in k-anonymous tables that are
+completely homogeneous in the Adults and Lands End databases, respectively,
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+30
+
+•
+
+A. Machanavajjhala et al.
+k
+2
+5
+10
+15
+20
+30
+50
+
+Aﬀected
+/Total tables
+8/8
+12/12
+12/12
+8/8
+10/10
+10/10
+5/5
+
+Avg. Gps.
+Aﬀected
+20.50
+12.67
+7.83
+8.88
+7.10
+5.50
+5.80
+
+Avg. Tuples
+Aﬀected
+13574.5
+13328.3
+10796.5
+12009.4
+11041.0
+11177.0
+8002.0
+
+Fig. 11. Effect of 95% homogeneity attack on the Adults database.
+
+k
+2
+5
+10
+15
+20
+30
+50
+
+Aﬀected
+/Total tables
+2/3
+2/3
+2/2
+2/2
+1/2
+1/2
+1/3
+
+Avg. Gps.
+Aﬀected
+13.0
+13.0
+19.5
+19.5
+3.0
+3.0
+1.0
+
+Avg. Tuples
+Aﬀected
+2825.33
+2825.33
+4238.00
+4238.00
+2119.00
+2119.00
+1412.66
+
+Fig. 12. Effect of 95% homogeneity attack on the Lands End database.
+
+while Figures 11 and 12 show a corresponding analysis of groups in kanonymous tables that are nearly homogeneous (i.e., the most frequent sensitive value s in a group appears in at least 95% of the tuples in the group).
+Both cases should be avoided since an adversary would believe, with near certainty, that an individual in a homogeneous or nearly homogeneous group has
+the sensitive value s that appears most frequently. Note that the minority (i.e.,
+≤ 5%) of the individuals in nearly homogeneous groups whose sensitive values
+are not s are also affected even though the best inference about them (that they
+have s) is wrong. As a concrete example, consider the case when s = AI DS. An
+individual that values privacy would not want to be associated with s with near
+certainty regardless of whether the true value is s. In the four tables shown
+in Figures 9, 10, 11, and 12, the first column indicates the value of k. The
+second column shows the number of minimal k-anonymous tables that have
+groups that are completely homogeneous (Figures 9 and 10) or 95% homogenous (Figures 11 and 12). The third column shows the average number of such
+groups per minimal k-anonymous table. The fourth column shows the average
+number of tuples per minimal k-anonymous table that were affected by the two
+homogeneity attacks. As we can see from Figures 9, 10, 11 and 12, the homogeneity attack is a real concern, affecting a very large fraction of both datasets.
+Even for relatively large values of k (such as 30 and 50), many tables still had
+nearly homogeneous groups.
+Note that the average number of affected groups, average number of affected
+tuples, etc., are not strictly decreasing functions of k. In particular, tables with
+small values of affected tuples are sometimes close to each other in the lattice of
+k-anonymous tables and may be generalized to the same table when k increases
+(thus reducing the total number of “safe” tables).
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+Time (minutes)
+
+6
+
+•
+
+31
+
+Entropy l-diversity (l=6)
+k-Anonymity (k=6)
+
+5
+4
+3
+2
+1
+0
+3
+
+4
+5
+6
+7
+Size of Quasi-Identifier
+
+8
+
+Fig. 13. Adults database.
+
+Time (minutes)
+
+30
+
+Entropy l-diversity (l=6)
+k-Anonymity (k=6)
+
+25
+20
+15
+10
+5
+0
+3
+
+4
+5
+6
+Size of Quasi-Identifier
+
+7
+
+Fig. 14. Lands End database.
+
+Performance. In our next set of experiments, we compare the running times
+of entropy -diversity and k-anonymity. The results are shown in Figures 13
+and 14. For the Adult database, we used occupation as the sensitive attribute,
+and for Lands End we used cost. We varied the quasi-identifier size from 3
+attributes up to 8 attributes; a quasi-identifier of size j consisted of the first
+j attributes of its dataset as listed in Figures 7 and 8. We measured the time
+taken to return all 6-anonymous tables and compared it to the time taken to
+return all 6-diverse tables. In both datasets, the running times for k-anonymity
+and -diversity were similar. Sometimes the running time for -diversity was
+faster, which happened when the algorithm pruned parts of the generalization
+lattice earlier than it did for k-anonymity.
+Utility. The next set of experiments compare the utility of anonymized tables which are k-anonymous, entropy -diverse or recursive (3, )-diverse. We
+use the Adults database in all the experiments with sensitive attribute occupation. For the purposes of comparison, we set k =  and experimented with
+the following values of  (and hence k): 2, 4, 6, 8, 10. The sensitive attribute
+occupation takes only 14 values. Hence, there is no table which can be more
+than 14-diverse for any reasonable definition of diversity. Since some of the values appeared very infrequently, we found that there is no generalization of the
+Adults database that is recursive (3, )-diverse for  = 12. We also found that
+the marginal distribution of the sensitive attribute is entropy 10.57-diverse.
+This means that no generalization of the Adults database can be more than
+entropy 10.57-diverse unless the entire dataset is suppressed.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+32
+
+•
+
+A. Machanavajjhala et al.
+
+The utility of a dataset is difficult to quantify. As a result, we used four
+different metrics to gauge the utility of the generalized tables–generalization
+height, average group size, discernibility, and KL-divergence. The first metric,
+generalization height [LeFevre et al. 2005; Samarati 2001], is the height of an
+anonymized table in the generalization lattice; intuitively, it is the number of
+generalization steps that were performed. The second metric is the average size
+of the q ∗ -blocks generated by the anonymization algorithm. The third metric is
+the discernibility metric [Bayardo and Agrawal 2005]. The discernibility metric
+measures the number of tuples that are indistinguishable from each other.
+Each tuple in a q ∗ -block Bi incurs a cost |Bi |, and each tuple that is completely
+suppressed incurs a cost |D| (where D is the original dataset). Since we did not
+perform any tuple suppression, the discernibility metric is equivalent to the
+sum of the squares of the sizes of the q ∗ -blocks.
+Neither generalization height, average group size, or discernibility take
+the data distribution into account. For this reason, we also use the KLdivergence, which is described next. In many data-mining tasks, we would
+like to use the published table to estimate the joint distribution of the attributes. Now, given a table T with categorical attributes A1 , . . . , Am , we can
+view the data as an independent and identically-distributed sample from an
+m-dimensional distribution F . We can estimate this F with the empirical distribution F̂ , where F̂ (x1 , . . . , xm ) is the fraction of tuples t in the table such
+that t.A1 = x1 , . . . , t.Am = xm . When a generalized version of the table is published, the estimate changes to F̂  by taking into account the generalizations
+used to construct the anonymized table T  (and making the uniformity assumption for all generalized tuples sharing the same attribute values). If the tuple
+
+t = (x1 , . . . , xm ) is generalized to t  = (x1 , . . . , xm
+), then F̂  (x1 , . . . , xm ) is given by
+F̂  (x1 , . . . , xm ) =
+
+|{t  ∈ T  }|
+|T  | × area(t  )
+
+,
+
+m
+
+where, area(x1 , . . . , xm
+) = i=1
+|{xi ∈ Ai | xi is generalized to xi }|.
+To quantify the difference between the two distributions F̂ and F̂ ∗ , we use
+the Kullback-Leibler divergence (KL-divergence) which is defined as
+
+x ∈ A1 ×···×Am
+
+F̂ (x) log
+
+F̂ (x)
+,
+F̂  (x)
+
+where 0 log 0 is defined to be 0. The KL-divergence is nonnegative and is 0 only
+when the two estimates are identical.
+In Figures 15, 16, 17, and 18, we show the minimum generalization height,
+average group size, and discernibility of k-anonymous, entropy -diverse, and
+recursive (3, )-diverse tables for  = k = 2, 4, 6, 8, 10, while Figures 19 and
+20 show our results for KL-divergence. For each graph in Figures 15, 16,
+17, 18, and 19, we performed the anonymizations on a 5% subsample of the
+original data, while Figure 20 shows results for anonymization of the entire
+dataset.
+Before explaining why it was necessary to subsample the data, we should first
+note that, in general, the graphs show that ensuring diversity in the sensitive
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+10
+
+33
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+8
+Minimum Ht.
+
+•
+
+6
+4
+2
+0
+
+2
+
+Min. Avg. Gp. Size
+
+2,500
+2,000
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+1,500
+1,000
+500
+0
+
+5.00
+Discernibility Cost (x 10^6)
+
+4
+6
+8
+Parameter Values for k,l
+
+4.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+3.00
+2.00
+1.00
+0.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+Fig. 15. Adults database. Q = {age, gender, race}.
+
+attribute does not require many more generalization steps than for k-anonymity
+(note that an -diverse table is automatically -anonymous); the minimum generalization heights for identical values of k and  were usually identical. Nevertheless, we found that generalization height was not an ideal utility metric
+because tables with small generalization heights can still have very large group
+sizes. For example, using full-domain generalization on the Adult database with
+the quasi-identifier {age, gender, race, marital status, education}, we found minimal (with respect to the generalization lattice) 4-anonymous tables that had
+average group sizes larger than 1,000 tuples. The large groups were caused
+by data skew. For example, there were only 114 tuples with age between 81
+and 90, while there were 12,291 tuples with age between 31 and 40. So if
+age groups of length 5 (i.e., [1–5], [6–10], [11–15], etc) were generalized to age
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+34
+
+•
+
+A. Machanavajjhala et al.
+12
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+Minimum Ht.
+
+10
+8
+6
+4
+2
+0
+
+2
+
+Min. Avg. Gp. Size
+
+2,500
+2,000
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+1,500
+1,000
+500
+0
+
+5.00
+Discernibility Cost (x 10^6)
+
+4
+6
+8
+Parameter Values for k,l
+
+4.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+3.00
+2.00
+1.00
+0.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+Fig. 16. Adults database. Q = {age, gender, race, marital status}.
+
+groups of length 10 (i.e., [1–10], [11–20], etc), we would end up with very large
+q ∗ -blocks.4
+Thus, to better understand the loss of utility due to domain generalization,
+we chose to study a subsample of the Adults database with a lesser data skew
+in the age attribute. It turned out that a 5% Bernoulli subsample of the Adult
+database suited our requirements, that is, most of the age values appeared in
+around 20 tuples each, while only a few values appeared in less than 10 tuples
+each. The second and third graphs in each of Figures 15, 16, 17, and 18 show
+4 Generalization hierarchies that are aware of data skew may yield higher quality anonymizations.
+
+This is a promising avenue for future work because some recent algorithms [Bayardo and Agrawal
+2005] can handle certain dynamic generalization hierarchies.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+35
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+14
+12
+Minimum Ht.
+
+•
+
+10
+8
+6
+4
+2
+0
+
+2
+
+Min. Avg. Gp. Size
+
+2,500
+2,000
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+1,500
+1,000
+500
+0
+
+5.00
+Discernibility Cost (x 10^6)
+
+4
+6
+8
+Parameter Values for k,l
+
+4.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+3.00
+2.00
+1.00
+0.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+Fig. 17. Adults database. Q = {age, gender, race, marital status, education}.
+
+the minimum average group size and the discernibility metric cost, respectively,
+of k-anonymous and -diverse tables for k,  = 2, 4, 6, 8, 10. Smaller values for
+utility metrics represent higher utility. We found that the best t-anonymous and
+t-diverse tables often (but not always) had comparable utility. It is interesting
+to note that recursive (3, )-diversity permits tables which have better utility
+than entropy -diversity. Recursive (c, )-diversity is generally less restrictive
+than entropy -diversity, because the extra parameter, c, allows us to control
+how much skew is acceptable in a q ∗ -block. Since there is still some residual
+skew even in our 5% subsample, the entropy definition performs worse than
+the recursive definition.
+In Figures 19 and 20, we compare k-anonymous and -diverse tables using the KL-divergence utility metric. Figure 19 shows our results for a 5%
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+36
+
+•
+
+A. Machanavajjhala et al.
+16
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+Minimum Ht.
+
+14
+12
+10
+8
+6
+4
+2
+0
+
+2
+
+Min. Avg. Gp. Size
+
+2,500
+2,000
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+1,500
+1,000
+500
+0
+
+5.00
+Discernibility Cost (x 10^6)
+
+4
+6
+8
+Parameter Values for k,l
+
+4.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+k−Anonymity
+Entropy k−diversity
+Recursive l−diversity (c=3)
+
+3.00
+2.00
+1.00
+0.00
+
+2
+
+4
+6
+8
+Parameter Values for k,l
+
+10
+
+Fig. 18. Adults database. Q = {age, gender, race, marital status, education, work class,
+native country}.
+
+subsample of the table and Figure 20 shows our results on the entire Adults
+database. In each of the graphs, we wish to publish a table from which the
+joint distribution Q × S can be estimated. In all the cases S = occupation. Q is
+the multidimensional attribute {age, gender, race}, {age, gender, marital status,
+race} and {age, education, gender, marital status, race}, respectively.
+Each of the graphs shows a baseline (the bar named “base”) that corresponds to the KL-divergence for the table where all the attributes in Q were
+completely suppressed (thus the resulting table had only one attribute, the
+sensitive attribute). This table represents the least-useful anonymized table
+that can be published. The rest of the bars correspond to the KL-divergence to
+the best k-anonymous, entropy -diverse, and recursive (3, )-diverse tables for
+k =  = 2, 4, 6, 8, 10, respectively.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+37
+
+4.0
+
+KL−Divergence
+
+3.5
+3.0
+
+k−Anonymity
+Entropy l−diversity
+Recursive l−diversity (c=3)
+Baseline
+
+2.5
+2.0
+1.5
+1.0
+0.5
+0.0
+
+KL−Divergence
+
+6.0
+5.0
+
+2
+
+4
+6
+8
+10
+Parameter Values for k,l
+
+Base
+
+k−Anonymity
+Entropy l−diversity
+Recursive l−diversity (c=3)
+Baseline
+
+4.0
+3.0
+2.0
+1.0
+0.0
+
+2
+
+4
+6
+8
+10
+Parameter Values for k,l
+
+Base
+
+10.0
+
+KL−Divergence
+
+8.0
+
+k−Anonymity
+Entropy l−diversity
+Recursive l−diversity (c=3)
+Baseline
+
+6.0
+4.0
+2.0
+0.0
+
+2
+
+4
+6
+8
+10
+Parameter Values for k,l
+
+Base
+
+Fig. 19. Comparing KL-divergence to k-anonymous and -diverse versions of a sample of the
+Adults database. From left to right, Q = {age, gender, race}, {age, gender, marital status, race} and
+{age, education, gender, marital status, race}, respectively.
+
+In the experiments run on the full Adults dataset, we see that the KLdivergence to the best -diverse table (entropy or recursive) is very close to the
+KL-divergence to the best k-anonymous table for k =  = 2, 4, 6. As expected, for
+larger values of , the utility of -diverse tables is lower. The best tables for the
+entropy and recursive variants of the definition often have similar utility. When
+a sample of the Adults database table was used, some of the sensitive values
+with small counts were eliminated. Hence, for  = 8, 10, the best tables were
+very close to the baseline. For  = 6, the recursive definition performs better
+than the entropy definition since recursive (3, )-diversity allows for more skew
+in the sensitive attribute.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+38
+
+•
+
+A. Machanavajjhala et al.
+3.0
+
+KL−Divergence
+
+2.5
+
+k−Anonymity
+Entropy l−diversity
+Recursive l−diversity (c=3)
+Baseline
+
+2.0
+1.5
+1.0
+0.5
+0.0
+
+2
+
+4
+6
+8
+10
+Parameter Values for k,l
+
+Base
+
+4.5
+4.0
+KL−Divergence
+
+3.5
+
+k−Anonymity
+Entropy l−diversity
+Recursive l−diversity (c=3)
+Baseline
+
+3.0
+2.5
+2.0
+1.5
+1.0
+0.5
+0.0
+
+2
+
+4
+6
+8
+10
+Parameter Values for k,l
+
+Base
+
+7.0
+
+KL−Divergence
+
+6.0
+5.0
+
+k−Anonymity
+Entropy l−diversity
+Recursive l−diversity (c=3)
+Baseline
+
+4.0
+3.0
+2.0
+1.0
+0.0
+
+2
+
+4
+6
+8
+10
+Parameter Values for k,l
+
+Base
+
+Fig. 20. Comparing KL-divergence to k-anonymous and -diverse versions of the Adults database.
+From left to right, Q = {age, gender, race}, {age, gender, marital status, race} and {age, education,
+gender, marital status, race}, respectively.
+
+7. RELATED WORK
+There has a been a lot of research on individual data privacy in both the computer science and the statistics literature. While a comprehensive treatment is
+outside the scope of this article, we provide an overview of the area by discussing
+representative work. Most of the work can be broadly classified depending on
+whether or not the data collector is trusted. We first discuss the trusted data
+collector scenario, of which our work is an example, in Section 7.1. We then
+discuss the untrusted data collector scenario in Section 7.2.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+39
+
+7.1 Trusted Data Collector
+In many scenarios, the individuals providing the data trust the data collector
+not to breach their privacy. Examples of such data collectors are the Census
+Bureau, hospitals, health insurance providers, etc. However, these data collectors want to share data with third parties for enhancing research. It is required
+that such sharing does not breach the privacy of the individuals. Methods used
+by the data collectors can be broadly classified into four classes (a discussion of
+each follows):
+— publish public-use microdata (e.g., the approach taken in this article);
+— allow third parties to query the data, and only allow queries which do not
+lead to disclosures (as statistical databases);
+— share data only with authorized third parties;
+— do not share data but provide support for collaborative computations which
+disclose no information beyond the final answer.
+7.1.1 Publishing Public-use Microdata. This article proposes new privacy definitions for the model of publishing public-use microdata. The Census
+Bureau provides data as public-use microdata (PUMS). They use a variety of
+sanitization techniques to ensure privacy and utility in the dataset. Hence,
+there is a huge amount of research on data sanitization in the statistics community. Here again, there are many techniques which provide some utility
+guarantees but do not give theoretical guarantees for privacy.
+Census data literature focuses on identifying and protecting the privacy of
+sensitive entries in contingency tables, tables of counts which represent the
+complete cross-classification of the data ([Fellegi 1972; Cox 1980; 1982; 1987;
+Dobra and Feinberg 2003; 2000; Slavkovic and Feinberg 2004]). A nonzero table entry is considered sensitive if it is smaller than a fixed threshold which is
+usually chosen in an ad-hoc manner. Two main approaches have been proposed
+for protecting the privacy of sensitive cells: data swapping and data suppression. The data swapping approach involves moving data entries from one cell
+in the contingency table to another so that the table remains consistent with
+a set of published marginals [Dalenius and Reiss 1982; Diaconis and Sturmfels 1998; Duncan and Feinberg 1997]. In the data suppression approach [Cox
+1980; 1995], cells with low counts are simply deleted. Due to data dependencies
+caused by marginal totals that may have been previously published, additional
+related cell counts may also need to be suppressed. An alternate approach is to
+determine a safety range or protection interval for each cell [Dobra 2002], and
+to publish only those marginals which ensure that the feasibility intervals (i.e.,
+upper and lower bounds on the values a cell may take) contain the protection
+intervals for all cell entries.
+Computer science research has also tried to solve the privacy-preserving
+data publishing problem. Sweeney [2002] showed that publishing datasets for
+which the identifying attributes (keys) have been removed is not safe and may
+result in privacy breaches. In fact, the paper shows a real-life privacy breach
+using health insurance records and voter registration data. To better protect
+the data, Sweeney [2002] advocates the use of a technique called k-anonymity
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+40
+
+•
+
+A. Machanavajjhala et al.
+
+[Samarati and Sweeney 1998] which ensures that every individual is hidden in
+a group of size at least k with respect to the nonsensitive attributes. The problem
+of k-anonymization is NP-hard [Meyerson and Williams 2004]; approximation
+algorithms for producing k-anonymous tables have been proposed [Aggarwal
+et al. 2004].
+Prior to this, there had been a lot of study in creating efficient algorithms
+for k-anonymity by using generalization and tuple suppression techniques.
+Samarati and Sweeney [1998] proposed a technique, using binary search for
+ensuring k-anonymity through full-domain generalization techniques. Bayardo
+and Agrawal [2005] modeled k-anonymization as an optimization problem between privacy and utility and proposed an algorithm similar to a frequentitemset mining algorithm. LeFevre et al. [2005] extended the approach of
+full-domain generalization and proposed an algorithm for returning all valid
+k-anonymous tables. It also used techniques very similar to frequent-itemset
+mining. Zhong et al. [2005] showed how to compute a k-anonymous table without the requirement of a trusted data collector. Ohrn and Ohno-Machado [1999]
+used Boolean reasoning to study the effect of locally suppressing attributes on
+a per-tuple basis. They introduced a notion called relative anonymization to
+counter the effects of homogeneity in the sensitive attribute. One of the instantiations of relative anonymization corresponds to the definition which we
+named entropy -diversity. In a preliminary version of this paper, Machanavajjhala et al. [2006] first introduced -diversity which, unlike k-anonymity, was
+aware of the distribution of values of the sensitive attributes and of the effects
+of background knowledge.
+The condensation-based approach to ensure k-anonymity [Aggarwal and Yu
+2004] treats the data as points in a high-dimensional space, and the technique
+tries to condense k nearby points into a single point.
+Chawla et al. [2005] proposes a formal definition of privacy for published
+data based on the notion of blending in a crowd. Here privacy of an individual
+is said to be protected if an adversary cannot isolate a record having attributes
+similar (according to a suitably chosen distance metric) to those of a given individual without being sufficiently close (according to the distance metric) to
+several other individuals; these other individuals are the crowd. The authors
+propose several perturbation and histogram-based techniques for data sanitization prior to publication. The formalization of the notion of privacy presents
+a theoretical framework for studying the privacy-utility trade-offs of the proposed data sanitization techniques. However, due to the heavy reliance on an
+intertuple distance measure of privacy, the proposed definition of privacy fails
+to capture scenarios where identification of even a single sensitive attribute
+may constitute a privacy breach. Also note that this privacy definition does not
+guarantee diversity of the sensitive attributes.
+Miklau and Suciu [2004] characterize the set of views that can be published while keeping some query answer secret. Privacy here is defined in the
+information-theoretic sense of perfect privacy. They show that to ensure perfect
+privacy, the views that are published should not be related to the data used to
+compute the secret query. This shows that perfect privacy is too strict as most
+useful views, like those involving aggregation, are disallowed.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+41
+
+Finally there has been some work on publishing XML documents and ensuring access control on these documents [Miklau and Suciu 2003; Yang and
+Li 2004]. Miklau and Suciu [2003] use cryptographic techniques to ensure that
+only authorized users can access the published document. Yang and Li [2004]
+propose publishing partial documents which hide sensitive data. The challenge
+here is that the adversary might have background knowledge which induces
+dependencies between branches, and this needs to be taken into account while
+deciding which partial document to publish.
+7.1.2 Statistical Databases. The third scenario in the trusted data collector model is hosting a query answering service. This is addressed by the statistical database literature. In this model, the database answers only aggregate
+queries (COUNT, SUM, AVG, MIN, MAX) over a specified subset of the tuples in
+the database. The goal of a statistical database is to answer the queries in such
+a way that there are no positive or negative disclosures. Techniques for statistical database query answering can be broadly classified into three categories,
+that is, query restriction, query auditing, data and output perturbation. Though
+the literature proposes a large number of techniques for ensuring privacy, but
+only a few of the techniques are provably private against attacks except in
+restricted cases. Adam and Wortmann [1989] provide a very good literature
+survey.
+The techniques in the query restriction category specify the set of queries
+that should not be answered to ensure that privacy is not breached. None of
+the answers to legal queries are perturbed. All of these techniques focus on the
+case where a query specifies an aggregate function and a set of tuples C over
+which the aggregation is done. The query set size control technique [Fellegi 1972;
+Schlorer 1975] specifies that only those queries which access at least |C| ≥ k and
+at most |C| ≤ L − k tuples should be answered. Here k is a parameter, and L
+is the size of the database. However, it was shown that snooping tools called
+trackers [Denning et al. 1979] can be used to learn values of sensitive attributes.
+The query set overlap control technique [Dobkin et al. 1979] disallows queries
+which have a large intersection with the previous queries.
+Query auditing in statistical databases has been studied in detail. The query
+monitoring approach [Dobkin et al. 1979; Chin 1986] is an online version of the
+problem where the (t + 1) th query is answered or not depending on the first t
+queries asked. The decision is based only on the queries and not on the answers
+to those queries. Pure SUM queries and pure MAX queries can be audited
+efficiently but the mixed SUM/MAX problem is NP-hard. In the offline auditing
+problem [Chin and Ozsoyoglu 1981; Chin 1986], the queries are presented all at
+once and the problem is to choose the maximum number of queries that can be
+answered. Kleinberg et al. [2000] considers auditing SUM queries over Boolean
+attributes and shows that it is co-NP hard to decide whether a set of queries
+uniquely determines one of the data elements. More recently, Kenthapadi et al.
+[2005] studied the problem of simulatable auditing. This is a variant of the
+query monitoring approach where the decision to disallow a query can depend
+on the answers to the previous queries as well. The main challenge in this model
+is that if a query answer is denied, information could be disclosed. Hence, the
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+42
+
+•
+
+A. Machanavajjhala et al.
+
+solutions proposed are such that any decision (to allow or deny a query) that is
+made by the database can also be simulated by the adversary.
+Data perturbation. techniques maintain a perturbed version of the
+database and answer queries on the perturbed data. However, most of these
+techniques suffer from the problem of bias [Matloff 1986], that is, the expected
+value of the query answers computed using the perturbed data is different from
+the actual query answers computed using the original data. Fixed-data perturbation techniques [Traub et al. 1984] perturb the data by adding zero-mean
+random noise to every data item. Such techniques have the worst problems
+with bias. The randomized response scheme proposed in Warner [1965] avoids
+this bias problem for COUNT queries on categorical attributes. Yet another
+technique is to replace the data with synthetic data drawn from the same empirical distribution.
+Output perturbation. techniques evaluate the query on the original data
+but return a perturbed version of the answer. Techniques include returning
+answers over a sample of the database [Denning 1980], rounding the answers
+to a multiple of a prespecified base b [Dalenius 1981], and adding random noise
+to the outputs [Beck 1980]. More recently, Dinur and Nissim [2003] proved that
+in order to protect against an adversary who is allowed to ask arbitrarily many
+queries √
+to a database, the random noise added to the answers should be at
+least ( n), with n as the number of tuples in the database. On the positive
+side, they also showed a technique that provably protects against a bounded
+adversary who is allowed to ask only
+√ T (n) ≥ polylog(n) queries by using additive
+perturbation of the magnitude Õ( T (n)). Building on this result, Blum et al.
+[2005] proposed a framework for practical privacy called the SuLQ framework
+where the number of queries an adversary is allowed to ask is sublinear in the
+number of tuples in the database.
+7.1.3 Sharing with Authorized Parties. Hippocratic databases [Agrawal
+et al. 2002] are a proposed design principle for building database systems which
+regulate the sharing of private data with third parties. Such a solution requires
+both the individuals who provide data and the databases that collect it to specify
+privacy policies describing the purposes for which the data can be used and the
+recipients who can see parts of the data. The policies are specified using a policy
+specification language like APPEL [M. Langheinrich 2001], which satisfies the
+P3P standard [M. Marchiori 2002]. A Hippocratic database also needs other
+functionality, like support for maintaining audit trails [Agrawal et al. 2004],
+query rewriting for disclosure limitation [LeFevre et al. 2004], and support for
+data retention.
+[Snodgrass et al. 2004] proposes schemes for auditing the operations of a
+database such that any tampering with the audit logs can be detected. Such a
+solution can guard against the database’s manipulation of the audit logs, thus
+giving assurance of eventual postbreach detection.
+7.1.4 Private Collaborative Computation. Private collaborative computation has been very well studied in the form of secure multiparty computation
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+43
+
+[Goldreich et al. 1987; Ben-Or et al. 1988; Chaum et al. 1988]. The problem
+of secure multiparty computation deals with n parties computing a common
+function on private inputs. Such a protocol should not disclose to the participants any information other than what is disclosed by the answer itself. Most of
+the early work focused on building solutions for general functions by expressing
+a function as a Boolean circuit. However, general solutions are perceived to be
+communication inefficient (of the order of the square of the number of parties
+involved for each gate in the Boolean circuit under evaluation).
+Thus there has been a lot of research proposing solutions to secure multiparty
+computations for specific functions. [Du 2001] proposes various specific (secure)
+two-party computations problems. The commodity server model [Beaver 1997;
+1998] has been used for privately computing the scalar product of two vectors
+[Du and Zhan 2002]. In the commodity server model, the two (or more) parties
+involved in the multiparty computation protocol employ the services of an untrusted third party to provide some randomness [Beaver 1997] or to help with
+some computation [Du and Zhan 2002]. It is assumed that this untrusted third
+party does not collude with the players involved in the multiparty computation.
+Most of these techniques employ randomization to guarantee privacy.
+Agrawal et al. [2003] employ commutative encryption techniques for information sharing across private database. Their techniques can be used to calculate the intersection and equijoin of two databases while disclosing only the
+sizes of each database. Clifton et al. [2002] describes methods to implement
+basic operations like secure sum, secure set union, secure set intersection, and
+secure scalar product using both encryption and additive randomization in the
+secure multiparty computation setting. These primitives are used in various
+application scenarios to build multiparty protocols for private association rule
+mining in horizontally-partitioned data [Kantarcioglu and Clifton 2002], private association rule mining in vertically-partitioned data [Vaidya and Clifton
+2002], and private EM clustering.
+One drawback which permeates the literature discussed is that there is no
+clear characterization of how much information is disclosed by the output of
+the protocol about the sensitive inputs.
+7.2 Untrusted Data Collector
+In the case where the data collector is not trusted, the private information of
+the individuals should be kept secret from the data collector. Though this is
+not the model dealt with in this article, definitions of privacy can be common
+across the trusted and the untrusted data collector model. The individuals provide randomized versions of their data to the data collector who then uses it for
+data mining. Warner [1971] proposed one of the first techniques for randomizing categorical answers to survey questionnaires. Recent work in the privacypreserving data mining literature also fits this model. Agrawal and Srikant
+[2000] propose randomization techniques that can be employed by individuals
+to mask their sensitive information while allowing the data collector to build
+good decision trees on the data. This work, however, does not give theoretical
+guarantees for privacy. Subsequent work proposes metrics for quantifying the
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+44
+
+•
+
+A. Machanavajjhala et al.
+
+information lost and the privacy guaranteed by privacy-preserving data mining
+techniques. One privacy metric [Agrawal and Aggarwal 2001] is based on the
+conditional differential entropy between the original and perturbed data. However, this privacy metric measures average-case behavior, so that a perturbed
+distribution can leave a lot of uncertainty about the original values in most of
+the domain, leave very little uncertainty in a small part of the domain (therefore
+causing a privacy breach), and yet still be considered satisfactory based on its
+conditional differential entropy. [Evfimievski et al. 2003; 2002] propose randomization techniques for privacy-preserving association rule mining and give theoretical guarantees for privacy. They define a privacy breach to be the event that
+the posterior probability (of certain properties of the data) given the randomized
+data is far from the prior probability. These techniques deal with categorical attributes only. Extensions to continuous data that allow the data collector to run
+OLAP-style queries on the data have also been proposed ([Agrawal et al. 2004]).
+On the negative side, Kargupta et al. [2003] show that randomizing the data,
+especially by adding zero-mean random variables, does not necessarily preserve
+privacy. The techniques provided in the paper exploit spectral properties of
+random matrices to remove the noise and recover the original data. Thus the
+data collector could breach privacy. Huang et al. [2004] show that the correlation
+between attributes is the key factor behind the attacks proposed in Kargupta
+et al. [2003]. The paper goes on to propose two techniques based on Principle
+Component Analysis (PCA) and the Bayes Estimate (BE) to reconstruct the
+original data from the randomized data. On a positive note, the paper shows
+that randomization schemes where the correlations in the noise are similar to
+the correlations in the data can protect against these attacks.
+8. CONCLUSIONS AND FUTURE WORK
+In this article, we have shown theoretically and experimentally that a kanonymized dataset permits strong attacks due to lack of diversity in the
+sensitive attributes. We have introduced -diversity, a framework that gives
+stronger privacy guarantees. We have also demonstrated that -diversity and
+k-anonymity have enough similarity in their structure that k-anonymity algorithms can be modified to work with -diversity.
+There are several avenues for future work. First, we want to extend our initial
+ideas for handling multiple sensitive attributes, and we want to develop methods for continuous sensitive attributes. Second, although privacy and utility are
+duals of each other, privacy has received much more attention than the utility
+of a published table. As a result, the concept of utility is not well understood.
+APPENDIX
+A. CORRECTNESS OF ENTROPY -DIVERSITY WITH DON’T-CARE SETS
+In this section, we will prove Theorem 4.1. Recall that we defined normalized
+entropy as:
+Ĥ(x1 , . . . , xn ) = −
+
+n
+
+i=1
+
+xi
+n
+
+j =1 x j
+
+xi
+log n
+
+j =1 x j
+
+.
+
+(11)
+
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+45
+
+First, we note that as a function of x1 , . . . , xn , the normalized entropy
+Ĥ(x1 , . . . , xn ) is concave. However, if we fix some of the variables, then
+Ĥ is neither concave nor convex in the other variables. As an example,
+consider f (x) = Ĥ(x, 100). We see that f (400) = .5004, f (800) = .3488, and
+f (600) = .4101. Thus f (600) = f ( 12 · 400 + 12 · 800) ≤ 12 f (400) + 12 f (800) showing that the normalized entropy is not concave. However, f (75) = .6829,
+f (125) = .6870, and f (100) = .6931 Thus f (100) = f ( 12 · 75 + 12 · 125) ≥ 12 f (75) +
+1
+f (125), and so it is not convex either. Therefore we cannot use convexity ar2
+guments to prove uniqueness in Theorem 4.1.
+We begin by looking at the first-order partial derivatives of Ĥ and finding
+the general unconstrained maximum of Ĥ(x1 , . . . , xr , p1 , . . . , pm ) where the pi
+are constants. Define f (x1 , . . . , xr ) ≡ Ĥ(x1 , . . . , xr , p1 , . . . , pm ). Then,
+f (x1 , . . . , xr ) = −
+
+r
+
+i=1
+
+−
+
+m
+
+i=1
+
+xi
+xi
+m
+m
+log r
+j =1 x j +
+j =1 p j
+j =1 x j +
+j =1 p j
+
+r
+
+pi
+pi
+m
+m
+log r
+x
++
+p
+x
++
+j
+j
+j
+j =1
+j =1
+j =1
+j =1 p j
+
+r
+
+,
+
+and simple manipulation shows that
+f (x1 , . . . , xr ) = −
+−
+
+r
+
+i=1
+m
+
+i=1
+
++ log
+
+xi
+m
+log xi
+j =1 x j +
+j =1 p j
+
+r
+
+pi
+m
+log pi
+j =1 x j +
+j =1 p j
+
+r
+
+r
+
+
+xj +
+
+j =1
+
+m
+
+
+pj
+
+.
+
+j =1
+
+Using the fact that the first derivative of x log x is 1 + log x:
+∂f
+1 + log xs
+m
+= − r
++
+r
+∂ xs
+j =1 x j +
+j =1 p j
+
+xs log xs
+2
+m
+j =1 x j +
+j =1 p j
+
++
+
+
+i=s
+
++
+
+m
+
+i=1
+
+xi log xi
+2
+m
+r
+x
++
+p
+j
+j
+j =1
+j =1
+
+
+
+
+pi log pi
+
+m
+r
+j =1 x j +
+j =1 p j
+
+1
+m
+x
++
+j =1 j
+j =1 p j
+
+2 + r
+
+xs log xs
+2
+m
+x
++
+p
+j =1 j
+j =1 j
+
+m
+i=s xi log xi
+i=1 pi log pi
++
+2 + 
+2
+m
+m
+r
+r
+x
++
+p
+x
++
+p
+j
+j
+j
+j
+j =1
+j =1
+j =1
+j =1
+log xs
+m
++
+r
+j =1 x j +
+j =1 p j
+
+= − r
+
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+46
+
+•
+
+A. Machanavajjhala et al.
+
+r
+
+i=1 xi +
+
+m
+
+
+
+log xs
+xs log xs
+2 + 
+2
+m
+m
+r
+r
+j =1 x j +
+j =1 p j
+j =1 x j +
+j =1 p j
+
+m
+i=s xi log xi
+i=1 pi log pi
++
+2 + 
+2
+r
+m
+m
+r
+j =1 x j +
+j =1 p j
+j =1 x j +
+j =1 p j
+m
+
+i=s (xi log xi − xi log xs ) +
+i=1 ( pi log pi − pi log xs )
+=
+,
+
+2
+
+r
+m
+x
++
+p
+j =1 j
+j =1 j
+= − 
+
+i=1 pi
+
+and so we see that ∂ f /∂ xs = 0 when
+m
+
+i=s xi log xi +
+i=1 pi log pi
+m
+
+log xs =
+.
+j =s x j +
+j =1 p j
+
+(12)
+
+(13)
+
+We will denote the value of the right-hand side of Equation (13) by c∗ . From
+Equation (12), it is easy to see that ∂ f /∂ xs < 0 when log(xs ) > c∗ (when xs > ec∗ )
+and ∂ f /∂ xs > 0 when log(xs ) < c∗ (when xs < ec∗ ). Combining this with the fact
+that f is continuous at xs = 0 (to rule out a maximum at xs = 0), we get that,
+given p1 , . . . , pm and for fixed x1 , . . . , xs−1 , xs+1 , . . . , xr , there is a unique value
+of xs that maximizes Ĥ. This brings us to the first theorem.
+THEOREM A.1. Let p1 , . . . , pm be constants and let x1 , . . . , xs−1 , xs+1 , . . . , xr be
+fixed. Then Ĥ( p1 , . . . , pm , x1 , . . . , xr ) (when treated as a function of xs ) is maximized when
+m
+
+i=s xi log xi +
+i=1 pi log pi
+∗
+
+m
+log xs = c =
+.
+j =s x j +
+j =1 p j
+Furthermore, the maximum is unique and H is decreasing for xs > ec∗ and increasing for xs < ec∗ .
+COROLLARY A.1. Let p1 , . . . , pm be constants and let x1 , . . . , xs−1 , xs+1 , . . . , xr
+be fixed. Let φs > 0. Then Ĥ( p1 , . . . , pm , x1 , . . . , xr ) (when treated as a function
+of xs ) is maximized subject to the constraint xs ≤ φs when
+m
+
+i=s xi log xi +
+i=1 pi log pi
+
+m
+log xs = min log φs ,
+j =s x j +
+j =1 p j
+= min(log φ, M (x1 , . . . , xs−1 , xs+1 , . . . , xr , p1 , . . . , pm )).
+PROOF. If xs cannot obtain the optimal value specified in Theorem A.1,
+it must be because φs < ec∗ . Since ∂ Ĥ/∂ xs > 0 for xs < ec∗ , the maximum constrained value must occur at xs = φs .
+Our next step is to find the unconstrained maximum of Ĥ over x1 , . . . , xr . A
+necessary condition for the maximum is that all first partial derivatives are 0.
+From Equation (13), we have:
+
+j =s
+
+xj +
+
+m
+
+j =1
+
+pj
+
+log xs =
+
+
+i=s
+
+xi log xi +
+
+m
+
+
+pi log pi
+
+i=1
+
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+r
+
+
+xj +
+
+j =1
+
+m
+
+
+pj
+
+j =1
+
+log xs =
+
+r
+
+
+xi log xi +
+
+i=1
+
+m
+
+
+•
+
+47
+
+pi log pi ,
+
+i=1
+
+and since the right-hand side is independent of s, and since the equality is true
+for any s, it follows that for s = t:
+r
+
+j =1
+
+xj +
+
+m
+
+
+pj
+
+j =1
+
+log xs =
+
+r
+
+j =1
+
+xj +
+
+m
+
+
+pj
+
+log xt
+
+(14)
+
+j =1
+
+xs = xt .
+
+(15)
+
+Thus there is only one critical point and, at the critical point, x1 = x2 = · · · = xr .
+To find out what this value is, we go back to Equation (13) and replace the xi
+by their common value x:
+m
+(r − 1)x log x + i=1
+pi log pi
+
+log x =
+(r − 1)x + mj=1 p j
+m
+m
+
+
+(r − 1)x log x +
+p j log x = (r − 1)x log x +
+pi log pi
+j =1
+
+m
+i=1 pi log pi
+m
+x =
+,
+j =1 p j
+
+i=1
+
+and we see that this is the log-entropic mean of the pi .
+THEOREM A.2. f (x1 , . . . , xr ) ≡ H( p1 , . . . , pm
+, x1 , . . . , xr ) achieves its unique
+m
+p log pi
+m i
+maximum when log x1 = log x2 = · · · = log xr = i=1
+= c∗ .
+pj
+j =1
+
+PROOF. We have already shown that this is the unique point where all first
+partial derivatives are 0 at this point. We still have to show that it is a global
+maximum. First note that a maximum cannot occur when any of the xs are 0
+(this follows directly from Theorem A.1).
+Now suppose the point (ec∗ , . . . , ec∗ ) is not a unique global maximum. Then there exist positive numbers ξ1 , ξ2 , . . . , ξr (not all equal to c∗ )
+such that f (ξ1 , ξ2 , . . . , ξr ) ≥ f (ec∗ , . . . , ec∗ ). Let L = min{ p1 , . . . , pm , ξ1 , . . . , ξr }
+and let U = max{ p1 , . . . , pm , ξ1 , . . . , ξr }. Consider the compact hypercube
+C = {(z 1 , . . . , z r ) : ∀i ∈ {1, . . . , r}, U ≥ z i ≥ L}. C is compact, f is continuous, and
+f achieves its maximum on C. Hence, there exists a point (θ1 , . . . , θr ) ∈ C such
+that f (θ1 , . . . , θr ) = supz ∈ C f (z) ≥ f (ξ1 , . . . , ξr ) ≥ f (ec∗ , . . . , ec∗ ) and that not all
+θi are equal to c∗ .
+Now, the θi cannot satisfy Equation (13) (with the xi replaced by the
+θi ) for all i because otherwise we will have a second point where all the
+partial derivatives are 0 (a contradiction). Without loss of generality, suppose θ1 does not satisfy Equation (13). By Theorem A.1, there exists a
+θ ∗ such that log θ ∗ is a weighted average of the log pi and log θ j so that
+min( p1 , . . . , pm , θ1 , . . . , θr ) ≤ θ ∗ ≤ max( p1 , . . . , pm , θ1 , . . . , θr ). This implies that
+(θ ∗ , θ2 , . . . , θr ) ∈ C. Furthermore, by Theorem A.1, f (θ ∗ , θ2 , . . . , θr ) > f (θ1 , . . . , θr ),
+which contradicts the fact that f (θ1 , . . . , θr ) is maximal on C. Therefore, there
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+48
+
+•
+
+A. Machanavajjhala et al.
+
+do not exist any nonnegative real numbers ξ1 , ξ2 , . . . , ξr (not all equal to c∗ ) such
+that f (ξ1 , ξ2 , . . . , ξr ) ≥ f (ec∗ , . . . , ec∗ ).
+Now that we know what the unconstrained maximum looks like, we are ready
+to characterize the constrained maximum. We will need the following simple
+results about weighted averages.
+LEMMA A.1. Let c1 , . . . , cn be nonnegative numbers and let w1 , . . . , wn be
+nonnegative numbers such that wi ci > 0 for some i. Let d and v be any positive numbers.
+
+
+(1) If d equals the weighted average of the ci (i.e., d = ( i ci wi )/( i wi )), then
+including d in
+that weighted
+
+ average
+ does not change its value (i.e., d = (vd +
+i ci wi )/(v +
+i wi ) = ( i ci wi )/( i wi )).
+
+
+(2) If d > ( i ci wi )/(
+ i wi ),
+
+
+
+then d > (vd + i ci wi )/(v + i wi ) > ( i ci wi )/( i wi ).
+
+
+(3) If d < ( i ci wi )/(
+ i wi ),
+
+
+
+then d < (vd + i ci wi )/(v + i wi ) < ( i ci wi )/( i wi ).
+
+
+(4) If d > d  and d 
+> ( i ci wi )/( i wi ),
+then d > (vd  + i ci wi )/(v + i wi ).
+
+
+(5) If d > (vd+ i ci w
+i )/(v +
+i wi ),
+then d > ( i ci wi )/( i wi ).
+PROOF.
+
+First we show (1).
+
+
+
+
+vd + i ci wi
+ci wi
+vd + d i wi d (v + i wi )
+
+
+
+=
+=
+= d = i
+.
+v + i wi
+v + i wi
+v + i wi
+i wi
+
+
+To prove (2), let d ∗ = ( i ci wi )/( i wi ), then
+
+
+
+
+vd + d i wi vd + i ci wi vd ∗ + i ci wi
+ci wi
+
+
+
+d=
+>
+>
+= i
+,
+v + i wi
+v + i wi
+v + i wi
+i wi
+and (3) is proven
+the same way. (4) is an easy consequence of (2). To prove (5),
+multiply by (v + i wi ) and cancel d v from both sides.
+Now we can prove the correctness of Algorithm 1 by proving Theorem 4.1,
+which we now restate.
+THEOREM A.3. Let p1 , . . . , pm , φ1 , . . . , φr be positive numbers. Then the
+following are true.
+(1) There is a unique vector (c1 , c2 , . . . , cr ) such that the assignment xi = ci maximizes Ĥ(x1 , . . . , xr , p1 , . . . , pm ) subject to the constraints 0 ≤ xi ≤ φi .
+(2) Let θ = max({φi | ci = φi } ∪ {0}). If φ j ≤ θ then c j = φ j . If φ j > θ, then log c j
+is the log-entropic mean of the set { p1 , . . . , pm } ∪ {φi | φi = ci }, and θ is the
+minimum value for which this condition can be satisfied.
+PROOF. First we must show that a maximum exists, and this follows from
+the fact that Ĥ is continuous and that the set {(x1 , . . . , xr ) | ∀i, 0 ≤ xi ≤ φi } is
+compact. Note that uniqueness of the maximum follows from the minimality
+condition for θ in (1). Therefore if we prove (2) then (1) follows.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+49
+
+Let (ξ1 , . . . , ξr ) be a point at which the maximum occurs. As a result of Corollary A.1, for s = 1, . . . , r, we must have
+log ξs = min(log φ, M (ξ1 , . . . , ξs−1 , ξs+1 , . . . , ξr , p1 , . . . , pm )).
+
+(16)
+
+Now let W = {i : ξi < φi } and V = {i : ξi = φi }. We claim that:
+m
+
+m
+
+pi log pi
+i=s ξi log ξi +
+i=1 pi log pi
+i ∈ V ξi log ξi +
+
+
+m
+i=1
+∀s ∈ W, log ξs =
+=
+.
+m
+ξ
++
+p
+ξ
++
+j =s j
+j ∈V j
+j =1 j
+j =1 p j
+(17)
+The first equality follows from Equation (16) and the second follows from
+Theorem A.2 for the unconstrained maximum of Ĥ as a function of xs for s ∈ W .
+Now we are ready to prove that there exists a cutoff value θ ∈ {φ1 , . . . , φr , 0}
+such that φ j ≤ θ implies that j ∈ V (i.e., x j = φ j ) and φ j > θ implies j ∈ W (i.e.,
+x j is the log-entropic mean of the pi and the xs for s ∈ V ). If either V or W is
+empty, then this is trivially true. Otherwise, assume by way of contradiction
+that there is no cutoff so that we can find an s, t such that φs > φt but t ∈ W and
+s ∈ V . This implies that
+log ξs = log φs > log φt > log ξt = M (ξ1 , . . . , ξt−1 , ξt+1 , . . . , ξr , p1 , . . . , pm )).
+and by Lemma A.1, parts (4) and then (5), we have:
+log ξs > M (ξ1 , . . . , ξr , p1 , . . . , pm ))
+and
+log ξs > M (ξ1 , . . . , ξs−1 , ξs+1 , . . . , ξr , p1 , . . . , pm )).
+However, this violates the condition on optimality described in Equation (16),
+which is a contradiction, and so there exists a cutoff θ .
+All that remains to be shown is that for the optimal solution, θ is the minimum value ∈ {φ1 , . . . , φr } such that φ j > θ implies j ∈ W (i.e., x j is the logentropic mean of the pi and the xs for s ∈ V ). Suppose it is not minimal. Then
+there exists a θ  ∈ {φ1 , . . . , φr , 0} with θ  < θ , a set V  = {i | φi ≤ θ  } and a vector
+(ω1 , . . . , ωr ) such that when i ∈ V  , then ωi = φi , and when i ∈
+/ V  , then ωi is
+
+the log-entropic mean of the pi and the ωs for s ∈ V . Now clearly V  ⊂ V so
+whenever ωi = φi , then ξi = φi . However, if we fix xi = φi for i ∈ V  , then the unconstrained maximum of Ĥ over the variables {xi | i ∈
+/ V  } occurs precisely when
+xi = ωi , by Theorem A.2 because ωi equals the log-entropic mean of the pi and
+the ωs for s ∈ V  . Since the variables xs for s ∈ V  will be fixed for any choice of
+cutoff θ (remember that by definition θ ≥ θ  ), and the unconstrained maximum
+over the rest of the variables is unique and achievable, the vector (ω1 , . . . , ωr )
+that is determined by the minimal cutoff θ  is indeed the unique constrained
+maximum we are looking for.
+ACKNOWLEDGMENTS
+
+We thank Joe Halpern for an insightful discussion on the proposed privacy
+model, Kristen LeFevre for the Incognito source code, Chris Clifton for first
+bringing the article by Ohrn and Ohno-Machado [1999] to our attention,
+Richard A. Suss for the reference on entropic means [Ben-Tal et al. 1989], and
+we thank the anonymous reviewers for their helpful suggestions.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+50
+
+•
+
+A. Machanavajjhala et al.
+
+REFERENCES
+ADAM, N. R. AND WORTMANN, J. C. 1989. Security-control methods for statistical databases: A
+comparative study. ACM Comput. Surv. 21, 4, 515–556.
+AGGARWAL, C. C. AND YU, P. S. 2004. A condensation approach to privacy preserving data mining.
+In Proceedings of the International Conference on Extending Database Technology (EDBT). 183–
+199.
+AGGARWAL, G., FEDER, T., KENTHAPADI, K., MOTWANI, R., PANIGRAHY, R., THOMAS, D., AND ZHU, A. 2004.
+k-anonymity: Algorithms and hardness. Tech. rep., Stanford University.
+AGRAWAL, D. AND AGGARWAL, C. C. 2001. On the design and quantifiaction of privacy preserving
+data mining algorithms. In Proceedings of the International Conference on Principles of Database
+Systems (PODS).
+AGRAWAL, R., BAYARDO, R. J., FALOUTSOS, C., KIERNAN, J., RANTZAU, R., AND SRIKANT, R. 2004. Auditing
+compliance with a hippocratic database. In Proceedings of the International Conference on Very
+Large Databases (VLDB). 516–527.
+AGRAWAL, R., EVFIMIEVSKI, A. V., AND SRIKANT, R. 2003. Information sharing across private
+databases. In Proceedings of the SIGMOD Conference. 86–97.
+AGRAWAL, R., KIERNAN, J., SRIKANT, R., AND XU, Y. 2002. Hippocratic databases. In Proceedings of
+the International Conference on Very Large Databases (VLDB). 143–154.
+AGRAWAL, R. AND SRIKANT, R. 1994. Fast Algorithms for Mining Association Rules in Large
+Databases. In Proceedings of the International Conference on Very Large Databases (VLDB).
+AGRAWAL, R. AND SRIKANT, R. 2000. Privacy preserving data mining. In Proceedings of the 19th
+ACM SIGMOD Conference on Management of Data.
+AGRAWAL, R., SRIKANT, R., AND THOMAS, D. 2004. Privacy preserving OLAP. In Proceedings of the
+23th ACM SIGMOD Conference on Management of Data.
+BACCHUS, F., GROVE, A. J., HALPERN, J. Y., AND KOLLER, D. 1996. From statistical knowledge bases
+to degrees of belief. A.I. 87, 1–2.
+BAYARDO, R. J. AND AGRAWAL, R. 2005. Data privacy through optimal k-anonymization. In Proceedings of the International Conference on Data Engineering (ICDE’05).
+BEAVER, D. 1997. Commodity-based cryptography (extended abstract). In Proceedings of the 29th
+ACM Symposium on Theory of Computing (STOC’97). 446–455.
+BEAVER, D. 1998. Server-assisted cryptography. In Proceedings of the 1998 Workshop on New
+Security Paradigms (NSPW’98). 92–106.
+BECK, L. 1980. A security mechanism for statistical database. ACM Trans. Datab. Syst. 5, 3,
+316–338.
+BEN-OR, M., GOLDWASSER, S., AND WIGDERSON, A. 1988. Completeness theorems for noncryptographic fault-tolerant distributed computation. In Proceedings of the 20th ACM Symposium on Theory of Computing (STOC’88). 1–10.
+BEN-TAL, A., CHARNES, A., AND TEBOULLE, M. 1989. Entropic means. J. Mathemat. Anal.
+Appl. 139, 2, 537–551.
+BLUM, A., DWORK, C., MCSHERRY, F., AND NISSIM, K. 2005. Practical privacy: The SuLQ
+framework. In Proceedings of the International Conference on Principles of Data Systems
+(PODS).
+CHAUM, D., CREPEAU, C., AND DAMGARD, I. 1988. Multiparty unconditionally secure protocols. In
+Proceedings of the 20th ACM Symposium on Theory of Computing (STOC’88). 11–19.
+CHAWLA, S., DWORK, C., MCSHERRY, F., SMITH, A., AND WEE, H. 2005. Toward privacy in public
+databases. In Proceedings of the Tactical Communications Conference (TCC).
+CHIN, F. 1986. Security problems on inference control for sum, max, and min queries. J.
+ACM 33, 3, 451–464.
+CHIN, F. AND OZSOYOGLU, G. 1981. Auditing for secure statistical databases. In Proceedings of the
+ACM Conference (ACM’81). 53–59.
+CLIFTON, C., KANTARCIOGLU, M., VAIDYA, J., LIN, X., AND ZHU, M. Y. 2002. Tools for privacy preserving
+data mining. SIGKDD Explorations 4, 2, 28–34.
+COX, L. 1995. Network models for complementary cell suppression. J. Amer. Statis. Asso. 90,
+1453–1462.
+COX, L. H. 1980. Suppression, methodology and statistical disclosure control. J. Amer. Statis.
+Asso. 75.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+-Diversity: Privacy Beyond k-Anonymity
+
+•
+
+51
+
+COX, L. H. 1982. Solving confidentiality protection problems in tabulations using network optimization: A network model for cell suppression in the u.s. economic censuses. In Proceedings of the
+International Seminar on Statistical Confidentiality. Dublin International Statistical Institute,
+Dublin, Ireland. 229–245.
+COX, L. H. 1987. New results in dislosure avoidance for tabulations. In Proceedings of the International Statistical Institute 46th Session. Tokyo, Japan. 83–84.
+DALENIUS, T. 1981. A simple procedure for controlled rounding. Statistik Tidskrift.
+DALENIUS, T. AND REISS, S. 1982. Data swapping: A technique for disclosure control. J. Statis. Plan.
+Infer. 6.
+DENNING, D. 1980. Secure statistical databases with random sample queries. ACM Trans. Datab.
+Syst. 5, 3, 291–315.
+DENNING, D. E., DENNING, P. J., AND SCHWARTZ, M. D. 1979. The tracker: A threat to statistical
+database security. ACM Trans. Datab. Syst. 4, 1, 76–96.
+DIACONIS, P. AND STURMFELS, B. 1998. Algebraic algorithms for sampling from conditional distributions. Annals of Statistics 1, 363–397.
+DINUR, I. AND NISSIM, K. 2003. Revealing information while preserving privacy. In Proceedings of
+the International Conference on Principles of Data Systems (PODS). 202–210.
+DOBKIN, D. P., JONES, A. K., AND LIPTON, R. J. 1979. Secure databases: Protection against user
+influence. ACM: Trans. Datab. Syst. 4, 1 (March), 76–96.
+DOBRA, A. 2002. Statistical tools for disclosure limitation in multiway contingency tables. Ph.D.
+thesis, Carnegie Mellon University.
+DOBRA, A. AND FEINBERG, S. E. 2000. Assessing the risk of disclosure of confidential categorical
+data. In Bayesian Statistics 7. Oxford University Press, Oxford, UK.
+DOBRA, A. AND FEINBERG, S. E. 2003. Bounding entries in multi-way contingency tables given a
+set of marginal totals. In Proceedings of the Shoresh Conference 2000: Foundations of Statistical
+Inference. Springer Verlag.
+DU, W. 2001. A study of several specific secure two-party computation problems. Ph.D. thesis,
+Purdue University.
+DU, W. AND ZHAN, Z. 2002. A practical approach to solve secure multi-party computation problems.
+New Security Paradigms Workshop.
+DUNCAN, G. T. AND FEINBERG, S. E. 1997. Obtaining information while preserving privacy: A
+markov perturbation method for tabular data. Joint Statistical Meetings. Anaheim, CA.
+EVFIMIEVSKI, A., GEHRKE, J., AND SRIKANT, R. 2003. Limiting privacy breaches in privacy preserving data mining. In Proceedings of the International Conference on Principles of Data Systems
+(PODS).
+EVFIMIEVSKY, A., SRIKANT, R., GEHRKE, J., AND AGRAWAL, R. 2002. Privacy preserving data mining of
+association rules. In Proceedings of the 8th ACM SIGKDD International Conference on Knowledge
+Discovery in Databases and Data Mining. 217–228.
+FELLEGI, I. P. 1972. On the question of statistical confidentiality. J. Amer. Statis. Asso. 67:337,
+7–18.
+GOLDREICH, O., MICALI, S., AND WIGDERSON, A. 1987. How to play any mental game. In Proceedings
+of the 19th ACM Conference on Theory of Computing (STOC’87). 218–229.
+HUANG, Z., DU, W., AND CHEN, B. 2004. Deriving private information from randomized data. In
+Proceedings of the 23th ACM SIGMOD Conference on Management of Data.
+KANTARCIOGLU, M. AND CLIFTON, C. 2002. Privacy-preserving distributed mining of association
+rules on horizontally partitioned data. In Proceedings of the Conference on Data Mining and
+Knowledge Discovery (DMKD).
+KARGUPTA, H., DATTA, S., WANG, Q., AND SIVAKUMAR, K. 2003. On the privacy preserving properties
+of random data perturbation techniques. In Proceedings of the International Conference on Data
+Mining (ICDM). 99–106.
+KENTHAPADI, K., MISHRA, N., AND NISSIM, K. 2005. Simulatable auditing. In PODS.
+KLEINBERG, J., PAPADIMITRIOU, C., AND RAGHAVAN, P. 2000. Auditing boolean attributes. In Proceedings of the International Conference on Principles of Data Systems (PODS).
+LEFEVRE, K., AGRAWAL, R., ERCEGOVAC, V., RAMAKRISHNAN, R., XU, Y., AND DEWITT, D. J. 2004. Limiting disclosure in hippocratic databases. In Proceedings of the International Conference on Very
+Large Databases (VLDB). 108–119.
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+52
+
+•
+
+A. Machanavajjhala et al.
+
+LEFEVRE, K., DEWITT, D., AND RAMAKRISHNAN, R. 2005. Incognito: Efficient fulldomain k-anonymity.
+In SIGMOD.
+M. LANGHEINRICH, E. 2001. A P3P preference exchange language 1.0 (appel1.0). W3C Working
+Draft.
+M. MARCHIORI, E. 2002. The platform for privacy preferences 1.0 (p3p1.0) specification. W3C
+Proposed Recommendation.
+MACHANAVAJJHALA, A., GEHRKE, J., KIFER, D., AND VENKITASUBRAMANIAM, M. 2006. -diversity: Privacy beyond k-anonymity. In Proceedings of the International Conference on Data Engineering
+(ICDE).
+MARTIN, D., KIFER, D., MACHANAVAJJHALA, A., GEHRKE, J., AND HALPERN, J. 2006. Worst-case background knowledge in privacy. Tech. rep., Cornell University.
+MATLOFF, N. S. 1986. Another look at the use of noise addition for database security. In Proceedings of IEEE Symposium on Security and Privacy. 173–180.
+MEYERSON, A. AND WILLIAMS, R. 2004. On the complexity of optimal k-anonymity. In PODS.
+MIKLAU, G. AND SUCIU, D. 2003. Controlling access to published data using cryptography. In
+Proceedings of the International Conference on Very Large Databases (VLDB). 898–909.
+MIKLAU, G. AND SUCIU, D. 2004. A formal analysis of information disclosure in data exchange. In
+SIGMOD.
+OHRN, A. AND OHNO-MACHADO, L. 1999. Using boolean reasoning to anonymize databases. A. I.
+Medicine 15, 3, 235–254.
+SAMARATI, P. 2001. Protecting respondents’ identities in microdata release. In IEEE Trans. Knowl.
+Data Eng.
+SAMARATI, P. AND SWEENEY, L. 1998. Protecting privacy when disclosing information: k-anonymity
+and its enforcement through generalization and suppression. Tech. rep. SRI-CSL-98-04, SRI
+Computer Science Laboratory, Palo Alto, CA.
+SCHLORER, J. 1975. Identification and retrieval of personal records from a statistical bank. Methods Inform. Medicine.
+SLAVKOVIC, A. AND FEINBERG, S. E. 2004. Bounds for cell entries in two-way tables given conditional
+relative frequencies. In Lecture Notes in Computer Science, Vol. 3050. J. Domingo-Ferrer and
+V. Torra Eds. Springer-Verlag, 30–43.
+SNODGRASS, R. T., YAO, S., AND COLLBERG, C. S. 2004. Tamper detection in audit logs. In Proceedings
+of the International Conference on Very Large Databases (VLDB). 504–515.
+SWEENEY, L. 2000. Uniqueness of simple demographics in the u.s. population. Tech. rep., Carnegie
+Mellon University.
+SWEENEY, L. 2002. k-anonymity: a model for protecting privacy. Int. J. Uncer., Fuz. Knowl-based
+Syst. 10, 5, 557–570.
+TRAUB, J. F., YEMINI, Y., AND WOZNIAKOWSKI, H. 1984. The statistical security of a statistical
+database. ACM Trans. Datab. Syst. 9, 4, 672–679.
+University of California Irvine Machine Learning Repository. http://www.ics.uci.edu/mlearn/
+mlrepository.html.
+VAIDYA, J. AND CLIFTON, C. 2002. Privacy preserving association rule mining in vertically partitioned data. In Proceedings of the International Conference on Knowledge Discovery and Data
+Mining (KDD). 639–644.
+WARNER, S. L. 1965. Randomized response: A survey technique for eliminating evasive answer
+bias. J. Amer. Statis. Ass.
+WARNER, S. L. 1971. The linear randomized response model. J. Amer. Statis. Ass. 884–888.
+YANG, X. AND LI, C. 2004. Secure XML publishing without information leakage in the presence of
+data inference. In Proceedings of the International Conference on Very Large Databases (VLDB).
+96–107.
+ZHONG, S., YANG, Z., AND WRIGHT, R. N. 2005. Privacy-enhancing k-anonymization of customer
+data. In Proceedings of the International Conference on Principles of Data Systems (PODS).
+Received January 2006; revised October 2006; accepted December 2006
+
+ACM Transactions on Knowledge Discovery from Data, Vol. 1, No. 1, Article 3, Publication date: March 2007.
+
+

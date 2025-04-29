@@ -1,0 +1,1400 @@
+Data & Knowledge Engineering 70 (2011) 101–126
+
+Contents lists available at ScienceDirect
+
+Data & Knowledge Engineering
+j o u r n a l h o m e p a g e : w w w. e l s ev i e r. c o m / l o c a t e / d a t a k
+
+Extending ℓ-diversity to generalize sensitive data☆
+Hongwei Tian, Weining Zhang ⁎
+Department of Computer Science, The University of Texas at San Antonio, USA
+
+a r t i c l e
+
+i n f o
+
+Article history:
+Received 27 May 2009
+Received in revised form 9 September 2010
+Accepted 10 September 2010
+Available online 25 September 2010
+
+Keywords:
+Privacy
+Data publishing
+Generalization
+(τ, ℓ)-diversity
+Algorithm
+
+a b s t r a c t
+Generalization is an important technique for protecting privacy in data dissemination. In the
+framework of generalization, ℓ-diversity is a strong notion of privacy. However, since existing
+ℓ-diversity measures are deﬁned in terms of the most speciﬁc (rather than general) sensitive
+attribute (SA) values, algorithms based on these measures can have narrow eligible ranges for data
+that has a heavily skewed distribution of SA values and produce anonymous data that has a low
+utility. In this paper, we propose a new ℓ-diversity measure called the functional (τ, ℓ)-diversity,
+which extends ℓ-diversity by using a simple function to constrain frequencies of base SA values that
+are induced by general SA values. As a result, algorithms based on (τ, ℓ)-diversity may generalize SA
+values, thus are much less constrained by skew SA distributions. We show that (τ, ℓ)-diversity is
+more ﬂexible and elaborate than existing ℓ-diversity measures. We present an efﬁcient heuristic
+algorithm that uses a novel order of quasi-identiﬁer (QI) values to achieve (τ, ℓ)-diversity. We
+compare our algorithm with two state-of-the-art algorithms that are based on existing ℓ-diversity
+measures. Our preliminary experimental results indicate that our algorithm not only provides a
+stronger privacy protection but also results in better utility of anonymous data.
+Published by Elsevier B.V.
+
+1. Introduction
+The importance of sharing data for research and knowledge discovery (for example, via data mining) has been well-recognized.
+However, sharing data that contains sensitive personal information, such as medical record or insurance history, across
+organization boundaries can raise serious privacy concerns.
+A step towards the protection of privacy is to remove personal identiﬁcation information (pii), such as ID number, name and
+credit card numbers, before data is released. However, such a protection is insufﬁcient in the existence of a certain public data,
+such as voter registry and background knowledge of an adversary. For example, in Fig. 1(a), the patient table of a hospital database
+contains one tuple per patient without any pii. Such a table is referred to as an original table (as oppose to anonymous table) or a
+microdata (as oppose to aggregated data). Suppose that an adversary wants to know the disease of a target person named Bob. The
+adversary may know that Bob was hospitalized; and from a public data source the adversary may also know that Bob is 20-year old
+and lives in the area of zip code 10001. If table (a) is released, the adversary can use the Age and Zipcode of Bob to uniquely identify
+Bob in table (a) and conclude with 100% certainty that Bob has hepatitis. This is called a linking attack.
+A fundamental technique that prevents privacy breach, such as a linking attack, is the generalization [1–10]. The idea is to
+replace (recode or generalize) speciﬁc values in tuples by more general values in given taxonomies, so that distinct tuples in the
+original table become indistinguishable (i.e., anonymous) in the generalized table. For example, in Fig. 1, table (b) is a
+generalization1 of table (a) based on taxonomies in Fig. 2. In table (b), seven patients (including Bob) have their Age and Zipcode
+recoded as b[20,29], 100**N and are no longer distinguishable from each other.
+☆ A part of this paper was published at The 6th International Conference on Information Technology: New Generations.
+⁎ Corresponding author. Tel.: +1 210 458 5557; fax: +1 210 458 4437.
+E-mail addresses: htian@cs.utsa.edu (H. Tian), wzhang@cs.utsa.edu (W. Zhang).
+1
+Here, in tables (b) and (c), the columns EC and f1 help to understand the ﬁgures, but do not appear in the published data.
+0169-023X/$ – see front matter. Published by Elsevier B.V.
+doi:10.1016/j.datak.2010.09.001
+
+102
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+(a) A Patients Table
+
+(b) (3, 2)-diversity
+
+(c) 2-diversity
+
+Fig. 1. Examples of ℓ-diversity anonymous data.
+
+In the framework of generalization, attributes of a table are divided into a sensitive attribute (SA) that needs to be protected
+and a quasi-identiﬁer (QI) whose values are not pii but can uniquely identify individuals when combined with some public data. In
+Fig. 1, attribute Disease is an SA and other attributes form a QI.
+The QI of a table can be used to partition the table into a set of equivalence classes (ECs), so that any two tuples belong to an EC
+if and only if (iff) they have the same QI values. In this context, the k-anonymity [4,6,8] is a fundamental notion of privacy. A table
+is k-anonymous if every EC of the table contains at least k tuples. Thus, k-anonymity guarantees that each individual is
+indistinguishable from at least k-1 other individuals.
+Although it prevents linking attack, k-anonymity may fail under an attack that exploits the distribution of SA values. For
+example, in a homogeneity attack [1], the adversary can ﬁrst partition a table on QI and then analyze the distribution of SA values in
+each EC. If all the tuples in an EC have the same SA value, the adversary can still infer with 100% certainty the SA value of any person
+in the EC, even though the EC contains k or more tuples.
+Another notion of privacy, the ℓ-diversity, was proposed in [1] to prevent homogeneity attacks. A table is ℓ-diversiﬁed if every
+EC in the table contains at least ℓ well-represented SA values. In principle, ℓ-diversity guarantees that the SA value of a target
+person cannot be identiﬁed with 100% conﬁdence unless the adversary has enough background knowledge to eliminate ℓ − 1 SA
+values in the person's EC. Several measures were proposed to quantify the meaning of “well-representedness” of ℓ-diversity.
+These include entropy ℓ-diversity [1], recursive (c, ℓ)-diversity [1] and simple ℓ-diversity [2,7]. The latter two are widely
+recognized and will be referred to as the existing diversity measures in the rest of this paper. We give their deﬁnitions below based
+on [1,2].
+Deﬁnition 1. (ℓ-diversity) Let T be a table, E be an EC in T based on QI and fi be the frequency of the ith most frequent SA value in
+E. E satisﬁes the recursive (c, ℓ)-diversity if f1 b c(∑ m
+i = ℓ fi), where m ≥ ℓ is the number of distinct SA values in E and c ≥ 1 is an
+integer constant; E satisﬁes the simple ℓ-diversity if f1 ≤ ℓ1 . T satisﬁes the (c, ℓ)-diversity (resp. the simple ℓ-diversity) if every EC in
+T satisﬁes the given diversity.
+For example, in Fig. 1, table (b) satisﬁes the recursive (3, 2)-diversity and table (c) satisﬁes the simple 2-diversity.
+Since existing diversity measures are deﬁned in terms of speciﬁc rather than general SA values, algorithms based on these
+diversity measures will only generalize QI values. For original data that has a heavily skewed SA distribution, existing diversity
+measures can cause a narrow eligible range of privacy requirements and consequently a low utility of anonymous data. We further
+discuss these problems in the next subsection.
+1.1. Problems of narrow eligible ranges
+To anonymize an original table, a data owner needs to specify a privacy requirement (in terms of parameters ℓ and c) for
+existing ℓ-diversity algorithms.
+
+(a) Age
+
+(b) Zipcode
+Fig. 2. Attribute taxonomies.
+
+(c) Disease
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+103
+
+Deﬁnition 2. (Eligible range) A privacy requirement of an ℓ-diversity algorithm is eligible for a dataset if it allows the algorithm to
+produce a table of some utility from the dataset. The set of all eligible requirements is the eligible range of the algorithm for the
+dataset.
+Although the utility of data may be measured in many ways, for simplicity, we assume that a table is useful as long as not all
+tuples in it have the most general QI value. To achieve privacy-preserving data publishing, a data owner needs to specify an eligible
+privacy requirement that provides sufﬁcient protection.
+Given the distribution of SA values of an original table, we can easily determine the eligible ranges under existing diversity
+measures.
+For example, the largest ℓ that a data owner can specify for the simple ℓ-diversity without getting an empty table is
+ 
+1
+, where f1 is the frequency of the most frequent SA value in the original table. Notice that as f1 increases, the maximum ℓ
+f1
+decreases. Thus, an SA distribution limits the maximum ℓ of the simple ℓ-diversity. Similarly, for (c, ℓ)-diversity, an SA
+distribution limits the maximum ℓ if c is ﬁxed and the minimum c if ℓ is ﬁxed.
+If the eligible range of an original table is narrow, it will be difﬁcult for a data owner to effectively use existing ℓ-diversity
+algorithms on the data. Unfortunately, many real-world datasets have very narrow eligible ranges for existing ℓ-diversity
+measures due to highly skewed SA distributions. For example, according to Table 1, which shows the eligible ranges of datasets in
+UCI repository [11] for simple ℓ-diversity, an algorithm of the simple ℓ-diversity will always output an empty table for most
+datasets in the table.2 It is worth noting that a dataset may have a very narrow eligible range regardless how many distinct SA
+values it has. The eligible ranges of the datasets in Table 1 for (c, ℓ)-diversity are also very narrow. For example, the eligible range
+of Adult dataset using Salary as the SA is c ≥ 4 if given ℓ = 2.
+A narrow eligible range can severely limit the ability of a data owner to publish useful data with effective control of following
+two types of privacy risks.
+1. Negative disclosure. The published table allows the adversary to determine with a high probability that a target person does not
+have a certain SA value.
+2. Positive disclosure. The published table allows the adversary to identify with a high probability that the SA value of a target
+person is within a very small set.3
+Example 3. (Negative disclosure) Consider a published table that contains a total 100 distinct SA values and an EC in the table
+contains only two distinct SA values. In this case, the adversary can conclude with a probability of 1 that any target person in this
+EC will not have any of the other 98 SA values. This is a negative disclosure if the adversary cannot draw this conclusion before
+seeing the data.
+To reduce the risk of negative disclosure using existing ℓ-diversity algorithms, the data owner needs to specify a large ℓ. A
+narrow eligible range will limit the data owner's ability to reduce the risk.
+Example 4. (Positive disclosure) Consider Fig. 1. If the data owner decides to anonymize table (a) using an algorithm of simple
+ℓ-diversity and choose ℓ = 2, the table (c), which satisﬁes the simple 2-diversity, will be obtained. But from table (c), the adversary
+can determine with a probability of 0.9 that Bob has either hepatitis or tuberculosis. This is because Bob is in EC 1, whose QI value is
+b[20,39], 1000*N, and the two most frequent SA values in that EC are hepatitis and tuberculosis. On the other hand, if the data owner
+wants to use a (c, ℓ)-diversity algorithm to anonymize table (a) with c = 3 and ℓ = 2, the only eligible (c, ℓ)-diversity requirement
+for this table, table (b) will be obtained. However, from table (b), the adversary can determine with a probability of 0.714 that Bob
+has hepatitis. This is because Bob is in EC 1, whose QI value is b[20,29], 100**N, and the most frequent SA value of that EC is hepatitis.
+In general, to reduce the risk of positive disclosure using existing ℓ-diversity algorithms, the data owner needs to specify a
+large ℓ (and a small c in case of a (c, ℓ)-diversity). Again, narrow eligible ranges will limit data owner's ability to reduce the risk.
+1.2. Our contributions
+In this paper, we propose to solve the problems of existing diversity measures by allowing the generalization of both QI and SA
+values. Intuitively, if a tuple in an anonymous table contains a general SA value, this general SA value, say a, can represent (or
+induce) any base SA value under a in the taxonomy. The adversary cannot exclude any of these induced base SA values unless he or
+she has enough prior knowledge to do so. Thus, the distribution of induced SA values in an anonymous table is often less skew than
+the distribution of SA values of the original table, therefore, improves the eligible range. In addition, by appropriately choosing QI
+and SA values to generalize, it is more likely to produce anonymous data of higher utility.
+To allow the generalization of SA values, we need to deﬁne an ℓ-diversity measure in terms of induced SA values and to design
+generalization algorithms based on this new diversity measure. In this paper, we make the following contributions.
+1. We propose a functional (τ, ℓ)-diversity, which extends existing ℓ-diversity measures in two ways. First, it measures the wellrepresentedness of ℓ-diversity in terms of estimated frequencies of induced base SA values. Second, it uses a linear function to
+2
+3
+
+It is an interesting point that our method can produce non-empty tables (see Section 5.2), even for the datasets with the maximal ℓ = 1 in Table 1.
+In practice, it is not necessary for the adversary to uniquely identify the true SA value of the target person to cause a privacy breach.
+
+104
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+Table 1
+Eligible ranges of UCI datasets for simple ℓ-diversity. Datasets that have a maximum ℓ = 1 will cause any algorithm of simple ℓ-diversity to output an empty
+output table for any privacy requirement.
+Name
+
+SA attribute
+
+# SA values
+
+Eligible range (max ℓ)
+
+Abalone
+Adult
+Adult
+Car Evaluation
+Chess (King–Rook vs. King)
+Chess (King–Rook vs. King–Pawn)
+Connect-4
+Contraceptive method choice
+Covertype
+Internet advertisements
+MAGIC gamma telescope
+Mushroom
+Musk (Version 2)
+Nursery
+Poker hand
+Statlog (Shuttle) data
+
+Rings
+Salary
+Occupation
+Class
+Optimal depth-of-win
+Class
+Class
+Contraceptive method used
+Cover_Type
+Class
+Class
+Class
+Class
+Rank
+Class
+Class
+
+29
+2
+14
+4
+18
+2
+3
+3
+8
+2
+2
+2
+2
+5
+10
+7
+
+6
+1
+7
+1
+6
+1
+1
+2
+2
+1
+1
+1
+1
+3
+1
+1
+
+specify an upper bound on cumulative frequency of ℓ dominant induced SA values, and therefore restricts the probability of
+privacy breaching.
+2. We analyze strength of various ℓ-diversity measures and establish conditions for an existing ℓ-diversity measure to produce
+anonymous data that will satisfy a given (τ, ℓ)-diversity requirement. This provides a basis for comparing various ℓ-diversity
+measures.
+3. We deﬁne a novel partial order of QI values by taking into consideration the importance of QI attributes and the information
+retained in (general) QI values. We present a heuristic algorithm to use this partial order to ﬁnd good (τ, ℓ)-diversity partitions
+for given original tables.
+4. We compare our algorithm with two existing ℓ-diversity algorithms, the Incognito-based (c, ℓ)-diversity algorithm [1] and the
+1-D ℓ-diversity algorithm [7], on both the privacy guarantee and the utility of published data. According to our preliminary
+results based on two popular UCI datasets, our method is able to produce useful anonymous data for many (τ, ℓ)-diversity
+requirements that cause the other methods to produce empty output. On the other hand, for (τ, ℓ)-diversity requirements that
+allow the other methods to produce non-empty data, our methods can often produce data with much better quality and can
+achieve this with little performance penalty.
+1.3. Related work
+Our work is within the framework of generalization. In this section, we give a brief account of some previous work in the
+literature.
+The k-anonymity [12] was proposed to prevent the linking attack and laid a foundation for measuring privacy in the context of
+generalization. The complexity of the optimal k-anonymity problem was investigated in several studies [13–15] and was shown to
+be NP-hard. Much work has been done in ﬁnding efﬁcient heuristic-based implementations of k-anonymity and resulted in a
+number of global recoding methods, such as single-dimension [4], multiple-dimension [6], bottom-up [16] and top-down [17]
+methods, and local-recoding methods [8,18].
+The notion of ℓ-diversity and several diversity measures were proposed in [1] to prevent the homogeneity attack, which cannot
+be prevented by k-anonymity. Efﬁcient heuristic implementations of the existing ℓ-diversity measures include (c, ℓ)-diversity
+algorithms that extend efﬁcient k-anonymity algorithms [1,19] and several efﬁcient algorithms for simple ℓ-diversity [2,7]. There
+are several variants of ℓ-diversity including (α, k)-anonymity [20] which combines k-anonymity with simple ℓ-diversity, and minvariance [21] which considers ℓ-diversity in the context of multiple release of a dataset involving some updates.
+A number of recent studies also considered more sophisticated attacks, such as skewness and similarity attacks [5], proximity
+attack [22], minimality attack [10], BCF attack [23], and composition attack [24].
+The modeling of background knowledge of an adversary was also studied recently. For example, a language for expressing the
+knowledge of the adversary was proposed in [25], which also deﬁned a measure, (c, k)-safety, to quantify the adversarial
+knowledge and proposed method to guarantee that using k or less pieces of knowledge, the adversary cannot infer the real SA
+value of any person with a probability higher than c. On the other hand, the privacy skyline was proposed in [9] to specify three
+types of adversarial knowledge using logic expressions: the knowledge about a target person, the knowledge about other persons
+(such as a friend or a relative of the target person), and the knowledge about a group of persons that have the same set of SA
+values.
+Privacy measures for numerical sensitive data were studied in [26–28].
+Much of the aforementioned work focused on the distribution of SA values in individual ECs and did not consider the difference
+of SA distributions between an EC and the whole table. One exception is the t-closeness proposed in [5], which noticed that a
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+105
+
+privacy breach may occur if in the anonymous table the SA distribution of an EC is very different from that of the whole table.
+Therefore, it requires the distance between the distributions of SA values in the whole table and in each EC to be bounded by a user
+speciﬁed threshold t. However, t-closeness does not speciﬁcally deal with the situation where the SA distribution of the whole
+table is heavily skewed. Therefore, like other existing ℓ-diversity measures, t-closeness can still fail to produce useful data if the
+original table has a heavily skewed SA distribution.
+Instead of generalization, randomization has been used for a long time to control disclosure for statistical data analysis. There has
+been a number of new results in the literature. The notion of differential privacy was proposed in [30,31] to measure the privacy of a
+randomization function. Informally, differential privacy requires that the randomization result is essentially unchanged no matter
+whether a tuple is in or not in the original table. Another privacy measure for randomized data publishing is the ρ1 − ρ2 [32], which
+measures the difference between the adversary's prior (ρ1) and posterior (ρ2) beliefs of a person's SA value. There have been a number
+of variants of ρ1 − ρ2 measures. For example, (d, γ)-privacy proposed in [33] assumes that the adversary's prior probability is less than
+d
+d and the ratio of posterior and prior beliefs is greater than . On the other hand, the probabilistic differential privacy was proposed in
+γ
+[34] for using synthetic data generation as the anonymization technique to publish maps.
+Another technique, permutation, is recently used to protect privacy [2,35]. It releases the quasi-identiﬁer and sensitive values
+directly in two separate tables, which can be jointed using group id.
+Besides the studies on tabular data anonymization, some studies consider different types of data, such as streaming data [36]
+and social network data [37]; some studies consider to publish knowledge models instead of data [38–40]; some studies focus on
+the balance between privacy protection and utility preservation [41,42].
+1.4. Roadmap
+The rest of the paper is organized as follows. In Section 2, we deﬁne the functional (τ, ℓ)-diversity measure. In Section 3, we
+analyze the strength of various ℓ-diversity measures. In Section 4, we present a heuristic algorithm for solving the (τ, ℓ)-diversity
+problem. In Section 5, we present experimental results. We conclude the paper and discuss our future work in Section 6.
+2. Functional (τ, ℓ)-diversity
+Let A be the set of attributes of data tables, consisting of two disjoint subsets, quasi-identiﬁer QI and sensitive attribute SA. For
+any data tuple t, t[QI] and t[SA] denote its QI and SA, respectively.
+Each attribute A has a taxonomy TA deﬁned as a tree structure. Leaf nodes of TA represent base values and non-leaf nodes
+represent general values. The set of base values under a given general value v is denoted by leaves(v). For convenience, we assume
+that SA is a single attribute that contains m distinct base values. A data tuple is a base tuple if contains only base values. Otherwise,
+it is a general tuple.
+Deﬁnition 5. (Generalization) Let v and v′ be two values of an attribute. We say that v covers v′, written v ≽ v′, if v is the same as v′
+or v is an ancestor of v′ in the taxonomy. Let t1 and t2 be two tuples and S be a set of attributes. We say that t1[S] covers t2[S], written
+t1[S] ≽ t2[S] (or t1 ≽ t2 if S = A), if for each attribute A ∈ S, t1[A] ≽ t2[A]. We say that t1 is more general than t2 if t1 ≽ t2 and t1 ≠ t2.
+Deﬁnition 6. (Partition) A (QI-induced) partition P of a table T is a set of equivalence classes (ECs) E1, …, Ep so that two tuples t1
+and t2 belong to the same EC iff (if and only if) t1[QI] = t2[QI]. It follows that T = ∪pi = 1 Ei and Ei ∩ Ej = ∅, for all i ≠ j. If t is in an EC E,
+then t[QI] is also the QI of E.
+Deﬁnition 7. (Induced frequency) Let E be an EC, a be a base SA value, and t be a tuple in E. We say that a is induced by t, if t[SA] ≽ a.
+The induced frequency of a in E is
+f ðaÞ =
+
+∑t∈E lðt ½SA; aÞ
+jE j
+
+where
+lðt ½SA; aÞ =
+
+8
+>
+<
+>
+:
+
+wðaÞ
+;
+∑v ∈ leavesðt ½SAÞ wðvÞ
+
+if a≼ t ½SA;
+
+0;
+
+otherwise:
+
+is the frequency of a attributed to t, and w(a) is a weight assigned to base SA value a. Intuitively, w(a) models the background
+knowledge of an adversary about a. If the adversary's background knowledge is unknown, we can let w(a) = 1 if a appears in the
+original, and w(a) = 0, otherwise.
+Example 8. Since all the four values of attribute Disease in Fig. 2(c) appear in Fig. 1(a), we can assign a weight 1 to each of them. In
+Fig. 3,4 the induced frequencies of SA values for each EC in table (a) are shown in table (b). Speciﬁcally, the frequency of hepatitis
+4
+
+In Fig. 3(a), the column EC does not appear in the published data.
+
+106
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+(a) (0.5, 3)-diversity
+
+(b) Induced SA distribution
+
+Fig. 3. An example of (τ, ℓ)-diversity.
+
+attributed to the ﬁrst tuple of table (a) is 1/ (1 + 1) = 0.5, but the frequency of ﬂu attributed to the same tuple is 0, since ﬂu is not a
+hemal disease. Also, in the EC 1 of QI value b[20,29], 1000*N of table (a) (consisting of tuples 1, 2, 4 and 5), the induced frequency of
+hepatitis is 0:5 = 0:5 + 0:54 + 1 + 0.
+Deﬁnition 9. (Cumulative frequency) Assume that the base SA values are a1, …, am, the induced frequency of ai in an EC is fi, and
+f1 ≥ f2 ≥ ⋯ ≥ fm. We call fk the kth dominant SA frequency and ak the kth dominant SA value. The cumulative frequency of the ﬁrst k
+dominant SA values is F(k) = ∑ ki = 1 fi.
+Example 10. In Fig. 3, according to table (b), for EC 1 of table (a) (with QI value b[20,29], 1000*N), the cumulative frequencies are
+F(1) = 0.5, F(2) = 0.75, F(3) = 1 and F(4) = 1.
+Deﬁnition 11. (Functional (τ, ℓ)-diversity) A partition P of a table T satisﬁes a functional (τ, ℓ)-diversity (or (τ, ℓ)-diversity for
+short) if for each equivalence class E, F(k) ≤ ψ(k), for every 1 ≤ k ≤ m, where F(k) is the cumulative frequency of the ﬁrst k dominant
+SA values and ψ(k) is an increasing function over [1, m] with ψ(1) = τ and ψ(ℓ) = 1.
+Obviously, there can be many possible bounding functions of cumulative frequencies. To be speciﬁc, we use the following linear
+function in this paper.
+8
+< τ + 1−τ ðk−1Þ;
+ℓ−1
+ψðkÞ =
+:
+1;
+
+if 1 ≤ k ≤ ℓ;
+if ℓ b k ≤ m:
+
+1−τ
+In general, 2 ≤ ℓ ≤ m and ℓ1 ≤τb1 (because under (τ, ℓ)-diversity, ψðkÞ−ψðk−1Þ = ℓ−1
+≤τ, which implies 1 ≤ τℓ).
+
+Example 12. In Fig. 3, table (a) satisﬁes (0.5, 3)-diversity. It contains three ECs, each of which has the identical set of cumulative
+frequencies F(1) = 0.5, F(2) = 0.75, F(3) = 1 and F(4) = 1. These cumulative frequencies are no larger than their respective limits
+ψ(1) = τ = 0.5, ψ(2) = 0.75, ψ(3) = 1 and ψ(4) = 1.
+Theorem 13. Let E be an equivalence class in an anonymous table that satisﬁes (τ, ℓ)-diversity and o be an individual whose
+generalized tuple is in E. Without any prior knowledge, an adversary can infer with a probability no higher than ψ(k) that the SA value of
+o is among one of the k dominant SA values.
+Proof. Let Pr[a] be the probability with which the adversary infers that o has SA value a. From the adversary's point of view, any
+tuple in E may be the tuple of o. Without any prior knowledge, the adversary has to assume that each tuple is equally probable.
+1
+Thus, any tuple in E has probability
+of being the tuple of o. If tuple t is randomly selected from E, the probability for the SA value
+jE j
+of o to be a is l(t[SA], a) since only base values covered by t[SA] are probable. Thus,
+Pr½a = ∑ P ½ajt Pr ½t  = ∑
+t∈E
+
+t∈E
+
+lðt ½SA; aÞ
+= f ðaÞ
+jE j
+
+Let Pr[S] be the probability with which the adversary infers that the SA value of o is among the set S of the ﬁrst k dominant SA
+values of E. Then, Pr[S] = ∑ ki = 1 Pr[ai], where ai is the ith dominant SA value. According to previous arguments, Pr[ai] = f(ai),
+therefore, Pr[S] = F(k). Since E is (τ, ℓ)-diversiﬁed, Pr[S] = F(k) ≤ ψ(k).
+□
+Besides the privacy measure (τ, ℓ)-diversity, we measure the utility of anonymous tuples by the amount of information
+retained in them. Intuitively, a base tuple contains the maximum amount of information and as the tuple is generalized, the
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+107
+
+amount of information retained by the tuple will decrease. The maximum loss of information occurs when all the components of
+the tuple are generalized to the roots of their taxonomies.
+1
+. The information of a tuple t is
+Deﬁnition 14. (Utility measure) The information of a value v in a taxonomy is I ðvÞ = j leaves
+ðvÞ j
+
+Iðt Þ = ∑A∈A Iðt ½AÞ, where A is the set of attributes. The information of a dataset G is I(G) = ∑ t ∈ G I(t). The utility of G is the
+information retained by G relative to information in the original dataset O, that is, umðGÞ = IIððOGÞÞ.
+1
+1
+Example 15. In Fig. 3, the information of tuple 1 or 2 of table (a) is 10
++ 10
++ 12 = 0:7, the information of tuples 3, 9, 11 or 12 is
+1.2, and that of other tuples is 1.1, thus the information of the whole data of table (a) is I(G) = 0.7 × 2 + 1.1 × 4 + 1.2 × 6 = 13. And
+then the utility of table (a) is umðGÞ = 1213× 3 = 0:36.
+
+With the privacy and utility measures as we deﬁned, the optimal (τ, ℓ)-diversity problem can be speciﬁed as follows.
+Problem 16. Given an original dataset T , a privacy requirement (τ, ℓ) and a utility measure um. Find a generalized dataset G that
+satisﬁes (τ, ℓ)-diversity and maximizes um(G).
+Theorem 17. The optimal (τ, ℓ)-diversity problem is NP-hard.
+Proof. (Sketch) The (τ, ℓ)-diversity problem can be reduced to a simple ℓ-diversity problem with ℓ = 1τ. The simple ℓ-diversity
+problem can in turn be reduced into the k-anonymity problem, assuming all the SA values in the data are distinct and k = ℓ.
+Because the optimal k-anonymity problem is NP-hard [13], so is the optimal (τ, ℓ)-diversity problem.
+□
+3. Strength of various ℓ-diversity measures
+In this section, we compare the (τ, ℓ)-diversity, the (c, ℓ)-diversity and the simple ℓ-diversity measures in terms of the
+strength of privacy requirements. The results presented in this section can help data owners in practice to use existing ℓ-diversity
+algorithms to achieve some (τ, ℓ)-diversity requirements. For the sake of presentation, we sometimes use (τ, u)-diversity to mean
+a speciﬁc (τ, ℓ)-diversity where ℓ = u.
+Deﬁnition 18. (Strength of requirements) A privacy requirement r1 is stronger than another privacy requirement r2 if every
+dataset that satisﬁes r1 also satisﬁes r2.
+Lemma 19. A simple ℓ1-diversity is stronger than a simple ℓ2-diversity iff ℓ1 N ℓ2. A (c1, ℓ1)-diversity is stronger than another (c2, ℓ2)diversity if ℓ1 ≥ ℓ2 and c1 ≤ c2.
+We only have a sufﬁcient condition for the (c, ℓ)-diversity because for (c, ℓ)-diversity requirements, the “stronger than” is a
+partial order.
+First, let us compare the strength of (τ, u)-diversity and simple ℓ-diversity. We are particularly interested in determining the lower
+bound simple ℓ-diversity that is stronger than a given (τ, u)-diversity. This can help a data owner to theoretically determine a simple
+ℓ-diversity requirement, so that the output of an existing simple ℓ-diversity algorithm is guaranteed to satisfy a given (τ, u)-diversity
+requirement.
+Theorem 20. A simple ℓ-diversity is stronger than a (τ, u)-diversity iff u ≤ ℓ.
+Proof. (If) Assume u≤ℓ. We show that the simple ℓ-diversity condition can be represented by a function ρ(k) that bounds the
+cumulative frequency of the ﬁrst k dominant SA values and that ρ(k)≤ψ(k) for 1≤k≤m. Thus it is stronger than the given (τ,u)-diversity.
+By Deﬁnition 1, simple ℓ-diversity requires that the kth dominant SA frequency fk ≤ fk−1 ≤ ⋯ ≤ f1 ≤ ℓ1 or equivalently, the
+1− 1
+cumulative frequency F ðkÞ = ∑ki= 1 fi ≤ ℓk , for 1 ≤ k ≤ ℓ. Since ℓk = ℓ1 + ℓ−1ℓ ⋅ðk−1Þ, these conditions can be expressed as
+F(k) ≤ ρ(k), where
+8
+1
+>
+>
+1−
+<1
+ℓ
+⋅ðk−1Þ; if 1 ≤ k ≤ ℓ;
++
+ð1Þ
+ρðkÞ =
+ℓ−1
+ℓ
+>
+>
+:
+1;
+if ℓ b k ≤ m:
+
+
+1
+That is, the simple ℓ-diversity is equivalent to a
+; ℓ -diversity.
+ℓ
+1 1
+1−τ
+ðk−1Þ−
+We now show that ρ(k) ≤ ψ(k) for1 ≤ k ≤m. Because u ≤ ℓ, we have ρð1Þ = ≤ ≤τ = ψð1Þ, ψðkÞ−ρðkÞ = τ +
+u ℓ
+u−1
+k
+1−τ
+k
+uτ−1
+k
+≥τ +
+ðk−1Þ− =
+1− ≥0, for 2 ≤ k ≤ u, and ψ(k) = ρ(k), for u + 1 ≤ k ≤ m.
+ℓ
+u−1
+u
+u−1
+u
+(Only if) We prove by contradiction. Assume that a simple ℓ-diversity is stronger than a (τ, u)-diversity and ℓ b u.
+1
+1
+1
+1
+1
+= ρð1Þ. However, τ = b
+. We can construct an EC
+Recall that ≤τb1. Let τ = and ℓ = u − δ. By Deﬁnition 1, f1 ≤
+u
+u
+u−δ
+u u−δ
+1
+= ρð1Þ N τ = ψð1Þ, f1 satisﬁes the simple
+that contains u − δ tuples with distinct base SA values. In this EC, since f1 =
+u−δ
+
+108
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+ℓ-diversity and not the (τ, u)-diversity. This contradicts the assumption that this simple ℓ-diversity is stronger than the (τ, u)diversity.
+□
+Among all the simple ℓ-diversity requirements stronger than the (τ, u)-diversity, the weakest one is preferred since the
+anonymous data obtained under this simple ℓ-diversity requirement will not only satisfy the (τ, u)-diversity, but also have the
+maximum utility.
+Corollary 21. The simple ℓ1-diversity is the weakest simple ℓ-diversity stronger than (τ, ℓ2)-diversity iff ℓ1 = ℓ2.
+□
+
+1
+;m Example 22. In Fig. 4, the x-axis is k, the number of dominant SA values, and the y-axis is ψ(k). Line AJ is the curve of
+m
+diversity, the strongest (τ, ℓ)-diversity speciﬁed using ψ(). Line DGJ is the curve of the simple ℓ-diversity, the weakest simple ℓdiversity that is stronger than the (τ, u)-diversity (represented by line EGJ).
+Proof. Follows Theorem 20 and Lemma 19.
+
+
+
+Next, let us compare the strength of (τ, u)-diversity and (c, ℓ)-diversity. Since it is difﬁcult to determine a (c, ℓ)-diversity
+requirement that is stronger than a given (τ, u)-diversity requirement if both c and ℓ are free variables, in the following result, we
+determine one of c and ℓ, assuming the other is ﬁxed.
+m−1
+m−1
+≤ ℓ≤ m is stronger than a (τ, u)-diversity iff 1≤ c ≤
+; a
+Theorem 23. A (c, ℓ)-diversity with m + 1−
+u−1
+ðu−1Þ⋅ðm−ℓ + 1Þ
+m−1
+m−1
+is stronger than a (τ, u)-diversity iff m + 1−
+≤ ℓ≤ m.
+(c, ℓ)-diversity with 1≤ c ≤
+u−1
+cðu−1Þ
+Proof. (If) Similar to the proof of Theorem 20, we derive a function ϕ(k) for (c, ℓ)-diversity that bounds the cumulative frequency
+of the ﬁrst k dominant base SA values, and show that ϕ(k) ≤ ψ(k) for 1 ≤ k ≤ m. Thus, the (c, ℓ)-diversity is stronger than the (τ, u)diversity. We consider two cases.
+m−1
+m−1
+Case 1: 1≤c≤
+and m + 1−
+≤ℓ≤m.
+ðu−1Þ⋅ðm−ℓ + 1Þ
+u−1
+We show that this (c, ℓ)-diversity is stronger than the (τ, u)-diversity. By Deﬁnition 1, in any (c, ℓ)-diverse EC, f1 b c ⋅ (fℓ +... +
+m−1
+1−f1
+and in any EC fℓ ≤
+, we have
+fm) ≤ c ⋅ (m − ℓ + 1) ⋅ fℓ. Since c≤
+ðu−1Þ⋅ðm−ℓ + 1Þ
+m−1
+f1 bc⋅ð fℓ + ::: + fm Þ
+≤c⋅ðm−ℓ + 1Þ⋅fℓ
+=
+
+m−1
+ðm−ℓ + 1Þ
+⋅ð1−f1 Þ
+ðu−1Þ⋅ðm−ℓ + 1Þ ⋅
+m−1
+
+=
+
+1−f1
+u−1
+
+1
+1
+Solving the previous inequality for f1 results in f1 b . Thus, the kth dominant SA frequency fk ≤fk−1 ≤⋯≤f1 b , for 1 ≤ k ≤ u, and
+u
+u
+k
+F ðkÞ = ∑ki= 1 fi b . Therefore, this type of (c, ℓ)-diversity requires F(k) b ϕ(k), where
+u
+8
+<b k;
+if 1 ≤ k ≤ u;
+ð2Þ
+ϕðkÞ =
+u
+:
+≤1
+if u + 1 ≤ k ≤ m:
+
+Fig. 4. Comparison of (τ, ℓ)-diversity and ℓ-diversity as privacy requirements.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+109
+
+
+
+1−τ
+k
+uτ−1
+k
+ðk−1Þ− =
+1− ≥ 0, for 1 ≤ k ≤ u, and ψ(k) = 1 ≥ ϕ(k), for u + 1 ≤ k ≤ m, we conclude
+u−1
+u
+u−1
+u
+that ψ(k) ≥ ϕ(k), for 1 ≤ k ≤ m.
+m−1
+m−1
+Case 2: m + 1−
+≤ ℓ ≤ m and 1 ≤ c ≤
+.
+cðu−1Þ
+u−1
+We show that this (c, ℓ)-diversity is stronger than the (τ, u)-diversity. Similar to Case 1, under this (c, ℓ)-diversity, we have
+1
+f1 b because
+u
+f1 b c ⋅ðfℓ + ::: + fm Þ
+Since ψðkÞ−ϕðkÞ N τ +
+
+ðm−ℓ + 1Þ
+= c⋅
+⋅ ð1−f1 Þ
+m−1
+
+
+
+
+m−1
++1
+m− m + 1−
+cðu−1Þ
+≤ c⋅
+⋅ ð1−f1 Þ
+m−1
+=
+
+1−f1
+u−1
+
+This (c, ℓ)-diversity also requires F(k) b ϕ(k), where ϕ(k) is exactly the same as the one deﬁned by Eq. (2). Thus, ψðkÞ≥
+
+k
+N ϕðkÞ for
+u
+
+1 ≤ k ≤ u, ψ(k) = 1 ≥ ϕ(k) for u + 1 ≤ k ≤ m, and the (c, ℓ)-diversity is stronger than the (τ, u)-diversity.
+(Only if). We prove it by contradiction.
+m−1
+≤ ℓ ≤ m is stronger than the (τ, u)-diversity, and that c N
+Case 1. Assume that a (c, ℓ)-diversity with m + 1−
+u−1
+m−1
+(c cannot be less than 1).
+ðu−1Þ⋅ðm−ℓ + 1Þ
+1
+1
+Since this assumption is true for all 2 ≤ u ≤ m and ≤τ b1. It must also be true for m = 5, u = 4 and τ = = 0:25, which
+u
+u
+implies ℓ = 5 and c ≥ 2. Thus, a (c, 5)-diversity should be stronger than (0.25, 4)-diversity as long as c ≥ 2 and there are 5 base SA
+values, or equivalently (by Deﬁnition 18), every dataset that satisﬁes (c, 5)-diversity will also satisfy (0.25, 4)-diversity, as long as
+c ≥ 2 and there are 5 base SA values.
+Now, consider a dataset that contains 432 tuples with same QI values (thus, it is a single EC). Among these tuples, 120 tuples
+have a base SA value a1. The remaining 312 tuples are evenly divided into 4 groups of 78 tuples and each group of tuples have
+120
+78
+= 0:2778b2⋅
+= 0:456≤c⋅ðfℓ + ⋯ + fm Þ, this dataset satisﬁes the
+one of the remaining 4 base SA values. Since f1 =
+432
+432
+(c, 5)-diversity for any c ≥ 2. But, since f1 = 0.277 N 0.25 = τ, it does not satisfy (0.25, 4)-diversity. Thus, we have a contradiction.
+m−1
+m−1
+is stronger than the (τ, u)-diversity and that ℓbm + 1−
+(ℓ
+Case 2. Assume that a (c, ℓ)-diversity with 1≤ c≤
+u−1
+cðu−1Þ
+cannot be larger than m).
+Similar to Case 1, we consider a special situation where m = 5, u = 4, τ = 0.25. This implies c = 1and 2 ≤ ℓ ≤ 4. By assumption,
+every dataset that satisﬁes (1, ℓ)-diversity will also satisfy (0.25, 4)-diversity, as long as 2 ≤ ℓ ≤ 4 and there are 5 base SA values.
+Now, consider a dataset that contains 288 tuples with same QI values (thus, it is a single EC). Among these tuples, 80 tuples
+have a base SA value 
+a1 and each of
+ the remaining 4 groups of 52 tuples has one of the remaining 4 base SA values. Since
+80
+52
+52
+= 0:278b1⋅
++
+= 0:361 = c⋅ðfm−1 + fm Þ≤c⋅ðfℓ + ⋯ + fm Þ, this dataset satisﬁes the (1, ℓ)-diversity for
+f1 =
+288
+288
+288
+□
+any 2 ≤ ℓ ≤ 4. But, since f1 = 0.278 N 0.25 = τ, it does not satisfy (0.25, 4)-diversity. Thus, we have a contradiction.
+Again, the weakest (c, ℓ)-diversity stronger than the given (τ, u)-diversity is preferred for good utility.
+m−1
+≤ ℓ≤m is the weakest (c, ℓ)-diversity stronger than (τ, u)-diversity iff c =
+Corollary 24. A (c, ℓ)-diversity where m + 1−
+
+
+u−1
+m−1
+m−1
+; a (c, ℓ)-diversity where 1≤c≤
+is the weakest (c, ℓ)-diversity stronger than (τ, u)-diversity iff ℓ =
+ðu−1Þ⋅ðm−ℓ + 1Þ
+u−1
+m−1
+m + 1−
+.
+cðu−1Þ
+Proof. Follows directly from Theorem 23 and Lemma 19.
+
+□
+
+Example 25. In Fig. 4, for the (τ, u)-diversity represented by line EGJ, lines BHJ and CIJ are two examples among many possible
+weakest (c, ℓ)-diversity that are stronger than the (τ, u)-diversity given a ﬁxed ℓ or a ﬁxed c. These weakest (c, ℓ)-diversity are all
+stronger than the weakest simple ℓ-diversity represented by line DGJ.
+4. Sequential sweep algorithm
+In this section, we present a heuristic (τ, ℓ)-diversity algorithm that obtains an anonymous table of a good utility. The basic
+idea is to partition the original table on QI and organize the set of ECs as a lattice (see Fig. 5(a) for an example), where each EC is
+labeled by a unique QI value. If an EC does not satisfy the given (τ, ℓ)-diversity requirement, some of its tuples will be swept (i.e.,
+
+110
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+(a)
+
+(b)
+
+Fig. 5. An order of QI values. In (a), the upper portion shows the taxonomy trees of two QI attributes A and B, and the levels of the trees. Attribute A is assumed to be
+more important than attribute B, and all values have the same weight. The lower portion shows the generalization lattice of QI values. For each pair of values linked
+by a line, the value at the higher level is more general than the value at the lower level. In (b), the values are ordered based on the heuristic order ≻ I from bottom to
+top. Values at the lower levels have more information than values at higher levels. Values at the same level have the same level vector and their relative order is not
+completely speciﬁed by ≻ I.
+
+moved) into other ECs labeled by more general QI values. The destination EC of each tuple is determined by a heuristic order of ECs
+that aims to retain as much utility as possible. The algorithm sweeps tuples until all the ECs satisfy the given (τ, ℓ)-diversity
+requirement or there is no more EC to sweep into. If the last EC (in the heuristic order) does not satisfy the given (τ, ℓ)-diversity
+requirement, the algorithm will generalize SA values of some selected tuples in that EC. In the following, we ﬁrst deﬁne the
+heuristic order of QI values and then discuss main steps of the algorithm in some details.
+4.1. A heuristic order of QI values
+Without loss of generality, we assume that the QI consist of attributes A1, …, Ad ordered by their importance, which may be
+based on their semantics, the complexity of their taxonomies, or the preference of a user. Each QI value is a d-tuple and a node in
+the lattice deﬁned by taxonomies of these attributes. For each QI value q, q[Ai] is the component of q under attribute Ai and a value
+in the taxonomy of Ai at some level (assuming the root is at level 0). We use Li, j (resp. Si, j) to denote the level j (resp. all values in
+level j) of the taxonomy of attribute Ai. We assume that taxonomies of attributes are represented in an appropriate form so that
+given a value, we can easily ﬁnd its Si, j and Li, j, as well as its level and the number of leaves it covers. Using these quantities, we can
+deﬁne the amount of information retained by a QI value as follows.
+First, consider any value in a single attribute, say Ai, at level Li, j. The amount of information retained by such a value is deﬁned
+as
+
+∑v ∈ Si;j p′ ðvÞ⋅IðvÞ
+I Si;j =
+∑w ∈ Si;j p′ ðwÞ
+where p′(v) is the weight of value v and I(v) is the amount of information retained by v (as deﬁned in Deﬁnition 14). Here the
+weight p′(v) can be determined by a user or by the number of leaves covered by v in the original dataset. Since nodes at the same
+level of a taxonomy tree may cover different number of leaves, I(Si, j) is in fact the average amount of information retained by a
+value in Si, j. Next, consider a QI value q such that q[Ai] is at level Li, ji (that is, q[Ai] ∈ Si, ji) for 1 ≤ i ≤ d. The average amount of
+information retained by q is given by
+
+1 d 
+I bL1;j1 ; …; Ld;jd N = ∑ I Si;ji
+d i=1
+Notice that different QI values may retain the same amount of information.
+Deﬁnition 26. (Order ≻ I) The level vector of a QI value q is vq = b I(b L1, j1, …, Ld, jd N), L1, j1, …, Ld, jd N, where Li, ji is the level of q[Ai]. A QI
+value q precedes another QI value q′ (written q ≻ Iq′) if vq N vq′ (that is, if there exists some 0 ≤ h b d, such that v[i] = v′[i] for 0 ≤ i ≤ h,
+and v[h + 1] N v′[h + 1]).
+Example 27. Fig. 5(a) shows the taxonomies of two attributes A and B and the lattice of QI values they deﬁne. Consider QI
+value a0b1. Since a0 is at level 0 of attribute A, b1 is at level 1 of attribute B, the set of values in A at level 0 has only one
+1
+value a0, and the set of values in B at level 1 has two value b1 and b2, the information retained by a0b1 is Iðb0; 1 NÞ = ⋅
+2
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+111
+
+0 1
+1
+1⋅
+@ 2 + 1⋅1 + 1⋅1A = 0:75, and the level vector va0b1 = b 0.75, 0, 1 N. Similarly, va1b1 = b 1, 1, 1 N, va1b0 = b 0.75, 1, 0 N and va0b0 =
+1
+
+1+1
+
+b 0.5, 0, 0 N, as shown in Fig. 5(b). Thus, a1b1 ≻ Ia1b0 ≻ Ia0b1 ≻ Ia0b0. Notice that a1b0 and a0b1 cannot be ordered by ≻(more
+general than), but can be ordered by ≻ I.
+Theorem 28. For any two distinct QI values q1 and q2 that are more general than the same base QI value q, either q1 ≻ Iq2 or q2 ≻ Iq1.
+Proof. We prove it by contradiction. Let the vectors associated with q, q1 and q2 be vq = b v0, v1, …, vd N, vq1 = b v10, v11, …, v1d N and
+vq2 = b v20, v21, …, v2d N, respectively. Assume that there exists a QI value q such that q1 ≻ q, q2 ≻ q and yet q1 ⊁I q2 or q2 ⊁I q1 , that is, vq1 = vq2.
+Since vq1 = vq2, for each attribute Ai, 1 ≤ i ≤ d, q1[Ai] and q2[Ai] are at the same level Li, j. But, since q1 ≻ q and q2 ≻ q, both q1[Ai] and
+q2[Ai] are ancestors of q[Ai]. Since the taxonomy is a tree, q[Ai] can have only one ancestor at each level in the taxonomy. Thus, q1
+[Ai] = q2[Ai]. But, this implies q1 = q2, a contradiction.
+□
+Example 29. In Fig. 5(a), both a0b1 and a1b0 are more general than a1b1, as shown in Example 27, a1b0 ≻ I a0b1.
+Deﬁnition 30. (Next EC) Let q0 be a base QI value of a base tuple t and q ≻ q0 be the QI value of the EC containing t. The QI value of
+next EC of t based on ≻ I is q′ such that q′ ≻ q0, q ≻ Iq′, and there exists no another QI value q″, such that q″ ≻ q0 and q ≻ Iq″ ≻ Iq′.
+Example 31. In Fig. 5(b), if the EC of QI value a1b0 contains two tuples t1 and t2, where t1[QI] = a1b1 and t2[QI] = a1b2. Then, the
+next EC for t1 is the EC of a0b1 and the next EC for t2 is the EC of a0b2.
+4.2. The algorithm
+The algorithm Sequential Sweep (SWEEP for short) is given in Fig. 6. We explain the main steps of the algorithm in this
+subsection and leave the details to subsequent subsections.
+The Step 1 of the algorithm checks to see if the input (original) table, viewed as a single EC, satisﬁes the (τ, ℓ)-diversity
+requirement, and if not, it will generalize SA values to satisfy the requirement (see Section 4.3 for details). In subsequent steps, the
+algorithm attempts to ﬁnd more ECs.
+The Step 2 initializes a set V of items, where each item contains a distinct level vector and a list of ECs whose QI values have that
+same level vector. There are H = ∏di = 1 hi items in V, where hi is the height of the taxonomy of attribute Ai. Items in V are
+organized in descending order of their level vectors. Initially, each item in V contains an empty list of ECs. New ECs will be created
+later on demand (that is, when base tuples are swept into them) and initialized with an empty list of tuples.
+The algorithm also maintains a list of ECs, called the closedECList, in which every EC satisﬁes the given (τ, ℓ)-diversity
+requirement. The Step 3 initialize closedECList.
+In Step 4, each base tuple t in the original table is inserted into the EC corresponding to the QI value t[QI]. This is done by ﬁrst
+locating the next EC and then inserting t into it. The detail about locating the next EC for a given tuple is in Section 4.5.
+In Steps 5 to 10, the algorithm iterates through V one item at a time. For each item, it considers each EC in the ECList (in Steps 6–
+10). It removes the ﬁrst EC from the ECList and makes it the current EC. If the current EC does not satisfy the (τ, ℓ)-diversity
+requirement, some tuples in the current EC will be swept into their respective next ECs (in Steps 8–9). The detail about selecting
+
+Fig. 6. Sequential sweep algorithm.
+
+112
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+tuples to sweep (in Step 11) is in Section 4.4 and the detail about determining the next EC of a selected tuple is in Section 4.5. If
+after sweeping, the current EC satisﬁes the (τ, ℓ)-diversity requirement, the QI values of all the tuples in the current EC will be
+replaced by (or equivalently, generalized to) the QI value of the current EC, and the EC will be placed into the closedECList (in Step
+10). The algorithm will then consider the next EC in the ECList.
+When the previous process terminates, either all ECs satisfy the (τ, ℓ)-diversity requirement or only one EC (the one has the
+most general QI value) is left to consider. If this last EC does not satisfy the (τ, ℓ)-diversity requirement, the algorithm will
+generalize the SA values of some tuples in this EC in Step 11.
+Finally, in Step 12, the anonymous table is returned.
+Theorem 32. The time complexity of Sequential Sweep Algorithm is OððH + hSA Þ⋅jT jÞ, where hSA is the height of taxonomy of SA,
+H = ∏di = 1 hi , hi is the height of the taxonomy of QI attribute Ai.
+Proof. The set V has H items. Since the ECList in each item of V can be organized as a hash structure with the key being the QI
+value of EC, it takes O(1) to ﬁnd the EC of a given QI value for a tuple. Thus, the procedure to ﬁnd Next EC takes O(H) to locate the
+ﬁnal destination EC for each tuple. So, it takes OðH ⋅jT jÞ for the algorithm to ﬁnd ﬁnal destination ECs for all jT j tuples (Step 3 and
+Steps 5–10). Generalizing SA values for jT j tuples takes OðhSA ⋅jT jÞ (Step 1 or Step 11). This gives the total time complexity
+OððH + hSA Þ⋅jT jÞ.
+□
+4.3. Generalize SA values
+If the input table or the last EC does not satisfy the given (τ, ℓ)-diversity requirement, some tuples will be selected for SA
+generalization according to the following heuristic. To reduce the skewness of an SA distribution, we select a tuple whose SA value
+covers the dominant base SA value of the EC. If more than one candidate exists, we choose the tuple that has the least general SA
+value. The SA value of the selected tuple is replaced by its parent SA value. This step is repeated until the set of tuples satisﬁes the
+(τ, ℓ)-diversity requirement.
+Example 33. In Fig. 7, suppose we need to ﬁnd a partition satisfying (0.5, 3)-diversity. Since the original dataset does not satisfy
+the distribution requirement, we need to generalize SA values of some tuples. The dominant base SA value is hepatitis, covered by
+SA values of tuples 1, 2, 3, 4, 6 and 11. Since all these tuples have base SA values, one is selected randomly. Assume that tuple 1 is
+selected. Then, its SA value will become hemal disease, the parent of hepatitis. However, although the SA frequencies of the dataset
+changes after tuple 1 is generalized, the dataset still does not satisfy (0.5, 3)-diversity. Another tuple needs to be selected for SA
+generalization. The value hepatitis remains to be dominant. Now we can randomly select one from tuples 2, 3, 4, 6 and 11. Notice
+that although the SA value of tuple 1 also covers hepatitis, it will not be chosen again since the other tuples have less general SA
+values. Suppose this time tuple 2 is selected for generalization. After that, the dataset satisﬁes the (0.5, 3)-diversity. One of possible
+results of (0.5, 3)-diversity is table (a) in Fig. 3.
+4.4. Select tuples to sweep
+As long as an EC does not satisfy (τ, ℓ)-diversity and it is not the last EC, we sweep tuples one by one into other ECs. Let E be the
+EC, a be the dominant base SA value and f(a) be its induced frequency. According to Deﬁnition 7, the frequency of a induced by
+f ðaÞ⋅ jE j−lðt ½SA; aÞ
+tuple t is l(t[SA], a). If t is removed from this EC, the new induced frequency of a becomes
+. Thus, removing t can
+jE j−1
+effectively reduce skewness of SA distribution only if l(t[SA], a) N f(a). Consequently, our heuristic is to select the tuple whose
+removal maximizes the reduction of the induced frequency of the dominant base SA value.
+Example 34. Consider original tuples in Fig. 7 and assume we want (0.5, 3)-diversity. Suppose that the current EC has QI value
+b[30,39], 1000*N and it contains tuples 6–10. This EC has the dominant base SA value tuberculosis with an induced frequency
+
+Fig. 7. The microdata in Fig. 1(a) (reproduced here for the sake of presentation).
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+113
+
+3
+= 0:6, thus, it does not satisfy the distribution requirement. Since each of tuples 7, 8 and 9 can induce a frequency 1 for
+5
+tuberculosis, we can randomly select one of them to sweep. If tuple 9 is swept, the EC can satisfy (0.5, 3)-diversity.
+4.5. Find next EC
+To locate the next EC for a given base tuple t in the current EC, a function ﬁndNextEC (in Steps 3 and 9 of the algorithm) will perform
+the following tasks with three input parameters: t[QI] (the QI value of the base tuple), the current item that contains the current EC
+(null if the tuple is currently not in any EC), and the set V of items. First, it ﬁnds the level vector vt[QI] using information stored in
+taxonomies of attributes, including the level and number of leaves of each component t[A], for A ∈ QI. Then, it ﬁnds the ﬁrst item
+subsequent to the current item whose level vector v satisﬁes the following conditions: v[0] ≤ currV[0], where currV is the level vector of
+the current item, and for 1 ≤ i ≤ d, v[i] ≤ vt[QI][i], where v[i] is the ith component of vector v. Once v is found, we can use the information
+represented by v (that is, the levels v[i]) and information about t[QI] (that is, each t[Ai] has precisely one ancestor at the level indicated
+by v[i]) to uniquely identify a QI value q, such that q ≻ t[QI] and vq = v. The next EC should have QI value q. Next, it ﬁnds the EC of q in the
+ECList of the item. If this EC does not already exist, a new EC will be created and inserted into the ECList.
+4.6. Multiple sensitive attributes
+Although the SWEEP algorithm presented in this section assumes that SA is a single attribute, it is straightforward to extend the
+algorithm to handle multiple SA attributes. When generalizing SA values (Section 4.3), the algorithm can consider each SA
+attribute independently. When selecting tuples to sweep (Section 4.4), the algorithm can select tuple t that satisﬁes l(t[SAi], ai) N f
+(ai) for all SA attributes, where ai is the dominant base SA value in SAi. If no such tuple exists in an EC, the algorithm can sweep all
+the tuples in the EC to their respective Next ECs.
+5. Experiments
+We implemented the SWEEP algorithm and two existing ℓ-diversity algorithms: the Incognito-based (c, ℓ)-diversity [1]
+(referred to as CLD thereafter) and 1-D ℓ-diversity [7] (referred to as 1DLD thereafter). Since ℓ-diversity provides better privacy
+protection than k-anonymity, and 1-D ℓ-diversity is the most efﬁcient ℓ-diversity method, we did not include other algorithms
+such as Mondrian [6] and Anatomy [2] in our study.
+The datasets we used were the Adult and the Nursery from the UCI Machine Learning Repository [11]. Some information about
+these datasets is given in Fig. 8. We chose these two datasets over others in the repository because their eligible ranges are wider
+than ℓ = 1 (see Table 1); they contain more tuples; and their attributes are either categorical or easily converted to categorical. We
+used all tuples (45,222 in the Adult dataset and 12,960 in the Nursery dataset) in our experiments, which were performed on a PC
+with a 2.8 GHz processor and 1 GB RAM.
+In the following, we ﬁrst review the two existing ℓ-diversity algorithms used in our experiments and then present our results.
+5.1. Algorithms for (c, ℓ)-diversity and simple ℓ-diversity
+In this section, we brieﬂy review the Incognito algorithm for (c, ℓ)-diversity [1] and the 1-D algorithm for simple ℓ-diversity
+[7], both of them are the most efﬁcient in their respective categories.
+5.1.1. The Incognito algorithm for (c, ℓ)-diversity
+The Incognito algorithm was originally proposed in [4] for k-anonymity and adapted later in [1] for the (c, ℓ)-diversity.
+The algorithm represents a set of generalization strategies (simply referred to as generalizations) and their relationships as a
+
+(a) Adult Dataset
+
+(b) Nursery Dataset
+
+Fig. 8. Descriptions of data attributes.
+
+114
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+Fig. 9. Excessive protection produced by algorithms on adult dataset.
+
+graph. A generalization is represented by an i-dimensional vector. For example, the 3D vector b A1, B2, C0 N represents a strategy
+that generalizes each data tuple t by replacing t[A] by its parent (which is one level higher in the taxonomy of attribute A, hence
+denoted by A1), t[B] by its grandparent (which is two levels higher in the taxonomy of attribute B, hence B2), and t[C] by itself. The
+attributes in the vector follow a predetermined order and in the a graph all nodes are vectors of the same number of attributes. An
+edge from a node v to another node v′ means that the two vectors are identical on every attribute except that on the last attribute,
+the value in v′ is at one level higher than the value in v.
+Given a data table and a set of taxonomies of attributes. The algorithm ﬁnds generalizations satisfying a given privacy
+requirement (either k-anonymity or (c, ℓ)-diversity) in the same way that the Aproiri algorithm ﬁnds frequent item sets for
+association rule mining [43,44]. It starts from a set of 1-dimensional generalizations and iteratively ﬁnds generalizations of higher
+dimensions. In iteration i, the algorithm identiﬁes all i-dimensional generalizations that satisﬁes the given privacy requirement
+and use them to create candidate (i + 1)-dimensional generalizations, represented by a new graph whose nodes have i + 1
+attributes. The algorithm terminates when no more new candidate generalization can be created. The privacy-preserving
+generalization that requires the minimum levels
+of generalization
+
+ will be used to anonymize the data table.
+∏
+The time complexity of this algorithm is O jT j +
+DðTA Þ , where D(TA) is the domain of taxonomy of attribute A and jT j is
+A∈QI
+the size of table. The second part of the time complexity is due to the construction of graphs of generalizations.
+
+Fig. 10. Excessive protection produced by algorithms on nursery dataset.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+115
+
+5.1.2. The 1-D algorithm for ℓ-diversity
+Unlike the Incognito algorithm, the 1-D algorithm for ℓ-diversity [7] uses a local rather than a global recoding scheme. The
+algorithm works directly on data tuples. The main ideas include a mapping of multi-dimensional QI values into a one-dimensional
+space and a partition of tuples into buckets based on SA values.
+The algorithm maps d-dimensional QI values to one-dimensional numeric values using techniques such as the Hilbert spaceﬁlling curve [45] or iDistance [46]. To facilitate the mapping, each value of a categorical attribute is assigned a numeric value
+reﬂecting its position in the in-order traversal of taxonomy trees of the attribute. Tuples are sorted in an ascending order in their
+respective buckets based on their mapped QI values.
+The algorithm repeatedly selects ℓ tuples from a set of buckets to form a group according to a greedy heuristic that prefers
+tuples with smaller mapped-values. The QI values
+of tuples in 1
+a group will be replaced by the (minimally) more general QI value.
+0
+∑
+
+The time complexity of this algorithm is O@jT j + 2 A∈QI
+
+jleavesð AÞj
+
+A, where leaves(A) is the leaf values in the taxonomy of attribute A
+
+and jT j is the size of table. The second part of the time complexity is due to the building of the Hilbert space-ﬁlling curve.
+5.2. Privacy protection
+Since there is no standard measure of privacy, we decided to use (τ, ℓ)-diversity in our experiments to specify privacy
+requirements and to measure the privacy actually achieved. To use CLD and 1DLD algorithms for a given (τ, ℓ)-diversity
+requirement, we specify the best ℓ-diversity requirements that provide sufﬁcient privacy guarantees wrt the given (τ, ℓ)diversity requirement. However, since these ℓ-diversity requirements do not always match exactly the (τ, ℓ)-diversity
+requirement, it often causes the CLD and 1DLD to over-protect privacy at the cost of data utility (due to too much generalization).
+In this experiment, we measure the excessive protection made by different methods.
+
+(a) Adult Dataset
+
+(b) Nursery Dataset
+Fig. 11. Excessive protection on representation of (τ, ℓ)-diversity.
+
+116
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+(a) (0.15, 8)-diversity on Adult Dataset
+
+(b) (0.45, 4)-diversity on Nursery Dataset
+Fig. 12. Examples of violation of (τ, ℓ)-diversity.
+
+Deﬁnition 35. (Excessive protection) Let f1, f2,..., fm be frequencies of base SA values of an EC E. The excessive protection of E with
+respect to a (τ, ℓ)-diversity requirement is deﬁned as eðEÞ = ∑m
+k = 1 jψðkÞ−F ðkÞj, where F(k) and ψ(k) are respectively the
+cumulative frequency and the bounding function given in Deﬁnition 11. The excessive protection of a partition P is eðP Þ =
+minE∈½P  feðEÞg.
+Intuitively, the excessive protection is the minimum distance between the required and the actual distributions of SA values
+over all the ECs of the anonymous dataset.
+In Figs. 9 and 10, the excessive protection by the three algorithms are shown in three-dimensional plots, where x-axis
+(ℓ) and y-axis (τ) represent (τ, ℓ)-diversity requirements and the z-axis represents the excessive protection. The (τ, ℓ)-
+
+Fig. 13. Non-empty output by SWEEP for datasets with maximal ℓ = 1.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+117
+
+Fig. 14. Utility of adult dataset measured by information.
+
+diversity requirements used in the experiment were chosen to cover a range appropriate for the datasets. The strength of
+the requirements increases from the left to right along the x-axis and from bottom to top along the y-axis. To measure the
+excessive protection of CLD and 1DLD, for each given (τ, ℓ)-diversity, we ran these algorithms with all the values of ℓ
+(and c) that are meaningful to the datasets. For each output table, we measured the excessive protection (according to
+Deﬁnition 35). We reported in Figs. 9 and 10 the minimum excessive protection. Therefore, these results are in favor of
+CLD and 1DLD.
+Our results show that SWEEP results in excessive protection much less than 1DLD or CLD. But, the differences are difﬁcult to see
+in the 3D plots. For clarity, we show a subset of results in the 2D plots in Fig. 11, which only contains some representative (τ, ℓ)diversity requirements in the x–y plane of Figs. 9 and 10.
+Fig. 11 shows the results obtained from (a) Adult dataset and (b) Nursery dataset. As we can see that SWEEP can always
+produce non-empty output table for any (τ, ℓ)-diversity requirement, but CLD and 1DLD may produce empty output table for
+some (τ, ℓ)-diversity requirements (in which cases, the curves show no result). In fact, CLD and 1DLD will output empty tables for
+many more (τ, ℓ)-diversity requirements than what we showed in Fig. 11. In cases where all three algorithms do produce nonempty output tables, SWEEP does much less excessive protection than CLD or 1DLD; and 1DLD does less excessive protection than
+CLD.
+In Fig. 11, CLD seems to behave somewhat randomly. This is due to that the reported excessive protection by CLD is the
+minimum over all the ECs in a partition, and the partitions can be quite different for different (τ, ℓ)-diversity requirements. For
+
+Fig. 15. Utility of nursery dataset measured by information.
+
+118
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+example, if the (τ, ℓ)-diversity requirement is τ = 0.4 and ℓ = 4, the minimum excessive protection may be from a partition based
+on the (c, ℓ)-diversity requirement where c = 2 and ℓ = 4; but if the (τ, ℓ)-diversity requirement is τ = 0.3 and ℓ = 5, the
+minimum excessive protection may be from a totally different partition based on a (c, ℓ)-diversity requirement where c = 4 and
+ℓ = 6. These minimum excessive protections can be taken from very different ECs of very different partitions. The situation for
+1DLD is similar.
+Fig. 12 shows more details for cases where a given (τ, ℓ)-diversity requirement is not eligible for 1DLD and CLD. It shows that in
+such cases some cumulative frequencies of some ECs can exceed the given requirement. For example, Fig. 12(a) shows that for the
+Adult dataset and the (0.15, 8)-diversity requirement, in some ECs generated by 1DLD, the cumulative frequencies of the ﬁrst
+k (≤ 7) dominant SA values are higher than required. In fact, in 4892 out of 4949 ECs, the cumulative frequencies of the ﬁrst 2
+dominant SA values are higher than the corresponding requirement 0.27. Similarly, in some ECs generated by CLD, the cumulative
+frequencies of the ﬁrst 5 dominant SA values are higher than required. Similar cases are also shown in Fig. 12(b) for the Nursery
+dataset and the (0.45, 4)-diversity requirement.
+Fig. 13 shows the utility of anonymous datasets that SWEEP produces from some UCI datasets that have very small eligible
+ranges (for example, ℓ = 1), where the utility is measured by the amount of information (see Section 5.3.1). For example, for the
+Adult dataset with Salary being the SA (which has 2 distinct values), SWEEP can produce an anonymous table that has 0.7
+information and satisﬁes the (0.5, 2)-diversity requirement. SWEEP can also produce useful output for other UCI datasets that are
+not included in Fig. 13.
+
+5.3. Comparison of utilities
+In this experiment, we compared the three algorithms on the basis of the utility of the anonymous tables they produce, using
+Information, Classiﬁcation Accuracy and Count Query as three utility measures.
+
+Fig. 16. Utility of datasets measured by information on representation of (τ, ℓ)-diversity.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+119
+
+5.3.1. Information
+In Figs. 14 and 15 the utility is measured by the information deﬁned in Deﬁnition 14. In these ﬁgures, x-axis (for ℓ) and yaxis (for τ) are for the (τ, ℓ)-diversity requirements, and z-axis is for the utility. For CLD and 1DLD, no result is reported if a
+privacy requirement results in an empty table. Again, we show the results in 2D plots in Fig. 16 for clarity. Based on these
+results, SWEEP outperforms 1DLD and CLD, and 1DLD outperforms CLD. Here, we only considered the output of 1DLD and CLD
+that had the least excessive protection. Otherwise, the utility of these algorithms will be much worse than what is shown here.
+There are two reasons why 1DLD and CLD do not perform well. One reason, as explained in Section 5.2, is a correlation between
+utility and excessive protection caused by existing ℓ-diversity measures. Intuitively, for a given (τ, ℓ)-diversity requirement,
+the more excessive protection an algorithm gives, the less utility it preserves. Another reason is due to speciﬁcs of the
+algorithms. For example, CLD uses a global recoding scheme, which is known to cause more information loss than a localrecoding scheme.
+In this experiment, QI and SA attributes were treated equally. However, it is not difﬁcult to extend the information-based utility
+measure of Deﬁnition 14 so that QI and SA can be assigned different weights. We did not do so here for two reasons. First, giving
+differential weights to attributes is meaningful only for modeling the usage of published data in real-world applications, but it is not
+clear how the weights should be assigned for different applications. Second, in the three applications we consider in this paper,
+namely, decision tree learning, classiﬁcation rules (Section 5.3.2) and aggregate query (Section 5.3.3), weights of attributes play no
+signiﬁcant role.
+5.3.2. Accuracy
+In this experiment, we measured the utility of anonymous data in terms of the classiﬁcation accuracy of decision trees and the
+number of classiﬁcation rules.
+We used the ID3 algorithm [47] to learn decision trees ﬁrst from the original data and then from the anonymous data. To apply
+ID3 algorithm on the anonymous data, we ﬁrst replaced each general value by a base value randomly selected from leaf values
+
+Fig. 17. Utility of datasets measured by decision tree accuracy.
+
+120
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+covered by the general value. The classiﬁcation accuracy of a decision tree was obtained by using the original tables as the testing
+set.
+caa
+We deﬁne the ratio of classiﬁcation accuracies to be rca =
+, where caa is the classiﬁcation accuracy of a decision tree learned
+cao
+from the anonymous data and cao is the classiﬁcation accuracy of a decision tree learned from the original data. In our experiments,
+we learned 10 decision trees each from the original data and the anonymous data and calculated the average ratio of classiﬁcation
+accuracies.
+In Fig. 17, the x-axis is the privacy requirements (ℓ) and the y-axis is the average ratio of classiﬁcation accuracies. Again, the
+results indicate that SWEEP outperforms both CLD and 1DLD. However, it is interesting that the shape of the curve of SWEEP in
+Fig. 17(b) is somewhat different from that in Fig. 16(b). This is because that SWEEP will generalize more SA values and less QI
+values for the Nursery dataset as the privacy requirement becomes stronger. As a result, the anonymous data may retain more total
+information but has lower classiﬁcation accuracy.
+As a slightly different yet related measure of utility, we also considered the number of classiﬁcation rules [48] (so called logic
+rules in [49]) that can be extracted from the original data as well as from the anonymous data. A classiﬁcation rule is a pattern
+learned from a dataset that has a certain classiﬁcation accuracy and covers (i.e., satisﬁed by) a certain number of tuples. For
+example, the classiﬁcation rule health= not_recom ⇒ not_recom can be learned from the Nursery dataset, which has a 100%
+classiﬁcation accuracy and covers 4320 tuples. We say that a classiﬁcation rule is preserved in a dataset by an algorithm if the same
+rule can be learned from the original data and from the anonymous data (maybe with different classiﬁcation accuracy or different
+number of covered tuples).
+In this experiment, we considered classiﬁcation rules preserved in the Adult dataset that have classiﬁcation accuracy no less
+than 70% and cover at least 250 tuples; and classiﬁcation rules preserved in the Nursery dataset that have classiﬁcation accuracy no
+less than 90% and cover at least 100 tuples. The result is shown in Fig. 18, where the x-axis is privacy requirements (ℓ) and the yaxis is the number of preserved classiﬁcation rules. For comparison, the total number of classiﬁcation rules learned from the
+
+Fig. 18. Utility of datasets measured by classiﬁcation rules.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+121
+
+original Adult and Nursery datasets are respectively 62 and 19. It is clear that SWEEP preserves more classiﬁcation rules than 1DLD
+and CLD.
+5.3.3. Count query
+In this experiment, we measured the utility of anonymous datasets in terms of the quality of answers to a type of aggregate
+query, the count query, of the following form.
+select f count ð*Þfrom T
+where overlapðA1 ; b1 Þand overlapðA2 ; b2 Þ and⋯and overlapðAs ; bs Þ
+where bi (1 ≤ i ≤ s) is a value in the taxonomy of attribute Ai; A1 is the SA; overlap(Ai, bi) is a predicate which is TRUE for a tuple t in
+s
+table T iff either t[Ai] ≽ bi or bi ≽ t[Ai]; fcount(*) is a function that will add a value ∏ ci to the total count for each qualiﬁed tuple t,
+i=1
+and c is the fraction of count contributed by t[A ] deﬁned as follows.
+i
+
+i
+
+8
+>
+< jleavesðbi Þj ; if t ½A ≽b
+i
+i
+ci = jleavesðt ½Ai Þj
+>
+:
+1;
+if bi ≽t ½Ai 
+
+We deﬁne the relative error of a count query to be rerror = |ACT − EST| / ACT, where ACT and EST are the results obtained from the
+original and the anonymous data, respectively. To measure the utility of an anonymous table, we ran count queries of various
+
+Fig. 19. Utility of datasets measured by count query.
+
+122
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+numbers of dimensions on the table. For each number of dimensions, s, the workload consisted of 1000 random s-dimensional
+count queries and we reported the average relative errors in Figs. 19 and 20.
+In Fig. 19, the average relative error (y-axis) of the three algorithms are plotted against various privacy requirements
+(x-axis). Once again, no result is reported for CLD and 1DLD when they output empty tables. For each privacy requirement,
+we ran random count queries for each possible dimension size (1 to 8 for the Adult dataset and 1 to 9 for the Nursery
+dataset, see Fig. 8) and reported the average error over the entire workload. This result shows that SWEEP outperforms
+CLD and 1DLD over all privacy requirements. To put the relative error into perspective, we also observed a random 3dimensional count query on the Adult dataset under the privacy requirement (0.3, 5). This query resulted in counts of
+1437, 1502, 1672 and 1744 from the original table and the three tables produced by SWEEP, 1DLD and CLD, respectively.
+Fig. 19 also clearly shows that the average relative errors of all three algorithms increase as the privacy requirement
+becomes stronger.
+In Fig. 20, the average relative error is plotted against the number of dimensions. To avoid redundancy, we only show the result
+of (0.3, 5)-diversity privacy requirement on Adult dataset and (0.5, 3)-diversity on Nursery dataset. These results show that SWEEP
+outperforms 1DLD and CLD for all dimension sizes greater than one. This is because SWEEP can balance between the generalization
+of QI and the generalization of SA so that it does not have to generalize QI as much as 1DLD and CLD would. However, SWEEP
+results worse for one-dimensional count queries because it generalizes SA while the others do not. But the differences of the three
+algorithms on one-dimensional queries are very small.
+Fig. 21 shows the change of counts for each SA values in the anonymous dataset compared to the original dataset. It
+reports relative errors (on the y-axis) of 1D count queries on various speciﬁc SA values (shown on the x-axis in the
+decreasing order of their counts in the original dataset). Notice that the relative errors of 1DLD and CLD for 1D queries are
+always 0. So only SWEEP is shown here. According to the results, the relative error of SWEEP is very small. For example, for
+Adult dataset with (0.5, 2)-diversity requirement, the relative error of counting the SA value Craft-repair (CR) is only 0.005
+(the actual counts on the original and the anonymous datasets are 6020 and 5992, respectively). The result also indicates
+
+(a) (0.3, 5)-diversity on Adult Dataset
+
+(b) (0.5, 3)-diversity on Nursery Dataset
+Fig. 20. Count query under speciﬁc (τ, ℓ)-diversity.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+123
+
+Fig. 21. Count of SA values.
+
+that SA values appeared more frequently in the original dataset will get more generalization as the privacy requirement
+becomes stronger.
+5.4. Execution time
+In this experiment, we considered the execution time of the three algorithms under various (τ, ℓ)-diversity requirements.
+Results in Figs. 16 and 17 compare the performance of obtaining data of best quality. For 1DLD and CLD, the best anonymous data
+satisfying the given (τ, ℓ)-diversity are obtained by a brute force search. For example, to ﬁnd the best output of 1DLD, we ran the
+algorithm starting with ℓ = 2 and tried each subsequent ℓ until the output table satisﬁes the given (τ, ℓ)-diversity. Similarly, to
+ﬁnd the best output of CLD, we ran the algorithm for various combination of c and ℓ. This is more time-consuming because the
+search space is two-dimensional and lacks a total order. Although we could determine theoretically the weakest simple
+ℓ-diversity and (c, ℓ)-diversity requirements that guarantees the given (τ, ℓ)-diversity (see Section 3), the output of these “best”
+measures typically has much less utility than those obtained from the brute force search.
+Fig. 22 shows the execution time of the three algorithms for various (τ, ℓ)-diversity requirements on the Adult dataset and
+the Nursery dataset, where the execution time of 1DLD and CLD includes the time to brute force search the ℓ (or c). As shown in
+Fig. 22(a), for the Adult dataset and for those (τ, ℓ)-diversity requirements that all three algorithms can produce non-empty
+output, the execution time of SWEEP is three times less than 1DLD and is always less than CLD. For (τ, ℓ)-diversity requirements
+that only SWEEP can produce non-empty output, the execution time of SWEEP increases gradually as the strength of the privacy
+requirement increases. Fig. 22(b) shows the similar results.
+It is worth mentioning that the performance of CLD may seem to be identical for different (τ, ℓ)-diversity requirements. This is
+because the same c and ℓ may be found to satisfy different (τ, ℓ)-diversity requirements. For example, in Fig. 22(a), ℓ = 6 and
+c = 10, 000 are found to satisfy both (0.5, 2)-diversity and (0.5, 3)-diversity. In the experiments, it took the same amount of time to
+ﬁnd these c and ℓ for these (τ, ℓ)-diversity requirements. The 1DLD also behaves similarly.
+
+124
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+Fig. 22. Execution time of algorithms.
+
+6. Conclusion
+In this paper, we propose a new ℓ-diversity measure called the functional (τ, ℓ)-diversity, which extends ℓ-diversity by using a
+simple function to constrain frequencies of base SA values that are induced by general SA values. We analyze the strength of various ℓdiversity measures and present an efﬁcient heuristic algorithm that uses a novel heuristic order of quasi-identiﬁer values to obtain (τ, ℓ)diversiﬁed anonymous data. We compare our algorithm with two state-of-the-art ℓ-diversity algorithms. Our preliminary experimental
+results indicate that our algorithm not only provides a stronger privacy protection but also results in better utility of anonymous data.
+There are many interesting issues for further research. As shown by our experiments, generalizing SA values not only
+strengthens privacy protection but also improves the data utility. It is interesting to develop strategies to balance the
+generalization of QI and SA values to maximize data utility. In this paper, we only considered data with categorical attributes. It is
+interesting to extend our method to work on numeric attributes as well. In this paper, we use (τ, ℓ)-diversity as a basis to compare
+algorithms, it is desirable to ﬁnd a common basis for comparing different notions of privacy and this is still an open problem.
+Furthermore, it is important to study the limit of our method, for example, to determining the amount of information that the
+adversary needs to defeat our system, in a way similar to [50].
+Acknowledgment
+The work of this paper was supported in part by NFS grant IIS-0524612.
+References
+[1] Ashwin Machanavajjhala, Johannes Gehrke, Daniel Kifer, Muthuramakrishnan Venkitasubramaniam, ℓ-diversity: privacy beyond k-anonymity, IEEE
+International Conference on Data Engineering, 2006, p. 24.
+[2] Xiaokui Xiao, Yufei Tao, Anatomy: simple and effective privacy preservation, International Conference on Very Large Data Bases, 2006, pp. 139–150.
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+
+125
+
+[3] Xiaokui Xiao, Yufei Tao, Personalized privacy preservation, ACM SIGMOD International Conference on Management of Data, 2006, pp. 229–240.
+[4] Kristen LeFevre, David J. DeWitt, Raghu Ramakrishnan, Incognito: efﬁcient Full–domain k-anonymity, ACM SIGMOD International Conference on
+Management of Data, 2005, pp. 49–60.
+[5] Ninghui Li, Tiancheng Li, t-closeness: privacy beyond k-anonymity and l-diversity, IEEE International Conference on Data Engineering, 2007, pp. 106–115.
+[6] Kristen LeFevre, David J. DeWitt, Raghu Ramakrishnan, Mondrian multidimensional k-anonymity, IEEE International Conference on Data Engineering, 2006,
+p. 25.
+[7] Gabriel Ghinita, Panagiotis Karras, Panos Kalnis, Nikos Mamoulis, Fast data anonymization with low information loss, International Conference on Very Large
+Data Bases, 2007, pp. 758–769.
+[8] Yang Du, Tian Xia, Yufei Tao, Donghui Zhang, Feng Zhu, On multidimensional k-anonymity with local recoding generalization, IEEE International Conference
+on Data Engineering, 2007, pp. 1422–1424.
+[9] Bee-Chung Chen, Kristen LeFevre, Raghu Ramakrishnan, Privacy skyline: privacy with multidimentional adversarial knowledge, International Conference on
+Very Large Data Bases, 2007, pp. 770–781.
+[10] Raymond Chi-Wing Wong, Ada Wai-Chee Fu, Ke Wang, Jian Pei, Minimality attack in privacy preserving data publishing, International Conference on Very
+Large Data Bases, 2007, pp. 543–554.
+[11] The uci machine learning repository, 2007. http://mlearn.ics.uci.edu/MLRepository.html.
+[12] P. Samarati, L. Sweeney, Protecting privacy when disclosing information:k-anonymity and its enforcement through generalization and suppression, Proc. of
+the IEEE Symposium on Research in Security and Privacy, 1998, pp. 188–206.
+[13] Adam Meyerson, Ryan Williams, On the complexity of optimal k-anonymity, ACM Symposium on Principles of Database Systems, 2004, pp. 223–228.
+[14] Gagan Aggarwal, Tomas Feder, Krishnaram Kenthapadi, Rajeev Motwani, Rina Panigrahy, Dilys Thomas, An Zhu, Approximation algorithms for k-anonymity,
+Journal of Privacy Technology (2005) 20051120001.
+[15] H. Park, K. Shim, Approximate algorithms for k-anonymity, ACM SIGMOD International Conference on Management of Data, 2007, pp. 67–78.
+[16] Ke. Wang, Philip S. Yu, Sourav Chakraborty, Bottom-up generalization: a data mining solution to privacy protection, IEEE International Conference on Data
+Mining, 2004, pp. 249–256.
+[17] Benjamin C.M. Fung, Ke. Wang, Philip S. Yu, Top-down speciﬁcation for information and privacy preservation, IEEE International Conference on Data
+Engineering, 2005, pp. 205–216.
+[18] Jian Xu, Wei Wang, Jian Pei, Xiaoyuan Wang, Baile Shi, Ada Wai-Chee Fu, Utility-based anonymization using local recoding, International Conference on
+Knowledge Discovery and Data Mining, 2006, pp. 785–790.
+[19] Daniel Kifer, J.E. Gehrke, Injecting utility into anonymized datasets, ACM SIGMOD International Conference on Management of Data, 2006, pp. 217–228.
+[20] Raymond Chi-Wing Wong, Jiuyong Li, Ada Wai-Chee Fu, Ke. Wang, (α, k)-anonymity: an enhanced k-anonymity model for privacy-preserving data
+publishing, International Conference on Knowledge Discovery and Data Mining, 2006, pp. 754–759.
+[21] Xiaokui Xiao, Yufei Tao, m-invariance: towards privacy preserving re-publication of dynamic datasets, ACM SIGMOD International Conference on
+Management of Data, 2007, pp. 689–700.
+[22] Jiexing Li, Yufei Tao, Xiaokui Xiao, Preservation of proximity privacy in publishing numeric sensitive data, ACM SIGMOD International Conference on
+Management of Data, 2008, pp. 473–486.
+[23] Benjamin C.M. Fung, Ke. Wang, Ada Wai-Chee Fu, Jian Pei, Anonymity for continuous data publishing, Proceedings of the 11th international conference on
+Extending database technology: Advances in database technology, 2008, pp. 264–275.
+[24] Srivatsava Ranjit Ganta, Shiva Prasad Kasiviswanathan, Adam Smith, Composition attacks and auxiliary information in data privacy, International Conference
+on Knowledge Discovery and Data Mining, 2008, pp. 265–273.
+[25] David J. Martin, Daniel Kifer, Ashwin Machanavajjhala, Johannes Gehrke, Joseph Y. Halpern, Worst-case background knowledge for privacy-preserving data
+publishing, IEEE International Conference on Data Engineering, 2007, pp. 126–135.
+[26] Kristen LeFevre, David J. DeWitt, Raghu Ramakrishnan, Workload-aware anonymization, International Conference on Knowledge Discovery and Data Mining,
+2006, pp. 277–286.
+[27] M. Ercan Nergiz, Maurizio Atzori, Christopher W. Clifton, Hiding the presence of individuals from shared databases, ACM SIGMOD International Conference
+on Management of Data, 2007, pp. 665–676.
+[28] Qing Zhang, Nick Koudas, Divesh Srivastava, Ting Yu, Aggregate query answering on anonymized tables, IEEE International Conference on Data Engineering,
+2007, pp. 116–125.
+[29] Hongwei Tian, Weining Zhang, Extending l-diversity for better data anonymization, Sixth International Conference on Information Technology: New
+Generations, 2009, pp. 461–466.
+[30] Cynthia Dwork, Differential privacy, International Colloquium on Automata, Languages and Programming, 2006, pp. 1–12.
+[31] Cynthia Dwork, Differential privacy: a survey of results, International Conference on Theory and Applications of Models of Computation, 2008, pp. 1–19.
+[32] A. Evﬁmievski, J. Gehrke, R. Srikant, Limiting privacy breaching in privacy preserving data mining, ACM Symposium on Principles of Database Systems, ACM,
+2003, pp. 211–222.
+[33] Vibhor Rastogi, Dan Suciu, Sungho Hong, The boundary between privacy and utility in data publishing, International Conference on Very Large Data Bases,
+2007, pp. 531–542.
+[34] Ashwin Machanavajjhala, Daniel Kifer, John Abowd, Johannes Gehrke, Lars Vilhuber, Privacy: theory meets practice on the map, IEEE 24th International
+Conference on Data Engineering, 2008, pp. 277–286.
+[35] Xiaoxun Sun, Hua Wang, Jiuyong Li, David Ross, Achieving p-sensitive k-anonymity via anatomy, Proceedings of the 2009 IEEE International Conference on eBusiness Engineering, 2009, pp. 199–205.
+[36] Lisa Singh, Mehmet Sayal, Privately detecting bursts in streaming, distributed time series data, Data & Knowledge Engineering 68 (2009) 509–530.
+[37] Bin Zhou, Jian Pe, WoShun Luk, A brief survey on anonymization techniques for privacy preserving publishing of social network data, ACM SIGKDD
+Explorations Newsletter 10 (2008) 12–22.
+[38] Arik Friedman, Ran Wolff, Assaf Schuster, Providing k-anonymity in data mining, The VLDB Journal 17 (2008) 789–804.
+[39] Patrick Sharkey, Hongwei Tian, Weining Zhang, Shouhuai Xu, Privacy-preserving data mining through knowledge model sharing, Privacy, Security, and Trust
+in KDD, First ACM SIGKDD International Workshop, 2007, pp. 97–115.
+[40] Weijia Yang, Shangteng Huang, Data privacy protection in multi-party clustering, Data & Knowledge Engineering 67 (2008) 185–199.
+[41] Tiancheng Li, Ninghui Li, On the tradeoff between privacy and utility in data publishing, International Conference on Knowledge Discovery and Data Mining,
+2009, pp. 517–526.
+[42] Marek P. Zielinsk, Martin S. Olivier, On the use of economic price theory to ﬁnd the optimum levels of privacy and information utility in non-perturbative
+microdata anonymisation, Data & Knowledge Engineering 69 (2010) 399–423.
+[43] Rakesh Agrawal, Ramakrishnan Srikant, Fast algorithms for mining association rules, International Conference on Very Large Data Bases, 1994, pp. 487–499.
+[44] Ramakrishnan Srikant, Rakesh Agrawal, Mining generalized association rules, International Conference on Very Large Data Bases, 1995, pp. 161–180.
+[45] Bongki Moon, H.V. Jagadish, Christos Faloutsos, Joel H. Saltz, Analysis of the clustering properties of the Hilbert space-ﬁlling curve, IEEE Transactions on
+Knowledge and Data Engineering, 2001, pp. 124–141.
+[46] Rui Zhang, Panos Kalnis, Beng Chin Ooi, Kian-Lee Tan, Generalized multidimensional data mapping and query processing, TODS 30 (2005) 661–697.
+[47] J.R. Quinlan, Induction of decision trees, Machine Learning 1 (1986) 81–106.
+[48] Giovanni Giuffrid, Wesley W. Chu, Dominique M. Hanssens, Mining classiﬁcation rules from datasets with large number of many-valued attributes, th
+International Conference on Extending Database Technology: Advances in Database Technology, 2000, pp. 335–349.
+[49] Vladimir Estivill-Castro, Ljiljana Brankovic, Data swapping: balancing privacy against precision in mining for logic rules, International Conference on Data
+Warehousing and Knowledge Discovery, 1999, pp. 389–398.
+[50] Arvind Narayanan, Vitaly Shmatikov, Robust de-anonymization of large sparse datasets, IEEE Symposium on Security and Privacy, 2008, pp. 111–125.
+
+126
+
+H. Tian, W. Zhang / Data & Knowledge Engineering 70 (2011) 101–126
+Hongwei Tian received his bachelor degree and master degree in computer science from Beijing University of Posts and
+Telecommunications in 2002 and 2006, respectively. He is currently a PhD candidate in Department of Computer Science at the
+University of Texas at San Antonio. His research interests include data privacy, data mining and knowledge discovery.
+
+Weining Zhang received his B. Eng. degree in Computer Engineering and Science from the University of Electronic Science and
+Technology of China (a.k.a. Chengdu Institute of Radio Engineering) in 1982, his MS and PhD degree, both in Computer Science, from
+the University of Illinois at Chicago in 1985 and 1988, respectively. He is currently an Associate Professor in Computer Science at the
+University of Texas at San Antonio and has been there since 1999. Prior to that, he was on the faculty of Department of Mathematics
+and Computer Science at the University of Lethbridge in Canada from 1989 to 1999. Weining Zhang's research interests include
+privacy-preserving data mining, social computing, data engineering, and secure knowledge management. His research was supported
+by NSF and NSERC of Canada. He is a member of IEEE CS and ACM.
+
+

@@ -1,0 +1,3506 @@
+L
+ℓ-Diversity
+Johannes Gehrke , Daniel Kifer ,
+Ashwin Machanavajjhala 
+
+Department of Computer Science, Cornell University,
+Ithaca, NY, USA
+
+Department of Computer Science and Engineering,
+Penn State University, University Park, PA, USA
+
+Yahoo! Research, Santa Clara, CA, USA
+
+Related Concepts
+⊲DeFinetti Attack; ⊲k-Anonymity; ⊲Statistical Disclosure
+
+Limitation
+
+Deﬁnition
+ℓ-diversity is a method for publishing data about individuals while limiting the amount of sensitive information
+disclosed about them.
+
+Background
+Many organizations are increasingly publishing
+microdata – tables that contain information about individuals that is not aggregated in any way. Examples include
+medical, voter registration, census, and customer data.
+Microdata is a valuable source of information for subsequent data analysis – medical research, the allocation of
+public funds, or trend analysis, just to name a few. However, if individuals can be uniquely identified in the microdata, then their private information is disclosed, and this is
+unacceptable.
+There is a long history of research on limiting disclosure in data publishing, starting with work by Stanley
+Warner on randomized response []. Much progress has
+been made over the following decades, but the area is still
+full of new developments; these two surveys show some of
+the recent progress and excitement in this area [, ].
+Consider the database of patients’ data shown in Fig. .
+There is a set of attributes (like {Zip Code, Age, Nationality, gender, and date of birth} in the example) that can
+be linked with external data to uniquely identify individuals in the population; these are called quasi-identifiers.
+To counter linking attacks using quasi-identifiers, Samarati
+
+and Sweeney proposed ⊲k-anonymity [–]. A table
+satisfies k-anonymity if every record in the table is indistinguishable from at least k −  other records for the values
+of the quasi-identifier attributes; such a table is called a kanonymous table. For every combination of values of the
+quasi-identifiers in the k-anonymous table, there are at
+least k records that share those values. This ensures that
+individuals cannot be uniquely matched to an individual
+record in the published microdata by linking attacks.
+Figure  shows a -anonymous table derived from the
+table in Fig.  (here “*” denotes a suppressed value so, for
+example, “zip code = *” means that the zip code is in
+the range [ − ] and “age=*” means the age is in
+the range [ − ]). Note that in the -anonymous table,
+each tuple has the same values for the quasi-identifier as at
+least three other tuples in the table.
+K-anonymity was designed to protect against associating respondents’ identities with released tuples without
+specifically addressing the association of sensitive information. First, when there is no diversity in the values
+of the sensitive attributes, an attacker can easily discover
+the sensitive value of an individual through a homogeneity attack. For example, an attacker who knows that her
+-year-old neighbor’s record is in Fig.  and who knows
+that the neighbor lives in zip code  can conclude
+from the table that the neighbor has cancer. Second,
+attackers have background knowledge, and k-anonymity
+does not limit disclosure against such background knowledge attackers. For example, an attacker who knows that
+her -year-old Japanese friend lives in zip code 
+can, with near certainty, conclude that the friend has a
+viral infection since it is well known that Japanese have a
+very low rate of heart disease. ℓ-Diversity was developed to
+address these two issues [].
+
+Theory
+
+Let T = {t , t , . . . , tn } be a table with tuples that form a
+subset of some larger population Ω. Without loss of generality, we may combine all of the quasi-identifier attributes
+into one single attribute. Thus in this discussion, each
+tuple has two attributes: a quasi-identifier and a sensitive
+attribute. The value of the quasi-identifier can often be
+linked with external data to uniquely associate tuples with
+
+Henk C.A. van Tilborg & Sushil Jajodia (eds.), Encyclopedia of Cryptography and Security, DOI ./----,
+© Springer Science+Business Media, LLC 
+
+
+
+L
+
+ℓ-Diversity
+
+Nonsensitive
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+Sensitive
+
+Zip code
+
+Age
+
+Nationality
+
+Condition
+
+13053
+13068
+13068
+13053
+14853
+14853
+14850
+14850
+13053
+13053
+13068
+13068
+
+28
+29
+21
+23
+50
+55
+47
+49
+31
+37
+36
+35
+
+Russian
+American
+Japanese
+American
+Indian
+Russian
+American
+American
+American
+Indian
+Japanese
+American
+
+Heart disease
+Heart disease
+Viral infection
+Viral infection
+Cancer
+Heart disease
+Viral infection
+Viral infection
+Cancer
+Cancer
+Cancer
+Cancer
+
+ℓ-Diversity. Fig.  Patient microdata
+Nonsensitive
+
+Sensitive
+
+Zip Code
+
+Age
+
+Nationality
+
+Condition
+
+1
+
+130∗∗
+
+< 30
+
+∗
+
+Heart disease
+
+2
+
+130∗∗
+
+< 30
+
+∗
+
+Heart disease
+
+3
+
+130∗∗
+
+< 30
+
+∗
+
+Viral infection
+
+4
+
+130∗∗
+
+< 30
+
+∗
+
+Viral infection
+
+5
+
+1485∗
+
+≥ 40
+
+∗
+
+Cancer
+
+6
+
+1485∗
+
+≥ 40
+
+∗
+
+Heart disease
+
+7
+
+1485∗
+
+≥ 40
+
+∗
+
+Viral infection
+
+8
+
+1485∗
+
+≥ 40
+
+∗
+
+Viral infection
+
+9
+
+130∗∗
+
+3∗
+
+∗
+
+Cancer
+
+10
+
+130∗∗
+
+3∗
+
+∗
+
+Cancer
+
+11
+
+130∗∗
+
+3∗
+
+∗
+
+Cancer
+
+12
+
+130∗∗
+
+3∗
+
+∗
+
+Cancer
+
+ℓ-Diversity. Fig.  -anonymous patient microdata
+
+It is not possible for a data publisher to guard
+against attacks employing arbitrary amounts of background knowledge []. The goal of microdata publishing
+is to allow a data publisher to guard against many reasonable attacks without having access to the attacker’s background knowledge. It seems that background knowledge
+such as “men do not have breast cancer” or “Japanese have
+a very low incidence of heart disease” is very powerful as it
+enables the adversary to eliminate sensitive values from a
+given data-block in the generalized table.
+However, if there are ℓ “well represented” sensitive
+values in a q⋆ -block (i.e., the set of tuples whose quasiidentifier has been generalized to q⋆ ), then the attacker
+needs ℓ −  damaging pieces of background knowledge to
+eliminate ℓ −  possible sensitive values and infer a positive disclosure. Thus, by setting the parameter ℓ, the data
+publisher can determine how much protection is provided
+against background knowledge – even if this background
+knowledge is unknown to the publisher.
+This intuition can be made formal through the
+ℓ-diversity principle as follows.
+Principle  (ℓ-Diversity Principle []) Let q be a value of
+the attribute Q in the base table T; let q⋆ be the generalized
+value of q in the published table T ⋆ . A q⋆ -block is ℓ-diverse if
+*it* contains at least ℓ “well-represented” values for the sensitive attribute S. A table is ℓ-diverse if every q⋆ -block (for
+all q∗ that appear in T ∗ ) is ℓ-diverse.
+There are two instantiations of the ℓ-diversity principle
+that both result in diversity in the sensitive attribute.
+Definition  (Entropy ℓ-Diversity) A table is Entropy
+ℓ-Diverse if for every q⋆ -block
+− ∑ p(q⋆ ,s) log(p(q⋆ ,s′ ) ) ≥ log(ℓ)
+s∈S
+
+individuals in the population Ω. The value of the sensitive attribute contains information about the individual
+only known to the data publisher. The goal of privacypreserving data publishing is to publish as much statistical
+information about T as possible while limiting the amount
+of disclosure about the association of the sensitive attribute
+with individuals.
+In ℓ-diversity, a generalization T ⋆ of T is published and
+is defined as follows. A domain D⋆ = {P , P , . . . } is a generalization (partition) of a domain D if ⋃ Pi = D and Pi ∩
+Pj = ∅ for i ≠ j. For q ∈ D, let ϕ D⋆ (q) denote the element
+P ∈ D⋆ that contains q. Given a table T = {t , . . . , tn } with
+a quasi-identifier Q and a generalization D⋆N of the domain
+D of Q, a table T ⋆ = {t⋆ , . . . , tn⋆ } can now be constructed
+by replacing qi , the value of the quasi-identifier of ti , with
+its generalized value ϕ D⋆ (qi ).
+
+where p(q⋆ ,s) =
+
+n(q⋆ ,s)
+is the fraction of tuples in the
+∑ n(q⋆ ,s′ )
+
+s′ ∈S
+
+q⋆ -block with sensitive attribute value equal to s.
+
+Definition  (Recursive (c, ℓ)-Diversity) In a given q⋆ block, let ri denote the number of times the ith most frequent
+sensitive value appears in that q⋆ -block. Given a constant c,
+the q⋆ -block satisfies recursive (c, ℓ)-diversity if r < c(rℓ +
+rℓ+ + ⋅ ⋅ ⋅ + rm ). A table T ⋆ satisfies recursive (c, ℓ)-diversity
+if every q⋆ -block satisfies recursive ℓ-diversity; -diversity is
+always satisfied.
+ℓ-Diversity has several advantages. It does not require
+the data publisher to have as much information as the
+adversary. The parameter ℓ protects against more knowledgeable adversaries; the larger the value of ℓ, the more
+
+L Notation
+
+Nonsensitive
+
+Sensitive
+
+1
+4
+9
+10
+
+Zip Code
+1305∗
+1305∗
+1305∗
+1305∗
+
+Age
+≤ 40
+≤ 40
+≤ 40
+≤ 40
+
+Nationality
+∗
+∗
+∗
+∗
+
+Condition
+Heart disease
+Viral infection
+Cancer
+Cancer
+
+5
+6
+7
+8
+
+1485∗
+1485∗
+1485∗
+1485∗
+
+> 40
+> 40
+> 40
+> 40
+
+∗
+∗
+∗
+∗
+
+Cancer
+Heart disease
+Viral infection
+Viral infection
+
+2
+3
+11
+12
+
+1306∗
+1306∗
+1306∗
+1306∗
+
+≤ 40
+≤ 40
+≤ 40
+≤ 40
+
+∗
+∗
+∗
+∗
+
+Heart disease
+Viral infection
+Cancer
+Cancer
+
+L
+
+
+
+. Kifer D () Attacks on privacy and definetti’s theorem. In:
+SIGMOD. ACM, New York, pp –
+. Machanavajjhala A, Kifer D, Gehrke J, Venkitasubramaniam M
+() L-diversity: privacy beyond k-anonymity. TKDD, ()
+. Samarati P () Protecting respondents’ identities in microdata
+release. TKDE, ():–
+. Samarati P, Sweeney L () Generalizing data to provide
+anonymity when disclosing information. In: PODS. ACM, New
+York, p 
+. Sweeney L () Achieving k-anonymity privacy protection
+using generalization and suppression. International Journal on
+Uncertainty, Fuzziness and Knowledge-based Systems ():–
+
+. Warner SL () Randomized response: a survey technique for
+eliminating evasive answer bias. J Amer Stat Assoc ():–
+
+ℓ-Diversity. Fig.  -Diverse inpatient microdata
+
+L Notation
+information is needed to rule out possible values of the
+sensitive attribute. Instance-level knowledge (such as “my
+neighbor does not have diabetes”) is also automatically
+covered. It is treated as just another way of ruling out possible values of the sensitive attribute. Different adversaries
+can have different background knowledge leading to different inferences. ℓ-Diversity simultaneously protects against
+all of them without the need for checking which inferences
+can be made with which levels of background knowledge
+(Fig. ).
+
+Open Problems
+Daniel Kifer has recently shown that a statistical model
+more sophisticated than the one used by ℓ-diversity can
+be used to improve estimates of the probability of a tuple
+being associated with a sensitive value. This model takes
+advantage of information that q∗ groups provide about
+each other []. Thus the exact level of protection that
+ℓ-diversity provides in general is an open problem.
+It is also known that the largest value that entropy can
+take depends on the size of the domain (of the sensitive
+attribute). Thus when the domain is large, it may be necessary to use thresholds larger than log(ℓ) when applying
+Entropy ℓ-diversity.
+
+Recommended Reading
+. Chen B-C, Kifer D, LeFevre K, Machanavajjhala A ()
+Privacy-preserving data publishing. Found Trend Databases
+(–):–
+. Dwork C () Differential privacy. In: rd international colloquium on automata, languages and programming (ICALP).
+Springer, Berlin, pp –
+. Fung BCM, Wang K, Chen R, Yu PS () Privacy-preserving
+data publishing: a survey of recent developments. ACM Comput
+Surv ():–
+
+Arjen K. Lenstra
+Laboratory for cryptologic algorithms - LACAL, School
+of Computer and Communication Sciences, École
+Polytechnique Fédérale de Lausanne, Switzerland
+
+Related Concepts
+⊲Exponential Time; ⊲O-Notation; ⊲Polynomial Time;
+⊲Subexponential Time
+
+Deﬁnition
+
+For t, γ ∈ R with  ≤ t ≤ , the notation Lx [t, γ] is used for
+any function of x that equals
+e(γ+o())(log x) (log log x) , for x → ∞,
+t
+
+−t
+
+where logarithms are natural and where o() denotes any
+function of x that goes to  as x → ∞ (⊲O notation).
+
+Theory
+This function has the following properties:
+●
+●
+●
+●
+
+Lx [t, γ] + Lx [t, δ] = Lx [t, max(γ, δ)]
+Lx [t, γ] ⋅ Lx [t, δ] = Lx [t, γ + δ]
+Lx [t, γ] ⋅ Lx [s, δ] = Lx [t, γ] if t > s
+For any fixed k:
+● Lx [t, γ]k = Lx [t, kγ]
+● If γ >  then (log x)k Lx [t, γ] = Lx [t, γ]
+● π(Lx [t, γ]) = Lx [t, γ] where π(y) is the number of
+primes ≤ y
+
+When used to indicate runtimes and for γ fixed, Lx [t, γ]
+for t ranging from  to  ranges from ⊲polynomial time to
+⊲exponential time in log(x):
+
+L
+
+
+
+L
+●
+●
+●
+
+Lamport One-Time Signatures
+
+Runtime
+Lx [, γ] = e
+
+(γ+o()) log log x
+
+= (log x)
+
+γ+o()
+
+is polynomial in log(x).
+Runtimes Lx [t, γ] with  < t <  are examples of
+runtimes that are ⊲subexponential time in log(x), i.e.,
+asymptotically greater than polynomial and less than
+exponential.
+Runtime
+Lx [, γ] = e(γ+o()) log x = xγ+o()
+
+is exponential in log(x).
+
+Lamport One-Time Signatures
+⊲Hash-Based Signatures
+
+study goes back to that of quadratic forms: Gauss []
+made a connection between quadratic forms and lattices,
+which was further developed by Dirichlet [] and especially Minkowski []. Lattice theory is usually called geometry of numbers [, , ], a name due to Minkowski [].
+
+Theory
+A lattice can be defined in many equivalent ways. To be
+precise, a few definitions need to be recalled. Let ⃗
+x, ⃗y ∈ Rn
+denote two row vectors (x , . . . , xn ) and (y , . . . , yn ) where
+the xi ’s and the yi ’s are real numbers (⊲Vector Space).
+Let ⟨⃗
+x, ⃗y⟩ denote the Euclidean inner product of ⃗
+x with ⃗y:
+n
+⃗
+⟨⃗
+x, y⟩ = ∑i= xi yi . Let ∥⃗
+x∥ denote the Euclidean norm of
+⃗
+x: ∥⃗
+x∥ = ⟨⃗
+x, ⃗
+x⟩/ . A set of vectors {⃗
+b , . . . , ⃗
+bd } are said to
+be R-linearly independent if and only if any equality of the
+form μ  ⃗b + ⋯ + μ d ⃗bd = , where the μ i ’s are real numbers,
+implies that the μ i ’s are all zero. Then the two most usual
+definitions of a lattice are the following ones:
+–
+
+Late Launch
+⊲Dynamic Root of Trust
+
+Lattice
+Phong Nguyen
+Département d’informatique, Ecole normale supérieure,
+Paris, Cedex , France
+
+Synonyms
+Euclidean lattice; Geometry of numbers
+
+Related Concepts
+⊲Closest Vector Problem; ⊲Lattice Reduction; ⊲LatticeBased Cryptography; ⊲Shortest Vector Problem
+
+Deﬁnition
+In mathematics, the term lattice is used for two very different kinds of objects, arising, respectively, in order theory
+and number theory. Here, lattice always means a numbertheoretical lattice. Informally speaking, a lattice is a regular infinite arrangement of points in n-dimensional space.
+More formally, a lattice is a discrete ⊲subgroup of Rn .
+
+Background
+Lattices appeared in the nineteenth century in both crystallography and number theory. But in some sense, their
+
+–
+
+A lattice is a discrete (additive) ⊲subgroup of Rn , that
+is, a non-empty subset L ⊆ Rn such that ⃗
+x −⃗y ∈ L whenever (⃗
+x, ⃗y) ∈ L (i.e., the group axiom), and where there
+exists a real ρ >  such that the simultaneous conditions ⃗
+x ∈ L and ∥⃗
+x∥ ≤ ρ imply that ⃗
+x be zero. With this
+definition, it is obvious that Zn is a lattice (the group
+axiom is satisfied, and ρ = / works), and that any
+subgroup of a lattice is a lattice.
+A lattice is the set of all integer linear combinations
+of some set of R-linearly independent vectors of Rn ,
+that is if ⃗
+b , . . . , ⃗
+bd are linearly independent, then L =
+d
+⃗
+{∑i= ni bi ∣ ni ∈ Z} is a lattice, and [⃗
+b , . . . , ⃗
+bd ] is said
+to be a basis of L. With this definition, it is still obvious
+that Zn is a lattice, but it is not clear that a subgroup of
+a lattice is still a lattice.
+
+It is not difficult to prove that the above definitions are in
+fact equivalent (see []). To decide at first sight whether or
+not a given subset L of Rn is a lattice, the second definition
+is useful only when one already knows a potential basis,
+which is not necessary with the first definition. Both definitions suggest that lattices are discrete analogues of vector
+spaces: as a result, lattice theory bears much resemblance
+to linear algebra.
+Lattice bases are not unique, but they all have the same
+number of elements, called the dimension or the rank of the
+lattice. Any lattice L of rank d ≥  has infinitely many bases.
+Indeed, one can see that to transform a lattice basis into
+another lattice basis, it is necessary and sufficient to apply
+a unimodular transformation, that is, a linear transformation represented by an integer matrix with determinant ±.
+This implies that the d-dimensional volume of the parallelepiped spanned by a lattice basis only depends on the
+
+Lattice Reduction
+
+lattice, and not on the choice of the basis: it is called the
+volume or determinant of the lattice, denoted by vol(L) or
+det(L). By definition, it is equal to the square root of the
+following d×d determinant, where (⃗
+b , . . . , ⃗
+bd ) is any basis
+of L:
+ ⟨⃗
+⃗
+⃗ ⃗
+ b , b ⟩ ⟨b , b ⟩
+⃗
+⃗
+⃗
+
+⟨b , b ⟩ ⟨b  , ⃗
+b ⟩
+det(⟨⃗
+bi , ⃗
+bj ⟩)≤i,j≤d =   
+ ⋮
+⟨⃗
+bd , ⃗
+b ⟩ ⟨⃗
+bd , ⃗
+b ⟩
+
+. . . ⟨⃗
+b , ⃗
+bd ⟩ 
+
+⃗
+. . . ⟨b  , ⃗
+bd ⟩
+.
+⋱
+⋮ 
+
+. . . ⟨⃗
+bd , ⃗
+bd ⟩
+
+The volume is useful to estimate the norm of lattice short
+vectors. More precisely, a classical theorem of Minkowski
+n
+states that in any d-rank lattice
+√ L of R ,/dthere is a nonzero
+vector ⃗v ∈ L such that ∥⃗v∥ ≤ dvol(L) . And this upper
+bound is optimal (up to a constant) in the worst case in the
+following sense: there exists C >  such that for all integer
+d ≥ , there exists a d-rank lattice L of√Rd such that for all
+nonzero ⃗v ∈ L, the inequality ∥⃗v∥ ≥ C dvol(L)/d holds.
+
+Applications
+Lattices are classical objects of number theory, which have
+many applications in mathematics and computer science:
+see [, ]. In particular, they are widely used in publickey cryptology, both in cryptanalysis and cryptographic
+design: see [, , ] and the entries on ⊲lattice-based
+cryptography, ⊲NTRU, and ⊲lattice reduction.
+By definition, any subgroup of Zn is a lattice, and such
+lattices are the main ones used in computer science.
+
+Recommended Reading
+. Cassels JWS () An introduction to the geometry of numbers.
+Springer, Berlin
+. Dirichlet JPGL () Über die Reduction der positiven
+quadratischen Formen in drei unbestimmten ganzen Zahlen.
+J Reine Angew Math :–
+. Gauss CF () Recension der “Untersuchungen über die
+Eigenschaften der positiven ternären quadratischen Formen von Ludwig August Seeber.” Göttingische Gelehrte
+Anzeigen, July , ff, . Repr. J Reine Angew Math
+:–. http://gdz.sub.uni-goettingen.de/dms/load/toc/?
+PPN=PPNX&DMDID=dmdlog
+. Grötschel M, Lovász L, Schrijver A () Geometric algorithms
+and combinatorial optimization. Springer, Berlin
+. Gruber M, Lekkerkerker CG () Geometry of numbers.
+North-Holland, Groningen
+. Micciancio D, Goldwasser S () Complexity of lattice problems: a cryptographic perspective. The Kluwer international
+series in engineering and computer science, vol . Kluwer,
+Boston
+. Minkowski H () Geometrie der Zahlen. Teubner, Leipzig
+. Nguyen PQ, Stern J () The two faces of lattices in cryptology.
+In: Cryptography and lattices – proceedings of CALC’, Providence. Lecture notes in computer science, vol . Springer,
+Berlin, pp –
+
+L
+
+
+
+. Nguyen PQ, Vallée B () The LLL algorithm: survey and
+applications. Information security and cryptography. Springer,
+Heidelberg
+. Siegel CL () Lectures on the geometry of numbers. Springer,
+Berlin
+
+Lattice Basis Reduction
+⊲Lattice Reduction
+
+Lattice Reduction
+Phong Nguyen
+Département d’informatique, Ecole normale supérieure,
+Paris, Cedex , France
+
+Synonyms
+Lattice basis reduction
+
+Related Concepts
+⊲Closest Vector Problem; ⊲Lattice; ⊲Lattice-Based Cryptography; ⊲Shortest Vector Problem
+
+Deﬁnition
+Among all the bases of a ⊲lattice, some are more useful
+than others. The goal of lattice reduction (also known as
+lattice basis reduction) is to find interesting bases, such as
+bases consisting of vectors which are relatively short and
+almost orthogonal. From a mathematical point of view, one
+is interested in proving the existence of at least one basis
+(in an arbitrary lattice) satisfying strong properties. From
+a computational point of view, one is rather interested in
+computing such bases in a reasonable time, given an arbitrary basis. In practice, one often has to settle for a trade-off
+between the quality of the basis and the running time.
+
+Background
+Lattice reduction goes back to the reduction theory of
+quadratic forms, initiated by Lagrange [], Gauss [],
+and Hermite []. Indeed, there is a natural relationship
+between lattices and positive definite quadratic forms, as
+first noted by Gauss [], and later developed by Dirichlet [] and especially Minkowski [].
+A classical fact of bilinear algebra states that any finitedimensional Euclidean space has an orthogonal basis, that
+is, a basis consisting of vectors which are pairwise orthogonal. Such bases are very useful, so it is natural to ask
+
+L
+
+
+
+L
+
+Lattice Reduction
+
+whether such bases also exist for lattices. Unfortunately,
+a lattice does not have in general an orthogonal basis.
+The goal of lattice reduction is to circumvent this problem.
+
+Theory
+Interesting lattice bases are called reduced, but there are
+many different notions of reduction, such as those of
+Minkowski, Hermite–Korkine–Zolotarev, Lenstra–Lenstra–
+Lovász, etc. Typically, a reduced basis is made of vectors which are relatively short and almost orthogonal.
+To explain what relatively short means, the so-called successive minima of a lattice are now defined.
+The intersection of a d-dimensional lattice L ⊆ Rn
+with any bounded subset of Rn is always finite. It follows
+that there is a shortest nonzero vector in L, that is, there
+is v ∈ L/{} such that ∥u∥ ≥ ∥v∥ for all u ∈ L/{}.
+Such a vector is not unique, but all such vectors must have
+the same norm. The first minimum of L is thus defined as
+λ  (L) = ∥v∥. Note that if v is a shortest vector, then −v is
+also short but is not very interesting. To avoid such problems, one defines the successive minima as follows. For any
+integer k such that  ≤ k ≤ d, the k-th successive minimum
+of L, denoted by λ k (L), is the radius of the smallest hyperball centered at the origin and containing at least k linearly
+independent vectors of L. The successive minima can be
+defined with respect to any norm, but the Euclidean norm
+is the most common.
+One can show that there are linearly independent vectors v , . . . , vd in L such that ∥vi ∥ = λ i (L) for all  ≤ i ≤ d.
+Surprisingly, as soon as d ≥ , such vectors may not form a
+basis of L: the integral linear combinations of the vi ’s may
+span a strict subset of L. Furthermore, as soon as d ≥ ,
+there may not exist a basis reaching simultaneously all the
+minima: there exist d-dimensional lattices such that for
+all bases (b , . . . , bd ), ∥bi ∥ ≠ λ i (L) for at least some i.
+This is one of the reasons why there is no definition of
+reduction which is obviously better than all the others: for
+instance, one basis may minimize the maximum of the vector norms, while another minimizes the product of the
+norms, and it is not clear if one is better than the other.
+A reduced basis should have relatively short vectors in the
+sense that the i-th vector of the basis is not far away from
+the i-th minimum λ i (L), that is, ∥bi ∥/λ i (L) can be upper
+bounded.
+The orthogonality of a basis is often measured by the
+product ∏di= ∥bi ∥ of the norms of the basis vectors divided
+by the volume of the lattice: this ratio is always ≥ , with
+equality if and only if the basis is orthogonal. Minkowski’s
+second theorem states that for all  ≤ k ≤ d, the geometric mean of the first k minima (∏ki= λ i (L))
+
+/k
+
+is at most
+
+√
+γ d vol(L)/d , where γ d is Hermite’s constant in dimension d and vol(L) is the volume of the lattice (see the entry
+⊲lattice for a definition). Hermite’s constant is asymptotically linear in the dimension: γ d = Θ(d). In particular,
+√
+γ d vol(L)/d , but this upper bound may not
+λ  (L) ≤
+hold for the other minima: in fact, one can easily construct lattices such that the first minimum is arbitrarily
+small, while the other minima are large. In a random lattice, however, all the√
+minima are asymptotically equivalent
+to (vol(L)/vd )/d ∼ d/(πe)vol(L)/d , where vd denotes
+the volume of the d-dimensional unit ball.
+Hermite, Korkine, Zolotarev, and Minkowski introduced strong notions of reduction: the corresponding
+reduced bases have very good properties but are very
+difficult to compute. For instance, bases reduced in the
+sense of Minkowski or of Hermite–Korkine–Zolotarev
+both include a shortest lattice vector, therefore finding such
+bases is already an NP-hard problem under randomized
+reductions as the lattice dimension increases (⊲Shortest
+Vector Problem). Lenstra, Lenstra, and Lovász [] introduced the first notion of reduction to be interesting
+from both a mathematical point of view and a computational point of view, in the sense that such reduced
+bases are provably made of relatively short vectors (but
+not as short as, say, a Minkowski-reduced basis) and
+can be computed efficiently. More precisely, the celebrated LLL algorithm, given as input an arbitrary basis
+of a d-dimensional lattice L in Qn , outputs (in time
+polynomial in the size of the basis)
+√ a lattice basis
+(b , . . . , bd ) such that ∥bi ∥ = O((/ )d )λ i (L) for all i.
+Smaller (slightly ⊲subexponential) approximation factors
+can be achieved in ⊲polynomial time using blockwise
+algorithms like Schnorr’s reduction [] and GamaNguyen’s reduction [].
+
+Applications
+Lattice reduction algorithms are useful because they
+enable to solve various lattice problems: approximating the
+⊲Shortest Vector Problem and the ⊲Closest Vector Problem (see [, , ]), finding many short lattice vectors. This
+has proved invaluable in many areas in computer science
+(see []), notably in cryptology (see the survey []). Lattice
+reduction algorithms have arguably become the most popular tool in public-key cryptanalysis (see the survey []):
+they have been used to break various public-key cryptosystems, including many ⊲knapsack cryptographic schemes
+and ⊲lattice-based cryptography, but also certain settings
+of discrete-log signature schemes. Interestingly, they are
+also used in the most sophisticated attacks known against
+⊲RSA (see [, ]): RSA with small secret exponent,
+chosen-message attacks on RSA signatures with peculiar
+
+Lattice-Based Cryptography
+
+paddings, certain settings of RSA encryption with small
+public exponent, etc. In particular, Coppersmith opened
+in [] a new avenue for cryptanalytic applications of lattice reduction when he revisited the connection between
+lattices and small solutions of polynomial equations. For
+instance, it can be shown using the LLL algorithm that,
+given an integer polynomial f (X) ∈ Z[X] of degree d such
+that the gcd of all the coefficients of f is coprime with a public integer N, one can find in time polynomial in (d, log N)
+all the integers x ∈ Z such that f (x ) ≡ modN and
+∣x ∣ ≤ N /d .
+
+Open Problems
+Lattice reduction is a very active research area: A lot of
+work is required to deepen our understanding of lattice
+reduction algorithms and to invent new lattice reduction
+algorithms.
+
+Experimental Results
+It should be emphasized that lattice reduction algorithms
+typically perform much better than their worst-case theoretical bounds would suggest: see [] for an experimental assessment of the performances of the best lattice reduction algorithms in practice. For instance, in low
+dimension (say, less than ), the LLL algorithm often
+outputs a shortest nonzero vector, while in high dimension, the approximation factor appears to be exponential
+on the average, but with a smaller constant than in the
+worst-case theoretical analysis, namely, the approximation
+factor is√of the form cd where c is significantly smaller
+than / . This phenomenon has yet to be explained:
+from a theoretical point of view, the average-case behavior of lattice reduction algorithms is mostly unknown.
+The effectiveness of lattice reduction algorithm is another
+reason why lattice reduction has been so popular in
+cryptanalysis.
+
+L
+
+. Gauss CF () Disquisitiones Arithmeticæ. Apud G. Fleischer,
+Leipzig
+. Gauss CF () Recension der “Untersuchungen über die
+Eigenschaften der positiven tern ären quadratischen Formen von Ludwig August Seeber.” Göttingische Gelehrte
+Anzeigen, July , ff, . Repr J Reine Angew Math
+:–. http://gdz.sub.uni-goettingen.de/dms/load/toc/?
+PPN=PPNX&DMDID=dmdlog
+. Grötschel M, Lovász L, Schrijver A () Geometric algorithms
+and combinatorial optimization. Springer, Berlin
+. Gruber M, Lekkerkerker CG () Geometry of numbers.
+North-Holland, Groningen
+. Hermite C () Extraits de lettres de M. Hermite à M. Jacobi
+sur différents objets de la théorie des nombres. J Reine Angew
+Math :–
+. Lagrange JL () Recherches d’arithmétique. Nouv Mém Acad
+Roy Soc Belles Lett (Berlin):–
+. Lenstra AK, Lenstra Jr HW, Lovász L () Factoring
+polynomials with rational coefficients. Math Ann :
+–
+. May A () Using LLL-reduction for solving RSA and factorization problems: a survey. In: Nguyen PQ, Vallée B (eds) The
+LLL algorithm: survey and applications. Information security
+and cryptography. Springer, Heidelberg
+. Micciancio D, Goldwasser S () Complexity of lattice problems: a cryptographic perspective. The Kluwer international
+series in engineering and computer science, vol . Kluwer,
+Boston
+. Minkowski H () Geometrie der Zahlen. Teubner, Leipzig
+. Nguyen PQ () Hermite’s constant and lattice algorithms.
+In: Nguyen PQ, Vallée B (eds) The LLL algorithm: survey and
+applications. Information security and cryptography. Springer,
+Heidelberg
+. Nguyen PQ () Public-key cryptanalysis. In: Recent trends
+in cryptography. Contemporary mathematics series, vol .
+AMS–RME, Providence
+. Nguyen PQ, Vallée B () The LLL algorithm: survey and
+applications. Information security and cryptography. Springer,
+Heidelberg
+. Nguyen PQ, Stern J () The two faces of lattices in cryptology. In: Cryptography and lattices – proceedings of CALC ’,
+Providence. LNCS, vol . Springer, Berlin, pp –
+. Schnorr CP () A hierarchy of polynomial lattice basis reduction algorithms. Theor Comput Sci :–
+
+Recommended Reading
+. Babai L () On Lovász lattice reduction and the nearest lattice
+point problem. Combinatorica :–
+. Coppersmith D () Small solutions to polynomial equations,
+and low exponent RSA vulnerabilities. J Cryptol ():–
+. Dirichlet JPGL () Über die Reduction der positiven
+quadratischen Formen in drei unbestimmten ganzen Zahlen.
+J Reine Angew Math :–
+. Gama N, Nguyen PQ () Predicting lattice reduction. In:
+Proceedings of EUROCRYPT’, Istanbul. LNCS, vol .
+Springer, Berlin
+. Gama N, Nguyen PQ () Finding short lattice vectors within
+Mordell’s inequality. In STOC’: Proceedings of the th
+annual ACM symposium on theory of computing, Victoria.
+ACM, New York
+
+Lattice-Based Cryptography
+Daniele Micciancio
+Department of Computer Science & Engineering,
+University of California, San Diego, CA, USA
+
+Related Concepts
+⊲Closest Vector Problem; ⊲Lattice; ⊲Lattice Reduction;
+⊲NTRU; ⊲Post-quantum Cryptography; ⊲Public Key
+Cryptography; ⊲Shortest Vector Problem
+
+
+
+L
+
+
+
+L
+
+Lattice-Based Cryptography
+
+Deﬁnition
+Lattice-based cryptography is a generic term used to
+encompass a wide range of cryptographic functions whose
+security is based on the conjectured intractability of
+⊲Lattice problems, like (variants of) the ⊲Shortest Vector
+Problem and the ⊲Closest Vector Problems.
+For applications of lattices in cryptanalysis, ⊲Lattice
+Reduction.
+
+Background
+The study of lattice-based cryptography was pioneered
+by Ajtai in  [], who proved that certain variants
+of the ⊲knapsack cryptographic schemes are at least
+as hard to break on the average as approximating (the
+length estimation variant of) the ⊲Shortest Vector Problem (GapSVP) within factors that grow only polynomially
+in the dimension n of the lattice. Two distinguishing features of Ajtai’s result, and lattice-based cryptography in
+general, are that:
+–
+
+–
+
+Breaking the cryptographic functions is provably at
+least as hard as solving certain lattice problems in the
+worst-case.
+the underlying lattice problems are not known to be
+efficiently solvable by quantum computers
+
+This should be contrasted with mainstream cryptographic
+functions based on ⊲number theory, which can be broken by quantum algorithms, and, even classically, rely on
+average-case complexity assumptions, a qualitatively much
+stronger requirement than worst-case hardness (Refer
+the entry ⊲Computational Complexity for further discussion on complexity assumptions and the entry on
+⊲Post-Quantum Cryptography for a summary of attacks
+using quantum computers and systems that are unaffected).
+Shortly after [], Ajtai and Dwork [] proposed a
+public-key encryption scheme also based on worst-case
+complexity of lattice problems. Since then, many more
+lattice-based cryptographic functions have been discovered. (See section on applications.)
+
+results. However, lower-degree polynomials (i.e., smaller
+values of c) are more desirable because they give stronger
+security guarantees. The strongest result along these lines
+known to date [] shows that Ajtai’s function can be based
+on the inapproximability of GapSVP (as well as other problems) within factors n+o() essentially linear in the lattice
+dimension.
+The security of lattice-based public-key encryption
+was originally based on the conjectured intractability of
+a special version of SVP, called the “unique” SVP [, ].
+This problem has been subsequently shown to be equivalent (up to small polynomial factors) to the standard
+GapSVP [].
+One of the less satisfactory aspects of lattice-based
+cryptography is that it typically yields cryptographic functions with very large keys. This is due to the fact that
+an n-dimensional lattice is described by an n × n matrix,
+which requires at least n space to store. This obstacle can
+be overcome using lattices with a special structure which
+admit a much more compact representation, e.g., cyclic
+lattices where a single vector can be used to represent an
+n-dimensional lattice by cyclically rotating its coordinates.
+Proposals along these lines first appeared in the ⊲NTRU
+cryptosystem, but without the support of a security proof.
+The theoretical study of efficient cryptographic functions
+based on structured lattices was initiated in  by
+Micciancio [], who exhibited a one-way function with key
+size and computation time essentially linear in the lattice
+dimension n, and still provably secure based on the worstcase inapproximability of the ⊲Shortest Vector Problem
+over cyclic lattices.
+Another major step in the development of latticebased cryptography was the introduction of the “learning
+with errors” (LWE) problem (an average-case version of
+bounded distance decoding, Refer the entry ⊲Closest Vector Problem) by Regev [], who first gave evidence that the
+problem is hard assuming lattice problems are hard even
+for quantum computers. The LWE problem was used by
+Peikert et al. [, –] to considerably expand the applicability of lattice-based cryptography to a wide range of
+cryptographic primitives.
+
+Theory
+The best currently known ⊲polynomial-time algorithms to
+(approximately) solve GapSVP and other lattice problems
+only produce solutions within an approximation factor
+which is almost exponential in the dimension n of the
+⊲Lattice. (Refer entries on ⊲Lattice Reduction and the
+⊲Shortest Vector Problem.) So, Ajtai’s conjecture that no
+polynomial time algorithm can approximate these problems within any polynomial factor nc is quite reasonable and supported by both theoretical and experimental
+
+Applications
+The techniques of [, , , ] have been extended in a
+number of ways to obtain a wide range of cryptographic
+primitives, including public-key encryption secure against
+⊲adaptive chosen ciphertext attack [], ⊲digital signatures schemes [, ], ⊲oblivious transfer protocols [],
+noninteractive ⊲zero-knowledge proof systems [], very
+efficient collision-resistant ⊲hash functions [], ⊲identitybased encryption [], and more.
+
+Least Common Multiple
+
+Open Problems
+The main open problem in the area of lattice-based cryptography is probably to gain confidence in their security.
+While these functions are supported by asymptotic security proofs, the proofs do not offer much guidance regarding concrete values of the security parameters that should
+be used in practice. This is both because the proofs are not
+tight (i.e., there is a substantial gap between the best known
+attack and the strongest provable security guarantee) and
+also because they start from worst-case problems whose
+exact complexity is still not very well understood.
+Another important open problem is to make latticebased cryptography more efficient and attractive in practice. The use of cyclic, or similarly structured, lattices
+promises to give substantial efficiency improvements over
+cryptography based on general lattices. (See [] for an illustrative example.) Still, for many cryptographic primitives,
+it is still not known how to take full advantage of structured
+lattices to achieve efficiency gains.
+The reader is referred to the chapter [] for an introduction to lattice-based cryptography, and the papers in
+the references for more recent developments.
+
+L
+
+
+
+. Micciancio D, Regev O () Lattice-based cryptography. In:
+Bernstein DJ, Buchmann J, Dahmén E (eds) Post-quantum cryptography. Springer, Berlin
+. Peikert C, Vaikuntanathan V () Noninteractive statistical
+zeroknowledge proofs for lattice problems. In: Proceedings of
+CRYPTO ’, Santa Barbara, – August . Lecture notes
+in computer science, vol . Springer, Berlin, pp –
+. Peikert C, Vaikuntanathan V, Waters B () A framework for
+efficient and composable oblivious transfer. In: Proceedings of
+CRYPTO ’, Santa Barbara, – August . Lecture notes
+in computer science, vol . Springer, Berlin, pp –
+. Peikert C, Waters B () Lossy trapdoor functions and their
+applications. In: Proceedings of STOC ’, Victoria, – May
+. ACM Press, New York, pp –
+. Regev O () New lattice based cryptographic constructions.
+J ACM ():–
+. Regev O () On lattices, learning with errors, random linear codes, and cryptography. In: Proceedings of STOC ’,
+Baltimore, – May . ACM Press, New York, pp –
+
+LCM
+⊲Least Common Multiple
+
+Recommended Reading
+. Ajtai M () Generating hard instances of lattice problems
+(extended abstract). In: Proceedings of the twenty-eighth
+annual ACM Symposium on the Theory of Computing
+(STOC’), Philadelphia, – May . ACM Press,
+New York, pp –
+. Ajtai M, Dwork C () A public-key cryptosystem with
+worstcase/average-case equivalence. In: Proceedings of the
+twenty-ninth annual ACM Symposium on Theory of Computing (STOC ’), E Paso, – May . ACM Press, New York,
+pp –
+. Gentry C, Peikert C, Vaikuntanathan V () Trapdoors for
+hard lattices and new cryptographic constructions. In: Proceedings of STOC ’, Victoria, – May . ACM Press,
+New York, pp –
+. Lyubashevsky V, Micciancio D () Asymptotically efficient
+lattice-based digital signatures. In: Proceedings of TCC ’,
+New York, – March . Lecture notes in computer science,
+vol . Springer, Berlin, pp –
+. Lyubashevsky V, Micciancio D () On bounded distance
+decoding, unique shortest vectors, and the minimum distance
+problem. In: Proceedings of CRYPTO , Santa Barbara, –
+ August . Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Lyubashevsky V, Micciancio D, Peikert C, Rosen A () Swifft:
+a modest proposal for FFT hashing. In: Proceedings of FSE
+’, Lausanne, – February . Lecture notes in computer
+science, vol . Springer, Berlin, pp –
+. Micciancio D () Generalized compact knapsacks, cyclic
+lattices, and efficient one-way functions. Comput Complex
+():–
+. Micciancio D, Regev O () Worst-case to average-case reductions based on Gaussian measure. SIAM J Comput ():–
+
+Least Common Multiple
+Scott Contini
+Silverbrook Research, New South Wales, Australia
+
+Synonyms
+LCM
+
+Related Concepts
+⊲Greatest Common Divisor; ⊲Number Theory
+
+Deﬁnition
+The least common multiple (lcm) of a set of positive integers {a , . . . , ak } is the smallest positive integer that is an
+integer multiple of every element of the set. This is denoted
+lcm(a , . . . , ak ), or sometimes just [a , . . . , ak ].
+
+Theory
+
+For example, lcm(, ) =  because  is a multiple
+of both  and  as  =  ⋅  and  =  ⋅ , and no
+positive integer smaller than  has this property.
+For a pair of integers, the least common multiple is
+related to the ⊲greatest common divisor by the relation
+gcd(a , a ) ⋅ lcm(a , a ) = a ⋅ a .
+
+L
+
+
+
+L
+
+Least Privilege
+
+Least Privilege
+Sabrina De Capitani di Vimercati
+Dipartimento di Tecnologie dell’Informazione (DTI),
+Università degli Studi di Milano, Crema (CR), Italy
+
+Synonyms
+Minimal privilege
+
+Related Concepts
+⊲Access Control Policies, Models, and Mechanisms
+
+Background
+The Legendre symbol was introduced by A.M. Legendre in
+.
+
+Deﬁnition
+The Legendre symbol of an integer x modulo a prime p is 
+if x is divisible by p, and otherwise + if x has a square root
+modulo p, and − if not.
+
+Theory
+Let p be an odd ⊲prime number and let x be an integer. If x
+is a ⊲quadratic residue, i.e., if x is relatively prime to p and
+the equation (⊲Modular arithmetic)
+x ≡ y mod p
+
+Deﬁnition
+The least privilege principle states that a subject (user or
+program) should be given only those privileges it actually
+needs to perform its job.
+
+Theory
+The least privilege principle was defined by Jerry Saltzer
+and Mike Schroeder [] as follows.
+⊲ Every program and every user of the system should operate
+using the least set of privileges necessary to complete the
+job.
+
+The importance of the least privilege principle is widely
+recognized since it minimizes the danger of damage due
+to inadvertent errors, Trojan Horses, or intruders masquerading as legitimate users. Although the least privilege
+principle is by itself a simple and fundamental design principle, in real practice its enforcement is not straighforward.
+The main motivation is that it may be difficult to determine
+the least amount of privileges a user/process will ever need
+to perform its job.
+
+Recommended Reading
+
+
+
+has an integer solution y, then the Jacobi symbol of x modulo p, written as (x/p) or ( px ), is +. If x is a quadratic
+nonresidue – i.e., x is relatively prime to p and has no square
+roots – then its Legendre symbol is −. If x is not relatively
+prime to p then ( px ) = .
+The Legendre symbol may be efficiently computed
+using the Quadratic Reciprocity Theorem or by modular
+exponentiation (⊲Exponentiation Algorithms) as
+p−
+x
+( ) = x  mod p
+p
+
+Levels of Trust
+Stephen M. Papa, William D. Casper
+High Assurance Computing and Networking Labs
+(HACNet), Department of Computer Science and
+Engineering, Bobby B. Lyle School of Engineering,
+Southern Methodist University, Houston, TX, USA
+
+. Saltzer JH, Schroeder MD () The protection of information
+in computer systems. Proc. IEEE, ():–
+
+Synonyms
+Commercial off-the-shelf; Information assurance; Integrated circuit; Intellectual property
+
+Legendre Symbol
+Burt Kaliski
+Office of the CTO, EMC Corporation, Hopkinton
+MA, USA
+
+Related Concepts
+⊲Jacobi Symbol; ⊲Prime Number; ⊲Quadratic Residue
+
+Related Concepts
+⊲PKI Trust Models; ⊲Root of Trust; ⊲Trusted Boot;
+⊲Trusted Computing; ⊲Trust Management
+
+Deﬁnition
+Trust Level: An appropriate level of hardware and software
+protection mechanisms in a computer system based on its
+intended use, and is established based on a risk analysis
+
+Levels of Trust
+
+that includes a probability and consequence of occurrence
+of an attack on the system.
+
+Background
+Computer security is reliant on trust. This trust is composed of several fundamental principles, including confidence that the targeted system is configured as expected,
+will operate as intended, and has not already been compromised or exploited. A verification strategy with appropriate methodology should be used to validate this trust.
+The validation can be done with a combination of hardware
+attestation and software integrity verification.
+A trust level is a useful method to identify the required
+hardware and software security protection mechanisms
+that a system must include to protect the data confidentiality, availability, and integrity once this data (software or
+other information) is present in an operational system. The
+level selected should be based on the desired level of trust.
+
+Theory
+As a system is designed, developed, integrated, and
+deployed a “weak link” in any security protection mechanism has the potential for allowing an attacker to gain
+access to the data being protected. Protection mechanisms
+are counter-measures against these attacks and are often
+needed to provide trust that a system will protect the data it
+is storing, sending, or processing. These mechanisms may
+include information assurance (IA), cryptography, tamper protection, third-party certificate authorities, shared
+secrets/keys, etc. Protection mechanisms are designed into
+the system to ensure that the confidentiality, integrity, and
+availability of the data are maintained while it is stored,
+being transferred, or being used within the deployed
+system.
+Mechanisms to create trust in a system may include
+cryptographic (hard) and non-cryptographic (soft) trust
+mechanisms. Hard trust mechanisms may include trusted
+boot, authentication between roots of trust in the system or
+network, methods and protocols to establish and maintain
+secure communication channels or exchange key material,
+digital signature for verification of data, third-party certificates, and the use of secure processors to protect data
+during run-time operation. Soft trust mechanisms may
+include verification of the hardware and software configuration to ensure proper system components are present,
+trusted operating systems, software designed to protect
+against known attacks, and run-time checks for attacks
+on the system. Trusted components are often the basis
+for installing trust in an overall design, but verifying the
+true trustworthiness of trusted components is not a trivial
+task [].
+
+L
+
+
+
+The specific mechanisms selected to establish trust
+needs to be based on some required level of system trust.
+The first step to establishing a system’s required trust
+level is assessing the relative risk the data will experience
+once the computing system is deployed. Risk of attack to
+deployed data may come from one or more sources. At the
+root the risks are people who have malicious intents, and
+the expected access they may have to the system. Typical
+usage scenarios that would put the data at risk may include
+one or more of the following:
+. An authorized malicious user with system usage rights
+and physical system access
+. An authorized malicious user with system usage rights
+but no physical system access
+. An unauthorized malicious insider or outsider with
+physical access to the system
+. An unauthorized malicious outsider with network
+access to the system
+. Data contained in nonvolatile storage within the computer system
+. Data contained in a server or other storage device not
+physically part of the computer system
+Users may be authorized to use a system, application, or
+service, however, use does not imply rights to the actual
+data processed within the system. An example of this is a
+video game, where the user can interact and play the game,
+but where the video game creator may want to prevent
+piracy of their IP in the game.
+Once the expected usage scenarios are understood, the
+probability and consequence of data compromise can be
+quantified, and based on this analysis the risk of data compromise can be understood. Often the consequence of loss
+may be stated in terms of potential monetary loss, loss of
+competitive advantage, loss of the enterprise’s ability to be
+profitable, or even in terms of national security.
+Ultimately the data owner, an organization or person
+who created or owns the data, must assess the relative
+importance of the data requiring protection and the risk
+associated with its loss or compromise. The data owner
+must then decide if the system that will contain the data
+is designed with sufficient protection mechanisms so that
+the risk is acceptable.
+Once a required level of trust has been identified,
+a trusted development environment (facilities, networks,
+and people), development tools, and hardware and software should be selected or developed to provide a consistent level of protection so that an appropriate level will exist
+in the deployed system. Discrete levels of trust provide a
+useful framework for identifying the design, development,
+and verification requirements for a given system. In any
+
+L
+
+
+
+L
+
+Levels of Trust
+
+deployed system a level of trust can be established using a
+mix of IA, trust, and tamper protection requirements.
+A framework based on levels of trust is established
+below to provide data owners and system designers a
+method of understanding the required protection mechanisms. A trust level criteria can be used by both the data
+owner and system designers to come to a common understanding of the protection requirements for the system.
+This criteria does not formally exist in many commercial
+environments, but has existed in many forms within many
+national government security organizations. When the
+data owner is a government agency, the criteria are based
+on data sensitivity or classification level, and the required
+protection level is established based on this level and the
+expected environment the system is expected to exist in.
+Based on the sensitivity of the information within the
+system and the intended use of the product, there are varying levels of trust required. A definition of the levels of trust
+that can be used as a criterion for establishing the required
+level of trust has its roots based on the five levels identified by FIPS-- draft [] for cryptographic devices.
+A proposal on levels of software trust is discussed in [].
+These levels are referred to as classes in that particular
+paper and focused specifically on software trust and the
+software development process. The definitions discussed
+below extend these concepts to included hardware and system design elements, hardware and software acquisition
+choices, maintenance processes, and even the development
+teams themselves.
+
+Applications
+It is insufficient to just have trust in the developed software or at the network interface. For any system to be
+trusted there are requirements for establishing trust during the development, deployment, and maintenance of the
+system. Trust in a computing system can be established and
+maintained if there is an appropriate and consistent level
+of trust in each of the following aspects of the product life
+cycle.
+Based on the FIPS-based security levels the following
+five trust levels are defined below, and provide an overview
+of trust and protection requirements based on the data’s
+risk of compromise throughout the computing system’s
+life cycle.
+
+Level  Trust (Very Low Risk of Compromise)
+No trust is required. No special, sensitive, high value, or
+significant data (information or software) will exist in the
+deployed system.
+
+Establishing and maintaining trust throughout the
+development process or in the deployed systems is not
+cost effective or relevant in the system design and is not
+required.
+
+Level  Trust (Low Risk of Compromise)
+Minimal trust required. Data in the deployed system is limited to low-value proprietary data or personal data readily
+available in public information. Its protection is not critical
+to long-term success of an organization or individual. Trust
+in the development environment and protection measures
+within the deployed system is optional.
+Establishing and maintaining trust throughout the
+development process and in the deployed system may not
+be cost effective or relevant in the system design. Deployed
+system trust includes software only designs to protect the
+data and software. Software support for trust may include
+software decryption and integrity verification of software
+and data. FIPS- Security Level  crypto requirements
+may be applicable.
+
+Level  Trust (Medium Risk of Compromise)
+Medium trust required. Data includes important proprietary or personal data. Trust in the development environment and protection measures within the deployed system
+are required. The level of trust and protection mechanisms
+designed into the system must be commensurate with the
+expected risk of exposure in the deployed system.
+Establishing and maintaining trust throughout the
+development process is cost effective and relevant in the
+system design. Efforts to establish trust in the deployed system include software designs to protect the data and software, and if required hardware support of these designs.
+Purchased software is selected and integrated with regard
+to trust. Preference to software that has been evaluated or
+well tested for security flaws may be a design consideration. Software is developed with processes that include
+security criteria. Code inspections with security checklists
+are used, and engineers are trained in software protection
+methods. All security-relevant software is verified using
+code integrity checking tools. Hardware may be COTS
+systems, boards, and components. Selection is based on
+performance to functional requirements, and support of
+the security requirements. Modifications for trust support
+in hardware are required if needed by software to secure
+the system.
+System or software installation or upgrades are performed by trusted personnel, tools, or applications. In
+deployed systems hardware supports for trust may be integral to the design. Operational software support for trust
+
+Levels of Trust
+
+includes use of decryption and integrity verification of
+software and data. Further checks on system configuration and operation may be performed to improve system
+trust. FIPS- Security Level  crypto requirements are
+applicable.
+
+Level  Trust (High Risk of Compromise)
+High-level trust required. Data is critical to long-term success of the organization or individuals. Trust in the development environment and protection measures within the
+deployed system are required. The level of trust and protection mechanisms designed into the system must be
+commensurate with the expected risk of exposure in
+the deployed system.
+Establishing and maintaining trust throughout the
+development process is cost effective and relevant in
+the system design. Efforts to establish trust in the deployed
+system include software designs to protect the data and
+software, and if available hardware support of these
+designs.
+The development environment should not be connected to the Internet and strong security measures are in
+place. Lead engineers and managers must control product configuration. Access controls are in place to keep
+developers from accessing specific data or resources. Physical access to development areas may be required. Security screening or background checks of all key personnel
+involved in development or deployment of the product is
+required.
+Hardware and software development tools must have
+a high level of assurance from a security perspective. Only
+open or closed source tools that come from reputable companies are selected. Tools’ outputs are to be verified for
+Trojans and other security flaws.
+Purchased software is selected and integrated with
+regard to trust. Selected software must have been evaluated or well tested for security flaws. Developed software
+is done using processes that include security criteria. Code
+inspections with security checklists are used, and engineers
+are trained in secure software development standards. All
+security-relevant software is verified using code integrity
+checking tools.
+Hardware may be COTS systems, boards, and components. Selection is based on performance to functional
+requirements, and must include support of the security
+requirements.
+System and software installation or upgrades are performed by trusted personnel, tools, or applications. Specific measures are in place to ensure data and software confidentiality and integrity during upgrades. These measures
+
+L
+
+
+
+may include attestation of the new configuration by trusted
+third parties, or with digital signatures.
+In deployed systems, hardware supports for trust is
+integral to the design. Modifications to hardware to support establishment of trust is required to help secure the
+system. This support starts with digital signature verification and decryption of boot software as part of the
+boot process. Additional hardware crypto engines to support cryptographic functions required by software are
+needed in the hardware. Operational software support for
+trust includes use of decryption and integrity verification of key system elements, of software and data. Further checks on system configuration and operation may be
+performed.
+Deployed system configuration control and release is
+performed by trusted personnel, configuration tools, or
+applications. FIPS- Security Level  crypto requirements are applicable.
+
+Level  Trust (Very High Risk of Compromise)
+Highest level of trust required. Loss of data will result
+in long-term and permanent damage to the organization,
+country, individuals, or groups of individuals. The level of
+trust and protection mechanisms designed into the system
+must be commensurate with the expected risk of exposure
+in the deployed system.
+Establishing and maintaining trust throughout the
+development process is cost effective and relevant in the
+system design. Efforts to establish trust in the system
+include software, hardware, and firmware designs to protect the data and software.
+Development environment is not connected to the
+Internet and strong security measures are in place. Lead
+engineers or managers control product configuration and
+are trusted. Access controls are in place to keep developers
+from accessing specific data or resources. Physical access
+controls to development area is required. Security screening or background checks of all personnel involved in the
+project is required.
+SW and hardware development tools must have a high
+level of assurance from a security perspective. Only open
+or closed source tools that come from reputable companies
+are selected. Tools outputs are be verified for Trojans and
+other security flaws.
+Purchased software is selected and integrated with
+regard to trust. Selected software must have been evaluated
+or well tested for security flaws. Developed software
+is done with processes that include security criteria.
+Code inspections with security checklists are used; engineers are trained in secure software development. All
+
+L
+
+
+
+L
+
+LFSR
+
+security-relevant software is verified using code integrity
+checking tools.
+Hardware must be designed and developed to meet
+trust requirements. Selection is based on performance to
+functional requirements, and must include support of the
+security requirements. Specific hardware designs are used
+to create trust and are required to secure and verify the system. In some systems the individual ICs must be trusted (to
+prove lack of Trojans or other malicious circuitry).
+System installation and upgrades are performed by
+trusted personnel, tools, or applications. Specific measures
+are in place to ensure data and software confidentiality and
+integrity during upgrades. Deployed system configuration
+control and release is performed by trusted personnel,
+configuration tools, or applications. FIPS - Security
+Level  crypto requirements are applicable.
+
+Open Problems
+A methodology to assess attacks risk (probability of an
+attack and consequence of the occurrence of a successful
+attack) and quantifying the trust level/protection mechanisms to reduce the probability of occurrence still remain
+to be developed.
+
+Recommended Reading
+. Bertrand M () The grand challenge of trusted components.
+In: Proceedings of the th international conference on software
+engineering (ICSE’), Portland, Oregon, IEEE
+. FIPS PUB - (DRAFT) Information Technology Laboratory,
+National Institute of Standards and Technology, Gaithersburg,
+-
+. Amoroso E, Nguyen T, Weiss J, Watson J, Lapiska P, Starr T ()
+Toward an approach to measuring software trust. In: Proceedings of the  IEEE computer society symposium on research
+in security and privacy, Oakland, IEEE
+
+LFSR
+⊲Linear Feedback Shift Register
+
+Linear Complexity
+
+Deﬁnition
+
+The linear complexity of a semi-infinite sequence s =
+(st )t≥ of elements of Fq , Λ(s), is the smallest integer Λ
+such that s can be generated by a ⊲linear feedback shift register (LFSR) of length Λ over Fq , and is ∞ if no such LFSR
+exists. By way of convention, the linear complexity of the
+all-zero sequence is equal to . The linear complexity of a
+linear recurring sequence corresponds to the degree of its
+⊲minimal polynomial.
+The linear complexity Λ(sn ) of a finite sequence sn =
+s s . . . sn− of n elements of Fq is the length of the shortest
+LFSR which produces sn as its first n output terms for some
+initial state. The linear complexity of any finite sequence
+can be determined by the ⊲Berlekamp–Massey algorithm.
+An important result due to Massey () is that, for any
+finite sequence sn of length n, the LFSR of length Λ(sn )
+which generates sn is unique if and only if n ≥ Λ(sn ).
+
+Theory
+The linear complexity of an infinite linear recurring
+sequence s and the linear complexity of the finite sequence
+sn composed of the first n digits of s are related by the following property: if s is an infinite linear recurring sequence
+with linear complexity Λ, then the finite sequence sn has
+linear complexity Λ for any n ≥ Λ. Moreover, the unique
+LFSR of length Λ that generates s is the unique LFSR of
+length Λ that generates sn for every n ≥ Λ.
+For a sequence s = s s . . ., the sequence of the linear complexities (Λ(sn ))n≥ of all subsequences sn =
+s . . . sn− composed of the first n terms of s is called the
+linear complexity profile of s.
+The expected linear complexity of a binary sequence
+sn = s . . . sn− of n independent and uniformly distributed
+binary random variables is
+E[Λ(sn )] =
+
+n 
+n  + ε(n)
++
++ −n ( + ) ,
+
+
+ 
+
+where ε(n) = n mod .
+If s is an infinite binary sequence of period n which is
+obtained by repeating a sequence s . . . sn − of n independent and uniformly distributed binary random variables,
+its expected linear complexity is
+E[Λ(s)] = n −  + − .
+n
+
+Anne Canteaut
+Project-Team SECRET, INRIA Paris-Rocquencourt,
+Le Chesnay, France
+
+Further results on the linear complexity and on the linear complexity profile of random sequences can be found
+in [].
+
+Related Concepts
+Algorithm;
+⊲Combination
+⊲Berlekamp–Massey
+Generator; ⊲Filter Generator; ⊲Linear Feedback Shift
+Register; ⊲Minimal Polynomial; ⊲Stream Cipher
+
+Recommended Reading
+. Rueppel RA () Analysis and design of stream ciphers.
+Springer-Verlag, New York
+
+Linear Consistency Attack
+
+Linear Congruential Generator
+Caroline Fontaine
+Lab-STICC/CID and Telecom Bretagne/ITI,
+CNRS/Lab-STICC/CID and Telecom Bretagne,
+Brest Cedex , France
+
+Related Concepts
+⊲Pseudorandom Generator; ⊲Stream Cipher
+
+Deﬁnition
+A linear congruential generator is a pseudorandom generator that produces a sequence of numbers x , x , x , . . .
+according to the following linear recurrence:
+xt = axt− + b mod n
+
+for t ≥  (modular arithmetic); integers a, b, and n characterize entirely the generator, and the seed is x .
+
+Example
+
+Considering for example a = , b = , n = , and
+x = , the sequence produced by the linear congruential generator will be , , , , , , , , , , , , ,
+, , . . .
+
+L
+
+In both cases, it can be shown that the sequence remains
+predictable [, ]. Another variant has also been studied, considering that some least significant bits of the
+produced integers are discarded; but such sequences still
+are predictable [, , ]. A more precise state of the art
+about cryptanalytic attacks of such generators can be found
+in [].
+
+Recommended Reading
+. Plumstead JB () Inferring a sequence generated by a linear
+congruence. In: Proceedings of the IEEE rd annual symposium
+on foundations of computer science, IEEE, pp –
+. Plumstead JB () Inferring a sequence produced by a linear
+congruence. Advances in Cryptology – Crypto’, Plenum Press,
+New York, pp –
+. Boyar J () Inferring sequences produced by a linear congruential generator missing low-order bits. J Cryptol :–
+. Krawczyk H () How to predict congruential generators.
+J Algorithms :–
+. Frieze AM, Hastad J, Kannan R, Lagarias JC, Shamir A ()
+Reconstructing truncated integer variables satisfying linear congruence. SIAM J Comput :–
+. Stern J () Secret linear congruential generators are not
+cryptographically secure. In: Proceedings of the IEEE th
+annual symposium on foundations of computer science, IEEE,
+pp –
+. Brickell EF, Odlyzko AM () Cryptanalysis: a survey of recent
+results. Contemporary Cryptology: The Science of Information
+Integrity, IEEE-Press, New York, pp –
+
+Background
+Pseudorandom generators are very useful in cryptography,
+in protocols, but also in the generation of keystreams in
+stream ciphers. In this case, they have to present strong
+properties to face cryptanalysis.
+
+Applications
+Such generators are easy to implement and pass the following statistical tests: Golomb’s randomness postulates,
+frequency test, serial test, poker test, runs test, autocorrelation test, Maurer’s universal statistical test. Hence, it can
+be considered as a good candidate for generating strong
+pseudorandom sequences. However, there is an important
+drawback: the sequence is predictable: given a piece of the
+sequence, it is easy to reconstruct the whole rest of it, even
+if the attacker does not know the exact values of a, b,
+and n [, ]. So, it would be very dangerous to use it in a
+cryptographic purpose. Some variants have been considered, using either several terms in the linear recurrence
+equation,
+xt = a xt− + a xt− + . . . + aℓ xt−ℓ + b mod n,
+or a quadratic recurrence relation,
+xt = axt− + bxt− + c mod n.
+
+
+
+
+Linear Consistency Attack
+Anne Canteaut
+Project-team SECRET, INRIA Paris-Rocquencourt,
+Le Chesnay, France
+
+Related Concepts
+⊲Linear Cryptanalysis for Stream Ciphers; ⊲Stream
+
+Cipher
+
+Deﬁnition
+The linear consistency attack is a divide-and-conquer
+technique which provides a ⊲known plaintext attack on
+⊲stream ciphers. It was introduced by Zeng, Yang, and
+Rao in . It has been applied to various keystream
+generators, like the Jenning generator [], the stop-and-go
+generator [], and the ⊲E cipher used in Bluetooth [].
+
+Theory
+The linear consistency attack applies as soon as it is possible to single out a portion K of the secret key and to form a
+system Ax = b of linear equations, where the matrix A only
+
+L
+
+
+
+L
+
+Linear Cryptanalysis for Block Ciphers
+
+depends on K and the right-side vector b is determined by
+the known keystream bits. Then, an exhaustive search for
+K can be performed. The correct value of K can be distinguished from a wrong one by checking whether the linear
+system is consistent or not. Once K has been recovered,
+the solution x of the system may provide some additional
+bits of the secret key.
+
+Recommended Reading
+. Fluhrer SR, Lucks S () Analysis of the E encryption system.
+In: Selected areas in cryptography – SAC , Lecture notes in
+computer science, vol . Springer, Berlin, pp –
+. Zeng K, Yang CH, Rao TRN () On the linear consistency
+test (LCT) in cryptanalysis with applications. In: Advances in
+cryptology – CRYPTO’. Lecture notes in computer science,
+vol . Springer, Berlin, pp –
+
+Linear Cryptanalysis for Block
+Ciphers
+Alex Biryukov , Christophe De Cannière
+
+FDEF, Campus Limpertsberg, University of
+Luxembourg, Luxembourg
+
+Department of Electrical Engineering, Katholieke
+Universiteit Leuven, Leuven-Heverlee, Belgium
+
+Related Concepts
+⊲Block Ciphers; ⊲FEAL
+
+Deﬁnition
+Linear cryptanalysis is a ⊲known plaintext attack in which
+the attacker studies probabilistic linear relations (called linear approximations) between parity bits of the plaintext,
+the ciphertext, and the secret ⊲key. Given an approximation with high probability, the attacker obtains an estimate
+for the parity bit of the secret key by analyzing the parity
+bits of the known plaintexts and ciphertexts. Using auxiliary techniques, he or she can usually extend the attack to
+find more bits of the secret key.
+
+Background
+Linear cryptanalysis is a powerful method of
+⊲cryptanalysis of block ciphers introduced by Matsui in
+ []. The attack in its current form was first applied
+to the ⊲Data Encryption Standard (DES), but an early
+variant of linear cryptanalysis, developed by Matsui and
+Yamagishi, was already successfully used to attack ⊲FEAL
+in  [].
+
+Theory
+The next section provides some more details about the
+attack algorithm. Sections “Piling-up Lemma” to “Provable
+security against linear cryptanalysis” discuss a number of
+practical and theoretical aspects which play a role in linear cryptanalysis. Section “Comparison with differential
+cryptanalysis” points out analogies between linear and differential cryptanalysis, and Section “Extensions” concludes
+with some extended variants of linear cryptanalysis.
+
+Outline of a Linear Attack
+Following Matsui’s notation, we denote by A[i] the
+ith bit of A and by A[i , i , . . . , ik ] the parity bit
+A[i ] ⊕ A[i ] ⊕ ⋯ ⊕ A[ik ]. The first task of the attacker
+is to find a suitable linear approximation. For simple linear operations such as an XOR with the key or a permutation of bits, very simple linear expressions can be
+written which hold with probability one. For nonlinear elements of a cipher such as S-boxes, one tries to find linear
+approximations with probability p that maximizes ∣p −  ∣.
+Approximations for single operations inside a cipher are
+then further combined into approximations that hold for
+a single round of a cipher. By appropriate concatenation of one-round approximations, the attacker eventually obtains an approximation for the whole cipher of
+the type:
+P [i , i . . . , ia ] ⊕ C [ j , j , . . . , jb ]
+= K [k , k , . . . , kc ] ,
+
+()
+
+where i , i , . . . , ia , j , j , . . . , jb , and k , k , . . . , kc denote
+fixed bit locations. Note that such approximation is interesting only if it holds with a probability p ≠  (how
+this probability is calculated is explained in the next section). For DES, Matsui found such an approximation with
+probability  + − . Using this approximation, a simple algorithm based on the maximum likelihood method
+can be used to find one parity bit K[k , k , . . . , kc ] of
+the key:
+Given a pool of N random known plaintexts, let T
+be the number of plaintexts such that the left side of the
+Eq.  is .
+if (T − N/) ⋅ (p − /) >  then
+else
+
+K [k , . . . , kc ] = 
+
+K [[k , . . . , kc ]] = 
+
+end if
+
+In order for the parity bit K[k , k , . . . , kc ] to be recovered
+correctly with a reasonable probability, Matsui demonstrated that the amount of plaintext N needs to be in
+
+Linear Cryptanalysis for Block Ciphers
+
+the order of ∣p −  ∣ . More efficient algorithms for linear cryptanalysis, which find more key bits, are described
+in [].
+−
+
+Piling-up Lemma
+The first stage in linear cryptanalysis consists in finding
+useful approximations for a given cipher (or in demonstrating that no useful approximations exist, which is usually much more difficult). Although the most biased linear
+approximation can easily be found in an exhaustive way
+for a simple component such as an S-box, a number of
+practical problems arise when trying to extrapolate this
+method to full-size ciphers. The first problem concerns the
+computation of the probability of a linear approximation.
+In principle, this would require the cryptanalyst to run
+through all possible combinations of plaintexts and keys,
+which is clearly infeasible for any practical cipher. The solution to this problem is to make a number of assumptions
+and to approximate the probability using the so-called
+Piling-up Lemma.
+Lemma  Given n independent random variables
+X , X , . . . , Xn taking on values from {,}, then the bias
+є = p − / of the sum X = X ⊕ X ⊕ . . . ⊕ Xn is given by:
+є=
+
+n−
+
+n
+
+∏ єj ,
+
+()
+
+j=
+
+where є , є  , . . . , є n are the biases of the terms X , X , . . ., Xn .
+Notice that the lemma can be further simplified by
+defining c = є, known as the imbalance or the (correlation) of an expression. With this notation, Eq. 
+reduces to
+n
+
+c = ∏ cj .
+j=
+
+In order to estimate the probability of a linear approximation using the Piling-up Lemma, the approximation is
+written as a chain of connected linear approximations, each
+spanning a small part of the cipher. Such a chain is called a
+linear characteristic. Assuming that the biases of these partial approximations are statistically independent and easy
+to compute, the total bias can be computed using Eq. .
+Although the Piling-up Lemma produces very good
+estimations in many practical cases, even when the approximations are not strictly independent, it should be stressed
+that unexpected effects can occur when the independence
+assumption is not fulfilled. In general, the actual bias in
+these cases can be both much smaller and much larger than
+predicted by the lemma.
+
+L
+
+
+
+Matsui’s Search for the Best
+Approximations
+The Piling-up Lemma in the previous section provides a
+useful tool to estimate the strength of a given approximation, but the problem remains how to find the strongest
+approximations for a given cipher. For DES, this open
+problem was solved by Matsui in  []. In his second
+paper, he proposes a practical search algorithm based on
+a recursive reasoning. Given the probabilities of the best
+i-round characteristic with  ≤ i ≤ n − , the algorithm efficiently derives the best characteristic for n rounds. This is
+done by traversing a tree where branches are cut as soon
+as it is clear that the probability of a partially constructed
+approximation cannot possibly exceed some initial estimation of the best n-round characteristic.
+Matsui’s algorithm can be applied to many other
+⊲block ciphers, but its efficiency varies. In the first place,
+the running time strongly depends on the accuracy of
+the initial estimation. Small estimations increase the size
+of the search tree. On the other hand, if the estimation is
+too large, the algorithm will not return any characteristic
+at all. For DES, good estimations can be easily obtained by
+first performing a restricted search over all characteristics
+which only cross a single S-box in each round. This does
+not work as nicely for other ciphers, however. The specific
+properties of the S-boxes also affect the efficiency of the
+algorithm. In particular, if the maximum bias of the S-box
+is attained by many different approximations (as opposed
+to the distinct peaks in the DES S-boxes), this will slow
+down the algorithm.
+
+Linear Hulls
+Estimating the bias of approximations by constructing linear characteristics is very convenient, but in some cases,
+the value derived in this way diverges significantly from
+the actual bias. The most important cause for this difference is the so-called linear hull effect, first described by
+Nyberg in  []. The effect takes place when the correlation between plaintext and ciphertext bits, described
+by a specific linear approximation, can be explained by
+multiple linear characteristics, each with a non-negligible
+bias, and each involving a different set of key bits. Such a
+set of linear characteristics with identical input and output masks is called a linear hull. Depending on the value of
+the key, the different characteristics will interfere constructively or destructively, or even cancel out completely. If the
+sets of keys used in the different linear characteristics are
+independent, then this effect might considerably reduce
+the average bias of expression (), and thus the success
+rate of the simple attack described above. Nyberg’s paper
+shows, however, that the more efficient attacks described
+
+L
+
+
+
+L
+
+Linear Cryptanalysis for Block Ciphers
+
+in [], which only use the linear approximations as a
+distinguisher, will typically benefit from the linear hull
+effect.
+
+Provable Security Against Linear
+Cryptanalysis
+The existence of a single sufficiently biased linear characteristic suffices for a successful linear attack against a block
+cipher. A designer’s first objective is therefore to ensure
+that such characteristic cannot possibly exist. This is usually done by choosing highly nonlinear S-boxes and then
+arguing that the diffusion in the cipher forces all characteristics to cross a sufficiently high minimal number of
+“active” S-boxes.
+The above approach provides good heuristic arguments for the strength of a cipher, but in order to rigorously
+prove the security against linear cryptanalysis, the designer
+also needs to take into account more complex phenomena
+such as the linear hull effect. For DES-like ciphers, such
+security proofs were studied by Knudsen and Nyberg, first
+with respect to differential cryptanalysis [], and then also
+applied to linear cryptanalysis []. The results inspired
+the design of a number of practical block ciphers such
+as MISTY (or its variant KASUMI; ⊲KASUMI/MISTYI),
+⊲Rijndael/AES, ⊲Camellia, and others. Later, similar
+proofs were formulated for ciphers based on SP-networks
+[, ].
+A somewhat more general theory for provable security
+against a class of attacks, including basic linear cryptanalysis, is based on the notion of decorrelation, introduced
+by Vaudenay []. The theory suggests constructions were
+a so-called Decorrelation Module that effectively blocks
+the propagation of all traditional linear and differential
+characteristics.
+An important remark with respect to the previous
+notions of provable security, however, is that ciphers
+which are provably optimal against some restricted class of
+attacks often tend to be weak when subject to other types
+of attacks [, ].
+
+Comparison with Diﬀerential
+Cryptanalysis
+Linear cryptanalysis has many methodological similarities with ⊲differential cryptanalysis as is noted in [].
+Differential characteristics correspond to linear approximations. Difference distribution tables are replaced by linear approximation tables. Concatenation rule for differential characteristics: “match the differences, multiply the
+probabilities” corresponds to concatenation rule for linear
+approximations (the piling-up lemma): “match the masks,
+multiply the imbalances.” The algorithms that search for
+the best characteristic or the best linear approximation
+
+are essentially the same. The notion of differentials has
+a corresponding notion of linear hulls. Together with
+striking methodological similarity between the two techniques, there is also duality [] of operations: “XOR
+branch” and “three-forked branch” are mutually dual
+regarding their action on differences and masks, respectively. An important distinction between the two methods is that differential cryptanalysis works with blocks
+of bits, while linear cryptanalysis typically works with
+a single bit. The bias of the linear approximation has
+a sign. Thus, given two approximations with the same
+input and output masks and equal probability but opposite signs, the resulting approximation will have zero bias,
+due to the cancellation of the two approximations by each
+other.
+
+Extensions
+The linear cryptanalysis technique has received much
+attention since its invention and has enjoyed several extensions. One technique is a combined ⊲differential–linear
+approach proposed by Langford and Hellman. Other
+extensions include key-ranking which allows for a tradeoff
+between data and time of analysis [, , ]; partitioning cryptanalysis [] which studies correlation between
+partitions of the plaintext and ciphertext spaces (no practical cipher has been broken via this technique so far);
+X  cryptanalysis [, ] has been applied successfully
+against several ciphers, including round-reduced versions
+of ⊲RC; the use of nonlinear approximations was suggested [, ], but so far it provided only small improvements over the linear cryptanalysis. A full nonlinear generalization still remains evasive. The idea to use multiple approximations has been proposed in [] though
+the problem of estimating the attacker’s gain as well as
+information extraction from such approximations largely
+remained opened. In [] by using a maximal likelihood
+framework, explicit gain formulas have been derived.
+Define capacity c  of a system of m approximations as
+c  =  ⋅ ∑ є J , where є j – are the biases of individm
+
+j=
+
+ual approximations. For a fixed attacker’s gain over the
+⊲exhaustive search, the data complexity N of the multiple linear attack is proportional to c  – the capacity of the
+“information channel” provided by multiple approximations. The paper also describes several algorithms which
+provide such gains. A conversion of a known plaintext
+linear attack to a chosen plaintext linear attack has been
+proposed in []. Finally note that similar techniques have
+been applied to stream ciphers (⊲Linear Cryptanalysis for
+Stream Ciphers).
+
+Linear Cryptanalysis for Stream Ciphers
+
+Recommended Reading
+. Biham E () On Matsui’s linear cryptanalysis. In: De Santis
+A (ed) Advances in cryptology – eurocryrt’. Lecture notes in
+computer science, vol . Springer, Berlin, pp –
+. Biryukov A, De Cannière C, Quisquater M () On multiple
+linear approximations In: Franklin M (ed) Advances in cryptology, proceedings of crypto . Lecture notes in computer
+science, vol . Springer, pp –
+. Desmedt Y (ed) (). In: Desmedt YG (ed) Advances in cryptology – crypto’. Lecture notes in computer science, vol .
+Springer, Berlin
+. Harpes C, Massey JL () Partitioning cryptanalysis. In:
+Biham E () Fast software encryption, FSE’. Lecture notes
+in computer science, vol . Springer, Berlin, pp –
+. Hong S, Lee S, Lim J, Sung J, Cheon D, Cho I () Provable security against differential and linear cryptanalysis for
+the SPN structure. In: Schneier B (ed) Proceedings of fast software encryption – FSE . Lecture notes in computer science,
+vol . Springer-Verlag, Berlin, pp –
+. Junod P, Vaudenay S () Optimal key ranking procedures
+in a statistical cryptanalysis. In: Johansson T (ed) Fast software encryption, FSE . Lecture notes in computer science,
+vol . Springer, Berlin, pp –
+. Kaliski BS, Robshaw MJ () Linear cryptanalysis using multiple approximations. In: Desmedt Y (ed) Advances in cryptography – crypto’. Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Keliher L, Meijer H, Tavares SE () New method for upper
+bounding the maximum average linear hull probability for SPNs.
+In: Pfitzmann B (ed) eurocrypt . Lecture notes in computer
+science, vol . Springer, Berlin, pp –
+. Knudsen LR, Mathiassen JE () A chosen-plaintext linear
+attack on DES. In: Schneier B (ed) Fast software encryption,
+FSE . Lecture notes in computer science, vol . Springer,
+Berlin, pp –
+. Knudsen LR, Meier W () Correlations in RC with a
+reduced number of rounds. In: Schneier B (ed) Proceedings of
+fast software encryption – FSE . Lecture notes in computer
+science, vol . Springer, Berlin, pp –
+. Knudsen LR, Robshaw MJB () Non-linear approximations
+in linear cryptanalysis. In: Maurer U (ed) Advances in cryptology – eurocrypt’. Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Matsui M () Linear cryptanalysis method for DES cipher. In:
+Helleseth T (ed) Advances in cryptology – eurocrypt’. Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Matsui M, Yamagishi A () A new method for known plaintext attack of FEAL cipher. In: Rueppel RA (ed) Advances in
+cryptography – eurocrypt’. Lecture notes in computer science, vol . Springer, Berlin, pp –
+. Matsui M () The first experimental cryptanalysis of the data
+encryption standard. In: Desmedt YG (ed) Advances in cryptography – crypto’. Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Matsui M () On correlation between the order of S-boxes and
+the strength of DES. In: De Santis S (ed) Advances in cryptology – eurocrypt’. Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Nyberg K () Linear approximations of block ciphers. In:
+De Santis (ed) Advances in cryptography – eurocrypt’. Lecture notes in computer science, vol . Springer, Berlin,
+pp –
+
+L
+
+
+
+. Nyberg K, Knudsen LR () Provable security against a differential attack. J Cryptol ():–
+. Santis AD (ed) (). In: De Santis A (ed) Advances in cryptology – eurocrypt’. Lecture notes in computer science, vol .
+Springer, Berlin
+. Selcuk AA () On probability of success in differential
+and linear cryptanalysis. Technical report, network systems
+lab, department of computer science, Purdue University, .
+Previously published at SCN 
+. Shimoyama T, Kaneko T () Quadratic relation of S-box
+and its application to the linear attack of full round des. In:
+Krawczyk H (ed) Advances in cryptology – crypto’. Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Shimoyama T, Moriai S, Kaneko T, Tsujii S () Improved
+higher order differential attack and its application to NybergKnudsen’s designed block cipher. IEICE Trans Fundament EA():–
+http://search.ieice.or.jp//files/ea.
+htm#e-a,,
+. Vaudenay S () On the weak keys of blowfish. In: Gollmann D (ed) Fast software encryption, FSE’. Lecture notes
+in computer science, vol . Springer, Berlin, pp –
+. Vaudenay S () Decorrelation: a theory for block cipher
+security. Journal of Cryptology ():–
+. Wagner D () The boomerang attack. In: Knudsen LR (ed)
+Fast software encryption, FSE’. Lecture notes in computer
+science, vol . Springer, Berlin, pp –
+
+Linear Cryptanalysis for Stream
+Ciphers
+Anne Canteaut
+Project-Team SECRET, INRIA Paris-Rocquencourt,
+Le Chesnay, France
+
+Related Concepts
+⊲Fast Correlation Attack; ⊲Linear Cryptanalysis; ⊲Stream
+
+Cipher
+
+Deﬁnition
+Linear cryptanalysis for stream ciphers relies on the same
+basic principles as the ⊲linear cryptanalysis for block
+ciphers introduced by Matsui. It exploits the existence
+of biased linear relations between some keystream bits
+and some key bits. The linear cryptanalysis provides a
+⊲known plaintext attack on various ⊲stream ciphers,
+which allows to distinguish the keystream from a truly random sequence. Such a distinguishing attack can be used
+for reducing the uncertainty of unknown plaintexts, or
+for recovering the unknown structure of the keystream
+generator. It may also be extended to a key-recovery
+attack in some cases. It might be mounted in the context
+of a ⊲resynchronization attack, when several keystream
+segments corresponding to different initial values are available to the attacker.
+
+L
+
+
+
+L
+
+Linear Feedback Shift Register
+
+Background
+In the context of stream ciphers, linear cryptanalysis is
+a terminology introduced by Golić in  []. However,
+linear attacks against stream ciphers were known before
+the introduction of linear cryptanalysis by Matsui: for
+instance, the ⊲correlation attack on the ⊲combination
+generator presented by Siegenthaler in  [] exploits a
+biased linear relation between the keystream and the bits
+of the initial state of a constituent register.
+
+Theory
+The linear cryptanalysis consists in finding some linear
+functions of the keystream bits which are not balanced,
+i.e., which are not uniformly distributed. Such linear
+correlations are used for distinguishing the keystream
+sequence from a random sequence by a classical statistical test.
+Biased linear relations are usually found by replacing
+the nonlinear components in the cipher by appropriate linear approximations. General methods for exhibiting such
+relations include the ⊲correlation attack [] against the
+⊲combination generator and on the ⊲filter generator, the
+linear sequential circuit approximation due to Golić [, ]
+and some variants used in [–] against several LFSRbased generators.
+Linear cryptanalysis has led to successful attacks on
+several stream ciphers, including SOBER [], SNOW [,
+, ], ⊲E [], and the original version of Grain [].
+
+Recommended Reading
+. Berbain C, Gilbert H, Maximov A () Cryptanalysis of
+Grain. In: Fast software encryption – FSE . Lecture notes
+in computer science, vol . Springer, Berlin, pp –
+. Canteaut A, Filiol E () Ciphertext only reconstruction of
+stream ciphers based on combination generators. In: Fast software encryption – FSE . Lecture notes in computer science,
+vol . Springer, Berlin, pp –
+. Coppersmith D, Halevi S, Jutla C () Cryptanalysis of stream
+ciphers with linear masking. In: Advances in cryptology –
+CRYPTO . Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Ekdahl P, Johansson T () Distinguishing attacks on SOBERt and t. In: Fast software encryption – FSE . Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Golić JDj, Bagini V, Morgari G () Linear cryptanalysis of
+Bluetooth stream cipher. In: Advances in cryptology – EUROCRYPT . Lecture notes in computer science, vol .
+Springer, Berlin, pp –
+. Golić JDj () Correlation via linear sequential circuit
+approximation of combiners with memory. In: Advances in
+cryptology – EUROCRYPT’. Lecture notes in computer science, vol . Springer, Berlin, pp –
+. Golić JDj () Linear cryptanalysis of stream ciphers. In:
+Fast software encryption – FSE’. Lecture notes in computer
+science, vol . Springer, Berlin, pp –
+
+. Nyberg K, Wallén J () Improved linear distinguishers for
+SNOW .. In: Fast software encryption – FSE . Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Siegenthaler T () Decrypting a class of stream ciphers using
+ciphertext only. IEEE Trans Comput C-():–
+. Watanabe D, Biryukov A, De Cannière C () A distinguishing attack of SNOW . with linear masking method. In:
+Selected areas in cryptography – SAC . Lecture notes in
+computer science, vol . Springer, Berlin, pp –
+
+Linear Feedback Shift Register
+Anne Canteaut
+Project-Team SECRET, INRIA Paris-Rocquencourt,
+Le Chesnay, France
+
+Synonyms
+LFSR
+
+Related Concepts
+⊲Berlekamp–Massey Algorithm; ⊲Combination Generator; ⊲Filter Generator; ⊲Linear Complexity; ⊲Minimal
+Polynomial; ⊲Stream Cipher
+
+Deﬁnition
+Linear Feedback Shift Registers (LFSRs) are the basic components of many ⊲running-key generators for ⊲stream
+cipher applications, because they are appropriate to hardware implementation and they produce sequences with
+good statistical properties. LFSR refers to a feedback shift
+register with a linear feedback function (⊲Nonlinear Feedback Shift Register).
+An LFSR of length L over Fq is a finite state automaton
+which produces a semi-infinite sequence of elements of Fq ,
+s = (st )t≥ = s s . . ., satisfying a linear recurrence relation
+of degree L over Fq
+L
+
+st+L = ∑ ci st+L−i ,
+i=
+
+∀t ≥ .
+
+The L coefficients c , . . . , cL are elements of Fq . They are
+called the feedback coefficients of the LFSR.
+An LFSR of length L over Fq has the following form:
+st+L
+st+L−1
+
+…
+
+st+L−2
+
+st+1
+
+st
+output
+
+c1
+
+c2
+
+cL−1
+
++
+
++
+
++
+
+cL
+
+L
+
+Linear Feedback Shift Register
+
+The register consists of L delay cells, called stages, each
+containing an element of Fq . The contents of the L stages,
+st , . . . , st+L− , form the state of the LFSR. The L stages are
+initially loaded with L elements, s , . . . , sL− , which can be
+arbitrary chosen in Fq ; they form the initial state of the
+register.
+The shift register is controlled by an external clock. At
+each time unit, each digit is shifted one stage to the right.
+The content of the rightmost stage st is output. The new
+content of the leftmost stage is the feedback bit, st+L . It is
+obtained by a linear combination of the contents of the
+register stages, where the coefficients of the linear combination are given by the feedback coefficients of the LFSR:
+
+Alternatively, one can use the characteristic polynomial
+[], which is the reciprocal polynomial of the feedback
+polynomial:
+L
+
+P⋆ (X) = X L P(/X) = X L − ∑ ci X L−i .
+i=
+
+For instance, the feedback polynomial of the binary LFSR
+shown in Fig.  is P(X) =  + X  + X  and its characteristic
+polynomial is P⋆ (X) =  + X + X  .
+An LFSR is said to be non-singular if the degree of its
+feedback polynomial is equal to the LFSR length (i.e., if the
+feedback coefficient cL differs from ). Any sequence generated by a non-singular LFSR of length L is periodic, and
+its period does not exceed qL − . Indeed, the LFSR has
+at most qL different states and the all-zero state is always
+followed by the all-zero state. Moreover, if the LFSR is singular, all generated sequences are ultimately periodic, that
+is, the sequences obtained by ignoring a certain number of
+elements at the beginning are periodic [].
+
+L
+
+st+L = ∑ ci st+L−i .
+i=
+
+Therefore, the LFSR implements the linear recurrence
+relation of degree L:
+L
+
+st+L = ∑ ci st+L−i ,
+
+∀t ≥ .
+
+i=
+
+Characterization of LFSR output sequences. A given LFSR
+of length L over Fq can generate qL different sequences
+corresponding to the qL different initial states and these
+sequences form a vector space over Fq . The set of all
+sequences generated by an LFSR with feedback polynomial
+P is characterized by the following property: a sequence
+(st )t≥ is generated by an LFSR of length L over Fq with
+feedback polynomial P if and only if there exists a polynomial Q ∈ Fq [X] with deg(Q) < L such that the generating
+function of (st )t≥ satisfies
+
+Example. Table  gives the successive states of the binary
+LFSR of length  with feedback coefficients c = c = ,
+c = c =  and with initial state (s , s , s , s ) = (, , , ).
+This LFSR is depicted in Fig. . It corresponds to the linear
+recurrence relation
+st+ = st+ + st mod .
+The output sequence s s . . . generated by this LFSR is
+ . . ..
+
+∑ st X =
+t
+
+t≥
+
+Theory
+
+Q(X)
+.
+P(X)
+
+Feedback polynomial and characteristic polynomial. The
+output sequence of an LFSR is uniquely determined by
+its feedback coefficients and its initial state. The feedback
+coefficients c , . . . , cL of an LFSR of length L are usually
+represented by the LFSR feedback polynomial (or connection polynomial) defined by
+
++
+
+Linear Feedback Shift Register. Fig.  Binary LFSR with feedback coeﬃcients (c , c , c , c ) = (, , , )
+
+L
+
+P(X) =  − ∑ ci X i .
+i=
+
+Linear Feedback Shift Register. Table  Successive states of the LFSR with feedback coeﬃcients (c , c , c , c ) = (, , , ) and
+with initial state (s , s , s , s ) = (, , , )
+t
+st
+st+
+st+
+st+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+L
+
+
+
+L
+
+Linear Feedback Shift Register
+
+1
+
+0
+
+0
+
++
+
+1
++
+
+0
+
+0
+
+1
+
+0
+
++
+
+0
+
+1
+
++
+
+Linear Feedback Shift Register. Fig.  Example of a LFSR of length 
+
+Moreover, the polynomial Q is completely determined
+by the coefficients of P and by the initial state of
+the LFSR:
+
+0
+
+0
+
+1
+
+⎞
+Q(X) = − ∑ X ∑ ci−j sj ,
+⎝
+⎠
+i=
+j=
+
+Linear Feedback Shift Register. Fig.  LFSR of length  which
+generates the same sequence as the LFSR of Fig. 
+
+where P(X) = ∑Li=  ci X i . This result, which is called
+the fundamental identity of formal power series of linear recurring sequences, means that there is a one-toone correspondence between the sequences generated by
+an LFSR of length L with feedback polynomial P and
+the fractions Q(X)/P(X) with deg(Q) < L. It has two
+major consequences. On the first hand, any sequence generated by an LFSR with feedback polynomial P is also
+generated by any LFSR whose feedback polynomial is a
+multiple of P. This property is used in some attacks on
+keystream generators based on LFSRs (⊲Fast Correlation
+attack). On the other hand, a sequence generated by an
+LFSR with feedback polynomial P is also generated by a
+shorter LFSR with feedback polynomial P′ if the corresponding fraction Q(X)/P(X) is such that gcd(P, Q) ≠ .
+Thus, amongst all sequences generated by the LFSR with
+feedback polynomial P, there is one which can be generated by a shorter LFSR if and only if P is not ⊲irreducible
+over Fq .
+Moreover, for any linear recurring sequence (st )t≥ ,
+there exists a unique polynomial P with constant term
+equal to , such that the generating function of (st )t≥ is
+given by Q (X)/P (X), where P and Q are relatively
+prime. Then, the shortest LFSR which generates (st )t≥ has
+length L = max(deg(P ), deg(Q ) + ), and its feedback
+polynomial is equal to P . The reciprocal polynomial of P ,
+X L P (/X), is the characteristic polynomial of the shortest LFSR which generates (st )t≥ ; it is called the ⊲minimal
+polynomial of the sequence. It determines the linear recurrence relation of least degree satisfied by the sequence.
+The degree of the minimal polynomial of a linear recurring sequence is the ⊲linear complexity of the sequence. It
+corresponds to the length of the shortest LFSR which generates it. The minimal polynomial of a sequence s = (st )t≥
+of linear complexity Λ(s) can be determined from the
+knowledge of at least Λ(s) consecutive bits of s by the
+⊲Berlekamp–Massey algorithm.
+
+Example. The binary LFSR of length  depicted in Fig. 
+has feedback polynomial
+
+L−
+
+i⎛
+
+i
+
+P(X) =  + X + X  + X  + X  + X  ,
+and its initial state s . . . s is .
+The generating function of the sequence produced by
+this LFSR is given by
+∑ st X =
+t
+
+t≥
+
+Q(X)
+P(X)
+
+where Q is deduced from the coefficients of P and from the
+initial state:
+Q(X) =  + X + X  .
+
+Therefore, we have
+∑ st X =
+t
+
+t≥
+
+ + X + X
+
+=
+,
+ + X + X  + X  + X  + X   + X 
+
+since  + X + X  + X  + X  + X  = ( + X + X  )( + X  )
+in F [X]. This implies that (st )t≥ is also generated by the
+LFSR with feedback polynomial P (X) =  + X  depicted
+in Fig. . The minimal polynomial of the sequence is then
+ + X  and its linear complexity is equal to .
+Period of an LFSR sequence. The minimal polynomial of
+a linear recurring sequence plays a major role since it
+completely determines the linear complexity and the least
+period of the sequence. Actually, the least period of a linear recurring sequence is equal to the period of its minimal
+polynomial. The period (also called the order) of a polynomial P in Fq [X], where P() ≠ , is the least positive
+integer e for which P(X) divides X e − . Then, s has maximal period qΛ(s) −  if and only if its minimal polynomial
+is a primitive polynomial (i.e., if the period of its minimal
+polynomial is maximal). For instance, the sequence generated by the LFSR shown in Fig.  has period  because
+its minimal polynomial  + X  has period . This sequence
+is  . . .. On the other hand, any nonzero sequence
+
+Location Information (Privacy of)
+
+generated by the LFSR of length  depicted in Fig.  has
+period  −  = . Actually, the minimal polynomial of any
+such sequence corresponds to its characteristic polynomial
+P⋆ (X) = +X+X  , because P⋆ is irreducible. Moreover, P⋆
+is a primitive polynomial. Any sequence s = (st )t≥ generated by an LFSR of length L which has a primitive feedback polynomial has the highest possible linear complexity
+Λ(s) = L and the highest possible period qL − . Such
+sequences are called ⊲maximal-length linear sequences
+(m-sequences). Because of the previous optimal properties, the linear recurring sequences used in cryptography
+are always chosen to be m-sequences. Moreover, they
+possess good statistical properties [] (⊲maximal-length
+linear sequences for further details). In other terms, the
+feedback polynomial of a LFSR should always be chosen
+to be a primitive polynomial.
+Keystream generators based on LFSRs. It is clear that an
+LFSR should never be used by itself as a keystream generator. If the feedback coefficients of the LFSR are public,
+the entire keystream can obviously be recovered from the
+knowledge of any Λ consecutive bits of the keystream,
+where Λ is the linear complexity of the running-key (which
+does not exceed the LFSR length). If the feedback coefficients are kept secret, the entire keystream can be recovered from any Λ consecutive bits of the keystream by the
+⊲Berlekamp–Massey algorithm. Therefore, a commonly
+used technique to produce a pseudorandom sequence
+which can be used as a running-key is to combine several
+LFSRs in different ways in order to generate a linear recurring sequence which has a high linear complexity (e.g.,
+⊲combination generator, ⊲filter generator...).
+
+The linear syndrome attack is an attack on ⊲LFSR-based
+keystream generators, which was presented by Zeng and
+Huang in  [] (see also []). It is a weak version of
+the ⊲fast correlation attack, which was independently proposed by Meier and Staffelbach [].
+
+Recommended Reading
+. Meier W, Staffelbach O () Fast correlation attacks on stream
+ciphers. In: Advances in cryptology – EUROCRYPT’. Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Zeng K, Huang M () On the linear syndrome method in
+cryptanalysis. In: Advances in cryptology – CRYPTO’. Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Zeng K, Yang CH, Rao TRN () An improved linear syndrome algorithm in cryptanalysis with applications. In: Advances
+in cryptology – CRYPTO’. Lecture notes in computer science,
+vol . Springer, Berlin, pp –
+
+List Decoding
+⊲Decoding Algorithms
+
+L
+Location Information (Privacy of)
+Claudio A. Ardagna
+Dipartimento di Tecnologie dell’Informazione (DTI),
+Università degli Studi di Milano, Crema (CR), Italy
+
+Synonyms
+
+. Golomb SW () Shift register sequences. Revised edition,
+Aegean Park Press, Laguna Hills, CA
+. Lidl R, Niederreiter H () Finite fields. Cambridge University
+Press, Cambridge
+. Rueppel RA () Analysis and design of stream ciphers.
+Springer-Verlag, New York
+
+Location privacy
+
+Anne Canteaut
+Project-Team SECRET, INRIA Paris-Rocquencourt,
+Le Chesnay, France
+
+Related Concepts
+⊲Fast Correlation Attack; ⊲Stream Cipher
+
+
+
+Deﬁnition
+
+Recommended Reading
+
+Linear Syndrome Attack
+
+L
+
+Related Concepts
+⊲Anonymity
+
+Deﬁnition
+Location information ⊲privacy is the right of mobile individuals to decide how, when, and for which purposes their
+location information could be released to and managed by
+other parties.
+
+Background
+The rapid growth of mobile technologies and the
+widespread adoption of mobile communication devices
+have fostered the development of new applications that
+exploit the physical position of the users to offer
+Location-Based Services (LBSs) for business, social, or
+informational purposes. Today, several commercial and
+
+
+
+L
+
+Location Information (Privacy of)
+
+enterprise-oriented LBSs are already available and are
+gaining popularity. In general, LBSs can be partitioned into
+the following categories [].
+●
+
+●
+
+●
+
+●
+
+●
+
+Locate-me services. They provide information about the
+position of the users. They should be used when authorized third parties need to know the position of the
+users for performing their tasks. A locate-me service
+is at the basis of all the others LBS categories.
+Nearby-information services. They provide information
+about the environment surrounding the location of
+a user (e.g., point of interest, context-aware tourist
+guides, or weather and traffic alerts). A user subscribes
+to these services and receives real-time information
+through her mobile device.
+Locate-friends and nearby-friends services. They provide information to subscribers about the real-time
+location or proximity of other subscribers. They can
+be used, for example, to provide services in the context of social networks or as industrial applications to
+coordinate workforces.
+Tracking services. They allow monitoring movements
+of the users and include telemetric services (i.e., the
+observation of parameters of mobile objects such as
+speed, direction of movement, and so on). They can
+be used by online services that provide tracking of
+children, employees, or vehicles, and warning about
+dangerous areas.
+Personal-navigation services. They provide information
+about the path that has to be followed to reach a target
+location from the current location of the user. These
+services rely on tracking services to gather the position
+of a user moving on the field.
+
+While these applications offer great benefits to the
+users, they also exhibit significant potential for privacy
+abuses since positioning and tracking systems are collecting a huge amount of location information. Recent security
+incidents have revealed faulty data management practices
+and unauthorized trading of personal (including location)
+information of the users. In this scenario, the improper
+exposure of location information could result in abuses,
+such as stalking or physical harassment.
+
+laptops, PDAs) enable the delivery of services that use the
+physical locations of the users and call for an urgent and
+careful consideration of privacy issues. Privacy concerns
+become more critical since mobile devices are unable to
+enforce restrictions on the location data scattering or to
+avoid the data flow (unless the mobile devices are switched
+off). The worst-case scenario that some analysts have foreseen as a consequence of an unrestricted and unregulated
+availability of location technologies recalls the well-known
+“Big Brother” stereotype: a society where the secondary
+effect of location technologies (whose primary effect
+is to enable the development of innovative and useful services) is a form of implicit total surveillance of
+individuals.
+⊲Location privacy can be defined as the right of individuals to decide how, when, and for which purposes their
+location information could be released to or managed
+by other parties. The lack of location privacy protection
+could be exploited by adversaries and result in different
+types of attacks: unsolicited advertising, when the location of a user could be exploited, without her consent,
+to provide advertisements of products and services available nearby the user position; physical attacks or harassment, when the location of a user could allow criminals
+to carry physical assaults to specific individuals; users profiling, when the location of a user could be used to infer
+other sensitive information, such as state of health, personal habits, or professional duties, by correlating visited
+places or paths; denial of service, when the location of a user
+could motivate an access denial to services under some
+circumstances.
+The concept of location privacy can assume several
+meanings and pursue different objectives, depending on
+the scenario in which users are moving and on the services users are interacting with. Location privacy solutions
+can be aimed at protecting users by making their location
+information anonymous or keeping explicit identification,
+but perturbing their location information to decrease the
+accuracy. Different categories of location privacy can then
+be defined [].
+●
+
+Theory
+Geolocation solutions measure the position of mobile
+devices by using several mobile technologies (e.g., GSM/
+G, GPS, WiFi) that have been developed and can be
+exploited to compute location information. The boost in
+terms of accuracy and reliability enjoyed by geolocation
+solutions in the recent years and the widespread adoption
+of GSM/G, GPS, and WiFi devices (e.g., cellular phones,
+
+●
+
+Identity privacy. The main goal is to protect users’ identities associated with or inferable from location information. In this case, accurate location measurements
+can be provided to location-based services, but the
+identity of the users must be kept hidden.
+Position privacy. The main goal is to perturb the location of the users as a way to protect their actual
+position. In particular, this type of location privacy
+is suitable when users’ identities are required for the
+successful provisioning of a service.
+
+Location Information (Privacy of)
+
+●
+
+Path privacy. The main goal is to protect the privacy
+of those users that are continuously monitored during
+a certain period of time. In this case, location-based
+services will no longer receive a single location measurement, rather they will gather a flow of position
+samples that permit them to track the users and to infer
+sensitive areas they have visited.
+
+Based on the above categories, three main classes
+of location privacy techniques have been introduced:
+anonymity-based, obfuscation-based, and policy-based.
+Anonymity-based techniques provide a class of solutions
+for the protection of identity and path privacy. In particular, this class includes all solutions based on the notion
+of ⊲anonymity, which is aimed at making an individual
+(i.e., her identity or personal information) not identifiable.
+Anonymity-based techniques [, ] are suitable for all those
+contexts that do not need knowledge of the identity of
+the users, and their effectiveness depends on the number
+of users physically located in the same area. Obfuscationbased techniques provide a class of solutions that perturb
+the location information still maintaining a binding with
+the identity of the users. Obfuscation degrades the accuracy of the location information to provide privacy protection. Obfuscation-based techniques [, ] are suitable for
+all those contexts that need knowledge of the identity of
+the users. Finally, policy-based techniques provide a class
+of solutions based on the definition of privacy policies and
+for the protection of all privacy categories.
+In general, anonymity-based and obfuscation-based
+techniques are dual categories. While anonymity-based
+techniques have been primarily defined to protect identity privacy and are less suitable for protecting position
+privacy, obfuscation-based techniques are well suited for
+position privacy protection and unrelated with identity
+privacy protection. As for path privacy, both anonymitybased and obfuscation-based techniques are well suited
+and able to provide the required degree of protection.
+Policy-based techniques are flexible and in general well
+suited for all location privacy categories, whereas their
+management complexity could easily become overwhelming for the users.
+
+Applications
+Many mobile network providers offer a variety of locationbased services, such as point of interest proximity, friendfinder, or location information transfer in case of an
+accident (e.g.,  emergency service). Such services naturally raise privacy concerns. Users consider their physical
+location and movements as highly privacy sensitive, and
+demand for solutions able to protect such an information
+
+L
+
+
+
+in a variety of environments. Also, although privacy is currently seen as an optional add-on by the LBS providers, in
+the near future, it will represent one of the key aspects to
+the success of the LBSs and a fundamental parameter in
+their selection by the users. In this context, solutions for the
+protection of location information privacy might be integrated with LBSs to protect the privacy of the users, still
+preserving the overall quality of the services.
+
+Open Problems and Future Directions
+Some open problems and interesting research directions
+that need to be tackled by future research in the context of
+location information privacy are as follows.
+●
+
+●
+
+●
+
+Untrusted mobile network operator. Current approaches
+usually assume untrusted location-based services,
+while they consider the mobile network operator as
+a trusted powerful entity able to know and observe
+all the traffic in the network. All the requests and
+responses in a communication are mediated by the network operator that knows, for all its users, which users
+access which servers. In other words, it can reconstruct
+exactly all the pairs ⟨user,LBS⟩ describing communications of its users. A critical problem, and an interesting future research direction, is to provide a means
+for users to communicate with LBSs without giving
+the operator the ability to observe the communication
+profiles. The mobile operator, while considered trustworthy with respect to the availability and working of
+the network, should be restricted in terms of the view
+and traffic it can reconstruct.
+Path protection. Future work should extend current
+solutions to better protect the privacy of the users that
+are monitored during a certain period of time. This
+research area is particularly relevant given the everincreasing interest in offering applications for tracking
+users. Data about users moving in a particular area are
+collected by external services that use them to provide
+their services effectively. In such a scenario, the need
+for privacy techniques aimed at protecting path privacy
+becomes urgent.
+Map constraints. Current privacy solutions do not consider map constraints as a way to better protect the
+location privacy of the users. Topological information,
+however, could help adversaries in reducing location
+privacy by guessing identity of users and by producing more accurate location information. An interesting
+research direction is to enrich existing privacy techniques with Geographical Information System (GIS)
+maps, providing more robust solutions that take advantage from map information.
+
+L
+
+
+
+L
+
+Location Privacy
+
+Recommended Reading
+. Ardagna CA, Cremonini M, Damiani E, De Capitani di Vimercati
+S, Samarati P () Privacy-enhanced location services information. In: Acquisti A, De Capitani di Vimercati S, Gritzalis S,
+Lambrinoudakis C (eds) Digital privacy: theory, technologies and
+practices. Auerbach (Taylor and Francis Group), New York
+. Ardagna CA, Cremonini M, De Capitani di Vimercati S, Samarati
+P () An obfuscation-based approach for protecting location
+privacy. IEEE Transactions on Dependable and Secure Computing, ():–, January-March 
+. Ardagna CA, Jajodia S, Samarati P, Stavrou A () Providing
+mobile users’ anonymity in hybrid networks. In: Proceedings of
+the th European Symposium on Research in Computer Security
+(ESORICS ), Athens, Greece, September 
+
+Location Privacy
+
+for themselves when, how, and to what extent information
+about them is communicated to others” []. Other more
+restrictive definitions have also been proposed, for example, “the ability [. . .] to move through public space with
+the expectation that [. . .] location will not be systematically and secretly recorded for later use” []. While some
+location information is also available on wired networks,
+location privacy is particularly relevant in wireless networks due to user’s significantly higher degree of mobility.
+Examples of the broad range of wireless location privacy
+concerns are:
+●
+●
+
+⊲Location Information (Privacy of)
+
+Location Privacy in Wireless
+Networks
+Marco Gruteser
+Wireless Information Network Laboratory, Department
+of Electrical and Computer Engineering, Rutgers
+University, North Brunswick, NJ, USA
+
+Synonyms
+Wireless locational privacy
+
+Related Concepts
+⊲Access Control; ⊲Anonymity; ⊲Entropy
+
+●
+
+A cellular phone user may want to make a phone call
+without the phone’s position recorded by the cellular
+phone network.
+The owner of a sensor network deployed for target
+tracking in a hostile environment may want to conceal the location of sensors, the location of detected
+events, and the location of the data sinks which collect
+information.
+The user of an automotive navigation service may want
+to share location traces for traffic congestion monitoring without revealing identity and exact places visited.
+
+These examples illustrate that in different situations device
+owners may want to control the release of location information with respect to wireless service providers, cellular
+service providers, application service providers, or eavesdroppers on the wireless channel. A common challenge
+is that location information is often implicitly revealed by
+network usage or activity. For example, the cellular base
+station through which a phone call originates reveals the
+approximate location of the caller.
+The potential risks associated with uncontrolled revealing of location information were enumerated in the Location Privacy Protection Act of  considered in the
+United States Congress []. Examples are the drawing of
+inferences about user’s medical condition, nightlife, or
+political activities from the places users visit.
+
+Deﬁnition
+The ability of a user or owner of a wireless device to control
+to which party, to what degree, and at what times information about the device’s geographic location is revealed.
+
+Background
+This definition of location privacy is derived from the
+more general concept of information privacy. It is commonly characterized as the claim for informational selfdetermination, originally defined by Alan Westin as “the
+claim of individuals, groups, or institutions to determine
+
+Theory
+A breach of location privacy requires that personally identifiable information is revealed with the location data,
+that is, the data can be uniquely linked to an individual person. Such personally identifiable information can
+take many forms, such as names and addresses of persons
+or device/network identifiers (e.g., the Global System for
+Mobile Communications International Mobile Subscriber
+Identifier or an Internet Protocol address), which can be
+easily linked to a person. It is also possible, however, that
+
+Location Privacy in Wireless Networks
+
+the location information itself can be linked to individual
+persons and thus can be considered personally identifiable
+information. In actual usage, often some information about
+location or identity is revealed, implying that location privacy should be understood in terms of a degree of privacy,
+rather than absolute privacy. The definition of metrics for
+this degree of location privacy remains an active area of
+research.
+This understanding gives rise to two approaches for the
+design of privacy-enhancing technologies: controlling the
+release of personally identifiable data or filtering out personally identifiable information to render the data truly
+anonymous.
+The first approach resembles access control and the
+main challenge is designing usable mechanisms. Standard
+web-tools such as privacy policy preference mechanisms
+that can provide guidance to users and make automatic
+decisions are also applicable to wireless applications. One
+common difference of access control mechanisms specifically developed for location information, however, is that
+the rules governing access frequently depend on location
+and time of access. They also differ, in that they may reduce
+the fidelity of location information, for example, providing only city-level location data although a precise GPS
+location is available.
+The second approach allows sharing of some location information without revealing personally identifiable
+records and is referred to as anonymization []. In this
+model, a set of location records L are filtered or perturbed
+by an anonymizer A, resulting in an anonymous dataset
+La = A(L), which can be shared with others. It is assumed
+that the adversary, say Eve, obtains access to La and seeks
+to reidentify users whose records are contained in La .
+In one model focused on tracking, La = (l , l , . . ., lk )
+with each li = (lat, lon, time, heading, speed) from one
+of m users U. The dataset does not identify which location
+record li belongs to which user uj in U and does not identify for any two location updates li , lj whether they were
+generated by the same user (i.e., the order in the dataset
+does not allow any such conclusion). Eve has an external
+location dataset O with location observations or restricted
+spaces for some of the users, where each observation has
+the form (uj , li ). The adversary also has a model of human
+movement that allows the adversary to assign a likelihood
+and can be used to reconstruct paths of individual users
+from the location dataset (i.e., link two location updates
+li , lj in La to the same user). The adversary can compromise location privacy if any of the observations in O can
+be uniquely linked to a location record in L to reidentify
+a location record and the adversary can learn significant
+
+L
+
+
+
+additional information about the user’s travels from L
+(beyond what is already known in O). A privacy metric
+that quantifies this additional information is the time-toconfusion metric []. Intuitively, it measures the duration
+that an adversary can follow a user in the dataset La from
+the observation where the user was reidentified. Strong
+anonymization requires that time to confusion is bounded
+and small. Techniques for stronger anonymization include
+path cloaking [] and mix zones [].
+In a related model [] also considering query privacy,
+La = (l , l , . . . , lk ) but with each li = (query, cloaking area,
+time) from one of m users U. Again the adversary has a
+dataset of location observations, but the adversary should
+not be able to reidentify any of the location records, since
+this would compromise query privacy in addition to the
+tracking concerns described above. The anonymizer can
+replace the exact location coordinates with a cloaking area,
+that is, an uncertainty region for the user location, to satisfy
+the k-anonymity criterion.
+
+Applications
+Typical designs of wireless communication networks generate personally identifiable information at many levels
+of the network stack. At the lower levels of the network
+stack any message transmitted can be localized and generate a location record. Users can therefore only control the
+release of location information toward the service provider
+by controlling where and when they communicate (and
+deactivate the device at other times) or by using specialized privacy-enhancing technologies to mask location or
+identifiers (e.g., identifier-free protocols or protocols that
+frequently change network and devices identifiers).
+At the physical layer, radio waveforms carry a fingerprint of the analog radio front end that transmitted the
+signal. On a set of identical wireless LAN radios, modulation level characteristics such as center frequency offset
+have been shown to allow distinguish one out of more
+than  transmitters. Any signal transmitted can also be
+located using location fingerprints (of the signal), or techniques based on triangulation and trilateration. Privacyenhancing techniques at this layer include reducing the
+frequency of transmissions, and decreasing transmission
+power (or increasing directionality) to reduce the chance
+of signal observation and localization.
+At the medium access layer, devices usually carry a
+unique address and their approximate location can be
+determined based on proximity to the wireless access point
+or cell tower that they associate with. A key privacyenhancing technique at the medium access control layer is
+
+L
+
+
+
+L
+
+Logic Bomb
+
+the frequent switching of medium access control addresses
+to reduce the chance of identification and tracking of the
+device [].
+At the network layer, Internet protocol addresses act
+as an identifier that sometimes can be linked to an individual and they also describe the location of the device in
+the network topology. This topological location can often
+be mapped to geographic location with about city-level
+granularity. The routes on which packets are sent can also
+reveal information about the approximate location of the
+source or destination node []. Privacy-enhancing technologies at the network layer include route randomization,
+onion routing, and reducing the granularity of location
+information maintained deep inside the network.
+Finally, location-based applications, which are frequently used over wireless networks, can collect location information together with application-level identifiers. Location is frequently obtained from Global Positioning System receivers, which can make it especially
+precise.
+While policy-based access control and anonymity are
+most commonly used at the application layer, these techniques can be adapted for use at all layers of the network
+stack. For example, the time-to-confusion criterion can
+be used to evaluate tracking risks from several wireless
+messages.
+
+Recommended Reading
+. Westin A () Privacy and freedom. Atheneum, New York
+. Blumberg A, Eckersley P () On locational privacy, and
+how to avoid losing it forever, Electronic Frontier Foundation
+Whitepaper, August 
+. S, Location Privacy Protection Act of . United States
+congressional record
+. Krumm J () A survey of computational location privacy. Pers
+Ubiquit Comput ():–
+. Hoh B, Gruteser M, Xiong H, Alrabady A () Preserving
+privacy in GPS traces via density-aware path cloaking. In: Proceedings of the th ACM conference on Computer and communications security (CCS), Alexandria, 
+. Beresford AR, Stajano F () Location privacy in pervasive
+computing. IEEE Pervasive Comput ():–
+. Gruteser M, Grunwald D () Anonymous usage of locationbased services through spatial and temporal cloaking. In:
+Proceedings of First ACM/USENIX international conference
+on mobile systems, applications, and services (MobiSys), San
+Francisco, CA, May 
+. Greenstein B, McCoy D, Pang J, Kohno T, Seshan S, Wetherall
+D () Improving wireless privacy with an identifier-free link
+layer protocol. In: Proceeding of the th international conference
+on mobile systems, applications, and services, Breckenridge, CO,
+– June 
+. Kamat P, Zhang Y, Trappe W, Ozturk C () Enhancing sourcelocation privacy in sensor network routing. In: ICDCS 
+Proceedings of th IEEE international conference, Columbus
+
+Logic Bomb
+Sean W. Smith
+Department of Computer Science, Dartmouth College,
+Hanover, NH, USA
+
+Related Concepts
+⊲Insider Threat
+
+Deﬁnition
+The term logic bomb refers to an attack by an inside adversary who plants code to automatically trigger some negate
+action at some point later in time.
+
+Background
+The term insider threat refers to the general problem posed
+when the adversary may be internal to an organization,
+already within the security perimeter and possessing privileges that may be abused.
+
+Theory and Applications
+Within this problem space, one type of adversary is a
+disgruntled employee angry about termination. Such an
+adversary may carry out an attack by (while still having
+appropriate privileges) planting code to automatically trigger some negate action at some point later in time (perhaps
+when the adversary’s privileges have been removed). The
+term logic bomb refers to such attacks (and has also been
+used to describe similar attacks carried by parties other
+than disgruntled insiders, such as national intelligence
+operators).
+Claburn [] discusses a recent logic bomb incident that
+made it into court.
+
+Recommended Reading
+. Claburn T () Fannie Mae contractor indicted for logic bomb.
+Information Week. January , 
+
+Logic-Based Authorization
+Languages
+Piero A. Bonatti
+Dipartimento di Scienze Fisiche, Università di Napoli
+Federico II, Napoli, Italy
+
+Related Concepts
+⊲Flexible Authorization Framework (FAF); ⊲Logic-Based
+Authorization Languages
+
+Logic-Based Authorization Languages
+
+Deﬁnition
+A logic-based authorization language is an executable
+specification language for expressing access control policies by means of axioms written in a formal logic.
+
+Background
+Logic-based authorization languages have been introduced by Woo and Lam [] with two main goals in mind:
+giving authorization policies a well-defined, unambiguous semantics, and enhancing the expressiveness of policy languages to match the flexibility needs of application
+domains. In the ⊲Flexible Authorization Framework []
+these ideas have been further elaborated by placing more
+structure on policies; the syntactic restrictions adopted in
+this work provide policy authoring guidelines and guarantee good semantic and computational properties. Subsequently, a rich literature has been extending the expressiveness of logic-based authorization languages to address
+the specificities of trust negotiation and usage control.
+
+Theory
+Logic-based authorization languages typically adopt a
+vocabulary of distinguished predicates that denote securityrelated concepts such as authorizations, digital credentials,
+etc. Such a reserved vocabulary can be extended with
+application-dependent symbols to model policy evaluation
+contexts, including, for example, user profile information,
+groups, roles, object hierarchies, data models, and histories. Role-based and attribute-based access control can be
+modeled as special cases.
+In this framework, an authorization A (encoded as a
+logical atom) is granted by a policy P and a context C (both
+encoded as a set of axioms) if, and only if, A is entailed by
+P ∪ C. The precise notion of entailment adopted depends
+on the formal logic underlying the authorization language;
+a common requirement is that entailment – as well as
+the other reasoning tasks mentioned below – should be
+efficiently decidable.
+Often the underlying logic is nonmonotonic, as
+required to model default policies – such as open and
+closed policies – and authorization inheritance with overriding. Further nonclassical features include constructs for
+distributed evaluation [, ], temporal reasoning [] and
+dynamic logics [] (for time-dependent and usage control
+policies), paraconsistent semantics [] (for conflict resolution), and deontic modalities [] (to associate obligations
+to authorizations).
+Most logic-based authorization languages are based on
+logic programming languages that nicely match expressiveness requirements and enjoy low asymptotic complexity (e.g., quadratic time in the case of stratified logic
+
+L
+
+
+
+programs under the stable model semantics). A few
+approaches are based on description logics [, ].
+Entailment is not the only reasoning task relevant to
+logic-based authorization languages. In some trust negotiation frameworks [, , ], agents have to find out a set
+of elements E in their portfolio of credentials such that
+P ∪ C ∪ E entails a desired authorization A, where P is
+a given policy and C a given context. This kind of inference is called abduction in the automated reasoning jargon.
+Abduction has been proposed also as a technique for policy
+analysis and explanation [, ]. Another relevant reasoning
+task is policy comparison, a variant of a query containment
+problem useful for compliance checking (as in ⊲PP) and
+policy validation [].
+The interested reader may find more details in a survey
+on logic-based access control languages [] and a tutorial
+on rule-based policies [].
+
+Implementations
+Several logic-based authorization languages have actually
+been implemented and deployed, including Cassandra [],
+KAoS [], PeerTrust [], Protune [], Rei [] and TrustBuilder []. In perspective, rule-based trust negotiation
+frameworks may take advantage of the Rule Interchange
+Format WC standard (www.w.org//rules/) to publish and exchange policies. The frameworks based on
+Description Logics typically rely on the WC standard
+OWL (www.w.org//OWL/).
+
+Open Problems and Future Directions
+Some of the major open issues concern usability and usage
+control. Both issues are shared by all policy languages,
+including those that are not based on any formal logic.
+End users are typically not good at writing their policies (see, e.g., []). Issues such as the trade-off between
+expressiveness and usability are still largely unresolved,
+and authoring and validation tools currently provide little help. Concerning usage control, there is currently no
+general reliable and scalable technique for enforcing and
+monitoring the usage restrictions prescribed by a policy on
+a piece of information after it has been disclosed.
+
+Recommended Reading
+. Becker MY, Nanz S () The role of abduction in declarative
+authorization policies. In: Hudak P, Warren DS (eds) PADL, Lecture notes in computer science, vol , Springer, Heidelberg,
+pp –
+. Becker MY, Sewell P () Cassandra: distributed access control policies with tunable expressiveness. In: th IEEE international workshop on policies for distributed systems and
+networks (POLICY ), IEEE Computer Society, Yorktown
+Heights, pp –
+
+L
+
+
+
+L
+
+Longhand
+
+. Bieber P, Cuppens F () Expression of confidentiality policies with deontic logic. In: Deontic logic in computer science:
+normative system specification, Wiley, Chichester, pp –
+. Bonatti PA, Mogavero F () Comparing rule-based policies.
+In: th IEEE international workshop on policies for distributed
+systems and networks (POLICY ), IEEE Computer Society,
+Palisades, New York, pp –
+. Bonatti PA, Olmedilla D () Driving and monitoring provisional trust negotiation with metapolicies. In: th IEEE international workshop on policies for distributed systems and
+networks (POLICY ), IEEE Computer Society, Stockholm,
+Sweden, pp –
+. Bonatti PA, Olmedilla D () Rule-based policy representation and reasoning for the semantic web. In: Antoniou D,
+Assmann U, Baroglio C, Decker S, Henze N, Patranjan PL, Tolksdorf R (eds) Reasoning web, Lecture notes in computer science,
+vol , Springer, Heidelberg, pp –
+. Bonatti PA, Olmedilla D, Peer J () Advanced policy explanations on the web. In: Brewka G, Coradeschi S, Perini A,
+Traverso P (eds) ECAI, Frontiers in artificial intelligence and
+applications, vol , IOS Press, Amsterdam, pp –
+. Bonatti PA, Samarati P () A uniform framework for regulating service access and information release on the web.
+J Computer Sec ():–
+. Bonatti PA, Samarati P () Logics for authorization and security. In: Chomicki J, van der Meyden R, Saake G (eds) Logics for
+emerging applications of databases, Springer, Berlin, pp –
+. Bruns G, Huth M () Access-control policies via Belnap
+logic: Elective and efficient composition and analysis. In: CSF,
+IEEE Computer Society, Pittsburg, PA (USA), pp –
+. Gavriloaie R, Nejdl W, Olmedilla D, Seamons KE, Winslett M
+() No registration needed: how to use declarative policies
+and negotiation to access sensitive resources on the semantic
+web. In: st European semantic web symposium (ESWS ),
+Lecture notes in computer science, vol , Heraklion, Crete.
+Springer, Heidelberg, pp –
+. Jajodia S, Samarati P, Sapino ML, Subrahmanian VS () Flexible support for multiple access control policies. ACM Trans Data
+Sys ():–
+. Joshi JB, Bertino E, Latif U, Ghafoor A () A generalized temporal role-based access control model. IEEE Trans Knowl Data
+Eng ():–
+. Kagal L, Finin TW, Joshi A () A policy language for a pervasive computing environment. In: th IEEE international workshop on policies for distributed systems and networks (POLICY
+), IEEE Computer Society, Lake Como, Italy, pp 
+. Kelley PG, Hankes Drielsma P, Sadeh N, Cranor LF () Usercontrollable learning of security and privacy policies. In: st
+workshop on artificial intelligence and security (AISec ),
+ACM, Rotterdam, The Netherlands, pp –
+. Kolovski V, Parsia B, Katz Y, Hendler JA () Representing web
+service policies in OWL-DL. In: Gil Y, Motta E, Benjamins VR,
+Musen MA (eds) International semantic web conference, Lecture notes in computer science, vol , Springer, Heidelberg,
+pp –
+. Lee AJ, Winslett M, Perano KJ () Trustbuilder: a reconfigurable framework for trust negotiation. In: IFIP Advances in
+information and communication technology (IFIP AICT ),
+Springer, West Lafayette, IN (USA), pp –
+. Pretschner A, Hilty M, Basin D () Distributed usage control.
+Commun ACM, ():–
+
+. Uszok A, Bradshaw JM, Johnson M, Jeers R, Tate A, Dalton J,
+Aitken JS () KAoS policy management for semantic web
+services. IEEE Intel Sys ():–
+. Woo TYC, Lam SS () Authorizations in distributed systems:
+a new approach. J Comput Sec (–):–
+
+Longhand
+⊲Handwriting Analysis
+
+Luby-Rackoﬀ Ciphers
+Lars R. Knudsen
+Department of Mathematics, Technical University
+of Denmark, Lyngby, Denmark
+
+Related Concepts
+⊲Pseudorandom Permutation; ⊲Secret Key Encryption;
+⊲Symmetric Cryptography
+
+Deﬁnition
+A Luby-Rackoff cipher is a Feistel cipher where in each
+round the nonlinear function used is assumed to be chosen uniformly at random from the set of all such functions.
+These ciphers are mainly of theoretical interest.
+
+Background
+In their celebrated paper [] Luby and Rackoff showed how
+to construct n-bit ⊲Pseudorandom Permutations from
+n-bit random functions. The constructions use three and
+four rounds in Feistel networks with randomly chosen
+functions in the round functions. Let L and R be the left,
+respectively, the right n-bit halves of a n-bit input. Then
+one round of a Feistel network is defined as follows:
+F(L, R) = (R, L ⊕ f (R)),
+
+where f : {, } → {, }n is a randomly chosen function.
+In order to make the encryption and decryption routines
+similar, it is custom to swap the halves of the output of
+the last round in an r-round Feistel network. The entry on
+Feistel ciphers provides an overview of practical designs.
+n
+
+Theory
+Luby and Rackoff ’s result says that in order to be able
+to distinguish the three-round construction from a randomly chosen n-bit function with probability close to one,
+an attacker needs at least n/ chosen plaintexts and their
+
+Luby-Rackoﬀ Ciphers
+
+corresponding ciphertexts. Such a permutation is called
+pseudorandom []. However, if an attacker can mount a
+chosen plaintext and a chosen ciphertext attack, he is able
+to distinguish the construction from a randomly chosen
+n-bit function using two chosen plaintexts and one chosen ciphertext. To see this, choose two plaintexts with left
+halves L and L , where L ≠ L and with equal right
+halves R. From the corresponding ciphertexts (T , S ) and
+(T , S ) compute the ciphertext (T ⊕ L ⊕ L , S ) and
+get the corresponding plaintext. Then the right half of this
+plaintext equals R ⊕ S ⊕ S , whereas this would be the case
+only with probability −n in the random case. Luby and
+Rackoff also showed that in a combined chosen plaintext
+and chosen ciphertext attack for the four-round construction, an attacker will need roughly n/ chosen texts to win
+with probability close to one. Such a permutation is called
+super pseudorandom.
+With q chosen plaintexts one can distinguish the threeround construction from a random function with probability
+n+
+p =  − e−q(q−)/ ,
+
+which is close to one for q ≃ n/ []. Choose plaintexts
+(Li , R) for i =  . . . , q, where the Li s are (pair-wise) distinct and R is a fixed, arbitrary value. Denote by (Ti , Si )
+the corresponding ciphertexts. Then for the three-round
+construction with probability p one finds at least one pair
+(i, j) for which i ≠ j, Li ⊕ Lj = Ti ⊕ Tj and Si = Sj .
+For a random n-bit function and with q ≃ n/ this happens with only very small probability. Also, with roughly
+n/ chosen plaintexts one can distinguish the four-round
+construction from a random function. Choose plaintexts
+(Li , R) for i =  . . . , cn/ , where c is an integer, the Li s
+are (pairwise) distinct and R is a fixed, arbitrary value.
+Denote by (Ti , Si ) the corresponding ciphertexts. Then for
+the four-round construction one expects to find c pairs of
+plaintexts for which Li ⊕ Lj = Si ⊕ Sj , whereas for a random n-bit function one expects to find only c/ such pairs
+[]. These results show that the inequalities by Luby and
+Rackoff are tight, that is, to distinguish the three-round and
+four-round constructions from a randomly chosen function with probability close to one, an attacker needs at least
+but not much more than n/ chosen plaintexts and their
+corresponding ciphertexts.
+The Luby-Rackoff result has spawned a lot of research
+in this area, and many different constructions have been
+proposed, of which only a few are mentioned here. In []
+
+L
+
+it was shown that four-round super Pseudorandom Permutations can be constructed from only one or two
+(pseudo)random n-bit functions. In the four-round construction, the first and fourth functions can be replaced by
+simpler “combinatorial” constructions achieving the same
+level of security as the original construction as shown in
+[], which is also a good reference for a survey of this area.
+Coppersmith [] analyzed the four-round construction. It was shown that with nn chosen plaintexts the
+round functions can be identified up to symmetry. With
+ × n texts .% of the functions are identified.
+There is a trivial upper bound of O(n ) for distinguishing constructions with r rounds for any r from a randomly
+chosen n-bit function. This follows from the fact that the
+Luby-Rackoff constructions are permutations and with n
+chosen distinct plaintexts, the resulting ciphertexts will
+all be distinct, whereas a collision is likely to occur for a
+truly random function []. It has been studied how to distinguish the Luby-Rackoff constructions from randomly
+chosen n-bit permutations (bijective mappings). However, in the cases using O(n/ ) inputs this does not make
+much of a difference, since in these cases the probability to distinguish a n-bit randomly chosen permutation
+from a n-bit randomly chosen function is small. Also,
+for a fixed number of rounds, r, it has been shown that
+there is an upper bound of O(n ) for distinguishing the
+r-round construction from a randomly chosen n-bit permutation []. More recent results indicate that with a larger
+number of rounds, the lower bound for the security of the
+Luby-Rackoff constructions approaches n .
+
+Recommended Reading
+. Coppersmith D () Luby-Rackoff: four rounds is not enough.
+Technical report RC . IBM, Yorktown Heights
+. Luby M, Rackoff C () How to construct pseudorandom
+permutations from pseudorandom functions. SIAM J Comput
+():–
+. Naor M, Reingold O () On the construction of pseudorandom permutations: Luby–Rackoff revisited. J Cryptol ():–
+. Patarin J () New results on pseudorandom permutations
+generators based on the DES scheme. In: Feigenbaum J (ed)
+Advances in cryptology – CRYPTO ’: proceedings. Lecture
+notes in computer science, vol . Springer, Berlin, pp –
+. Patarin J () How to construct pseudorandom and super pseudorandom permutations from one single pseudorandom function. In: Rueppel RA (ed) Advances in cryptology – EUROCRYPT
+’: proceedings, Balatonfüred, – May . Lecture notes in
+computer science, vol . Springer, Berlin, pp –
+
+
+
+L
+
+
