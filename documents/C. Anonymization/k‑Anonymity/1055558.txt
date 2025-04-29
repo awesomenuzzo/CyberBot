@@ -1,0 +1,712 @@
+On the Complexity of Optimal K-Anonymity
+Adam Meyerson
+
+∗
+
+Ryan Williams
+
+Department of Computer Science
+University of California
+Los Angeles, CA
+
+Computer Science Department
+Carnegie Mellon University
+Pittsburgh, PA
+
+awm@cs.ucla.edu
+
+ryanw@cs.cmu.edu
+
+ABSTRACT
+
+fundamental data mining problem have been suggested,
+implemented, and theoretically studied (e.g. [1, 2, 3, 5,
+7, 4]). In general, most proposals for privacy-protecting
+data mining involve perturbing individual data values
+or perturbing the results of queries, but this is undesirable if one wants to ensure complete data integrity.
+(One can imagine cases arising where it is vital to be
+capable of rigorously proving to a judge that a certain
+trend is indeed occurring; with perturbations in data,
+only “probably true” inferences may be drawn.)
+An alternative approach is to restrict the release of
+information in some way. We shall focus on the strategy of k-anonymization, first proposed by Samarati and
+Sweeney [9, 10]. To our knowledge, no theoretical results were known concerning the problem prior to this
+paper. Let k > 1 be a fixed integer. Suppose we want
+to release a table of private data to the public, and we
+have the capability to suppress or “generalize” various
+entries in the table. If this suppression/generalization
+is done in such a way that every record becomes textually indistinguishable (entry for entry) from k − 1 other
+records in the table, we say that the new modified table
+is k-anonymized. For a quick example, take the following short relation, given as a possible response to the
+query “Who had an X-ray at this hospital yesterday?”
+
+The technique of k-anonymization has been proposed in
+the literature as an alternative way to release public information, while ensuring both data privacy and data
+integrity. We prove that two general versions of optimal k-anonymization of relations are N P -hard, including the suppression version which amounts to choosing a
+minimum number of entries to delete from the relation.
+We also present a polynomial time algorithm for optimal
+k-anonymity that achieves an approximation ratio independent of the size of the database, when k is constant.
+In particular, it is a O(k log k)-approximation where the
+constant in the big-O is no more than 4. However, the
+runtime of the algorithm is exponential in k. A slightly
+more clever algorithm removes this condition, but is a
+O(k log m)-approximation, where m is the degree of the
+relation. We believe this algorithm could potentially be
+quite fast in practice.
+
+1.
+
+†
+
+INTRODUCTION
+
+Data privacy and data mining are quite naturally at
+odds with each other. In certain scenarios such as tracking epidemics and product marketing, a data miner requires access to large volumes of (possibly) personal information, in order to spot interesting trends or correlations. However, the direct release and study of such
+data may violate the privacy of individuals. Ideally,
+one strives for the best of both worlds: to somehow
+infer overall trends in data without inferring much information about particulars. Many approaches to this
+
+first
+Harry
+John
+Beatrice
+John
+
+∗Research done while the author was a postdoc at
+Carnegie Mellon.
+†Supported by the NSF ALADDIN Center (NSF Grant
+No. CCR-0122581) and an NSF Graduate Research Fellowship.
+
+last
+Stone
+Reyser
+Stone
+Ramos
+
+age
+34
+36
+47
+22
+
+race
+Afr-Am
+Cauc
+Afr-Am
+Hisp
+
+Suppose our task is to 2-anonymize this data before
+its release. If the database has been augmented to permit the proper values for attributes, then one possible
+2-anonymization of the table would be the following.
+first
+*
+John
+*
+John
+
+last
+Stone
+R*
+Stone
+R*
+
+age
+30-50
+20-40
+30-50
+20-40
+
+race
+Afr-Am
+*
+Afr-Am
+*
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage, and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+(Note the specification of “20-40”, “R*”, etc. as adrepublish, to post on servers or to redistribute to lists, requires prior specific missible generalizations must be given prior to the inpermission and/or a fee.
+put. In this paper, we will only consider the special case
+PODS 2004 June 14-16, 2004, Paris, France.
+of suppressions, i.e. each entry is either included in the
+Copyright 2004 ACM 1-58113-858-X/04/06 . . . $5.00.
+
+223
+
+output, or omitted entirely, with a * character taking
+its place.)
+We will see that k-anonymity admits a very clean formalization; it is simple to propose, and has a concrete
+privacy parameter k within its definition. In this work,
+we will consider the complexity of rendering relations
+of private records k-anonymous, while minimizing the
+amount of information that is not released. That is, we
+want to simultaneously ensure the anonymity of individuals up to a group of size k, and withhold a minimum
+amount of information to achieve this privacy level. We
+will show that this optimization problem is N P -hard in
+general. Moreover, we prove that a further restriction of
+the problem where attributes are suppressed instead of
+individual entries is also N P -hard. On the positive side,
+we will present a greedy O(k log k)-approximation algorithm for optimal k-anonymity via suppression of entries
+(note the hidden constant in the big-O is no more than
+4; see Section 4 for more details). This approximation
+ratio is fairly nice, since the value for k used in practice is no more than 5 or 6 [9]. We remark that for
+the special case m ∈ O(log n) (where m is the degree of
+the relation and n is the number of tuples), an polynomial time exact algorithm has been recently proposed
+by Sweeney [8]. Hence our algorithm will probably be
+best applied in cases with high-dimensional records.
+
+2.
+
+k identical anonymized vectors. Thoughout, we will call
+such a set of vectors a k-group. Note that k-groups need
+not have cardinality exactly k, though they must have
+at least k.
+
+3. HARDNESS OF K-ANONYMITY
+The k-anonymity decision problem may be formally
+defined as follows.
+k-ANONYMITY: Given V ⊆ Σm , l ∈ N, is there a suppressor t such that t(V ) is k-anonymous, and the total
+number of vector coordinates suppressed in t(V ) is at
+most l?
+Our first result is that if there is no restriction on the
+alphabet size, then optimal k-anonymization is hard for
+all k ≥ 3.
+Theorem 3.1. k-ANONYMITY is NP-hard for k ≥
+3, if |Σ| ≥ |V | is allowed.
+Proof. The reduction is from k-DIMENSIONAL PERFECT MATCHING: Given a k-hypergraph H = (U, E)
+with n = |U | and m = |E|, is there a subset S ⊆ E of
+n/k hyperedges such that each vertex of U is contained
+in exactly one hyperedge of S?
+Assume (without loss of generality) that H is simple,
+i.e. it has no repeated edges in its description. Let U =
+{u1 , . . . , un } and E = {e1 , . . . , em } denote the nodes
+and edges of a k-dimensional hypergraph H, and let
+Σ = {0, 1, . . . , n}. We will construct a database V as
+follows. For each ui , define an m-dimensional vector
+vi ∈ Σm :
+(
+0 if ui ∈ ej ,
+vi [j] :=
+1 otherwise.
+
+NOTATION
+
+We will consider degree-m tuples in the database to
+be m-dimensional vectors vi drawn from Σm , where Σ
+is a (finite) alphabet of possible values for attributes.
+(In general, Σ could vary for each attribute.) Thus the
+databases under consideration are formally represented
+as subsets V ⊆ Σm . Let ∗ be a fresh symbol not in Σ.
+
+Set V := {v1 , . . . , vn }. Assume t suppresses the minimum number of vector coordinates and maintains kanonymity. We claim that the total number of coordinates suppressed by t is at most n(m − 1) if and only if
+there is a k-dimensional perfect matching in H.
+We prove the claim for k = 3; a straightforward generalization of our argument proves it for all larger k.
+First, suppose there is a perfect 3-dimensional matching M in H. For i = 1, . . . , n, let j(i) be such that ej(i)
+is the unique hyperedge from M that contains node ui .
+Define a suppressor t by
+(
+0 if j 0 = j(i),
+0
+t(vi )[j ] :=
+∗ otherwise.
+
+Definition 2.1. Let t be a map from V to (Σ∪{∗})m .
+We say t is a suppressor on V if for all v ∈ V and
+j = 1, . . . , m it is the case that t(v)[j] ∈ {v[j], ∗}.
+Intuitively speaking, a suppressor defines some kind
+of anonymization: every vector v ∈ V has a corresponding anonymized vector t(v) = v 0 in an anonymized set
+V 0 ⊆ (Σ ∪ {∗})m . The coordinates of v 0 are identical to
+the coordinates of v, except some coordinates may be
+suppressed by the new “anonymous” character ∗.
+We can extend a suppressor t to act on a set of vectors
+V in a straightforward way (so that t(V ) makes sense).
+We will regard t(V ) as a multiset when two or more
+vectors in v map to the same suppressed vector, i.e.
+v 6= v 0 ∈ V but t(v) = t(v 0 ). We can now define the
+notion of k-anonymization precisely.
+
+Since ui is on hyperedge ej(i) , it follows by definition
+that vi [j(i)] = 0, and all other coordinates are ∗. Therefore t is a suppressor on V .
+Now consider any t(vi ). There are three nodes ui , ui0 ,
+ui00 on the hyperedge ej(i) , and each node has identical
+anonymized vectors, i.e. t(vi ) = t(vi0 ) = t(vi00 ). Hence
+there are three vectors in t(V ) which are identical to
+t(vi ) (including t(vi ) itself). This shows that t(V ) is
+3-anonymous. Since every t(v) ∈ t(V ) has exactly one
+non-∗ coordinate, the value of our solution is exactly
+n(m−1). Therefore the optimum 3-anonymized solution
+will have at most this many ∗’s in its vectors.
+
+Definition 2.2. Let t be a suppressor on the set V =
+{v1 , . . . , vn } ⊆ Σm . Then t(V ) is k-anonymous iff for
+all vi ∈ V , there exist k − 1 indices i1 , i2 , . . . , ik−1 ∈
+{1, . . . , n} (all pairwise distinct and distinct from i) such
+that t(vi1 ) = t(vi2 ) = ... = t(vik−1 ) = t(vi ). Alternatively, we call t a k-anonymizer on V .
+In other words, when a suppressor on a database
+makes the database k-anonymous, it means that every
+anonymized vector is a member of a multiset of (at least)
+
+224
+
+For the converse, consider a 3-anonymous suppressor
+t for V , and assume it suppressed at most n(m−1) coordinates. We claim that every vector t(v) in t(V ) has at
+most one non-∗ coordinate. Suppose not, and consider a
+counterexample t(vi ). Since t(V ) is 3-anonymous, there
+must exist two other identical vectors, say t(vi0 ) and
+t(vi00 ). Since the non-∗ coordinates have the same values as in the original vi vectors, it follows that vi , vi0 ,
+and vi00 are identical in two distinct coordinates; call
+them j and j 0 . By construction, any two vi vectors can
+match only in coordinates that are 0, and vi [j] = 0 only
+if node ui is on edge ej . Hence vi , vi0 , and vi00 are all on
+two distinct edges, ej and ej 0 . But this implies that two
+edges of H are identical, contradicting our assumption
+that H is simple. Thus every vector v has at most one
+non-∗ coordinate in its 3-anonymous form t(v). Hence
+at least n(m − 1) coordinates in t(V ) are suppressed.
+Therefore, if we obtain a t(V ) with at most n(m − 1)
+suppressed coordinates, it must be that every vector in
+t(V ) has exactly one non-∗ coordinate. Given this fact,
+we can extract a perfect matching M for the original
+hypergraph H. For each i = 1, . . . , n, consider the non∗ coordinate in t(vi ). This coordinate must have value
+0 (otherwise there can be no identical vectors). If this
+is coordinate j, we add hyperedge ej to a matching M .
+Clearly we produce a set of hyperedges such that each
+node is on at least one hyperedge. Since there are 3
+identical vectors for every vector v, it follows that there
+are at most n3 edges in M . Since we need n3 edges at
+minimum to cover every node, there must be exactly n3
+edges, the set of which is a perfect matching.
+
+3.1
+
+ei ∩ ej = ∅ (similar to the previous theorem). This implies at least m − n/k attributes must be suppressed in
+any k-anonymization, otherwise two edges share a vertex. If exactly m − n/k attributes are suppressed in a
+k-anonymization, then n/k attributes remain, each representing a hyperedge disjoint from the others that remain, i.e. H has a perfect matching. If H has a perfect
+matching, then by suppressing those m − n/k attributes
+not in this matching, each remaining attribute j has k
+vectors (with *’s) that share exactly the same components (they have a b1 exactly in component j, and b0 or
+∗ elsewhere). This is a k-anonymization.
+
+4. APPROXIMATING K-ANONYMITY
+We have seen that producing an optimal anonymization of a database is difficult to achieve in general. We
+will now describe an approximation algorithm for kanonymizing, which runs in polynomial time and never
+suppresses more than O(k log k) times the minimum
+number of entries that must be suppressed in order to
+achieve k-anonymity. Considering that it generally suffices in practice [9] for k to be a small constant (around
+5 or 6), this is a quite positive result. The algorithm is
+a greedy strategy whose proof is somewhat involved, requiring several steps. We begin with a definition. Over
+the following sections, let Σ, V , and t be given.
+Definition 4.1. Let S ⊆ Σm , and u, v ∈ Σm . The
+distance between u and v is d(u, v) := |{j : u[j] 6=
+v[j]}|. The diameter of S is
+d(S) := max d(u, v).
+u,v∈S
+
+Anonymizing attributes is hard
+
+Intuitively, the diameter of S is the maximum number
+of coordinates in which two vectors of S differ. It is
+useful to note that this function is a metric.
+
+Another version of k-anonymity, where we choose
+whether or not to suppress various attributes from the
+database, is also hard. Say that attribute j is suppressed
+by t if for all v ∈ V , v[j] = ∗. Define k-ATTRIBUTEANONYMITY to be the problem of k-anonymizing a V
+in a way that minimizes the number of attributes suppressed.
+
+Example. Let V = {1010, 1110, 0110} and t(b1 b2 b3 b4 ) =
+∗ ∗ b3 b4 (each bi ∈ {0, 1}). Then there is one resulting
+3-group g = {∗ ∗ 10, ∗ ∗ 10, ∗ ∗ 10}, and the diameter of
+g is 2 (1010 and 0110 differ in two coordinates).
+
+Theorem 3.2. For k > 2, k-ANONYMITY ON ATTRIBUTES is N P -hard, for any Σ such that |Σ| ≥ 2.
+
+4.1 Minimum diameters and k-anonymity
+
+Proof. We will just give a proof sketch, as it is quite
+similar to the proof in the previous section, except we
+do not need a large alphabet. Let H be a k-hypergraph
+with vertices u1 , . . . , un and edges e1 , . . . , em . We will
+build a database of n vectors v1 , . . . , vn ∈ Σm where
+each vi represents a vertex in H, and there exists a
+suppressor that k-anonymizes the database (suppressing m − n/k attributes) if and only if H has a perfect
+matching.
+Since |Σ| ≥ 2, there are two symbols b0 6= b1 in Σ.
+We set vi [j] = b1 if ui ∈ ej , otherwise vi [j] = b0 .
+Thus the suppression of an attribute is equivalent to
+the removal of a hyperedge in H. Observing that for
+every j there are exactly k vectors vl such that vl [j] =
+b1 , it follows that if attribute j is not suppressed in a
+k-anonymization, then one k-group consists exactly of
+these k vectors with vl [j] = b1 . Two attributes i and j
+are not suppressed in a k-anonymization if and only if
+
+In what follows, we will demonstrate a close relationship (with respect to approximation) between an optimization problem on set diameters and k-anonymity.
+Let k1 , k2 ∈ N with k1 ≤ k2 . Define a (k1 , k2 )-cover
+of V to be a collection {S1 , . . . , Sl } of subsets of V such
+that k1 ≤ |Si | ≤ k2 for i = 1, . . . l, and for every v ∈
+V there is an Si such that v ∈ Si . Define a (k1 , k2 )partition of V to be a (k1 , k2 )-cover where all the Si are
+disjoint.
+Observe that any k-anonymizer t on V naturally defines a (k, |V | − k) partition Π(t, V ), given by the different sets of vectors made identical under t. Moreover, we may assume without loss of generality that a
+k-anonymizer defines a (k, 2k − 1) partition: if some set
+Si has cardinality 2k or greater, then by splitting Si
+arbitrarily into two disjoint sets Si0 and Si00 (both of cardinality at least k), this new partition requires no more
+∗’s to k-anonymize it than the former one.
+
+225
+
+¡2k−1¢
+
+Let OP T (V ) be the value of an optimal solution (the
+minimum number of ∗’s that must be inserted in the
+vectors of V to achieve a k-anonymization, over all kanonymizers t). For S ⊆ V , let AN ON (S) be the total
+number of coordinates of vectors in S that must be replaced with a ∗ in order for all vectors
+¡P in S to be iden¢
+tical. Observe OP T (V ) = minΠ
+S∈Π AN ON (S) ,
+where the minimum is taken over all partitions Π of
+V into sets whose cardinalities are at least k. Finally,
+∗
+let
+P Π be an optimal partition for k-anonymity, i.e.
+S∈Π∗ AN ON (S) = OP T (V ).
+Lemma 4.1.
+
+≤α
+
+2
+
+k
+
+OP T (V ) < 3αkOP T (V ).
+
+Therefore, a 3k(1+ln 2k) approximation to optimal kanonymity will follow if there is a (1+ln 2k)-approximation
+to the k-minimum diameter sum problem.1 We will now
+discuss the construction of such an approximation.
+
+4.2 Approximating k-minimum diameter
+sum
+
+For all V ⊆ Σm ,
+
+k · min d(Π) ≤ k · d(Π∗ ) ≤ OP T (V ) ≤ 3k2 · d(Π∗ ),
+Π
+
+where the minimum is taken over all partitions Π of V
+into sets whose cardinalities are in the range [k, 2k − 1].
+Proof. For any S ⊆ V , we have that |S| · d(S) ≤
+AN ON (S), since by definition of diameter, at least d(S)
+coordinates in each vector must be suppressed in order
+for all vectors of S P
+to become identical.
+P Summing over
+all S ∈ Π∗ , we have S∈Π∗ |S|d(S) ≤ S∈Π∗ AN ON (S),
+implying
+k · min d(Π) ≤ k · d(Π∗ ) ≤ OP T (V ).
+
+At a high level, the approximation algorithm for kminimum diameter sum runs in two phases:
+Phase 1: Produce a (k, 2k − 1)-cover whose diameter
+sum is at most (1 + ln 2k) times the optimal k-minimum
+diameter sum (for partitions).
+Phase 2: Convert the cover into a (k, 2k−1)-partition,
+with no increase in the diameter sum.
+
+4.2.1 Producing a cover
+Let C denote the collection of all subsets of V with
+cardinality in the range [k, 2k − 1]. We will execute
+the well-known greedy algorithm for approximating the
+usual set cover problem [6] on the collection C.
+
+Π
+
+On the other hand, for some S ∈ Π∗ , every pair {u, v} ⊆
+S has distance at most d(S) from each other. That is,
+we only need to suppress d(S) coordinates in u and v
+to make them identical. Suppressing at most d(S) coordinates (in every vector of S) over all pairs of vectors
+¡ ¢
+in S, it follows that AN ON (S) ≤ |S|
+d(S). Hence by
+2
+summing over Π∗ , and using the fact that |S| ≤ 2k − 1
+for all S ∈ Π∗ ,
+Ã
+!
+2k − 1
+OP T (V ) ≤
+d(Π∗ ) < 3k2 · d(Π∗ ).
+2
+
+Cover(V ,C):
+Build C as defined above.
+Initially, Π := ∅, D = ∅.
+While (D 6= V ),
+For each S ∈ C, measure the ratio
+r(S) =
+
+d(S)
+.
+|S ∩ (V − D)|
+
+Choose an S such that r(S) is minimum.
+D := D ∪ S.
+Π := Π ∪ {S}.
+End while.
+Return Π.
+
+A natural optimization problem arises from the statement of the lemma: finding a (k, 2k − 1)-partition Π
+of V such that d(Π) is minimized. Let us name this
+the k-minimum diameter sum problem. The close relationship between k-anonymity and this problem can be
+articulated with a simple corollary.
+Corollary 4.1. Let α ≥ 1, and Π be a (k, 2k − 1)partition with diameter sum at most α times the optimal k-minimum diameter sum. Then the algorithm that
+anonymizes each S ∈ Π by (over all pairs {u, v} ⊆ S
+and all j such that u[j] 6= v[j]) assigning w[j] := ∗ to
+every w ∈ S is a 3αk-approximation algorithm to optimal k-anonymity.
+Proof. Suppose Π̂ achieves the optimal k-minimum
+diameter sum. From the proof of the previous lemma,
+the total number of stars inserted into the vectors of V
+by the described algorithm on Π is
+Ã !
+Ã
+!
+Ã
+!
+X |S|
+2k − 1
+2k − 1
+α
+d(S) ≤ α
+d(Π̂) ≤ α
+d(Π∗ )
+2
+2
+2
+S∈Π̂
+
+226
+
+In each iteration, D contains the vectors in V that
+have been covered so far by Π. Also, any chosen S always contains an element of V − D, so the above takes
+at most O(|V |) iterations. Therefore the algorithm returns a (k, 2k − 1)-cover, i.e. the S are all of cardinality
+between k and 2k − 1, and for all v ∈ V , there is an
+S ∈ Π that contains v.
+Invoking the analysis of the greedy algorithm for set
+cover on subsets of cardinality at most 2k, the collection Π is a (1 + ln 2k)-approximation to the k-minimum
+diameter sum problem, when Π is not restricted to be a
+(k, 2k − 1)-partition but merely a (k, 2k − 1)-cover of V .
+Clearly, the minimum over this larger space is at most
+the minimum over (k, 2k − 1)-partitions.
+
+4.2.2 Converting the cover into a partition
+Of course, Π is not necessarily a (k, 2k − 1)-partition
+of V ; some sets of Π may have non-empty intersection
+with each other. If so, apply the following reduction:
+1
+
+Note ln x denotes the natural logarithm of x.
+
+Steps 1 and 2 produce an (1 + ln 2k)-approximation
+to k-minimum diameter sum. Lemma 4.1 and Corollary 4.1 show that Step 3 results in a 3k(1 + ln 2k)approximation to optimal k-anonymity. Let us record
+this fact before proceeding further.
+
+S
+Si
+
+≤ d(S)
+
+≤ d(Si )
+≤ d(Sj )
+
+Theorem 4.1. k-ANONYMITY has a 3k(1 + ln 2k)approximation that runs in O(|V |2k ) time.
+
+Sj
+
+4.3 A strongly polynomial approximation
+Due to Phase 1, the above algorithm suffers from a
+runtime that is exponential in k. We will outline a modification to Phase 1 which makes the algorithm “strongly
+polynomial” (i.e. polynomial in n and k), but the approximation ratio becomes O(k log m). We will restrict
+the greedy algorithm to find a set cover over a much
+smaller family of subsets. Define, for all c ∈ V and
+i ∈ {1, . . . , m}, the set
+
+Figure 1: S is the union of Si and Sj with nonempty intersection. The diameter of S is bounded
+from above by d(Si )+d(Sj ), by the triangle inequality
+on diameters.
+
+Sc,i := {v ∈ V : d(c, v) ≤ i}.
+Reduce(Π):
+1. Look for Si , Sj ∈ Π and v ∈ V such that v ∈ Si ∩Sj .
+2. If found, do one of the following:
+• If either |Si | or |Sj | is greater than k, remove v from
+the larger set. (Removing an element from a set can
+only decrease its diameter.)
+• Otherwise, |Si | = |Sj | = k. Replace Si and Sj in Π
+with Si ∪ Sj . (Note |Si ∪ Sj | ≤ 2k − 1 since v is in
+both, and d(Si ∪ Sj ) ≤ d(Si ) + d(Sj ) so again d(Π) can
+only decrease; cf. Figure 1.)
+3. Return the new Π.
+
+That is, Sc,i is defined by a fixed center c and radius i, so
+there are m|V | possible sets. (Alternatively, we could
+define for all c, c0 ∈ V , Sc,c0 := {v ∈ V : d(c, v) ≤
+d(c, c0 )}. This would yield a total of |V |2 sets instead;
+we naturally advise to substitute whichever collection is
+smaller in what follows.) The following is straightforward, and follows from the triangle inequality on d.
+Lemma 4.2. d(Sc,i ) ≤ 2i.
+Let D denote the collection of these Sc,i with cardinality at least k.
+Say that S ⊆ V has a center c ∈ S if for all v ∈ S
+we have d(c, v) ≤ dd(S)/2e. Consider the optimal value
+D∗ for the k-minimum diameter sum problem on a set
+of vectors V . If we further insist that each group in a
+feasible solution has a center, we claim that the value of
+an optimal solution satisfying this restriction is at most
+2D∗ . To this end, we prove a lemma for any V ⊆ Σm .
+
+It is easy to see that repeating Reduce until it no
+longer applies to Π will eventually produce a (k, 2k − 1)partition with diameter sum at most the original diameter sum (and could be smaller). Furthermore, at most
+|V |2 repetitions are required, since each application of
+the reduction removes some v from some set in Π (by
+either removing v, or removing some Si that contains
+it). This completes the approximation algorithm.
+
+Lemma 4.3.
+min
+d(Π0 ) ≤ 2 min d(Π),
+0
+
+4.2.3 Runtime analysis
+
+Π
+
+The number
+of steps over the two phases is roughly
+³
+¡ |V | ¢ ´
+O 2k−1
+|V | = O(|V |2k ). In the first phase, there are
+¡ |V | ¢
+O( 2k−1
+) sets in the collection C, and we must choose
+at most |V | sets from C, with each set choice requiring
+¡ |V | ¢
+O( 2k−1
+) time to determine. In the second phase, the
+runtime is simply O(|V |3 ), so the overall time is dominated by Phase 1.
+
+Π
+
+where Π ranges over all (k, 2k − 1)-covers of V , and Π0
+ranges over covers of V by sets from D.
+Proof. Let Π̂ be a (k, 2k−1)-cover such that d(Π̂) =
+minΠ d(Π). For each set T ∈ Π̂, let cT ∈ T be arbitrarily
+chosen. Define Ω := {ScT ,d(T ) : T ∈ Π̂}.
+Observe that T ⊆ ScT ,d(T ) ; it follows that |Sc,d(T ) | ≥
+k, Ω ⊆ D, and that Ω is a cover of V .
+Finally, P
+by the previous lemma
+P we have
+d(Ω) = T ∈Π̂ d(ScT ,d(T ) ) ≤ T ∈Π̂ 2d(T ) = 2d(Π̂).
+
+4.2.4 Summary
+The below summarizes the algorithm.
+
+Now, the new Phase 1 will execute Cover on the (significantly smaller) collection D of Sc,i over all c ∈ V and
+i ∈ {1, . . . , m}. This modification runs in O(m · |V |2 )
+time (or, using the alternative formulation, O(|V |3 ) time),
+but since the cardinality of the sets in D can be up to
+m, the approximation ratio for diameter sum over this
+collection via the greedy algorithm is (1 + ln m). This
+implies a 2(1 + ln m)-approximation to k-minimum diameter sum when every set in the partition has a center,
+and we arrive at a much more favorable result.
+
+Approximation for optimal k-anonymity:
+Let V ⊆ Σm .
+1. Set Π := Cover(V, C). (Section 4.2.1).
+2. Repeat Π := Reduce(Π) until Π = Reduce(Π)
+(Section 4.2.2).
+3. For each S ∈ Π, insert the minimum number of ∗’s
+in vectors of S such that all vectors of S are identical.
+Return Π.
+
+227
+
+Theorem 4.2. k-ANONYMITY has a 6k(1 + ln m)approximation that runs in O(m|V |2 + |V |3 ) time.
+We are confident that this time bound can be significantly improved using appropriate data structures and
+a more sophisticated analysis, but this is beyond the
+scope of our work. Essentially the most computationally intensive part is computing the measures r(S) for
+each set S and taking the minimum, which might be
+well-approximated by some other method.
+
+5.
+
+CONCLUSIONS
+
+We have formally defined the problem of k-anonymizing
+a database via suppressing tuple components, and determined the computational complexity of k-anonymization
+when one wishes to withhold a minimum number of entries yet achieve a privacy level k. In general, the problem is N P -hard. However, our proof for the general
+case uses an alphabet Σ of large size, so it is possible
+that the problem is still tractable for small (constantsized) alphabets. On the other hand, we also analyzed
+the complexity of the problem variant where instead of
+choosing individual entries to suppress, we choose entire attributes to suppress, and found it to be N P -hard
+even for Boolean attributes– this may suggest there is
+not much hope in finding tractable subcases of the general problem.
+Finally, we presented two efficient greedy approximation algorithms for the problem. Can an approximation
+algorithm be found whose performance ratio is independent of k? We suspect that Ω(log k) might be a lower
+bound on the possible approximability of the problem
+(within polynomial time), given that such a lower bound
+exists for k-set cover.
+
+6.
+
+ACKNOWLEDGEMENTS
+
+Thanks to Manuel Blum, Latanya Sweeney, and Maverick Woo for discussions on the problem. We would
+also like to thank the anonymous reviewers for their
+very helpful feedback.
+
+7.
+
+REFERENCES
+
+[1] R. Agrawal, J. Kiernan, R. Srikant, and Y. Xu.
+Hippocratic databases. In Proc. of the 28th
+International Conference on Very Large
+Databases, 143–154, 2002.
+[2] R. Agrawal and S. Ramakrishnan. Privacy
+Preserving Data Mining. In Proc. of ACM
+International Conference on Management of
+Data, 439–450, 2000.
+[3] D. Agrawal and C. C. Aggarwal. On the design
+and quantification of privacy preserving data
+mining algorithms. In Proc. of ACM Symposium
+on Principles of Database Systems, 2001.
+[4] I. Dinur and K. Nissim. Revealing Information
+while Preserving Privacy. In Proc. of ACM
+Symposium on Principles of Database Systems,
+202–210, 2003.
+[5] A. Evfimievski, J. E. Gehrke, and R. Srikant.
+Limiting Privacy Breaches in Privacy Preserving
+
+228
+
+Data Mining. In Proc. of ACM Symposium on
+Principles of Database Systems, 211–222, 2003.
+[6] D. S. Johnson. Approximation algorithms for
+combinatorial problems. Journal of Computer and
+System Sciences 9:256-278, 1974.
+[7] J. Kleinberg, C. Papadimitriou, P. Raghavan.
+Auditing Boolean Attributes. In Proc. of ACM
+Symposium on Principles of Database Systems,
+86–91, 2000.
+[8] L. Sweeney. Optimal anonymity using k-similar, a
+new clustering algorithm. Under review, 2003.
+[9] L. Sweeney. k-anonymity: a model for protecting
+privacy. International Journal on Uncertainty,
+Fuzziness and Knowledge-based Systems 10(5),
+557–570, 2002.
+[10] P. Samarati and L. Sweeney. Generalizing Data to
+Provide Anonymity when Disclosing Information
+(Abstract). In Proc. of ACM Symposium on
+Principles of Database Systems, 188, 1998.
+
+
