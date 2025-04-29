@@ -1,0 +1,533 @@
+Multimedia Tools and Applications
+https://doi.org/10.1007/s11042-024-19669-9
+Security to text (S2T): multi-layered based security
+approaches for secret text content
+Shamal Kashid1·Lalit K. Awasthi1·Krishan Berwal2
+Received: 5 June 2023 / Revised: 3 April 2024 / Accepted: 10 June 2024
+© The Author(s), under exclusive licence to Springer Science+Business Media, LLC, part of Springer Nature 2024
+Abstract
+In the digital world, text data is produced in an unstructured manner across various commu-nication channels. Extracting valuable information from such data with security is crucialand requires the development of techniques in text mining, information retrieval, and naturallanguage processing (NLP). To solve this issue, we introduce two novel approaches: key-word extraction (KE) and a multi-layered secret sharing scheme (MLSS) to provide securityto extracted keywords rather than overall text documents. The KE approach encompassesa sequence of text pre-processing procedures, including tokenization, stopword removal,stemming, and bag of words representation, followed by indexing. This methodology aims toefﬁciently extract keywords from text datasets. For this research work, we have proposed threedatasets, including text messages, whatsapp messages, and electronic mail. MLSS enhancesthe security of extracted textual data by leveraging text pre-processing steps. This schemeensures better conﬁdentiality and the non-revealment of sensitive information. Additionally,we evaluate our KE model on our dataset as well as on standard datasets. Experimental resultsdemonstrate the effectiveness of our proposed security to text (S2T) model, which outper-form existing state-of-the-art approaches. The model obtains a 100% correlation between thereconstructed text and the original text.
+Keywords Keyword extraction ·Text security ·Secret sharing scheme ·
+Natural language processing
+Lalit K. Awasthi and Krishan Berwal contributed equally to this work.
+B Shamal Kashid
+kashid.shamalphd2021@nituk.ac.in
+Lalit K. Awasthi
+lalitdec@gmail.com
+Krishan Berwal
+k2b@ieee.org
+1Department of Computer Science and Engineering, National Institute of Technology UttarakhandIN, Srinagar, India
+2Faculty of Communication Engineering, Military College of Telecommunication Engineering, Mhow,IN, India
+123
+Multimedia Tools and Applications
+1 Introduction
+Technology development and easy Internet accessibility generate enormous amounts of tex-
+tual content daily. This text content takes a lot of space and time to be processed and securelycommunicated, which decreases the system’s performance [ 1]. The fair utilization of data
+with security and the fast delivery of content to various users or systems with guaranteedquality of service are essential yet challenging areas [ 5]. With the ease of editing and creation
+in the digital world, protecting ownership and preventing unauthorized tampering with textdata have become signiﬁcant issues. Most people use the Internet daily for different socialactivities on platforms like facebook, whatsapp, instagram, and twitter. Semantic differencesin text content pose a massive challenge to data extraction [ 8].
+Identifying meaningful or relevant information from enormous textual data and ensuring
+the safety of such extracted sensitive information has become critical in many areas of thisdigital world [ 10]. The notable ﬁnancial sector, commercial applications, military commu-
+nications networks, and national security are the various sectors of government that requiretext data security. Customer information such as user names, telephone numbers, debit andcredit card numbers, addresses, and credentials are the most informative data in bankingapplications, referred to as Keywords in Banking, Emails, Business, Feedback, Surveys, andSocial media posts [ 9,11].
+Ensuring the safety and security of textual data is crucial across various sectors, including
+ﬁnance, commercial applications, military communications networks, and national security.It helps mitigate risks, protect against threats, and maintain conﬁdentiality. Robust securitymeasures can enhance trust, preserve intellectual property, and safeguard national interests[12,13]. These approaches extend beyond speciﬁc sectors to areas like healthcare, legal, and
+government agencies, where conﬁdentiality, privacy, and data protection are essential. It canassist businesses in enhancing productivity, providing better customer service, and stayingin contact with the consumer base. Once the keywords are identiﬁed, data can be combinedwith additional text analysis to categorize the texts based on sentiment, topic, language, andother factors [ 1]. Table 1shows a text ﬁle processed by KE along with ground truth.
+Text pre-processing plays an important part in any NLP system. The most commonly used
+terms unlikely to assist keyword extraction include pronouns, articles, and prepositions; theseterms can be eliminated. Text pre-processing procedure effectively removes unnecessary datafrom input dataset [ 2]:
+•To minimize the size of the indexing (or data) ﬁles for text documents to stopwords
+occupying up to 20-30% of the overall number of words on a written page, indexing sizecan be reduced by 50% by using stemming.
+•To increase the efﬁciency and effectiveness of the information retrieval system to stop-
+words do not help search or text mining, and they may cause the retrieval system to getconfused, stemming checks similar terms in a text document [ 2].
+Several automatic data extraction (ADT) tools (like Y AKE [ 4], RAKE [ 5,8], BERT
+(Bidirectional Encoder Representations from Transformers) [ 6,7] and Textrank [ 4]) are
+already present in NLP . Improving text data pre-processing efﬁciency in ADT is challenging,and its modeling requires large-scale training datasets. Developing a large text dataset isunreasonable due to the need for more data sources and unnecessary cost and time [ 19].
+Y AKE [ 3,4] is a simple unsupervised automatic keyword extraction approach that uses
+statistical text features obtained from single documents to ﬁnd the most relevant terms ina text. RAKE [ 5] is a procedure for extracting keywords from separate documents that are
+123
+Multimedia Tools and Applications
+Table 1 Extracted Keyword from a text ﬁle
+Dear Customer,
+We refer to your e-mail regarding your Credit Card 1234XXXXXXXX7009.We wish to clarify that as per terms and conditions if the customer makes apayment of only the minimum amount due or any amount less than the totalamount due, then appropriate charges and interest are levied on the account.We also wish to clarify that the refund received in case of the canceledtransaction is not considered a payment. If there is a refund received fromthe merchant equivalent to the total amount due, the payment of at least theminimum outstanding due needs to be paid. So that no ﬁnancial charges canbe generated on your credit card statement. Please be informed that no merchantrefund/cashback/credit due to transactions converted to EMI /canceledtransactions reversals/promotional cashback will be considered as a paymenttowards the outstanding card. In case a card member makes an excess paymentcompared to the outstanding of the card, there will be a credit balance inthe card account. This will be adjusted against the subsequent transactionson the card. However, no interest can be claimed on this excess credit amount.We request you to click on the below-mentioned link for the details onscenarios where the ﬁnancial charges are levied.
+Keywords/Ground Truth:
+Dear, Customer, e-mail, regarding, Credit, Card,1234XXXXXXXX7009, clarify, terms, conditions, customer, only, any, less,appropriate, wish, received, transaction, not, refund, equivalent, minimum,needs, paid, generated, statement, Please, no, refund/cashback/credit, converted,canceled, reversals, promotional, cashback, member, compared, balance, request,click, mentioned, link, details, scenarios.
+unsupervised approach, domain, and language independent. The main challenge for extracted
+keywords/information is to be conﬁdential, authenticated, and untampered before sendingit to its intended recipient. Cryptography is one aspect of the solution to these issues [ 16],
+however, cryptography and watermarking algorithms are not suitable for situations wherea secret or master key has to be distributed and controlled among the group of participants[24]. This work applies a branch of cryptography known as a secret-sharing scheme (SSS),
+where the secret is shared and allocated to group members.
+The KE model and MLSS to addresses the critical issue of text data security and extrac-
+tion. The KE model aims to extract essential keywords from textual data efﬁciently, enablingaccurate analysis and interpretation. These keywords play a vital role in various applica-tions, such as information retrieval, document categorization, and sentiment analysis. On theother hand, the MLSS scheme focuses on enhancing the security of extracted text data. Byemploying encryption, secret sharing, and XOR operations, the MLSS scheme ensures theconﬁdentiality and integrity of sensitive information extracted from textual data. Together,the KE model and MLSS scheme provide a comprehensive solution for both extracting valu-able insights from text data and safeguarding it against unauthorized access and revelation.The following are the main contributions of the proposed work:
+123
+Multimedia Tools and Applications
+•The proposed KE model effectively extracts sensitive data from text datasets. Addition-
+ally, a bag of word and indexing techniques effectively implement our proposed KEmodel.
+•Three types (whatsapp text messages, electronic mail, and textual messages) of large data
+volume datasets have been proposed for this research work.
+•The proposed MLSS model provides security to the extracted non-revealing text data by
+achieving a 100% correlation between the reconstructed and original text.
+•KE proposed model outperforms baseline models on the three datasets (Inspec,
+SemEval201, and Krapivin) as well as on our three proposed datasets based on F1-Score.
+•The proposed technique takes less computational time to create secret share generation
+and secret share reconstruction than the existing SSS techniques.
+2 Background study
+Many applications, such as marketing, product management, academics, and governance,need to evaluate and extract information from textual data. It can be utilized for indexingpurposes in information retrieval programs like Google, Microsoft Internet Explorer, andFirefox [ 2]. The primary aim of the preprocessing text is to extract essential features or
+keywords from raw textual documents to increase the signiﬁcance of words to their documentﬁles, which takes up to 80% of the time on the total text documents classiﬁcation procedure.
+2.1 Keyword extraction
+Nanta Janpithak et al. [ 22] demonstrated the utility of the GA TE (General Architecture of Text
+Engineering) framework in extracting regulatory requirements from documents. A NearlyNew Information Extraction System can be used to extract only the most important contentand in its implementation; unstructured phases like subject, object, target, and action mayall be retrieved and converted into structured data such as a table. The sentiment of web ﬁlmreviews investigated [ 23] and several preprocessing methods are used to minimize the noise
+in the text, as well as the chi-squared method to remove unnecessary attributes which are notaffected by the text’s alignment. Experiment assessment shows realistic text pre-processingprocedures, like data transformation and ﬁltering, signiﬁcantly enhancing the classiﬁer’scapability. The accuracy gained on the pair of data sets is analogous to subject categorization,a much simpler work. Results indicated signiﬁcant enhancement in classiﬁer performancedue to realistic text preprocessing techniques like data transformation and ﬁltering.
+Key Information Extraction (KIE) [ 24] was used to improve capabilities by automatically
+adding textual and visual aspects within documents. The methodology incorporates improvedgraph learning modules to rectify the graph architecture on complex documents along graph-
+ically rich contexts. Using a BiRNN- bidirectional recurrent neural network, Yang et al.
+(2012) [ 25] learned the conditional distribution features of every keyword in texts where
+the model reaches nearly 100% recalls and precisions. To estimate the ability of the hiddeninformative data within the developed system to utilize the differences in feature distribution,resulting in state-of-the-art outcomes. Y AKE, introduced by Campos et al. [ 3], emerged as a
+feature-based model for multilingual KE from single documents, surpassing existing meth-ods without requiring training on speciﬁc collections or dictionaries. The extension of Y AKEby Campos et al. [ 4] to select the most relevant keywords based on statistical text features
+123
+Multimedia Tools and Applications
+outperformed numerous supervised and unsupervised methods across various text lengths,
+languages, and domains.
+Allahyari et al. [ 34] elaborated various extraction methodologies for multi-document
+and single-document summarization. The author discussed the most often used techniques,including subject representation methods, frequency-driven approaches, graph-based meth-ods, and machine learning context technology. Gambhir et al. [ 35] studied some crucial
+information about the record of text summarization, the recent SOTA and future potential.The survey conducted in this work would be a useful beginning point for new researchers tounderstand the fundamental challenges of text summarization. The majority of studies tookan extractive strategy. It is necessary to place a greater emphasis on abstractive and hybridtechniques. El-Kassas et al. [ 36] provide a survey with a complete assessment of the various
+components of Automatic Text Summarization (A TS): methodologies, techniques, datasets,approaches, evaluation methods and research goals.
+2.2 Text security
+Generated models [ 12,29] which were providing a personal collection of shares (secret)
+when using the n-counting-based SSS method. In this study, unmanaged allocated sharescreated by the system utilizing an authenticated receiver key creation technique were servedusing personalized remembrance tools. The shares employed in the original SSS methodwere difﬁcult to remember, in contrast to standard password assignments, which provide fullpersonal selection. The proposed learning context or keeping shares secreted within person-ally a section of lines or sentences with the help of improved Arabic textual steganography.Table 2shows the analysis of text data security using the SSS approaches.
+P a r u le ta l .[ 32] proposed a BEMSS- Blockwise Encryption based Multi Secret Sharing
+scheme for Securing Visual Content based on (n,n) multiple secret visual data encoding tech-nique with a SSS, which is proposed in this study by utilizing blockwise encryption. Theexperimental studies demonstrate the performance of the BEMSS model which delivers acomputationally effective method for data security. The secret-sharing procedure is consid-ered a classiﬁcation issue by the generative adversarial networks (GANs) network, whichassumes the role of a dealer. The key concept is to treat any secret texts as images. The secrettext image is then broken into sub-images using image segmentation, and the sub-images arethen encoded and decoded using DNA (Deoxyribonucleic acid) coding. Next, the proposedmodel is trained to identify the SS results. The results illustrate the scheme’s high commu-nication efﬁciency, ﬂexibility, and security. This technique is a considerable extension of theGANs and a unique approach for the key SSS methodology [ 13].
+Table 2 Analysis of technique based SSS for textual data
+Scheme Type Secret Information SSS Approach
+Gutub et al. [ 29] (k,n) Text Counting based SSS with Stegnography
+Adnam et al. [ 12] (k,n) Text to Image Counting based SSS with Stegnography
+Zhen et al. [ 13] (k,n) Text Generative Adversarial Networks-Basedd SSS
+E s r a ae ta l .[ 14] (k,n) Text Watermarking Watermarking with Counting based SSS
+Guttikonda et al. [ 17] (k,n) Text File Polynomial Based SSS
+Shamal et al. [ 9] (n,n) Email,Text and Multilayered SSS based on X-OR
+Whatsapp Message
+123
+Multimedia Tools and Applications
+Fig. 1 Proposed Keyword Extraction Model with Seurity Steps
+The two proposed approaches use Arabic language characteristics steganography based
+on Kashida extension characters to hide conﬁdential secrets inside the texts. The compar-isons were evaluated at several techniques on the same stage with the 40 standard benchmarktextual assertions, and the ﬁndings were remarkable and showed promising results for furtherstudy. The Kashida steganography technique used in the Arabic text watermarking systemis proposed [ 14]. MSSS (Multilayered Secret Sharing Scheme) for text uses X-OR to pro-
+vide (n+1, n+1) multilayered text encryption with the help of a SSS. MSSS [ 9] includes
+two different levels for share generation and share reconstruction. While elaborating on thereconstruction algorithm, the authors used Blakley’s technique and determined the scheme’saccess structure as well as evaluated its information rate. The authors motivated and appliedSecret sharing scheme in this proposed work as discussed in Section 3.
+3P r o p o s e dm o d e l
+In this work, two novel approaches have been proposed. First is to extract important words
+using the KE model with an aim to extract important words from text ﬁles effectively. Secondis to provide text data security using a multi-layered secret-sharing scheme. Figure 1shows
+the proposed S2T model steps.
+3.1 Keyword extraction (KE) model
+Our proposed KE model is based on different text preprocessing steps. This section brieﬂydescribes the KE model steps in detail as shown in Fig. 2.
+Fig. 2 Proposed Keyword Extraction Model Steps
+123
+Multimedia Tools and Applications
+3.1.1 Step 1 tokenization
+The procedure of converting a set of words to signiﬁcant or meaningful words is called
+tokenization. It follows some steps. First, split the input text into paragraphs and second,split the paragraph into sentences. After that, the third step splits the sentence into words. Atokenization ﬁlter, also known as tokens, separates these words and characters. The tokenscollection included question marks, symbols, and characters outside common morphology.The nouns, verbs, pronouns, and other tokens are then organized using the Part of Speech(POS) grammar rules. We can obtain language-dependent properties by tokenization, whichcontinues using the stopword [ 20]. The outcome can be a single sentence, a paragraph, a
+document, or a group of sentences.
+Algorithm 1 Tokenization Algorithm.
+Require: Document
+Ensure: List of Word Tokens
+1: Split the document into the paragraph2:foreach paragraph in the document do
+3: split a paragraph into sentences
+4: foreach Sentence in the document do
+5: split sentence into tokens6: end for
+7:end for
+Algorithm 1 provides a foundational tokenization process essential for NLP tasks. It starts
+by segmenting a document into paragraphs, then iterates over each paragraph, breakingit down into sentences. Within each sentence, the algorithm further divides the text intoindividual word tokens, enabling the next analysis [ 20,21].
+3.1.2 Step 2 stopword removal
+The stopwords contain a listing of frequently occurring words which are appeared in all
+textual documents [ 9,20,21]. Common features of text such as conjunctions (and, or, but)
+and pronouns (she, he, it) should be deleted for the reason that they don’t have any impact,which contributes less or does not provide any value to the classiﬁcation process (everyfeature was removed whenever the model matches the feature in the stopwords dictionary).If the feature is a special character or a number, it should be eliminated. For the same reason,if the feature is a special character or a digit, it was removed. To identify the stopwords,
+Algorithm 2 Stopword Removal.
+Require: List of Word Tokens
+Ensure: Preprocessed text
+1:foreach document do
+2: search the stopword list3: if(word=stopword) then
+4: remove the word from the sentence5: else if then
+6: do nothing7: end if
+8:end for
+123
+Multimedia Tools and Applications
+we can sort our collection of phrases by frequency and choose the ones with the highest
+frequency based on their lack of semantic value [ 21]. So, Algorithm 2 shows the procedure
+of stopword removal. This algorithm takes a list of word tokens as input and aims to producepreprocessed text as output by removing stopwords. It iterates over each document in thedataset and searches for each word in a predeﬁned stopword list. If a word is identiﬁed as astopword, it is removed from the sentence. Otherwise, if the word is not a stopword, no actionis taken. By systematically removing stopwords from the text data, the algorithm helps reducenoise and improve the quality of the next text analysis tasks, such as sentiment analysis orkeyword extraction processes.
+3.1.3 Step 3 stemming
+Stemming removes unnecessary features from a word’s form while maintaining properspelling. At the same time, all stemmed words are converted to their basic form. Stem-ming is a normalization technique for natural language processing employed in this step tominimize the number of computations created on the test dataset.
+This stage consists of breaking down words or phrases into root words. Stemming is
+the procedure of extracting afﬁxes, preﬁxes, and sufﬁxes from characteristics of decreasingmodulated terms to their original stem. The stemmed word is not needed to connect the word’sinitial root, but it is usually connected the reason that words match a similar stem. In orderto reduce the number of features in the feature space and enhance the performance of theclassiﬁer, many different types of features are combined into a single feature. Consider thefollowing scenario: (Interchang, Interchange, Interchanger, Interchangeable, Interchanging).To produce the single-feature relation, the total features are conﬂated into a single feature bydeleting the different sufﬁxes -e, -er, -able, and -ing to accomplish only one (single) featureconnection, as shown in Fig. 3.
+Bag of words AB O W[ 18] represents text data that describes the occurrence of particular
+words within a text data ﬁle, as shown in Fig. 4. We keep records of the number of words
+while ignoring grammar issues and word order. Since any data about the sequence or structureof words contained within the document is deleted, it is referred to as a “bag” of words. The
+Fig. 3 Example of stemming
+123
+Multimedia Tools and Applications
+Fig. 4 Example of Bag of Words
+model is only concerned with recognized terms appear in the document, not with where they
+appear. To identify the location of terms we use indexing.
+Indexing The main goal of word indexing is to boost efﬁciency by extracting a set of terms
+from the ﬁnal text document to index the text document. Word indexing entails choosinga suitable collection of keywords from a large number of documents and identifying thosekeywords for each text document, essentially customary documents, into such a vector ofkeyword weights.
+The KE model employs preprocessing techniques to extract important keywords from
+textual data. Initially, the text undergoes tokenization, where it is segmented into individualwords or tokens, establishing the fundamental units for analysis. Subsequently, stopwordsare the common words removed to reduce noise and focus attention on more meaningfulterms. Stemming techniques further reﬁne the data by reducing words to their root or baseform, capturing variations of the same word. Once preprocessed, the text is represented usingthe BoW model, which represents each document with a vector that indicates the frequencyof each word in a predeﬁned vocabulary. This representation allows for efﬁcient analysiswhile disregarding word order. Finally, we organize and store the BoW representations usingindexing techniques like inverted indices or term-document matrices, which enable quickaccess and retrieval of textual data. The effectiveness of the KE model relies on the qualityof these preprocessing techniques and the suitability of the chosen algorithms. Overall, byemploying these preprocessing techniques, the KE model enhances the quality of extractedkeywords, enabling more accurate analysis and interpretation of textual data.
+123
+Multimedia Tools and Applications
+3.2 Multi-layered secret-sharing scheme
+The MLSS ensures the security of extracted non-revealing text data through a multi-step
+process. Initially, the text undergoes preprocessing to the KE approach. Then, encryptiontechniques are applied to secure the extracted text data, ensuring conﬁdentiality and integrity.Each word or token is encrypted by using a cryptographic algorithm. Next, the encrypted textdata is divided into multiple shares using a SSS, distributing the shares among multiple partiesto enhance security. XOR operations may be employed during encryption and reconstructionto securely combine data. This process ensures that the original text remains conﬁdential andnon-revealing, with reconstruction requiring the collaboration of multiple parties. In manycases, keeping a secret is necessary. A password, an encryption key, a secret message, andother items may need to be hidden. Encryption can help protect data, but it is also crucialto keep the secret key safe for encryption. Consider that you encrypt all of your critical ﬁleswith a single secret key and if that key is lost, all of your important ﬁles are inaccessible. Toovercome this issue, SSS allows you to divide your secret into multiple parts and distributethem to speciﬁc individuals [ 15].
+A SSS is a methodology via which a vendor allocates shares to parties so that autho-
+rized subsets of those parties can only rebuild the secret or original data. These schemesare essential cryptographic methods that operate as the basis for various secure protocols,including the general protocol for multi- ple parties computation, threshold cryptography,Byzantine agreement, key control, and attribute-based enciphering [ 31]. The original secret
+text is recovered during decoding by combining the shares. Blakley and Shamir [ 33] extended
+this idea of SSS to a (k, n) system in which n represents the total numeral of shares and theminimum or required number of shares represented by k to retrieve the secret. Conﬁdentialdetails can be shared in a group through a SSS method without a single user having accessto that secret. When required or more additional members of the grouping cooperate, thesecret will be recovered. Any media, including video, text, images, audio, and numbers, cancontain the secret.
+There are several SSS approaches [ 9,10,15] available to manage the different types of
+multimedia data. For text data security, this work relies on XOR-based secret-sharing schememethodology. MLSS scheme divides a secret input text into n+1 shares, where n representsthe length of the text directed as shares. The proposed MLSS approach protects textual data.Figure 5shows the general steps of the secret-sharing scheme. The size of the textual data
+is minimized once the pre-processing of the textual data is done. The keywords that wereextracted are also the most informational or disclosing data. Consequently, ensuring safetyis crucial for data or information security. Data security of text data is guaranteed using thesecret sharing method at the primary level, and the secret share generated is communicatedas a binary ﬁle at the secondary level.
+Algorithm 3 describes the text encoding and share generation procedures within the Multi-
+layered Secret Sharing Scheme. The algorithm takes a set of secret keywords representedby variable W as input and generates (n+1) secret shares denoted by variable S using anMLSS scheme. Initially, each word W undergoes XOR encryption with a randomly generated
+Fig. 5 General Secret Sharing Scheme Steps
+123
+Multimedia Tools and Applications
+Algorithm 3 Proposed Share Generation Scheme.
+Input : n secret texts ( W1,W2,W3,W4,....Wn)
+Output : n+1 shared texts ( S1,S2,S3,S4,....S(n+1))
+Share Creation
+1. Binary random number generation
+R=random binary number(i)
+2. Calculate ( X1,X2,X3,X4,.... Xn) using XOR operation
+For (i=1t on ) :
+(a) Xi=Wi⊕R Where,(i=1,2,3,...n)
+3. Creation of Shares ( S1,S2,S3,S4,....S(n+1))
+based on XOR operation
+(a) S1=X1
+(b) For (i =2t on ) :
+Si=Xi⊕X(i−1)
+(c) For (i=n+1):
+S(n+1)=W1⊕Xn
+binary number R, ensuring unique encryption for each word. Afterwards, we generate shares
+by performing XOR operations between consecutive encoded words ( Xi). The ﬁrst share,
+S1, corresponds to the encoded representation of the ﬁrst word W1, while the next shares(S2 to Sn) are computed as XOR combinations of consecutive encoded words. The ﬁnalshare, S(n+1), is generated by XORing the last encoded word with the original ﬁrst word.This process generates (n+1) secret shares representing the original keywords, ensuringconﬁdentiality and security in the sharing process.
+Algorithm 4 proposes a secret reconstruction scheme that aims to recover the original secret
+texts from the (n+1) shared texts generated by the SSS. It follows a step-by-step process: ﬁrst,intermediate texts are reconstructed from the shared texts through XOR operations. Then, theﬁrst secret text is reconstructed using the ﬁnal shared text and the last intermediate text. Next, abinary random number is computed from the ﬁrst intermediate text and the reconstructed ﬁrst
+Algorithm 4 Proposed Secret Reconstruction Scheme.
+Input : n+1 shared texts ( S1,S2,S3,S4,....S(n+1))
+Output : n secret texts ( W1,W2,W3,W4,....Wn)
+Share Reconstruction
+1. Recover ( X1,X2,X3,X4,.... Xn) texts with the help of XOR operation
+(a) S1=X1
+(b) For (i =1t on ) :
+Xi=Si⊕X(i−1)where(i=1,2,3,4,....n)
+(c) For (i=n+1):
+S(n+1)=W1⊕Xn
+(d) Reconstruct W1using
+W1=S(n+1)⊕Xn
+2. Find out binary random number using
+R= X1⊕W1 Where,(i=1,2,3,...n)
+3. Recovered shared texts ( W1,W2,W3,W4,....Wn)
+using XOR operation
+Wi=Xi⊕R Where,(i=2,3,4.....n)
+123
+Multimedia Tools and Applications
+secret text. Finally, the remaining secret texts are recovered by XORing each intermediate text
+with the binary random number. This process ensures the secure reconstruction of the secrettexts while preserving conﬁdentiality. The main advantages of the both proposed models arementioned below:
+•No necessity to deal with all words from proposed dataset.
+•Without every one of the shares, the hacker is still unable to retrieve the secret.
+•Shares generated of text comprise no information related to the original text.
+All steps of MLSS are discussed in details below.
+•Data / Information:
+Input for this MLSS model are text in which the input text is converted
+into binary numbers. The description of the input dataset is given in Table 3.
+•Secret Generation: Share generation of input data is done on the basis of Algorithm 3. The
+proposed scheme is (n,n+1) secret share generation. For example, if the text has length 4then generated share is 5 (n+1) where n=4. However, generated shares are represented bya binary number. An example of secret share generation using Algorithm 3 is explainedin Table 7. The generated share does not reveal anything related to the original text.
+•Sharing Process:
+Generated share is shared among the authorized group of persons. The
+secret can be reconstructed only when the authorized group agrees to reveal the secret.
+•Recovery Process: Share reconstruction of text is done on the basis of Algorithm 4. The
+proposed scheme is (n+1,n) secret share reconstruction which means if the number ofshares is 4 (n+1) then the original text length is 3. Also, the created shares are representedin binary numbers.
+•Data / Information:
+In this step, generated binary shares are converted into original textual
+data, and Finally, original text data were successfully retrieved using the above steps.
+The MLSS scheme offers unique advantages in providing text data security, including
+enhanced security through a multi-layered approach, power access management, robustnessagainst single points of failure, scalability, ﬂexibility, efﬁcient key management, and sig-niﬁcant contributions to the ﬁeld of text data security, military, and defense systems. Bysafeguarding extracted sensitive information, these security approaches enable compliancewith regulatory requirements, maintain individual privacy rights, and mitigate the risks asso-ciated with data breaches and unauthorized access.
+4 Experimental result and discussion
+This section evaluates the proposed model using the performance measures discussed inSection 4.1. Section 4.2provides a detailed description of the datasets. We evaluated the
+proposed S2T model through the F1-score of the KE methodology and execution time forSSS scheme, as explained in Section 4.3.
+Table 3 Overview of dataset
+Dataset Type Full Text Length (FTL) Full Text Length (FTL) Number
+File (Char) File (Words)
+Whatsapp 03000 0740 300
+Text Messages 04773 0836 400
+E-mail 20929 3277 2000
+123
+Multimedia Tools and Applications
+4.1 Perfromance measure
+The effectiveness of our proposed KE method alongside baseline models is evaluated using
+performance metrics: precision (P), recall (R), and F-score (F1). Prior research has widelyused these metrics to assess the effectiveness of keyword extraction techniques [ 49–52]. We
+outline the equations for calculating precision, recall, and f1-score below.
+P=Correctly Identiﬁed Keywords
+All Extracted Keywords(1)
+R=Correctly Identiﬁed Keywords
+All Text Keywords(2)
+F1=2×P×R
+P+R(3)
+4.2 Dataset used
+The comparative analysis utilizes three standard datasets (INSPEC, SemEval2017 & Krapiv)
+with different sizes and domains to evaluate the proposed method against several benchmarkmodels. Also we proposed datasets for this task.
+•INSPEC: The ﬁrst dataset, as utilized in [ 53], comprises 2000 English abstracts sourced
+from the Inspec database. These abstracts are segmented into three subsets: a training set,a validation set, and a test set, each containing 1000, 500, and 500 abstracts, respectively.
+•SemEval2017: The second dataset, constructed by Kim et al. [ 54] designed for the
+keyphrase extraction task as part of the SemEval evaluation campaign. This dataset con-sists of 284 scientiﬁc articles written in English, sourced from the ACM Digital Libraries,encompassing conference and workshop papers. The 284 documents are segmented intothree subsets: a trial set comprising 40 documents, a training set containing 144 docu-ments, and a test set comprising 100 documents.
+•Krapivin: The third dataset, constructed by Krapivin et al. [ 55] dataset comprises 2,304
+full-text scientiﬁc articles from the computer science domain, published by the Associa-tion for Computing Machinery (ACM). Author-assigned and editor-corrected keyphrasesfor each article are given.
+Additionally, dataset has been created manually for this research work. Three various types
+of text categorical data are included. The primary dataset encompasses whatsapp messages(text), the secondary dataset comprises text messages, and the third dataset type includesdetails of e-mails of bank transactions. We compared the KE model with our proposeddataset and three standard datasets INSPEC, SemEval2017, and Krapivin [ 46–48]. Table 3
+indicates a detailed description of the proposed dataset in which the model has been executedusing the three separate datasets.
+4.3 Results and discussion
+The proposed model has been designed by considering bank applications. So, we have keptthe keywords (customer name, address, mobile no. etc.) manually, which are application-oriented. RAKE model extracts keyphrases or word phrases from text documents which isan inefﬁcient way of extracting keywords for the banking domain. All the manually decidedkeywords are nearly available in the KE model. Due to this KE model is more efﬁcient for
+123
+Multimedia Tools and Applications
+Table 4 Comparison of the proposed KE model with yake [ 4] and rake model [ 8]
+Dataset Full Length File Extracted Keyword Extracted Keyword Extracted Keyphrases
+Type (FLF) using proposed KE using Y AKE [ 4] using RAKE [ 8]
+Whatsapp 0740 138 053 286
+Text Messages 0836 154 107 456E-mail 3277 208 126 1336
+bank applications. The proposed KE model extracts more efﬁcient words from a text ﬁle than
+the Y AKE and RAKE models. Table 4shows the keyword or essential word extraction result
+from the KE model compared with the Y AKE model [ 17] and RAKE model [ 8].
+Table 5shows our proposed dataset performance based on the KE model with a detailed
+description. Table 6represents the results of the F1-scores for KE and the baseline models on
+the three datasets. The outcomes show that the KE model performs better on almost all eval-uation metrics across all three datasets, indicating the effectiveness of the proposed method.
+Table 7demonstrates the output of the proposed MLSS-based model employed to generate
+shares for text with the help of Algorithm 3 for text data having a length of three and sharesequal to four. Each share is equal to the length of the word plus one.
+Table 8illustrates three different texts utilized to execute Algorithm 3, a method for
+creating secret shares. The outcome shows that similarity values between generated sharesand actual text are not matched. The ﬁndings indicate that every share is distinct and notrevealing anything related to the secret text. Additionally, the 100% correlation between theactual and reconstructed words shows that no data has been lost.
+Table 9shows the average execution time (in seconds) needed to construct (n+1) shares
+by utilizing Algorithm 3, and Table 10shows the result of reconstructing the secret using
+(n+1) shares using Algorithm 4. Both tables contain seven different text ﬁles with varyingtext length (characters) [ 17]. The outcome of these two tables shows that our proposed
+algorithms perform better than the existing Polynomial-Based SSS for Text [ 17] approach
+in terms of execution time. Additionally, Tables 9and 10show that the execution time for
+share reconstruction is less than share generation.
+In Table 11, we compare the results of our KE model with the Y AKE and RAKE model on
+our proposed three types of a dataset, as shown in Table 3. The execution time (in seconds)
+for KE needed to produce (n+1) shares and uses that (n+1) shares to reconstruct the secret.From Table 11, it is observed that:
+•KE requires less execution time to generate shares for extracted keywords than generation
+shares for the overall Full-Length-Text Files.
+Table 5 Dataset performance
+based on proposedkeyword-extraction modelDESCRIPTION E-MAIL MESSAGES WHA TSAPP
+Full-Text FiLe (Char) 20929 4773 3000
+Full-Text FiLe (Words) 2377 836 740V ocab Size 1798 430 280Tokens Words 2519 585 585Filtered Tokens Words 1741 419 270Posting List 689 351 346Stopwords 179 179 179Extracted Words 208 154 138
+123
+Multimedia Tools and Applications
+Table 6 Performance of the KE
+model as an F1-score on threebenchmark datasetsMODEL INSPEC SemEval2017 Krapivin
+TextRank [ 47] 27.62 30.50 17.32
+SingleRank [ 48] 24.13 31.73 18.17
+TopicRank [ 49] 19.33 24.87 15.85
+MultipartiteRank [ 50] 20.52 26.87 17.37
+Y AKE [ 3] 13.65 20.55 13.87
+EmbedRank(BERT) [ 51] 39.77 36.72 20.90
+SIFRank(ELMo) [ 37] 39.82 37.25 22.05
+MDERank(BERT) [ 52] 36.17 37.18 23.85
+PromptRank(T5) [ 39] 38.17 41.57 28.04
+Proposed 41.0 42.0 30.0
+Best results are shown in bold
+Table 7 Secret share generation
+using MLSS schemeSample Share 1 Share 2 Share 3 share 4Text
+NLP 01001111 00000010 00011100 00011111
+Txt 01010101 00101100 00001100 00100001SSS 01010010 00000000 00000000 00000001Ykw 01011000 00110010 00011100 00101111
+Table 8 Similarity score for text
+using SSSSample Text Share1 Share2 Share3 Reconstructed text
+Text 1 1.0000 1.0000 1.0000 1.0000
+Text 2 1.0000 1.0000 1.0000 1.0000Text 3 1.0000 1.0000 1.0000 1.0000
+Table 9 Average execution time
+for text by using MLSS scheme(SHARE CREA TION) (seconds)Text Text Length Share Proposed ShareType (char) Generation [ 17] Generation
+Text 1 10 0.004854 0.00099
+Text 2 374 0.006000 0.00199
+Text 3 3391 0.015160 0.01399
+Text 4 26,382 0.079933 0.10846
+Text 5 70,352 0.381000 0.27921
+Text 6 246,232 2.159500 0.95673
+Text 7 378,142 3.435500 1.29432
+Best results are shown in bold
+123
+Multimedia Tools and Applications
+Table 10 Average execution time
+for text by using MLSS scheme(SHARE CREA TION) (seconds)Text Text Length Share Proposed ShareType (char) Reconstructiom [ 17] Reconstructiom
+Text 1 10 0.00379 0.00069
+Text 2 374 0.00496 0.00099
+Text 3 3391 0.00533 0.01099
+Text 4 26,382 0.04916 0.06598
+Text 5 70,352 0.24123 0.20432
+Text 6 246,232 0.57085 0.04890
+Text 7 378,142 0.63653 0.52093
+Best results are shown in bold
+•KE requires less execution time to reconstruct shares for extracted keywords than recon-
+struct shares for the overall Full-Length-Text Files.
+•Extracted Keywords and Full-Length Files (FLF) results show that reconstruction of the
+secret takes a shorter time than the construction of the shares.
+•Results on the E-mail dataset shows that the KE model takes less computation time as
+compared to Y AKE and RAKE model.
+•Results on the Whatsapp dataset show that the KE model takes less computation time as
+compared to Y AKE and RAKE models.
+•Results on the Text messages dataset show that the KE model takes less computation
+time as compared to Y AKE and RAKE models.
+•KE model takes less execution time for secret share generation and reconstruction on
+three different datasets when compared to the Y AKE and RAKE models.
+•Y AKE model takes less execution time for secret share generation and secret share
+reconstruction as compared to the RAKE model.
+4.4 Discussion
+Securing extracted keywords holds the main signiﬁcance in ensuring the integrity and reliabil-ity of various applications such as information retrieval, NLP , and data mining. Unauthorized
+Table 11 Average execution time
+for text using MLSS scheme(SHARE CREA TION & sharereconstruction) (seconds)Data Text Length Share ShareType (char) Generation(s) Reconstruction (s)
+Email (FLF) 20929 0.08644 0.06373
+Email (KE) 01770 0.00699 0.00599Email (Yake) 01839 0.00799 0.00597
+Email (Rake) 14875 0.06270 0.04761
+Whatsapp (FLF) 04773 0.01896 0.01497Whatsapp (KE) 01219 0.00499 0.00399Whatsapp (Yake) 01302 0.00599 0.00415Whatsapp (Rake) 04089 0.02198 0.01299Messages (FLF) 03000 0.01198 0.00899Messages (KE) 00379 0.00199 0.00185Messages (Yake) 0.00285 0.00199 0.00192Messages (RAKE) 03758 0.02498 0.01257
+123
+Multimedia Tools and Applications
+access to or manipulation of keywords could not only undermine the accuracy of search
+results but also pose signiﬁcant risks to data privacy and system security. Additionally, thepresence of sensitive information within keywords necessitates robust measures to preventunauthorized disclosure or misuse. The proposed KE model consistently outperforms inaccurately identifying and extracting essential keywords from the text corpus based on theF1-score. Secondly, in terms of text share generation and reconstruction, our proposed modelexhibits enhanced performance compared to the baseline method. The proposed MLSS modelachieves faster share generation times and reconstruction times without compromising thequality of the reconstructed text due to the use of XOR operations instead of complex algo-rithms for encryption. This improvement is particularly signiﬁcant in real-time applicationswhere rapid text share generation and reconstruction are important. The signiﬁcance of theresults in Tables 5-11shows that our proposed model S2T is better than other methods of
+keyword extraction, share generation, and reconstruction time. Overall, the signiﬁcance ofour results lies in demonstrating the effectiveness and practical utility of our proposed modelacross multiple dimensions, including keyword extraction, summary generation, share gen-eration time, and reconstruction time.
+4.5 Limitations
+The limitations of securing extracted keywords, particularly within the context of the proposedS2T model, can include the following:
+•Loss of Contextual Information: Securing extracted keywords can potentially lose con-
+textual information in the original text, as they are condensed representations of theunderlying text, further abstracting away valuable context. The loss of context couldpotentially affect the interpretability and usefulness of secured keywords, especially intasks requiring context, such as NLP or sentiment analysis.
+•Semantic Ambiguity: Keywords in text can be ambiguous and misinterpreted, so secur-
+ing them without considering their semantic context can lead to misunderstandings ormisinterpretations.
+•Limited Information Retention: Securing keywords involves reducing original text con-
+tent to essential terms, enhancing security but discarding non-keyword information. Thislimitation may restrict tasks that require a comprehensive understanding of the text, suchas document summarization or information retrieval.
+•Dependency on Keyword Extraction Accuracy: The accuracy of the keyword extrac-
+tion process is crucial for securing extracted keywords, as a ﬂawed algorithm may notaccurately represent the underlying text. Ensuring the robustness and accuracy of thekeyword extraction process is crucial for maintaining the integrity and security of thesecured keywords.
+•Vulnerability to Adversarial Attacks: Securing keywords may introduce vulnerabilities to
+adversarial attacks aimed at manipulating or perturbing the extracted terms. Adversariescould exploit weaknesses in the keyword extraction algorithm or the security mechanismsused to protect the keywords, leading to the compromise of sensitive information ormisleading terms.
+•Scalability and Efﬁciency Concerns: Securing a large volume of extracted keywords from
+massive text datasets may pose scalability and efﬁciency challenges. The computationalresources and processing overhead required to encrypt, transmit, and store a large numberof keywords securely could be substantial, especially in real-time or high-throughputapplications.
+123
+Multimedia Tools and Applications
+Addressing these limitations requires careful consideration of the trade-offs between security,
+usability, and performance in the design and implementation of keyword security mecha-nisms. It also highlights the importance of incorporating context awareness, robustness, andefﬁciency into keyword extraction and security processes to mitigate potential risks and max-imize the utility of secured keywords. Future work for securing extracted keywords couldfocus on addressing the identiﬁed limitations and advancing the capabilities of keywordsecurity mechanisms.
+Overall, future work on securing extracted keywords should aim to advance the state-of-
+the-art in keyword security by addressing key challenges, enhancing semantic understanding,improving adversarial robustness, ensuring scalability and efﬁciency, integrating withprivacy-enhancing technologies, empowering users with security controls, and establishingevaluation frameworks for comprehensive assessment and comparison.
+5 Conclusion
+We presented an unsupervised KE model with SSS to provide text security for sensitivedata rather than overall data. The effectiveness of the S2T model enhances text data securitythrough keyword extraction methodology and a secret sharing scheme. For this research, wehave proposed three datasets, including text messages, whatsapp messages, and electronicmail. Initially, we preprocess text datasets using techniques such as stopword removal, tok-enization, stemming, bag of words, and indexing to extract important data. Subsequently, weemploy the KE model to extract keywords relevant to banking applications. The result anal-ysis of the KE model showed its effectiveness on three publicly available datasets (inspec,semeval2017, and krapivins) as well as on our proposed datasets. The result analysis indicatesa notable reduction in numeral words and includes more informative keywords through theKE model. Also, the KE model takes less execution time for secret share generation and secretshare reconstruction than the existing methodology. Furthermore, we compare the executiontimes of the total text ﬁle with and without the extracted keywords based on MLSS. Theﬁndings highlight that our proposed MLSS model signiﬁcantly improves the execution timeof the KE model while ensuring a secure system environment. Experimental result analysisshows the efﬁciency and effectiveness of our proposed S2T scheme in enhancing text datasecurity through optimized keyword extraction techniques.
+For future research, the SSS-based approach will be able to reduce the amount of text data
+shares generated and expand the preprocessing of that text data using various deep learningtechniques, which perform better when the text size is enhanced.
+Author Contributions All the authors contributed equally.
+Availability of data and materials The data that support the ﬁndings of this study are available from the
+corresponding author upon reasonable request.
+Declarations
+Ethical approval This article does not contain any studies with human participants or animals performed by
+any of the authors.
+Conﬂict of Interest None
+123
+Multimedia Tools and Applications
+References
+1. Aggarwal CC, Zhai CX (2012) An introduction to text mining. Springer, Boston, MA, pp 1–10
+2. Kannan S, Gurusamy V , Vijayarani S, Ilamathi J, Nithya M, Kannan S, Gurusamy V (2014) Preprocessing
+techniques for text mining. Int J Comput Sci Commun Netw 5(1):7–16
+3. Campos R, Mangaravite V , Pasquali A, Jorge A, Nunes C, Jatowt A (2020) Y AKE! Keyword extraction
+from single documents using multiple local features. Inf Sci 509:257–289
+4. Campos R, Mangaravite V , Pasquali A, Jorge AM, Nunes C, Jatowt A (2018) Yake! collection-independent
+automatic keyword extractor. In: Advances in Information Retrieval: 40th European Conference on IRResearch, ECIR 2018, Grenoble, France, March 26-29, 2018, Proceedings 40, pp. 806-810. SpringerInternational Publishing, rake
+5. Rose S, Engel D, Cramer N, Cowley W (2010) Automatic keyword extraction from individual documents.
+Text mining: applications and theory pp 1-20
+6. Borisov O, Aliannejadi M, Crestani F (2021) Keyword extraction for improved document retrieval in
+conversational search. Preprint at arXiv:2109.05979
+7. Qian Y , Jia C, Liu Y (2021) BERT-based text keyword extraction. In: Journal of Physics: Conference
+Series, vol. 1992, no. 4, IOP Publishing, p 042077
+8. Rinartha K, Kartika LGS (2021) Rapid automatic keyword extraction and word frequency in scientiﬁc
+article keywords extraction. In: 2021 3rd International conference on cybernetics and intelligent system(ICORIS), pp 1-4. IEEE
+9. Kashid S, Kumar K, Saini P , Negi A, Saini A (2022) Approach of a multilevel secret sharing scheme for
+extracted text data. In: 2022 IEEE Students conference on engineering and systems (SCES), pp 1-5. IEEE
+10. Kashid S, Awasthi LK, Kumar K, Saini P (2023) NS4: a novel security approach for extracted video
+keyframes using secret sharing scheme. In: 2023 International conference on computer, electronics &electrical engineering & their applications (IC2E3), pp 1-6. IEEE
+11. Cirillo S, Desiato D, Scalera M, Solimando G (2023) A visual privacy tool to help users in preserving
+social network data. In: IS-EUD Workshops
+12. Adnan G, Aziz A, Alaseri K (2021) Reﬁning Arabic text stego-techniques for shares memorization of
+counting-based secret sharing. J King Saud Univ - Comput Inf Sci 33(9):1108–1120
+13. Zheng W, Wang K, Wang F-Y (2021) GAN-Based key secret-sharing scheme in blockchain. IEEE Trans
+Cybern 51(1):393–404. https://doi.org/10.1109/TCYB.2019.2963138
+14. Esraa A, Gutub A (2022) Novel arabic e-text watermarking supporting partial dishonesty based on
+counting-based secret sharing. Arab J Sci Eng 47(2):2585–2609
+15. Saini P , Kumar K, Kashid S, Negi A (2022) MEVSS: Modulo encryption based visual secret sharing
+scheme for securing visual content. In: International conference on deep learning, artiﬁcial intelligenceand robotics, pp 24-35. Cham: Springer International Publishing,
+16. Luo Y , Yao C, Mo Y , Xie B, Yang G, Gui Huiyang (2021) A creative approach to understanding the
+hidden information within the business data using Deep Learning. Inf Process Manage 58(5):102615
+17. Guttikonda P , Mundukur NB (2020) Polynomial-based secret sharing scheme for text, image and audio.
+J Inst Eng (India) B 101(5):609–621
+18. HaCohen-Kerner Y , Miller D, Yigal Y (2020) The inﬂuence of preprocessing on text classiﬁcation using
+a bag-ofthe -words representation. PloS One 15(5):e0232525
+19. Feng D, Chen H (2021) A small samples training framework for, deep Learning-based automatic infor-
+mation extraction: case study of construction accident news reports analysis. Adv Eng Inform 47:101256
+20. Abidin DZ, Nurmaini S, Malik RF, Rasywir E, Pratama Y (2019) A model of preprocessing for social
+media data extraction. In: 2019 International conference on informatics, multimedia, cyber and informa-tion system (ICIMCIS), pp 67-72. IEEE
+21. Kadhim AI (2018) An evaluation of preprocessing techniques for text classiﬁcation. IJCSIS 16(6):22–32
+22. Janpitak N, Sathitwiriyawong C, Pipatthanaudomdee P (2019) Information security requirement extrac-
+tion from regulatory documents using GA TE/ANNIC. 2019 7th International electrical engineeringcongress (iEECON). IEEE
+23. Haddi E, Liu X, Shi Y (2013) The role of text pre-processing in sentiment analysis. Procedia Comput Sci
+17:26–32
+24. Y u W, Lu N, Qi X, Gong P , Xiao R (2021) PICK: processing key information extraction from documents
+using improved graph learning-convolutional networks. In: 2020 25th International conference on patternrecognition (ICPR), pp 4363-4370. IEEE
+25. Yang Z, Wang K, Li J, Huang Y , Zhang Y -J (2019) TS-RNN: Text steganalysis based on recurrent neural
+networks. IEEE Signal Process Lett 26(12):1743–1747
+26. Papagiannopoulou E, Tsoumakas G (2020) A review of keyphrase extraction. Wiley Interdisciplinary
+Reviews: Data Mining and Knowledge Discovery 10(2):e1339
+123
+Multimedia Tools and Applications
+27. Florescu C, Caragea C (2017) Positionrank: an unsupervised approach to keyphrase extraction from
+scholarly documents." In Proceedings of the 55th annual meeting of the association for computationallinguistics (volume 1: long papers), pp 1105–1115
+28. Yadollahi MM, Lashkari AH, Ghorbani AA (2021) Towards query-efﬁcient black-box adversarial attack
+on text classiﬁcation models. In: 2021 18th International conference on privacy, security and trust (PST),pp 1-7. IEEE
+29. Gutub A, Alaseri K (2020) Hiding shares of counting-based secret sharing via Arabic text steganography
+for personal usage. Arab J Sci Eng 45(4):2433–2458
+30. Phiri KK, Kim H (2019) Linear secret sharing scheme with reduced number of polynomials. Security and
+Communication Networks 2019
+31. Khan AA, Shaikh AA, Cheikhrouhou O, Laghari AA, Rashid M, Shaﬁq M, Hamam H (2022) IMG-
+forensics: Multimedia-enabled information hiding investigation using convolutional neural network. IETImage Process 16(11):2854–2862
+32. Saini P , Kumar K, Kashid S, Dhiman A, Negi A (2022) BEMSS- Blockwise Encryption based multi
+secret sharing scheme for securing visual content. 2022 IEEE 9th Uttar Pradesh Section InternationalConference on Electrical, Electronics and Computer Engineering (UPCON), pp 1-6. https://doi.org/10.
+1109/UPCON56432.2022.9986417
+33. Shamir A (1979) How to share a secret. Commun ACM 22(11):612–61334. Allahyari M, Pouriyeh S, Asseﬁ M, Safaei S, Trippe ED, Gutierrez JB, Kochut K (2017) Text summa-
+rization techniques: a brief survey. Preprint at arXiv:1707.02268
+35. Gambhir M, Gupta V (2017) Recent automatic text summarization techniques: a survey. Artif Intell Rev
+47(1):1–66
+36. El-Kassas WS, Salama CR, Rafea AA, Mohamed HK (2021) Automatic text summarization: a compre-
+hensive survey. Expert Syst Appl 165:113679
+37. Sun Y , Hangping Qiu Y , Zheng ZW, Zhang C (2020) SIFRank: a new baseline for unsupervised keyphrase
+extraction based on pre-trained language model. IEEE Access 8:10896–10906
+38. Hasan HMM, Sanyal F, Chaki D (2018) A novel approach to extract important keywords from docu-
+ments applying latent semantic analysis. In: 2018 10th International conference on knowledge and smarttechnology (KST), pp 117-122. IEEE
+39. Kong A, Zhao S, Chen H, Li Q, Qin Y , Sun R, Bai X (2023) PromptRank: Unsupervised keyphrase
+extraction using prompt. Preprint at arXiv:2305.04490
+40. Kashid S, Kumar K, Saini P , Dhiman A, Negi A (2022) Bi-RNN and Bi-LSTM based text classiﬁcation
+for amazon reviews. In: International conference on deep learning, artiﬁcial intelligence and robotics, pp62-72. Cham, Springer International Publishing
+41. Kumbhar A, Savargaonkar M, Nalwaya A, Bian C, Abouelenien M (2019) Keyword extraction perfor-
+mance analysis. In: 2019 IEEE Conference on multimedia information processing and retrieval (MIPR),pp 550-553. IEEE
+42. Kim SN, Medelyan O, Kan M-Y , Baldwin T (2013) Automatic keyphrase extraction from scientiﬁc
+articles. Lang Resour Eval 47:723–742
+43. Nomoto T (2022) Keyword extraction: a modern perspective. SN Comput Sci 4(1):92
+44. Liao S, Yang Z, Liao Q, Zheng Z (2023) TopicLPRank: a keyphrase extraction method based on improved
+TopicRank. J Supercomput 1-20
+45. Kılıç Ünlü H, Çetin A (2023) Keyword extraction as sequence labeling with classiﬁcation algorithms.
+Neural Comput Appl 35(4):3413–3422
+46. Delgado-Solano IP , Nunez-V arela AS, Perez-Gonzalez GH (2018) Keyword extraction from users’
+requirements using textrank and frequency analysis, and their classiﬁcation into ISO/IEC 25000 qual-ity categories. In: 2018 6th International conference in software engineering research and innovation(CONISOFT), pp 88-92. IEEE,
+47. Mihalcea R, Tarau P (2004) Textrank: Bringing order into text. In: Proceedings of the 2004 conference
+on empirical methods in natural language processing, pp 404-411
+48. Wan X, Xiao J (2008) Single document keyphrase extraction using neighborhood knowledge. In: AAAI
+vol 8, pp 855–860
+49. Bougouin A, Boudin F, Daille B (2013) Topicrank: graph-based topic ranking for keyphrase extraction.
+In: International joint conference on natural language processing (IJCNLP), pp 543-551
+50. Boudin F (2018) Unsupervised keyphrase extraction with multipartite graphs. Preprint at
+arXiv:1803.08721
+51. Bennani-Smires K, Musat C, Hossmann A, Baeriswyl M, Jaggi M (2018) Simple unsupervised keyphrase
+extraction using sentence embeddings. Preprint at arXiv:1801.04470
+52. Zhang L, Chen Q, Wang W, Deng C, Zhang S, Li B, Wang W, Cao X (2021) MDERank: A masked
+document embedding rank approach for unsupervised keyphrase extraction. Preprint at arXiv:2110.06651
+123
+Multimedia Tools and Applications
+53. Hulth A (2003) Improved automatic keyword extraction given more linguistic knowledge. In: Proceedings
+of the 2003 conference on Empirical methods in natural language processing, pp 216-223
+54. Kim SN, Medelyan O, Kan M-Y , Baldwin T (2013) Automatic keyphrase extraction from scientiﬁc
+articles. Lang Resour Eval 47:723–742
+55. Krapivin M, Autaeu A, Marchese M (2009) Large dataset for keyphrases extraction pp 1-4
+Publisher’s Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and
+institutional afﬁliations.
+Springer Nature or its licensor (e.g. a society or other partner) holds exclusive rights to this article under
+a publishing agreement with the author(s) or other rightsholder(s); author self-archiving of the acceptedmanuscript version of this article is solely governed by the terms of such publishing agreement and applicablelaw.
+123

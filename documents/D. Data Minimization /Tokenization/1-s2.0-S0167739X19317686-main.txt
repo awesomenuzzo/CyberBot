@@ -1,0 +1,1437 @@
+FutureGenerationComputerSystems105(2020)432–445
+Contents lists available at ScienceDirect
+FutureGenerationComputerSystems
+journal homepage: www.elsevier.com/locate/fgcs
+ABlockchainTokenizerforIndustrialIOTtrustlessapplications✩
+DanieleMazzeia,∗,GiacomoBaldic,GualtieroFantonib,GabrieleMonteliscianic,
+AntonioPitasic,LauraRiccia,LorenzoRizzelloc
+aDepartmentofComputerScience,UniversityofPisa,Italy
+bDepartmentofCivilandIndustrialEngineering,UniversityofPisa,Italy
+cZerynth,USA
+a r t i c l e i n f o
+Articlehistory:
+Received3July2019
+Receivedinrevisedform2December2019
+Accepted12December2019
+Availableonline16December2019
+Keywords:
+IndustrialIOT
+Blockchain
+Ethereum
+Smartcontract
+Supplychain
+Industry4.0a b s t r a c t
+TheBlockchainisanoveltechnologywithawiderangeofpotentialindustrialapplications.Despite
+avastrangeoftests,prototypes,andproofofconceptsimplementedinthelastyears,theindustrial
+useofBlockchaintechnologyisstillintheearlystages.EnablingtheinteractionofindustrialInternet
+ofThings(IOT)platformswithBlockchainmightbechallengingbecausestandardsarestillmissingin
+boththesetechnologies.Moreover,integratingproductiveassetswithdistributeddataexchangeand
+storagetechnologiesisakindofactivitythatneedstotakeintoaccountvariousaspects,inparticular:
+interoperability,portability,scalability,andsecuritythatneedtobeguaranteedbydesign.
+Thispaperdescribestheimplementationofaportable,platform-agnosticandsecureBlockchain
+TokenizerforIndustrialIOTtrustlessapplications.TheIndustrialBlockchainTokenizer(IBT)isbased
+onanindustrialdataacquisitionunitabletogatherdatafrombothmodernandlegacymachineswhile
+alsointerfacingdirectlywithsensors.Acquireddatacanbeprocessedlocallyenablinganedgefiltering
+paradigmandthensenttoanyBlockchainplatform.Thesystemhasbeendesigned,implemented
+andthentestedontwosupplychainscenarios.Testsdemonstratedthesystemcapabilitytoactasa
+bridgebetweenindustrialassetsandBlockchainplatformsenablingthegenerationofimmutableand
+trust-less‘‘digitaltwins’’forindustrialIOTapplications.
+©2019ElsevierB.V.Allrightsreserved.
+1. Introduction
+TheBlockchainisanoveltechnologywithawiderangeof
+potentialindustrialapplications[1].InflatedbytheFinTechin-
+dustry,thenconsideredtheholygrailofmodernpaymenthan-
+dling, BlockchainistryingtomovefromFinTechtoindustrial
+applications[2,3].Variousresearchactivitiesdemonstratedthe
+potentialbenefitsofintegratingBlockchaininbusiness.Precision
+farming[4],roboticswarmsforoceanbedexploration[5],smart
+gridforenergyproduction[6],varioushealthcareplatforms[7–9]
+andmanyotherdemonstratorshavebeenimplemented.
+On the Information Technology (IT) side, various proof of
+conceptshavebeenalsobuilt:Blockchainpowereddecentralised
+architecturesforthemanagementofArtificialIntelligence(AI)
+algorithms[1],protectionofmedicaldatabymeansofAIand
+Bitcoin[10],platformfordeepfakevideosidentification[11],AI
+andMachineLearning(ML)algorithmsmarketplace[12],mon-
+etisationofIOTdata[13],andmanyother[1,14].
+✩Demovideosavailableonhttps://www.youtube.com/playlist?list=PLTTabSB
+mQk8s_eMRPCwZfvOIUKwu58yjP.∗Correspondingauthor.
+E-mailaddress: daniele.mazzei@unipi.it(D.Mazzei).However,despitethenumberofdemos,prototypesandproof
+ofconceptsbuiltinthelastyears,accordingtoDeloitte’s‘‘Break-
+ingBlockchainopen’’2018report[15], therealindustrialuseof
+theBlockchaintechnologyisstillachimaera.
+Inthispaper,thedesign,development,andtestofadevice
+aimedatconnectinganyindustrialmachinetoanyBlockchain
+platform are presented. This work aims to build an enabling
+technologyforthediffusionofBlockchaininindustrialapplica-
+tionsthankstotheloweringofthedevelopment,integrationand
+maintenanceeffortsofaBlockchain-poweredIndustrialInternet
+ofThings(I-IOT)solution.
+Thepaperisorganisedasfollows:Firstly,Section2introduces
+theconceptofIOTandanalysestheacademicactivityandmarket
+trendsonBlockchain-poweredIOTsolutions.Section2.1focuses
+ontheIndustrialIOTtechnologyintroducingtherequirements
+and constraints used in Section 3 for the definition of a de-
+signguideline.Section4describesthedesignanddevelopment
+of the Blockchain tokenizer while the tests on two industrial
+supply-chainusecasesaredescribedinSections5.1and5.2.The
+reasonsbehindthechoiceofsupply-chainasatestingdomainare
+describedinSection5.
+https://doi.org/10.1016/j.future.2019.12.020
+0167-739X/ ©2019ElsevierB.V.Allrightsreserved.
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 433
+2. Blockchain and IOT
+The Internet of Things refers to the network of numerous
+physical objects provided with Internet connection [16]. Such
+devices continuously acquire information about the surround-
+ingenvironmentandexploittheirconnectiontoautonomously
+communicatewitheachotherandwithcloudserversusingdata
+aggregationunits(gatewayoredge-server).
+The growing market of low costs micro-controllers (MCU)
+andmicro-processors(MPU),theirsmallfootprint,theirreduced
+costandtheavailabilityofon-boardantennaspermitnowadays
+to makesmartalmost any of our classical devices (e.g. light
+bulbs,doors).Forthisreason,theamountofdataproducedby
+IOTdevicesisexpectedtogrowexponentiallyinthefollowing
+years,togetherwiththeassociatedmarket.Gartnerforecasts[17]
+thattheIOTmarketwillquadrupleinsize,growingfrom$900
+billionin2014to$4.3trillionby2024,withmorethan30billion
+connectedobjects.
+ThecoreconceptatthebasisofIOTandIndustrialIOTtech-
+nologiesisthe‘‘DigitalTwin’’[18,19].Grieves[20,21]firstlypre-
+sentedtheconceptofthedigitaltwinas ‘‘adigitalreplicaofaliving
+ornon-livingphysicalentity’’ .Bybridgingthephysicalandthe
+virtualworld,dataistransmittedseamlesslyallowingthevirtual
+entitytoexistsimultaneouslywiththephysicalentity.Inindus-
+trialapplications,thisallowscreatingvirtualmodelsofphysical
+assets,objectsandgoodstosimulaterealobject’sbehaviourin
+real-worldenvironmentsandapplications[22].
+Thedigitaltwiniscomposedofthreecomponents:thephysi-
+calentitiesinthephysicalworld,thevirtualmodelsinthevirtual
+world,andtheconnecteddatathattiethetwoworlds[20].There-
+fore,toenablethegenerationofadigitaltwin,itisnecessaryto
+interfacephysicalassetswiththedigitalworldusingsensorsand
+interfacesabletoacquireandconvertrealvaluesinstreamsof
+data.
+The growing of the IOT market also leads to another big
+challenge.Thecontinuousgatheringofpersonalandbusiness-
+sensitivedatabyIOTobjectsandtheirvisibilityfromtheInternet
+puttheproblemofsecurityasaprimeconcern.Inthiscontext,
+securityhasnotonlytobeintendedastheavoidanceofphysical
+orproprietydamage(e.g.,causedbythehackingofasmartalarm
+system)butitalsohastobereferredtotheprivacyissue[23].
+Onits‘‘IOTsignals2019’’report[24],Microsoftreportedthat
+85% of respondents are in ‘‘IOT adoption’’ phase, and three-
+fourths of these have IOT projects in planning. Among IOT
+adopters,88%believeIOTiscriticaltobusinesssuccessbelieving
+ina30%ROI(ReturnofInvestment)intwoyears.NearlyallIOT
+adopters(97%)havedeclaredsecurityconcernswhenimplement-
+ingIOTwhile38%ofIOTadopterscitecomplexityandtechnical
+challenges in using IOT in industrial scenarios as a barrier to
+furtheringadoption.Moreover,itisessentialtofocusthatnearly
+one-thirdofprojects(30%)implementedbyrespondentsfailin
+theproof-of-conceptstage,oftenbecausetheimplementationis
+expensivetoscale(declaredby32%)orbottom-linebenefitsare
+unclear(28%).
+Lookingatthisdata,itisclearthatadistributedtrusttechnol-
+ogy,ensuringscalability,privacy,andreliability,forIOTplatforms
+couldbeacornerstoneforthegrowthofasecureIndustrialIOT
+environment[25,26].
+Inordertounderstandifandhowthescientificcommunity
+feels these needs, a corpus composed of Scopus retrieved pa-
+pers’titles,andabstractshavebeencreatedandthenanalysed
+usingTopicModellingtechnique[27].AqueryonScopus1for
+Blockchain AND (IOT OR Internet of Things) ,withapub-
+licationdatewithin2015and2020hasbeenexecutedresulting
+1304papers(seeFig.1).
+TheresultoftheanalysisaresummarisedinTables1and2.Table 1
+Mostusedwordsin‘‘BlockchainANDIOT’’papers’title.
+1.Security 9.Energy
+2.Technology 10.Supply
+3.Privacy 11.Application
+4.Management 12.Device
+5.Architecture 13.Contract
+6.Trust 14.Authentication
+7.Control 15.Storage
+8.Model 16.Software
+Table 2
+Labelsextractedbythetopicmodellingalgorithms.
+1.Securityandprotection 6.Scalability
+2.Privacy 7.Digitalstorageandcloud
+3.Networkarchitecture 8.Embeddeddevicesrequirements
+4.Consensusandminers 9.Smarthomeandintelligentbuilding
+5.Communicationprotocol 10.Businessanddatamarket
+Security,privacyandnetworkarchitecturearethemainrea-
+sonswhyscientistsareworkingontheapplicationofBlockchain
+technologytoIOTandIndustrialIOTarchitectures[28,29].This
+demonstratesthattheacademiccommunitycorrectlyperceived
+currentmarketneedsanditistryingtoaddressthesechallenges
+byportingBlockchainontheIOTworld.
+Forexample,in[30],authorspresentanarchitecturethatin-
+tegratesSoftwareDefinedNetworking(SDN),Blockchainandfog
+computing.TheSDNmonitorsandanalysestrafficdataintheIOT
+networktodetectattacks,whileBlockchaindeliversdecentralised
+attack detection. Fog supports attack detection and mitigation
+attheedgenode.[31–33]presentanapproachforperforming
+collaborativeDeepLearning(DL)atthedeviceleveltoovercome
+privacyleakandobtainenoughdataemployingtheBlockchainto
+ensuretheconfidentialityandintegrityofDLinIOT.
+2.1. IndustrialIOT
+Inbusiness,thefinalgoalistooptimiseproductionandin-
+creaseefficiency.Forthisreason,manycompaniesandfactories
+aretryingtomonitorandanalyseproductionfacilitiescollecting
+data from industrial machines. Industrial IOT is the enabling
+technologyofthisnewphenomenonknownas sensor-drivenbusi-
+ness[34,35].
+IndustrialInternetofThingscanradicallychangetheindustry
+asweknownowadays,butsideeffectscannotbeunderestimated.
+Security, trust and tampering will become major problems in
+thefourthandfifthindustrialrevolutions,anditisnottrivial
+tosolvetheminacontextwherelowpoweredandresource-
+constraineddevicesareubiquitous.Thisleadto trustissues[36]
+thatBlockchainsystems aretryingtodealwith.
+In the industrial context, security is addressed by the CIA
+triad(Confidentiality,Integrity,Authentication)[37]andbythe
+enforcement of communication channels and storage. On the
+other hand, enforcing security by centralising the control and
+managementofthesystemcouldleadtotrustissuesthatarise
+whendataiscontrolledbyasingleagentamongseveralones
+belongingtothesameconsortiumormarket[38].
+While security solutions are already widely available and
+slowly (especially when it comes to constrained IOT devices)
+adopted [39,40], the extensive use of cloud-based centralised
+IOTplatformsmakesthebuildingofatrustedenvironmentvery
+challenging.Atrustedenvironmentisarequirementfortrustless
+applications:theuseoftheadjectivetrustlessaimstounderline
+howthetrustshouldnotberequiredtowardsasingleelementof
+thesystemtoassuretrustpropertiesofthewholeapplication.
+1QueryexecutedonSeptember9th2019.
+434 D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445
+Fig. 1.BlockchainAND(IOTORInternetofThings)queryresultsonScopus(9-9-2019).
+Distributedledgers[41]couldrepresentavaluableresourcein
+solvingtrust-relatedconcernssince,bydatasharingandconsen-
+susmechanismsenforcedbycryptography,theycreatetrusted
+setupsinatrustlessfashion[3,26,42].
+FurthermorethelatesttrendofBaaS(BlockchainasaService)
+platformsseemtooffertherightcompromisebetweentheease
+ofuseofcloudservicesandtrulytrustedsetups,favouringthe
+adoption of Blockchain solutions built by the more significant
+IT and cloud vendors, for example: AWS [43], Microsoft [44],
+IBM[45]andOracle[46].
+Looking at the scientific literature, we can assert that aca-
+demicsidentifiedBlockchainasoneofthemostpromisingtech-
+nologiestosolvesecurityandtrustproblemswhileguarantee-
+ingscalability,privacy,andreliabilityinIndustrialIOTapplica-
+tions[25,47,48].
+Various pilots aimed at using Blockchain as IOT extending
+technology for industrial applications have been done. In [49]
+anauthenticationmechanismbasedonBlockchain-enabledfog
+nodeshasbeenimplementedusingEthereumsmartcontractsfor
+theenforcementofIOTdevicessecurity.In[50]adecentralised
+ProofofDelivery(POD)solutionfordigitalassetshasbeendevel-
+opedusingEthereumsmartcontractstoprovideimmutableand
+tamper-prooflogs,accountability,andtraceabilitythanksalsoto
+theintegrationwiththeInterPlanetaryFileSystem(IPFS)[51].
+2.2. FromIOTdigitaltwintoBlockchaintoken
+Intheprevioussection,theIOTDigitalTwinconcepthasbeen
+introducedlikeanin-silicocopyofreal-worldassets.Asimilar
+conceptisalsopresentintheBlockchainworld:the ‘‘Token’’.A
+Tokenisthedigitalrepresentationofanassetavailableonthe
+Blockchain[52].
+ATokenisnotnecessarilyrelatedtoaCryptocurrencylike
+BitcoinorEtherandcanbeconsideredasasortofsecuritydoc-
+ument.Technically,aTokenisimplementedbyanalgorithmde-
+finedinaSmartContractonaBlockchain.Forexample,Ethereum
+[53,54]isaplatformthatcanbeusedtocreateanyarbitrary
+smartcontract,includingthosethatrepresentdigitalassetscalled
+Ethereum tokens [55].Ethereumtokenscanrepresentanything
+fromaphysicalobjectlikegold(Digix2)toanativecurrencyused
+topaytransactionfees(Golem3).Tokenscanbeusedforavariety
+ofpurposessuchaspayingtoaccessanetworkor,likeinouruse-
+cases,trackingthestatusandmodifyingthevalueofgoodsand
+parcels.
+Like in the case of the IOT Digital Twin, the link between
+aTokenanditscorrespondingphysicalassetisinitiallypurely
+fictitious.TheTokencontainstheassetmodelthatispopulated
+withdatabythealgorithmsimplementedonthesmartcontract
+andthusfirmlyanchored.Thealgorithmofthesmartcontract
+2https://www.dgx.io/.
+3https://golem.network/.guaranteestheuniquenessofthedatasinceitdoesnotallow
+copies,substitutionandcouldalsolimitthenumberofTokens
+availableontheBlockchain. Tokenizationofreal-worldassets,
+isatrendthatgeneratedmuchinterestoverthepastyear[56].
+Followingthesameparadigm,inthiswork,Ethereumtokensare
+usedasatechnologyfortheimplementationofthedigitaltwin
+foratrust-lessIndustrialIOTplatform.
+Followingtheapproachtakenin[57],wedecidedtotestour
+technologyinthecontextofthesupplychainformanufacturing
+(ThetestingdomainisdescribedinSection5).InSections5.1
+and5.2twousecasesarereportedshowinghowEthereumsmart
+contracttokenshavebeenusedasdigitaltwinsofphysicalprod-
+ucts(e.i.anitemproducedbyanindustrialmachineandaparcel
+endowedwithenvironmentalparameterssensors).
+3. Challenges and design guideline
+LinkingBlockchainplatformswithindustrialassetsusingIOT
+devices might lead to technological and cost obstacles. The
+biggestchallengestofaceforaBlockchainsolutionforIndustrial
+applicationsare:
+•interoperability
+•portability
+•scalability
+•security
+Thefollowingsectionreportsananalysisofhowthesechal-
+lengesemerge.Theanalysisisorganisedasaguidelineforthede-
+signofapossibletechnologicalsolution.Theguidelineisdivided
+intosectionsandproducesvariousDesignPrinciplesindicated
+withacapitalDP,followedbyauniquenumericID.
+3.1. Interoperability
+The world of Industrial IOT devices is heterogeneous. PLCs
+havebeenthefundamentalcomputationalunitinfactoriesfor
+decades:equippedwithproprietary,highlyspecialisedsoftware,
+theycannotbeeasilyextendedtosupportcustomfeaturesnor
+replaced.
+Embedded systems running bare-metal software, Real-Time
+OperatingSystem(RTOS)orLinuxbaseddistributionaretypically
+usedassensingandactuationnodes.Nodesarethenconnectedto
+IOTgatewayswheredataareaggregatedandforwardedtocloud
+servicesorcompanyservers.
+Togetherwithsensorsnode,nowadays,awiderangeofau-
+tomatic guided vehicle (AGV) and robotic arms are employed
+infactoriesandwarehouses.Thisroboticsystemstypicallyrun
+thenewde-factostandardROS[58,59]framework,aGNU/Linux
+basedOStailoredforroboticapplications.
+Insuchacompositeenvironment,anyoftheseelementsmight
+needtobecapableoftrackingitsactionsonaBlockchainplat-
+form.Forthisreason,itisnecessarytodesignaninteroperable
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 435
+solution.Inthiscontext,interoperabilitymeansthepossibilityof
+connectinganyindustrialdevicetoanykindofBlockchainable
+tosupportTokensandSmartContracts.
+Insoftwarearchitecturedesign,thisrequirementistypically
+addressed by introducing an abstraction layer. Therefore, the
+designedsolutionmustincludeanabstractionlayerabletobridge
+anyindustrialapparatuswithdifferentsmartcontractenabled
+Blockchains (DP1: Interoperability) .
+3.2. Portability
+InIndustrialcontexts,eachdeviceandapparatushavetobe
+strictlydedicatedtotheaccomplishmentofspecifictasks.Itis
+unacceptabletorequirethemodificationofindustrialapparatus
+software in order to allow these units to perform Blockchain
+operations. Moreover, Blockchain operations and transactions
+can require specific protocols while being computational in-
+tense,threadblockingandtime-consuming.AlltheseBlockchain
+requiredfeaturesarealmostimpossibletoenableinlegacyin-
+dustrialapparatusbutalsoinmostmodernindustrialmachines.
+Forthisreason,itisnecessarytodesignaportablesystem
+aimedatdecouplingBlockchain-relatedoperationsfromappa-
+ratusfunctionalitiesandcapabilities.Inthiscontext,portability
+isdefinedasthecapabilityofthesystemtobepluggedtoany
+Industrialapparatusordevice(alsowithconstrainedcomputa-
+tionalcapabilities)enablingtheexecutionofBlockchain-related
+operationsusingsimplecommandsandwithafire-and-forget
+approach (DP2: Portability) .
+3.3. Scalability
+Scalabilityisdefinedasthecapabilityofasystemtoproperly
+handle a growing amount of work, to keep a stable level of
+efficiencyinresponsetoincreasedinput.Forabusiness,tocope
+withincreasedvolumeoforderswithoutcollapsingorlimiting
+requestsfromclients.Inthiscontext,scalabilityisnotaddressed
+asapropertyoftheindustrialapparatus,butasthepropertyof
+agenericfactorytoaddBlockchaincapabilitiestoitsproduction
+lineseamlessly.
+Inthiscontext,scalabilityisaddressedasapropertyofthe
+industrialIOTplatformthatcanbeaddedtoagenericindustrial
+processseamlesslywhileguaranteeingthefuturecapabilityof
+growingwithoutrequiringimportantintervention (DP3: Scala-
+bility).Itisessentialtohighlightthatsolutionscalabilitycannot
+beaddressedbyincreasingthecomputationalloadontheindus-
+trialapparatusbecausethiswillconflictwithpreviouslydefined
+DR2.
+SinceBlockchainapplicationsintheIndustrialIOTworldare
+stillbeingdefined,havingaflexiblesolutiontoprovideaccessto
+arbitrarysmartcontractenabledBlockchainplatformsguarantee-
+ingscalabilityrepresentsakeyadvantage.
+3.4. Security
+Atrustedsystemshallnotcompromisethesecurityproperties
+oftheconnectedindustrialapparatus.Transactionsmightbesent
+withoutencryptionbutsignedtoguaranteeIntegrityandAuthen-
+tication,likewhathappensintheEthereumpublicnetwork[60].
+Other Blockchain platforms, primarily the ones providing the
+possibilityofdeployingpermissionedconsortiuminstances,also
+allowtoestablishprivatechannelstoassuretransactionsconfi-
+dentiality(i.e.HyperledgerFabric).
+Inanycase,aprivatekeyisneededtosigntransactionsand
+precautionsmustbetakenforitssecurestorageandagainstits
+theft.Therefore,areliablecryptographicstackisrequiredforthe
+executionofthesecurityoperations.Twodesignprinciplesforsecuritycanbederived: (DP4: In-
+dustrial grade security) :protectprivatekeysatleastfollowing
+recommendedIndustrialIOTsecuritystandards; (DP5: Built-in
+security):provideabuilt-inreliablecryptographicstack.
+4. Building the Tokenizer
+Fivedesignprinciplesforatechnologicalsolutionaimedat
+bridging the gap between Blockchain and Industrial IOT have
+beenderivedfromtheanalysiscarriedinSection3.Inthissection,
+theIndustrialBlockchainTokenizer(IBT)developmentprocessis
+described starting from the selection of the hardware compo-
+nentsandthendiscussingthesoftwarearchitecturedesignand
+implementation.
+4.1. Hardware
+Thedefinedguidelineorientedtheauthorstowardstheuseof
+anexternalhardwaresolutionaimedatguaranteeingthecom-
+plete decoupling of Blockchain operations from the industrial
+apparatusroutinesandfunctions (DP2: Portability) .Itwouldbe
+possible,inmodernmachinescontrolledbyanindustrialPCto
+use a pure software solution to be installed utilising modern
+application containerisation techniques. However, it would be
+impossible to guarantee that failure and crashes of the con-
+tainerisedsoftwarewillnotaffecttheentiresystemoperations.
+Moreover,thecontainerisedsoftwarewillusethecomputational
+resourcesofthehostmachineviolating DR3: Scalability .
+On the contrary, dedicated hardware peripheral would re-
+quire commands from the industrial machine while returning
+responses through a standard interface. This condition makes
+mandatory the implementation of a standard, legacy-machine
+supportable, lightweight and scalable communication interface
+for the IBT (DP1: Interoperability) . The dedicated hardware
+shouldalsobecapableoftakingcareon-boardofneededcal-
+culations, assuring reusability in different industrial contexts
+andscenarioswhilealsoguaranteeingscalabilityintermofthe
+number of supported functions and target Blockchains (DP3:
+Scalability).
+Theuseofadedicatedhardwaresolutioncouldreducethe
+scalabilityofthesystemsincreasinglinearlythecostrequired
+fortheconnectionofnewmachinestotheBlockchainservice.
+However,duetothelowpricereachednowadaysbyIOTandI-
+IOTdevices,authorsbelievethattheabove-describedadvantages
+widelyovercomethislimitation.
+Finally,theIBTshouldseamlesslyenablethetokenizationof
+bothindustrialmachinesandgoods (DP3: Scalability) .Forthis
+reason,thedeviceneedstobeendowedwithdigitalinterfacesfor
+theconnectionwithmachinesequippedwithdigitalcontrollers
+butalsowithanalogicportsaimedatacquiringdatafromsensors
+placeddirectlyongoods,parcelsandproductsingeneral.
+AnanalysisofcommerciallyavailableIndustrialIOTgateway
+has been conducted. Nowadays the ‘‘Gateway’’ term is widely
+usedintheIOTcontextmakingitdifficulttoidentifyaspecific
+productcategory.The4ZeroBoxbyTOIsrl4hasbeenchosenasa
+hardwareunitforthedevelopmentoftheIBT.The4ZeroBoxisan
+IOTgatewayspecificallydesignedforretrofitapplicationswitha
+focusonportability,interoperabilityandscalability.
+In particular, DP1: Interoperability comports the need for
+supportingdifferentcommunicationprotocolsfortheinterfac-
+ing with industrial machines, sensors and Blockchain services.
+For the connection with industrial machines, the 4ZeroBox is
+equippedwiththemostpopularindustrialcommunicationinter-
+faces(RS232,RS485,EthernetandCAN)andreadytousesoftware
+4www.thingsoninternet.it.
+436 D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445
+libraryforthemostusedprotocolsarealsoavailable(ModBus,
+EtherCat,CANBus,SiemensS7).Thesystemalsohas13analogic
+inputsthatenabletheconnectionof4–20mA,0–10V,resistive,
+and current-coil sensors. On the Blockchain side, the IBG can
+communicatewithremoteserversthroughthe4ZeroBoxbuilt-
+inEthernetandWiFiinterfaces.Thegatewaysupportsthemost
+commonoverTCP/IPprotocols(HTTP,HTTPS,MQTT,MQTTSand
+other)forwhichsoftwarelibrariesareavailable.Ifneeded,itis
+alsopossibletoinstallaGSMexpansionboard.
+Asolutionreliableforscalability (DR3: Scalability) needtobe
+easytoinstall,fasttoprogram,andeasytomanage.The4ZeroBox
+is easily programmable in C and Python languages thanks to
+theZerynthplatform5[61–64](softwaredetailsarediscussedin
+Section4.2).Moreover,well-documentedprogrammingSDKand
+toolchainarealsoavailabletogetherwithamassprogramming
+toolkitandacertificategenerationtoolchain (DR3: Scalability) .
+Finally,the4ZeroBoxcanbealsolinkedtoadedicatedcloud-
+baseddevicemanagerfromwhichitispossibletomonitorthe
+stateoffield-deployeddevicesandefficientlyperformFirmware
+Over The Air (FOTA) updates and Remote Procedures Calling
+(RPC).
+Furthermore, the 4ZeroBox is equipped with an onboard
+cryptochip(MicrochipATECC508A6),makingitcompliantwith
+the most advanced I-IOT security standards. The ATECC508A
+cryptochipalsosupportsEllipticCurvecryptography[65]which
+isverycommonintheBlockchainworldthusmakingthe4Zer-
+oBoxcompliantwithdesignrequirements (DP4: Industrial grade
+security)and(DP5: Built-in security) .Section4.2detailstheuse
+ofATECC508Acryptochip.
+RegardingDP4andDP5,itisalsonecessarytoconsideranti-
+tamperingcountermeasures.Tamperingdetection/responsetech-
+niquesareextensivelydocumented[66,67]whiletamperingde-
+tectionmechanismsarecategorisedintofourgroups:switches,
+sensors,circuitryandelectronic[66]dependingonthekindof
+tamperingattacktheyaimatprotecting.Ingeneral,theuseof
+theanalogicanddigitalI/Oportsavailableonthe4Zeroboxal-
+lowstheimplementationofanti-tamperingmechanismsaimedat
+activatingkeyerasureprocedureswhendetectingunauthorised
+access[68].However,theseanti-tamperingmechanismsarehere
+identified,andtheirenforceabilitytookintoconsiderationasa
+requirementbutnotimplementedintheIBTprototypedescribed
+inthiswork.
+It is important to highlight that most of the IOT gateways
+availableonthemarketarebasedonSingleBoardComputer(SBC)
+endowedwithMicro-Processor(MPU)thattypicallyruncustom
+Linuxdistributions.Onthecontrary,forsecurityandpowercon-
+sumptionreasons,wepreferredtouseaMicro-Controller(MCU)
+basedsolutionwhereaminimalfirmwarerunsontopofaReal-
+TimeOS(RTOS).DuetotheminimalnatureofMCUfirmware
+andtothearchitectureofreal-timeoperatingsystemsforMCU,
+MCU based embedded devices are less prone to cyber-attacks
+comparedtomainstreamcomputersystemslikeRaspberryPiand
+similarMCUbasedSBCs[69].However,astheStuxnetworm[70]
+proves, MCUs are not entirely safe from attacks but are still
+consideredbytheautomotiveandavionicsindustriessaferthan
+Linuxbasedsystems[71].Anotheraspectthatsupportstheuse
+ofMCUforcriticalapplicationsistherecentreleaseonthemar-
+ketofMCUswithsupportforhardware-implementedTrustZone
+memory.Thissecurememoryisdedicatedtothestorageofap-
+plicationbinariesandcannotbereadfromoutsideormodified
+ifmarkedas‘‘locked’’[72].Therefore,onceadevicehasbeen
+programmedforaspecificapplicationanddeclaredaslocked,
+itsfirmwarecannotbechangedanymore,preventingsoftware
+5www.zerynth.com.
+6https://www.microchip.com/wwwproducts/en/ATECC508A.manipulation.Regardingpower-consumption,MCUsaretypically
+designed for low-power applications. Thus, they can be used
+in battery-operated scenarios for a very long time. Moreover,
+MCUhardwareandRTOSarchitecturesaredesignedforfrequent
+hibernationallowinganeasierdesignoflow-powerfirmwarefor
+batteryoperatedscenarios.
+4.2. Software
+Requirements R1, R2, R3 have been partially addressed by
+choosingadedicatedexternalunitaimedattakingcareofall
+theBlockchainrelatedoperationsusingagenericinterfacewith
+theindustrialmachine.Therefore,theIBThardwarewillexpose
+toindustrialmachinesasimplecommandprotocolthathasto
+beaccessibleoveravarietyofinterfacesenablingtheexecution
+offire-and-forgetBlockchainoperations.Fig.2reportstheIBT
+firmwarearchitecture.Thedrawingshighlightthevarioussoft-
+wareelementsimplementedontheIBTfirmware.Blueblocks
+representsoftwaremodulesthatareexecutedontheIBTMCU
+whileingreenisreportedthecryptographicstackthatisexe-
+cutedonthededicatedIBTcryptochip(seeSection4.1formore
+detail).Blocksrelatedtocloudorexternalserversservicesare
+reportedinred.Thedeviceisconnectedtoindustrialmachines
+equippedwithdigitalinterfacesthroughoneofthecommuni-
+cationinterfacessupportedbythe4ZeroBox.The communication
+interfacedrivertakescareofhandlingtheconnection.Thedriver
+sendsandreceivesdatafromthe commandparser modulethat
+canbeconsideredasthecommunicationabstractionlayerofthe
+IBTintroducedinSection3andrequiredby (DP1: Interoper-
+ability)and (DP2: Portability) .WhenusingtheIBTsystemfor
+themonitoringofgoods,parcelsorlegacymachinesthatdonot
+supportdigitalcommunicationinterfaces,asetofsensorscan
+bepluggedtotheseassetsmakingtheIBTabletoacquiredata
+relatedtotheassetstatus.Datagatheredbythesensorsareac-
+quiredandfilteredlocallyonthe4ZeroBoxMCUusingadedicated
+softwaremodule.Datagatheredbythecommandparserorbythe
+sensorsreadingmodulearesenttotheBlockchainlayerwhereall
+thefunctionsrequiredfortheenablingofBlockchainoperations
+areimplemented.TheBlockchainlayercommunicateswiththe
+externalcryptochipwherethecryptographicstackhandlesall
+therequiredcryptographicoperations.TheIBTisconnectedwith
+the external Blockchain server through a networking module
+thatmanagestheEthernetorWificonnection.Thenetworking
+moduleusestheexternalcryptochipforthemanagementofthe
+networkingsecuritykeysandcertificates.
+4.2.1. SoftwareDevelopmentKit(SDK)
+Development phase started with the choice of an SDK to
+program the IBT. The official 4ZeroBox SDK is Zerynth [61], a
+platformthatallowsprogramminginPythonMCUsforIOTap-
+plications.ZerynthisaPythonVirtualMachines(VM)thatexe-
+cutesabytecodecompiledfromPythonbyanexternaltoolchain
+(Zerynth Studio). The Zerynth VM runs on top of a real-time
+operatingsystemsupportingmulti-threadedprogramming.The
+ZerynthVMexecuteseachPythonthreadasadedicatedthreadof
+theRTOSmakingZerynthallowingthebuildingofmultithreaded
+module-basedsoftwarearchitecture.
+Moreover,theZerynthchoicehasalsobeenmotivatedbythe
+portableandhigh-levelnatureoftheZerynthVirtualMachine.A
+firmwarewrittenwithZerynthinhybridC/Pythoncanrunvir-
+tuallyonany32-bitmicrocontroller (DP2: Portability) givingus
+thepossibilitytomigratetootherMCUbasedsolutionsdifferent
+fromthe4ZeroBox.
+ZerynthSDKsupportsadvancednetworkingandhasabuilt-in
+cryptographicstackintegratedseamlesslywithhardwarecrypto
+elementsliketheATECC508Aforwhichlibrariesareavailable.
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 437
+Fig. 2.Firmwarearchitectureoverview.BlueblocksrepresentssoftwaremodulethatareexecutedontheIBTMCUwhileingreenisreportedthecryptographic
+stackthatisexecutedonthededicatedIBTcryptochip.Blocksrunningonexternalserversarereportedinred.(Forinterpretationofthereferencestocolourinthis
+figurelegend,thereaderisreferredtothewebversionofthisarticle.)
+TheZerynthSDKsupportsallthecommunicationinterfacesavail-
+ableonthe4ZeroBoxprovidingalsohigh-levelprotocollibraries
+that have been used for the implementation of the interface
+drivers.
+4.2.2. Hayescommandsetextended
+Forthebuildingofthecommandparser,acommandprotocol
+hasbeendefinedandimplemented.
+Apopularcommandset,usedfordecadesintelecommunica-
+tionsandnetworking,istheHayesprotocol,alsoknownasAT
+commandset[73].Ithasbeenintroducedandusedextensively
+withmodems,modulator/demodulator devicesintheclassical
+sense,takingdigitalinformationand modulatingitoverdifferent
+channels,andreturningdigitalinformation demodulatedfromthe
+external channel (typically analog channels). In the years, the
+concept ofmodemhas gained full acceptance, even indicating
+communicationdevicesusedtolinkcomputerstoothercomput-
+ersornetworks.Inthisbroadersense,theIBTcouldbeconsidered
+asasortofBlockchainmodem.Amodemthatcreatesthelink
+betweenanindustrialassetandaBlockchainserverproducing
+theassetdigitaltwinusingtheBlockchaintokentechnology.
+HayescommandsetiscomposedofbasicATcommands,com-
+mandformatsandresultcodes.Ithasbeenextendedforcustom
+solutions,themostpopularofwhichistheoneadoptedforGlobal
+SystemforMobileCommunications(GSM)modems[74].Inthis
+work,acustomsetofATcommandsforimplementingBlockchain
+functionalitieshasbeendeveloped,makingtheIBTabletoactas
+aBlockchainmodemforindustrialassets.
+Table3reportsthesetofATcommandsimplemented.
+Inthiswork,ATcommandshavebeenspecificallytargeted
+to a Blockchain of the Ethereum family. Our choice is moti-
+vated by the fact that, currently, Ethereum is one of the few
+Blockchainofferingamaturetechnologyforthedevelopmentof
+smartcontracts.OtherBlockchains,likeCardano7orAlgorand,8
+arecurrentlydevelopingtheirsmartcontractsystem.Itisworth
+noticingthatoursystemwillbeabletoincludeaninterfacewith
+thesesmartcontractswithminimalchangessincethisrequires
+7https://www.cardano.org.
+8https://www.algorand.com/.Table 3
+ImplementedHayescommand.
+Command Description
+AT+CADD=<contract_address >SettheaddressofaContractAccount.
+AT+CADD=? Getcurrentlyusedcontractaddress.
+AT+CGAS=<function_name >
+, <gas_price >, <gas_limit >Specifygas_priceandgas_limitfor
+functionfunction_name
+AT+CGAS=<function_name >
+,?,?Getgas_priceandgas_limitfor
+function_name
+AT+CTX=<function_name >, <
+value>, <arg1>, <arg2>
+, . . . , <argN >SendatransactiontochosenContract
+Address,calling function_namewitha
+listofargumentsandavalueinETH
+(canbe[none]). arg1,arg2, . . . ,argN
+areoptional.
+AT+CCALL=<function_name >
+, <rx_bits>, <rx_type>, <
+arg1>, <arg2>, . . . , <argN >Callfunction_namenotmodifyingthe
+blockchain(notneedingapaid
+transaction),toretrieveContractinfo
+(e.g.variablesstate).Currentlyasingle
+returnvalueissupportedand rx_bitsis
+usedtospecifyvaluelengthinbits,
+whilerx_typespecifiesvaluetype.
+Possiblerx_typeareSTRING ,INTEGER.
+arg1,arg2, . . . ,argNareoptional.
+AT+ETXCNT Gettransactionscountforcurrent
+account.
+AT+ERPC=<rpc_address >SetthenodeexposingtheJSON
+ac{RPC}servertointeractto.
+AT+ERPC=? Getthecurrentlyusedaddressofthe
+node.
+onlyamodificationofthecommandparsermodule.(Morede-
+tailsonthereasonsbehindthechoiceofEthereumasatesting
+platformarereportedinthefollowingsection.)
+4.2.3. Blockchainplatformandinterface
+TheBlockchainlayerreportedinFig.2hasbeendeveloped
+as an abstraction layer aimed at connecting the IBT with any
+Blockchainplatformthatsupportssmartcontractsandtokens.
+Fortheimplementationoftheusecasedemo,variousBlockchain
+platforms(IOTA,HyperledgerandEthereum)havebeenanalysed.
+IOTAisacrypto-currencyemergedin2015intendingtosolveone
+438 D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445
+oftheBlockchain’smainproblems: scalability.Blockchaintech-
+nologieslikeBitcoincannotexpandquicklyandwillnotbeable
+toprocesshigh-speedtransactions.IOTAaddressestheseissues
+withanewtechnologycalled Tangle.Thetangleisaspecialised
+databaseinwhichparticipantshavetoconfirmtwoothertrans-
+actionsiftheywanttoexecuteone.Withthisalgorithm,IOTA
+cantheoreticallyprocessaninfiniteamountoftransactionsand
+growsitsnetworkstrengthifmoreparticipantsjoin[75].Unfor-
+tunately,IOTAdoesnotnativelysupportsmartcontractsand,at
+thecurrentstage,variousdiscussionontheneedofextendingthe
+platformwiththisfeatureisactiveontheIOTAcommunityand
+withintheboardofdirectors[76].Hyperledgerisaconsortium
+thatincubatesandpromotesarangeofbusinessBlockchaintech-
+nologies,includingdistributedledgerframeworks,smartcontract
+engines,clientlibraries,graphicalinterfaces,utilitylibrariesand
+sampleapplications.Differentcompanyandgroupscreatedtheir
+projectsascustomisationoftheHyperledgermodulararchitec-
+ture. However, at the current stage, a general-purpose public
+projectbasedonHyperladgerisnotyetavailable[77].Onthe
+other side, Ethereum [60] is considered the most prominent
+frameworkforsmartcontractsanditscapitalisationreached1
+billiondollarssinceitslaunchinJuly2015[78].Ethereumisavail-
+ableaspublicBlockchain;ithasafreetestnetworkandcanalso
+beinstalledlocallyfortestanddevelopmentpurposes.Moreover,
+a dedicated Zerynth library for interfacing with the Ethereum
+Blockchainisalreadyavailable.9Forthisreason,Ethereumhas
+been chosen as a platform for the implementation of the use
+cases.
+However, it is important to highlight that several security
+vulnerabilities have been discovered in Ethereum smart con-
+tracts.Thesevulnerabilitieshavebeenidentifiedwithhands-on
+developmentexperiences[79]andstaticanalysisofthecontracts
+availableontheEthereumBlockchain[80].Ethereumhasalsosuf-
+feredrealattacksonsmartcontracts.Themostsuccessfulattack
+managedtosteal$60Mfromacontract[78].Thisleadtothe
+publicationofvariousworksaimedatmitigatingvulnerabilities
+ofEthereumsmartcontract.In[51]anoff-chainsecuredownload
+phasebasedontheInterplanetaryfilesystemhasbeenaddedto
+theEthereumnetworkobtainingproofofdeliverymechanism.
+TheATECC508Acryptoelementisoneofthefirstscryptochip
+tointegrateECC(EllipticCurveCryptography)algorithms,butun-
+fortunately,atthecurrentstage,itonlysupports secp256r1curve
+whileforsigningEthereumtransactionthe secp256k1[81]curve
+isrequired.Forthisreason,inthiswork,thecryptochipisused
+forthegenerationoftheprivatekeyonlywhilethetransaction
+issignedontheIBTmicrocontrollerusingtheZerynthEthereum
+library.IBTprivatekeyisgeneratedusingtheATECC508Acrypto
+chipintegratedhigh-qualityFIPS800-90[82]RandomNumber
+Generator(RNG).Thegeneratedkeyisthenstoredinthecrypto
+chip TrustZone memory and accessed by the Blockchain layer
+runningonthemicrocontrollerforthesigningofEthereumtrans-
+actions.
+Moreover,theATECC580Afeatureshardwaremonotoniccoun-
+ters that can be useful to further add security guarantees on
+the Ethereum transaction nonces. Authors are aware that, at
+thecurrentstage,standardEthereumimplementationdoesnot
+supportpermissionedBlockchaindeploymentthatisattracting
+muchattentionintheindustrialworld.However,variouspar-
+allelprojectsareaddressingthisissuebycreatingopen-source
+EthereumforksliketheJ.P.MorganQuorum[83],thatextends
+standardEthereumwithdataprivacyandconsortiuminstances.
+9https://docs.zerynth.com/latest/official/lib.Blockchain.Ethereum/docs/index.
+html.4.2.4. Smartcontract
+AgeneralsmartcontracthasbeendevelopedusingSolidity,10
+theofficialEthereumprogramminglanguage.Thecontractacts
+asastorageforacquireddataandenablesthecreationofthe
+digitaltwinbyproducingtheBlockchaintoken(limitationofthis
+choicearediscussedin6).Thecontracthasbuilt-inrulesthat
+canbeusedaccordingtotheindustrialscenariosforupdatinga
+shipmentvalueorgeneratingproductionalertsandalarmsbased
+onthetrackeddataandhistory.
+Thecontracthasbeendevelopedusingthe Trufflesuite.Truffle
+includes a toolchain to compile Solidity code, deploy it on a
+Blockchain,rununittests,andimplementsaninteractiveconsole
+tousethesmartcontractmethods.The Ganachetoolhasbeen
+usedforrunninglocallyanEthereumdebugBlockchainwithauto
+miningcapabilities.
+Once deployed on a Blockchain, the public address of the
+deployedcontractmustbeembeddedintheIBTBlockchainlayer
+firmwaremoduletogetherwithitsABI(ApplicationBinaryInter-
+face)whichcontainsthesignaturesofthemethodsexposed.The
+contractdoesnotcallothercontractsandhasbeenbuiltwithsim-
+plicityinmindtoavoidsomecommonsecuritypitfallsthatmay
+beusedbyanattackertomakeunauthorisedtransactions[78].
+Thesmartcontracttakesadvantageof eventsforamoreaccessible
+developmentoffront-endmonitoringapplications.
+Anarbitrarynumberofassettypescanbeconfiguredinthe
+contractsfortheenablingofadifferentruleset.Inmoredetails,a
+trackeditem(e.iaparceloranyitemproducedbyanindustrial
+machine)isastructcomposedof:asender(Ethereumaddress),a
+receiver(Ethereumaddress)and(optionally)aninitialvalue(in-
+teger,inWei).ThereadingsfromtheIBT communicationinterface
+driverordataacquisitionandfiltering modulesareencodedina
+singlebytearrayinordertoavoidhittingthemaximumstacksize
+oftheEVM(EthereumVirtualMachine).
+Thesmartcontractcanbeseenasadigitallysignedcertificate
+for the correct production or handling of the goods and as a
+receiptforthepayment(whenrequired).Thecontractalsoacts
+asamiddlemanforthepaymentsenablingthereceivertopay
+withitsEthereumaccount.
+Thesmartcontractbecomesanasset (a token)thatincludesa
+copyoftheparcel/itemdata (digital twin)andalsoadigitalised
+storyofthechangesappliedtotheitemvalueandpropertiesby
+therulesdefinedinthecontract (a shipping certificate) .
+Thefollowingfunctionshavebeenimplementedonthecon-
+tract:
+•createagood.Thisfunctioniscalledbythemerchandise
+producer,specifyingtheconsumeraddress,thecurrentpo-
+sition,andtheaddressofthenextagentinchargeofthe
+transportation;
+•take a good.This function is called by the next agent in
+chargeofthetransportation,alsospecifyingthedesirednext
+takerinthechain;
+•give a good.This function is called by the current parcel
+carrier when transferring good ownership to the desired
+taker;
+•retrievethelistofcarriersforgood. Thisfunctionreturnsthe
+updated list of carriers so that, for example, after taking
+agood,anagentcanbesureoftransferredownershipby
+checkingthelastelementofthelist;
+•retrievethelistoftransfertimestampsforgood. Thisfunction
+returnsalistoftransfertimestampstocheckwheneach
+transfer,ofaspecificgood,happened;
+•updategoodposition. Thisfunctioniscalledbythecurrent
+carriertoupdatetransportedgoodlocation.
+10https://github.com/Ethereum/solidity.
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 439
+•createshipment. Thisfunctionregistersnewshipmentmeta-
+data(ID,senderaddress,receiveraddress,initialvalue)in
+thecontract.
+•update shipment. This function stores new data received
+fromdevicesensorsandupdategoodsvalueaccordingly.
+•getshipmentdata. Thisfunctionreturnsalltheregistered
+information,includingthecurrentvalueandthehistoryof
+dataloggedfromsensors.
+•completeshipment. Thisfunctionmarksashipmentascom-
+pleteanddelivered.Thisfunctionrequiresthecallertopay
+fortheshipment.Theamountisthelastcomputedvalue.
+TransactionscanbeexecutedbyIBTauthoriseddevicesorby
+APPsassociatedwiththeoperator’sidentity.
+Moreover,thesmartcontracthasbeenbundledwithsome
+unittestsranwithintheTrufflesuitebeforeactuallydeploying
+ittoaprivateEthereumtestBlockchain.Themainfunctionsof
+thecontracthavebeentestedagainstsomeexpectedresultsand
+differentfakeitemgenerationshavebeenproducedsimulating
+incomingdatafromtheIBTinordertoverifythesmartcontract
+functionalitiesandruleexecution.
+4.2.5. Userinterfaceanddashboard
+Auserinterfacegenerationbackendhasalsobeenrealisedto
+reportdatapublishedontheBlockchainbytheIBT.
+TheinterfacehasbeenbuiltusingWeb3js11forcallingsmart
+contract methods from javascript, React12and Leaflet13with
+OpenStreetMap14for the development of the UI components
+includingatrackingmapwhenrequiredbytheuse-case.
+Thebackendallowsthegenerationofapplicationsthatcanbe
+executedinanywebbrowser,allowingtheuseofsmartphone
+andtabletasmonitoringdevices.AsaproviderfortheEthereum
+RPC (Remote Procedure Call) interface Metamask15has been
+selectedastheeasiestwaytocallasmartcontractmethodfrom
+insideaweb-browser.Metamaskcanbeinstalledasanextension
+forthemostpopularbrowsers: GoogleChrome,MozillaFirefox,
+andOpera,replacingthebuilt-inWeb3jsengineandprovidingan
+improveduserexperience.
+5. Test: Blockchain for distributed supply chain management
+With big industrial and technological entities working to-
+gethertoachieveproduction-readysolutions,theSupplyChain
+fieldseemsthebestcandidateforbroadadoptionofBlockchains.
+As defined by Swaminathan et al. in [84] a supply chain can
+bedefinedasanetworkofautonomousorsemi-autonomousbusi-
+nessentitiescollectivelyresponsibleforprocurement,manufacturing
+anddistributionactivitiesassociatedwithoneormorefamiliesof
+products.
+Thus,asupplychaincanbeconsideredasamulti-agentnet-
+work.Therefore,theperformanceofeachentitydependsonthe
+performanceofothers,ontheiroperationsandtheircoordination
+activities.
+Theneedtotrackinreal-timeshippinggoodsamongmany
+distributors,bothconcerninggoodsconditionsandpassagesof
+ownership,hasforcedtheSupplyChainManagement(SCM)sec-
+tortoapproachdigitaltrackingsolutions[85]whichareslowly
+replacingpaper-basedtransportbills[86].However,Blockchain–
+SCMintegrationisstillinitsinfancy[87]andtherecentquery
+((Blockchain)AND(IOT OR (internet of things)) AND
+11https://web3js.readthedocs.io/en/1.0/.
+12https://reactjs.org/.
+13https://leafletjs.com/.
+14https://www.openstreetmap.org.
+15https://metamask.io/.(logistics OR (supply chain))) onScopusproducedonly
+40results.16
+On the other hand, data cannot be collected by the single
+entitiesparticipatinginthechainandstoredinprivatedatabases,
+withouttrustissuesarising.Therefore,distributedledgersaimed
+atcreatingimmutableandsharedrecordsofeverytransaction
+associatedwithphysicalassetscanenforceanewleveloftrust
+inthesector.
+FollowingIBManalysis[88],Blockchainsolutionswouldhave
+acriticalimpactonthreedifferenttrust-relatedareas:
+•Visibility:Blockchainscreatesvisibilityinwherethingsare,
+but also traceability in where things were. Even compa-
+niesthathavemasteredvisibilitywithintheirorganisation
+find it difficult, today, to handle the massive amount of
+documentsproducedfromdozensofvendorsinvolvedin
+thesupplyprocess.Aseminalexampleisthewheatsupply
+chainwhereeverythingneedstobetrackedandreported
+ateverypassage, fromthefarmtotheshippingcontainerto
+thefactoryfloortotheloafofbreadonashelf .Thanksto
+improvedvisibility,managerscouldactandplanaccordingly
+tothegoodsstateinreal-time.Anotheradvantagecarriedby
+greatervisibilityisthepossibilityofreducingtheabsolute
+numberofdisputesandthetimeneededtoresolvethem.
+Eliminatingtheneedforintermediariesaimedatcreating
+trustamongvendorswouldalsolowerthecosts;
+•Optimisation:optimisationcomesasaconsequenceofreal-
+timevisibility.Beingawareaheadoftimeofasupplier’s
+shipmentstatewouldallowtheorganisationtotakeinternal
+actionsaccordingly:stepstoreshuffleinternalinventoryor
+completetheshipmentfromadifferentsupplierincaseof
+partialshipment,forexample.Aniterativeoptimisationpro-
+cesswhichbecomespossibleonlythankstodataavailability
+and reliability. Lowering the trust barrier would make it
+easierforcompaniestoswitchpartners,makingthemarket
+moredynamic;
+•demand:withdataaboutcustomerpurchasesavailableto
+every participant in the production and distribution net-
+work,everyentitywouldbeupdatedonrealmarketde-
+mands.Democraticdemanddatacoulderadicateoneofthe
+mostintractablechallengesofthesupplychain:the bull-
+whip effect[89](Fig.3),whereordersareinflatedasthey
+movefromfinalcustomertomanufacturerdueforexample
+tostockunitpurchase.
+Forthesereasons,wedecidedtofocusontheSupplyChain
+domainwhereagoodgoesfromawarehouseandreachesthe
+finaluserafterhavingpassedthroughactorsandprocessesthat
+can modify its value. For making the explanation more pre-
+ciseandclosertorealscenarios,twodifferentusecaseshave
+beenimplemented:(1)internallogisticand(2)externallogistic.
+(Videosoftheusecasesareavailableonhttps://www.youtube.
+com/playlist?list=PLTTabSBmQk8s_eMRPCwZfvOIUKwu58yjP.)
+5.1. Usecase1:Robotizedwarehouseandtransportation
+ArobotisedwarehouseapplicationhasbeensetuptotestIBT
+capabilitiesonaproductionsite(internallogistic).Theinternal
+logisticsetupincludestwodifferentrobotsandahumanoperator,
+representingaplantwheregoodsareproducedandmovedfrom
+afirstproductionsitetoasecondcustomisationlineemploying
+roboticarms,AGVs(AutomaticGuidedVehicle)andhumanoper-
+ators.Thistestaimstoreproduceacriticalstepinsupplychains:
+the passage of ownership.
+16QueryexecutedonJuly1st2019.
+440 D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445
+Fig. 3.Orderinflationfromcustomertomanufacturer[89].
+Intheinternallogisticscenario,thegood(theteddybearin
+Fig.4)isinitiallyproduced(andowned)byaKUKAmanufacturing
+roboticarm(Kuka-LWR4+17)ideallyplacedattheproduction
+plant. The good is then transferred to an autonomous vehicle
+(iRobotRoomba18)whichmusttransportittothecustomisation
+plantand,duringtransportation,updatepositiontrackinginreal-
+time.Atthesecondplant,ahumanoperatortakesownershipof
+thegoodtoapplyneededcustomisationsandmakeitreadyfor
+finaldistribution.Inthiscontext,theKukaarmcanbeidentified
+asgoodsproducer,theiRobotRoombaasgoodscarrierandthe
+humanoperatorasgoodsconsumer.
+(Demovideo:https://youtu.be/58ZccdBBKoA)
+5.1.1. Workflowandexecution
+Fig. 5 reports a detailed description of the internal logistic
+usecaseworkflowfromtheperspectiveofeachagent(columns).
+Blocksrepresenttheagent’sstatesthatarereportedinredwhen
+interactionwiththeBlockchainsmartcontractisrequired.
+Fromtimet0totimetf,goodownership(bluecircleinwork-
+flowblocks)passesfromproducer(Kukaarm)toconsumer(hu-
+manoperator).
+Reported workflow highlights the need of an identification
+mechanismtoleteachagentrecognisethetransactionpartner
+andauthorisethetransferprocess:asaconsequence,eachagent
+hasauniqueIDthatisalsoprintedonaQRcodetobecarried
+andtobevisiblefortestingpurposes.
+Inthisscenario,theoperator(henceforthO)isabletomonitor,
+through a simple dashboard (henceforth D), all transportation
+phasesheredescribed:
+–t0(good creation): Kukaarm(henceforthK)createsagood
+instanceattheproductionsite,theoperatordetectsthisactionon
+theDwhichreportscreatedgoodsIDandcurrentcarrier.iRobot
+(henceforthR)isalsoable,thankstopluggedIBT,todetectgood
+creationandstartsmovingtotheproductionsitefortakingthe
+item.
+–t1(first identification): Rarrivesatproductionsite,iden-
+tifies K thanks to its QR code and calls GoodsTracker take
+functionforgood26.Kcompletestheidentificationphasetooand
+startsthephysicaltransferprocess.
+–t2(good transfer): Kcompletesthephysicaltransferphase
+andcalls GoodsTracker give function,authorisingthetrans-
+ferofownershipperformedby GoodsTracker SmartContract
+functionontheBlockchainplatform.
+17KukaLightWeightRobot4+https://www.kukakore.com/.
+18https://www.irobot.com/about-irobot/stem/create-2.–t3(ownership transferred): Rdetectsownershiptransfer
+andstartsmovingtowardsOsite.Dshowsachangeinownership.
+Furthermore, the transfer table is updated with a transfer id,
+human-readabletimestampofthetransferandnamesofinvolved
+giverandtaker.
+–t4(intermediate position update): Rstopsatanintermedi-
+atepositiontoupdategoodslocationcoordinates:thechangeis
+immediatelyvisibleforOthroughD.
+–t5(second identification): RarrivesatOsiteandupdates
+goodlocationcoordinatesforthesecondtime.Itisimmediately
+identifiedbyOwebcamandrecognisesOthankstoshowedQR
+code,authorisingthereleaseofthegoodscalling GoodsTracker
+givefunction.Abutton,notifyingcarrierarrival,appearsonD.
+–t6(good accepted by consumer): Ophysicallytakesthe
+goodfromRcarrierandclicksonthebutton,triggeringa Good-
+sTracker take functioncall. GoodsTracker contractperforms
+thepassageofownership,whichisshownonD.
+Fig.6showstheuserinterfacecustomisedforthisspecificuse-
+case.Theinterfaceallowsreal-timemonitoringoftheproduction
+and transportation of the goods while also enabling the hu-
+manoperatortointerfacewiththeBlockchainsystemaccepting
+incominggoods.
+5.2. Use case 2: Shipment condition monitoring and goods value
+real-timemodification
+Inthisusecase,theIBThasbeenusedasasortofBlockchain-
+poweredsmartsensorforshipmentstatemonitoring.
+TheIBThasbeenintegratedforthepurposewithtwoenvi-
+ronmentalparametersensorsandaGSMmoduleinthe4ZeroBox
+(seeFig.7).The4ZeroBoxhastwoexpansionsocketsbasedonthe
+MikroBUSstandard.Forthisusecasethesocketshavebeenused
+forthepluggingofthefollowingsensors:
+•BME280,anintegratedenvironmentalunitcapableofdetect-
+inghumidity,pressure,andtemperature;
+•LEA-6S,ahighperformanceGPSpositioningchip;
+•ADXL345,a3-axishigh-resolutionaccelerometerwithultra-
+lowpowerconsumption.
+allthesensorsmountedontheexpansionboardscommunicate
+with the IBT microcontroller via I2Cprotocol handled by the
+Zerynthdedicatedlibrariesalreadyavailable.
+(Demo videos: https://youtu.be/KyCgE_xNwuY and https://
+youtu.be/kIjS6R5yIW4)
+5.2.1. Workflowandexecution
+In Fig. 8, the external logistic workflow is illustrated from
+thepointofviewofthedevice,thesender,andthereceiverof
+theshipment.Asincase1,eachcolumnrepresentsanagent,
+redblocksindicatewherethatinteractionwiththeBlockchainis
+requiredwhilebluecirclesindicatetheownershipofthegoods.
+Also,inthisscenario,theoperator(O)canmonitor,through
+thedashboard(D)alltransportationphasesheredescribed:
+–t0(parcel creation): TheOperatorcreatesaparcelusing
+thedashboard(D)toinsertthesenderandreceiveraddresses
+togetherwiththeinitialvalueoftheparcel.
+–t1(IBT configuration): The IBT device is notified by the
+backendonthecreationofanewparceltobetracked.Sensors
+datastoredonthedevicebufferarecleaned.
+—t2(New Shipment Creation): TheIBTcallstheBlockchain
+functionforthecreationofanewshipmentpassingthedataof
+theparcelandtheinitialvalueofthesensorreads.
+–t3(Sensor Data Stream): IBTdevicestreamstheacquired
+datatothebackendwithafrequencydefinedinthefirmware.
+Thisfrequencycanalsobeexposedasaparameterinorderto
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 441
+Fig. 4.TheKukaArmreleasingtheproduceditem(teddybear)ontheiRobotRoombaautonomousvehicle.Inoverlaytheoperatormonitoringdashboard.
+Fig. 5.Internallogisticworkflow.Redblocksindicatewhereaninteractionwith
+theEthereumsmartcontractisactivatedwhilebluecirclesindicateateachstage
+whoistheagentowningthegood.(Forinterpretationofthereferencestocolour
+inthisfigurelegend,thereaderisreferredtothewebversionofthisarticle.)
+alloweasycustomisationoftheparcelwithoutrequiringdevice
+firmwaremodification.
+–t4(Shipment Status Monitoring): Boththesenderandthe
+receivercanmonitorinreal-timeusingthedashboardthestatus
+oftheparcelvisualisingthecurrentGPSposition,thevaluein
+ETH,andthesensorsdata.
+–t5(Shipment delivered): Thereceiverdeclarestheparcel
+arrivedandacceptstopaythefinalvalueinETHinordertotake
+theparcelandclosetheshipment.Eventsfromthedashboardare
+senttothebackend.Thesmartcontractisexecutedforthelast
+timeandpermanentlystoredontheBlockchain.
+–t6(Device Stop and Reset): Thebackendnotifiesthedevice
+thattheshipmentatwhichitwasassociatediscompleted.Thesensorsdatastreamisterminated,andthedevicesettotheidle
+status.
+Fig.9showstheuserinterfacecustomisedforthisspecific
+use-case.Theinterfaceallowsreal-timemonitoringoftheship-
+mentpositionandstatus.Sensorsdataarereportedinreal-time
+together with the smart contract calculated parcel ETH value.
+Theinterfacealsoallowsthehumanoperatortointeractwith
+the Blockchain system by accepting the incoming parcel, thus
+transferring(paying)thereportedamountofETHtotheparcel
+senderaddress.
+6. Costs and sustainability analysis
+ThisworkshallbeconsideredaProofofConcept(POC)ofhow
+BlockchaintechnologycanbeusedinindustrialIOTcontextsfor
+themonitoringofassetsandgoodsintrust-lessscenarios.Inthis
+preliminaryversionoftheIBT,thesmartcontractpermanently
+storeseverydatareceivedfromtherobot/sensors/assetsonthe
+Blockchain.Thisisabiglimitationleadingtocostandscalability
+problems.Inthereportedusecases,thecontracthasbeenexe-
+cutedbyalocalEthereumnode,andthetotalgascostforthe
+shipmentoftheusecase2hasbeencalculatedasreportedin
+Fig.10.Thecostoftheshipmentislinearlydependentbythe
+amountofdatapushedfromtheIBTtothenode.Forexample,
+sendingapacketofdataevery10minforaweekwouldcon-
+sumeabout150’000’000gasunits,whichinJune2019areworth
+$121.
+Thisscalabilityandcostlimitationcanbereducedbychanging
+thesmartcontractstructure.Forinstance,havingthepossibility
+towritecodetobeexecuteddirectlyontheIBTmicrocontroller,
+itispossibletomovefromapushingstrategytoanevent-based
+paradigm where sensors data are analysed locally, and events
+only are sent to the Blockchain. This simple modification will
+dramaticallydroptheshipmentcostofusecase2toafewgas
+unitswithoutinfringingtheguidelineandspecificationdiscussed
+above.
+Another critical point is the number of transactions that a
+deviceexecuteforstoringallthedesiredinformationandevents.
+ApossiblesolutionistoclassifylocallyontheIBTfirmwareevents
+as critical/non-critical. In this case, non-critical events will be
+bufferedonthedevicememoryandsentinasinglepackagefor
+theexecutionofanewtransactiononlywhenacriticaleventis
+detectedorattheclosingoftheshipment.Theeventsclassifica-
+tionstrategycanbebalancedaccordingtothepropertyandvalue
+ofthegoodsinordertoreachasustainableshipmenttracking
+cost.
+442 D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445
+Fig. 6.Humanoperatordashboardtomonitorgoodsproductionandacceptincominggoods.
+Fig. 7.4ZeroBox expanded with GPS, accelerometer and temperature sensors
+viamikrobusclickunits(greenboards).
+Introducingthismodificationdoesnotaffectthescalability
+ofthesystem.Rulesandparameterscanbewrittenonasmart
+contractandthentransferredasconfigurationtotheIBTwhena
+newparcelorgoodiscreated.
+7. Conclusion
+Inthispaper,asolutionaimedatinterfacingindustrialassets
+andapparatuswithBlockchainsforindustrialtrustlessapplica-
+tionshasbeendesigned,implementedandtested.Theproposed
+solutioniscompletelyagnostic,allowingtheinteractionofmod-
+ernandlegacymachineswithpublic,on-premisesorasaservice
+Fig. 8.External logistic use case workflow. Red blocks indicate where an
+interaction with the Ethereum smart contract is activated while blue circles
+indicateateachstagewhoistheagentowningthegood.(Forinterpretationof
+thereferencestocolourinthisfigurelegend,thereaderisreferredtotheweb
+versionofthisarticle.)
+Blockchains.Moreover,theproposedsolutioncanbeeasilycus-
+tomised to become a standalone Blockchain-powered tracking
+system.Inthedesignprocess,aguidelinehasbeendefinedand
+thenusedforthedrivingofthedevicehardwareandsoftware
+selectionandimplementation.
+Thesystemhasbeendesignedtoactasabridgebetweenthe
+IndustrialIOT,andtheBlockchainworldenablingthetokenisa-
+tionofindustrialassets,andthecreationofBlockchain-powered
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 443
+Fig. 9.Theshipmentmonitorinterfacewithreal-timereportoftheparcelvalueinETH.
+Fig. 10.GASusageofashipmenttrackedwiththedevicecustomisedforusecase2.
+digitaltwins.TheIBTcanbeconsideredasareferencedesign
+for the building of Blockchain-powered end-to-end Industrial
+IOT solutions that cover the entire data flow going from the
+machine or parcel parameter tracking to the operator moni-
+toringdashboard. Theimplementedcasesallowedtestingthe
+IBT plugged to different industrial apparatus and sensors. The
+systemcanaddBlockchainfunctionalitiestomodernindustrial
+scenarios where robotised machines are available but also to
+externalscenarioswhereparcelsandgoodsarefarfromindustrial
+apparatusandso,difficulttobetrackedandmonitored. Theinte-
+grationprocessturnedoutalmosteffortlessthankstothechoice
+ofcommerciallyavailableandwell-documentedhardwareand
+softwaresolutions.Moreover,thedefinitionofanad-hocHayes
+commandsetmadetheinterfacingwithindustrialmachinesef-
+fortless.Human-centreddesignismandatoryintheinnovation
+of industrial scenarios and processes. For this reason, a dedi-
+cateddashboardgenerationenginehasalsobeendevelopedas
+acomponentoftheIBTsystem.
+Inthepresentedusecasesallthecomputingefforthasbeen
+executedbytheIBTcomputationalunit,bothconcerningcryp-
+tographicfunctionsandnetworking,allowingtheIndustrialIOT
+assets and sensors to focus on its primary tasks so that also
+industrialsecurityandscalabilityrequirementsaresatisfied.
+Theboxhasalsoproventobereliableforrepeateduse,but,for
+beingdeclaredproduction-ready,itshouldundergobatteriesof
+teststhatarebeyondthescopeofthiswork,sameconsiderations
+arevalidforindustrialcertifications.Thecryptoelementembeddedonthe4ZeroBoxhasbeenused
+tostoreprivatekeysandsignEthereumtransactionsfullyaccom-
+plishingthesecuritydefinedrequirements.TheGASestimation
+fortheexecutionofthesmartcontracthasbeencalculated,and
+variouscostreductionstrategieshavebeenidentified.
+FuturedevelopmentisneededtoextendtheBlockchainlayer
+adding other Blockchain platforms. Anyhow, this passage will
+be entirely painless for the user thanks to the implemented
+abstractionlayers.
+Declaration of competing interest
+Theauthorsdeclarethefollowingfinancialinterests/personal
+relationshipswhichmaybeconsideredaspotentialcompeting
+interests:
+DanieleMazzei,GiacomoBaldi,GualtieroFantoniandGabriele
+Monteliscianiareco-foundersoftheZerynthcompany.Lorenzo
+RizzelloandAntonioPitasiareemployeesoftheZerynthcom-
+pany.LauraRiccihasnorelationshipwithZerynth.
+Zerynthcontributedwithitsemployeesandassetstothework
+reportedinthispaper.
+References
+[1] K.Salah,M.H.U.Rehman,N.Nizamuddin,A.Al-Fuqaha,Blockchainforai:
+reviewandopenresearchchallenges,IEEEAccess7(2019)10127–10149.
+[2] D. Tapscott, A. Tapscott, Blockchain Revolution: How the Technology
+behindBitcoinIsChangingMoney,Business,andtheWorld,Penguin,2016.
+444 D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445
+[3] A.Reyna,C.Martín,J.Chen,E.Soler,M.Díaz,Onblockchainanditsintegra-
+tionwithiot,challengesandopportunities,FutureGener.Comput.Syst.88
+(2018) 173–190, http://dx.doi.org/10.1016/j.future.2018.05.046, URL http:
+//www.sciencedirect.com/science/article/pii/S0167739X17329205.
+[4] J.Lin,Z.Shen,A.Zhang,Y.Chai,Blockchainandiotbasedfoodtraceability
+forsmartagriculture,in:Proceedingsofthe3rdInternationalConference
+onCrowdScienceandEngineering,ACM,2018,p.3.
+[5] E.C.Ferrer,Theblockchain:anewframeworkforroboticswarmsystems,
+in:ProceedingsoftheFutureTechnologiesConference,Springer,2018,pp.
+1037–1058.
+[6] M.Mylrea,S.N.G.Gourisetti,Blockchainforsmartgridresilience:Exchang-
+ing distributed energy at speed, scale and security, in: 2017 Resilience
+Week(RWS),IEEE,2017,pp.18–23.
+[7] M.Hölbl,M.Kompara,A.Kamišalić,L.NemecZlatolas,Asystematicreview
+oftheuseofblockchaininhealthcare,Symmetry10(10)(2018)470.
+[8] K. Peterson, R. Deeduvanu, P. Kanjamala, K. Boles, A blockchain-based
+approachtohealthinformationexchangenetworks,2016.
+[9] P. Mamoshina, L. Ojomoko, Y. Yanovich, A. Ostrovski, A. Botezatu, P.
+Prikhodko, E. Izumchenko, A. Aliper, K. Romantsov, A. Zhebrak, et al.,
+Convergingblockchainandnext-generationartificialintelligencetechnolo-
+gies to decentralize and accelerate biomedical research and healthcare,
+Oncotarget9(5)(2018)5665.
+[10] A.Maxmen,Airesearchersembracebitcointechnologytosharemedical
+data,Nature555(7696)(2018).
+[11] H.R. Hasan, K. Salah, Combating deepfake videos using blockchain and
+smartcontracts,IEEEAccess7(2019)41596–41606.
+[12] Singularitynet,2018,URLhttps://singularitynet.io/.
+[13] A.Suliman,Z.Husain,M.Abououf,M.Alblooshi,K.Salah,Monetizationof
+iotdatausingsmartcontracts,IETNetw.8(1)(2018)32–37.
+[14] M.A.Khan,K.Salah,Iotsecurity:Review,blockchainsolutions,andopen
+challenges,FutureGener.Comput.Syst.82(2018)395–411.
+[15] Breakingblockchainopen:Deloitte’s2018globalblockchainsurvey,2018,
+URL https://www2.deloitte.com/content/dam/Deloitte/us/Documents/
+financial-services/us-fsi-2018-global-blockchain-survey-report.pdf.
+[16] L. Atzori, A. Iera, G. Morabito, The internet of things: A survey,
+Comput. Netw. 54 (15) (2010) 2787–2805, http://dx.doi.org/10.1016/j.
+comnet.2010.05.010,URLhttp://www.sciencedirect.com/science/article/pii/
+S1389128610001568.
+[17] V.Liu,Businessbenefitsoftheinternetofthings:Agartnertrendinsight
+report, 2019, URL https://www.gartner.com/en/doc/3806366-business-
+benefits-of-the-internet-of-things-a-gartner-trend-insight-report.
+[18] E.Negri,L.Fumagalli,M.Macchi,Areviewoftherolesofdigitaltwinin
+cps-basedproductionsystems,ProcediaManuf.11(2017)939–948.
+[19] Q.Qi,F.Tao,Digitaltwinandbigdatatowardssmartmanufacturingand
+industry4.0:360degreecomparison,IEEEAccess6(2018)3585–3593.
+[20] M.Grieves,Digitaltwin:Manufacturingexcellencethroughvirtualfactory
+replication,Whitepaper,2014,pp.1–7.
+[21] A.ElSaddik,Digitaltwins:Theconvergenceofmultimediatechnologies,
+IEEE MultiMedia 25 (2) (2018) 87–92, http://dx.doi.org/10.1109/MMUL.
+2018.023121167.
+[22] J.Hochhalter,W.P.Leser,J.A.Newman,V.K.Gupta,V.Yamakov,S.R.Cornell,
+S.A. Willard, G. Heber, Coupling damage-sensing particles to the digitial
+twinconcept.
+[23] R. Roman, J. Zhou, J. Lopez, On the features and challenges of secu-
+rity and privacy in distributed internet of things, Comput. Netw. 57
+(10)(2013)2266–2279,http://dx.doi.org/10.1016/j.comnet.2012.12.018,to-
+wardsaScienceofCyberSecuritySecurityandIdentityArchitecturefor
+theFutureInternet.URLhttp://www.sciencedirect.com/science/article/pii/
+S1389128613000054.
+[24] Iot signals: Summary of research learnings, 2019, URL https:
+//azure.microsoft.com/mediah{and}ler/files/resourcefiles/iot-signals/IoT-
+Signals-Microsoft-072019.pdf.
+[25] A.Panarello,N.Tapas,G.Merlino,F.Longo,A.Puliafito,Blockchainandiot
+integration:Asystematicsurvey,in:Sensors,2018.
+[26] N.M. Kumar, P.K. Mallick, Blockchain technology for security issues and
+challenges in iot, Procedia Comput. Sci. 132 (2018) 1815–1823, http:
+//dx.doi.org/10.1016/j.procs.2018.05.140,internationalConferenceonCom-
+putational Intelligence and Data Science. URL http://www.sciencedirect.
+com/science/article/pii/S187705091830872X.
+[27] D.M.Blei,A.Y.Ng,M.I.Jordan,Latentdirichletallocation,J.Mach.Learn.
+Res.3(2003)993–1022.
+[28] S.Huckle,R.Bhattacharya,M.White,N.Beloff,Internet.of.things,Internet
+ofthingsblockchainandsharedeconomyapplications,ProcediaComput.
+Sci.98(2016)461–466.
+[29] R.Shrestha,S.Kim,Integrationofiotwithblockchainandhomomorphic
+encryption:Challengingissuesandopportunities,RoleBlockchainTechnol.
+IoTAppl.115(2019)293.
+[30] S.Rathore,B.W.Kwon,J.H.Park,Blockseciotnet:Blockchain-baseddecen-
+tralizedsecurityarchitectureforiotnetwork,J.Netw.Comput.Appl.143
+(2019)167–177.
+[31] S.Rathore,Y.Pan,J.H.Park,Blockdeepnet:Ablockchain-basedsecuredeep
+learningforiotnetwork,Sustainability11(14)(2019)3974.[32] S. Rathore, J.H. Park, Semi-supervised learning based distributed attack
+detectionframeworkforiot,Appl.SoftComput.72(2018)79–89.
+[33] S. Rathore, P.K. Sharma, A.K. Sangaiah, J.J. Park, A hesitant fuzzy based
+securityapproachforfogandmobile-edgecomputing,IEEEAccess6(2017)
+688–701.
+[34] D. Mourtzis, E. Vlachou, N. Milas, Industrial big data as a result of iot
+adoptioninmanufacturing,ProcediaCirp55(2016)290–295.
+[35] C. Perera, C.H. Liu, S. Jayawardena, The emerging internet of things
+marketplacefromanindustrialperspective:Asurvey,IEEETrans.Emerg.
+Top.Comput.3(4)(2015)585–598.
+[36] O.Salman,I.Elhajj,A.Kayssi,A.Chehab,Anarchitecturefortheinternet
+of things with decentralized data and centralized control, in: Computer
+Systems and Applications (AICCSA), 2015 IEEE/ACS 12th International
+Conferenceof,IEEE,2015,pp.1–8.
+[37] D.B.Parker,Informationsecurityinanutshell,Inf.Syst.Secur.6(1)(1997)
+14–19.
+[38] R.vonSolms,J.vanNiekerk,Frominformationsecuritytocybersecurity,
+Comput.Secur.38(2013)97–102,http://dx.doi.org/10.1016/j.cose.2013.04.
+004, cybercrime in the Digital Economy. URL http://www.sciencedirect.
+com/science/article/pii/S0167404813000801.
+[39] H. He, C. Maple, T. Watson, A. Tiwari, J. Mehnen, Y. Jin, B. Gabrys, The
+securitychallengesintheiotenabledcyber-physicalsystemsandoppor-
+tunities for evolutionary computing & other computational intelligence,
+in: 2016 IEEE Congress on Evolutionary Computation (CEC), IEEE, 2016,
+pp.1015–1021.
+[40] A.-R.Sadeghi,C.Wachsmann,M.Waidner,Securityandprivacychallenges
+in industrial internet of things, in: 2015 52nd ACM/EDAC/IEEE Design
+AutomationConference(DAC),IEEE,2015,pp.1–6.
+[41] F.M.Benčić,I.P.Žarko,Distributedledgertechnology:blockchaincompared
+todirectedacyclicgraph,in:2018IEEE38thInternationalConferenceon
+DistributedComputingSystems(ICDCS),IEEE,2018,pp.1569–1570.
+[42] A.Dorri,S.S.Kanhere,R.Jurdak,P.Gauravaram,Blockchainforiotsecurity
+andprivacy:Thecasestudyofasmarthome,in:PervasiveComputingand
+CommunicationsWorkshops(PerComWorkshops),2017IEEEInternational
+Conferenceon,IEEE,2017,pp.618–623.
+[43] AwsbaasURLhttps://aws.amazon.com/blockchain/.
+[44] Microsoft azure baas. URL https://azure.microsoft.com/en-us/solutions/
+blockchain/.
+[45] Ibmbaas.URLhttps://www.ibm.com/blockchain/.
+[46] Oraclebaas.URLhttps://www.oracle.com/cloud/blockchain/index.html.
+[47] K. Christidis, M. Devetsikiotis, Blockchains and smart contracts for the
+internetofthings,IEEEAccess4(2016)2292–2303.
+[48] H.Malviya,Howblockchainwilldefendiot,AvailableatSSRN2883711.
+[49] R. Almadhoun, M. Kadadha, M. Alhemeiri, M. Alshehhi, K. Salah, A user
+authenticationschemeofiotdevicesusingblockchain-enabledfognodes,
+in:2018IEEE/ACS15thInternationalConferenceonComputerSystemsand
+Applications (AICCSA), IEEE, 2018, http://dx.doi.org/10.1109/aiccsa.2018.
+8612856.
+[50] H.R.Hasan,K.Salah,Proofofdeliveryofdigitalassetsusingblockchain
+andsmartcontracts,IEEEAccess6(2018)65439–65448.
+[51] J.Benet,Ipfs-contentaddressed,versioned,p2pfilesystem,arXivpreprint
+arXiv:1407.3561.
+[52] T.Weingärtner,Tokenizationofphysicalassetsandtheimpactofiotand
+ai,in:eublockchainforum.eu.
+[53] G.Wood,etal.,Ethereum:Asecuredecentralisedgeneralisedtransaction
+ledger,EthereumProj.YellowPap.151(2014)(2014)1–32.
+[54] Ethereumwiki.URLhttps://github.com/ethereum/wiki/wiki.
+[55] L. Xie, A beginner’s guide to ethereum tokens, 2018, URL https://blog.
+coinbase.com/a-beginners-guide-to-ethereum-tokens-fbd5611fe30b.
+[56] B. Garner, Physical assets on the blockchain: Why bother?, 2018, URL
+https://coincentral.com/physical-assets-on-the-blockchain-why-bother/.
+[57] M. Westerkamp, F. Victor, A. Küpper, Tracing manufacturing processes
+usingblockchain-basedtokencompositions,Digit.Commun.Netw.(2019)
+http://dx.doi.org/10.1016/j.dcan.2019.01.007.
+[58] A.Koubâa,RobotOperatingSystem(ROS),Springer,2017.
+[59] J.Kerr,K.Nickels,Robotoperatingsystems:Bridgingthegapbetweenhu-
+manandrobot,in:Proceedingsofthe201244thSoutheasternSymposium
+onSystemTheory(SSST),2012,pp.99–104.http://dx.doi.org/10.1109/SSST.
+2012.6195127.
+[60] V.Buterin,etal.,Ethereumwhitepaper:anextgenerationsmartcontract
+&decentralizedapplicationplatform,Firstversion.
+[61] D. Mazzei, G. Baldi, G. Montelisciani, G. Fantoni, A full stack for quick
+prototypingofiotsolutions,Ann.Telecommun.73(7–8)(2018)439–449.
+[62] D. Mazzei, G. Montelisciani, G. Baldi, A. Baù, M. Cipriani, G. Fantoni,
+Improving the efficiency of industrial processes with a plug and play
+iotdataacquisitionplatform,Enterp.Interoper.:SmartServ.Bus.Impact
+Enterp.Interoper.(2018)315–321.
+[63] P. Karvelis, T.-A. Michail, D. Mazzei, S. Petsios, A. Bau, G. Montelisciani,
+C. Stylios, Adopting and embedding machine learning algorithms in mi-
+crocontrollerforweatherprediction,in:2018InternationalConferenceon
+IntelligentSystems(IS),IEEE,2018,pp.474–478.
+D.Mazzei,G.Baldi,G.Fantonietal./FutureGenerationComputerSystems105(2020)432–445 445
+[64] D.Mazzei,G.Montelisciani,G.Baldi,G.Fantoni,Changingtheprogram-
+mingparadigmfortheembeddedintheiotdomain,in:2015IEEE2nd
+WorldForumonInternetofThings(WF-IoT),IEEE,2015,pp.239–244.
+[65] D.Hankerson,A.Menezes,EllipticCurveCryptography,Springer,2011.
+[66] M.Aarts,Hardwareattackstamperresistance,tamperresponseandtamper
+evidence,2016,Dateofretrieval23.
+[67] S.H.Weingart,Physicalsecuritydevicesforcomputersubsystems:Asurvey
+of attacks and defenses, in: International Workshop on Cryptographic
+HardwareandEmbeddedSystems,Springer,2000,pp.302–317.
+[68] Mcu tamper protection. URL https://www.digikey.com/en/articles/
+techzone/2015/aug/tamper-protection-secures-your-valuable-mcu-based-
+system-ip.
+[69] Built-in rtos security for connected embedded devices, 2018, URL
+https://www.intervalzero.com/embedded/built-in-rtos-security-for-
+connected-embedded-device/.
+[70] S.Karnouskos,Stuxnetwormimpactonindustrialcyber-physicalsystem
+security, in: IECON 2011-37th Annual Conference of the IEEE Industrial
+ElectronicsSociety,IEEE,2011,pp.4490–4494.
+[71] A.Ukil,J.Sen,S.Koilakonda,Embeddedsecurityforinternetofthings,in:
+2011 2nd National Conference on Emerging Trends and Applications in
+ComputerScience,IEEE,2011,pp.1–6.
+[72] S. Ravi, A. Raghunathan, S. Chakradhar, Tamper resistance mechanisms
+forsecureembeddedsystems,in:17thInternationalConferenceonVLSI
+Design.Proceedings,IEEE,2004,pp.605–611.
+[73] D.S. Alberts, R.E. Hayes, Power to the Edge: Command. Control. in the
+InformationAge,Tech.rep.,2003.
+[74] Atcommandsetforuserequipment,Tech.rep.URLhttp://www.etsi.org/
+deliver/etsi_ts/127000_127099/127007/10.03.00_60/ts_127007v100300p.
+pdf.
+[75] R.Alexander,Iota-introductiontothetangletechnology:Everythingyou
+needtoknowabouttherevolutionaryblockchainalternative.
+[76] R. Ralf, Smart contracts and iota. URL https://medium.com/@ralf/about-
+smart-contracts-in-iota-626d2bd3619e.
+[77] C.Cachin,Architectureofthehyperledgerblockchainfabric,in:Workshop
+onDistributedCryptocurrenciesandConsensusLedgers,Vol.310,2016,p.
+4.
+[78] N.Atzei,M.Bartoletti,T.Cimoli,Asurveyofattacksonethereumsmart
+contracts (sok), in: Principles of Security and Trust, Springer, 2017, pp.
+164–186.
+[79] K.Delmolino,M.Arnett,A.Kosba,A.Miller,E.Shi,Stepbysteptowards
+creatingasafesmartcontract:Lessonsandinsightsfromacryptocurrency
+lab, in: International Conference on Financial Cryptography and Data
+Security,Springer,2016,pp.79–94.
+[80] L.Luu,D.-H.Chu,H.Olickel,P.Saxena,A.Hobor,Makingsmartcontracts
+smarter,in:Proceedingsofthe2016ACMSIGSACConferenceonComputer
+andCommunicationsSecurity,ACM,2016,pp.254–269.
+[81] J.Bauer,R.C.Staudemeyer,H.C.Pöhls,A.Fragkiadakis,Ecdsaonthings:Iot
+integrityprotectioninpractise,in:InternationalConferenceonInformation
+andCommunicationsSecurity,Springer,2016,pp.3–17.
+[82] Q.H.Dang,Sp800-106.randomizedhashingfordigitalsignatures.
+[83] Jpmorgan quorum distributed ledger. URL https://github.com/
+jpmorganchase/quorum.
+[84] J.M.Swaminathan,S.F.Smith,N.M.Sadeh,Modelingsupplychaindynam-
+ics: A multiagent approach*, Decis. Sci. 29 (3) (1998) 607–632, http://
+dx.doi.org/10.1111/j.1540-5915.1998.tb01356.x,arXiv:https://onlinelibrary.
+wiley.com/doi/pdf/10.1111/j.1540-5915.1998.tb01356.x.
+[85] Digitaltransformationsofindusties-logisticsindustry,Tech.Rep.,2016.
+[86] A. Rushton, P. Croucher, P. Baker, The Handbook of Logistics and
+DistributionManagement,fourthed..
+[87] M.M. Queiroz, R. Telles, S.H. Bonilla, Blockchain and supply chain man-
+agementintegration:asystematicreviewoftheliterature,SupplyChain
+Manag.:Int.J.(2019).
+[88] Trustintrade-towardstrongersupplychains,Tech.Rep.,2016.
+[89] What is the bullwhip effect? understanding the concept & definition,
+2012, URL http://www.aalhysterforklifts.com.au/index.php/about/blog-
+post/what_is_the_bullwhip_effect_underst{and}ing_the_concept_definition.
+Daniele Mazzei Assistant Professor at the Computer
+ScienceDepartmentofTheUniversityofPisa.Daniele
+graduatesinBiomedicalEngineeringin2006andPhD
+inMay2010inAutomaticRoboticandBioengineering
+attheUniversityofPisa.Hisresearchfocusesonthe
+IndustrialInternetofThingsandhuman-robot/machine
+interaction.Heisco-inventorof8patents,co-authorof
+52Scopusindexedpublicationswith747citationsand
+h-indexof15andalsoco-authorof2bookchapters.
+Heisaco-founderofZerynth
+Giacomo Baldi He holds two master degrees, one in
+computer science and one in medicine. Most of his
+experiences of work and research stemmed from the
+ability to mix both fields of expertise in innovative
+ways.Asacomputerscientistin2015heco-founded
+and developed Zerynth, a Python virtual machine for
+embeddeddevices.InDecember2012withothercol-
+leagues,healsoco-foundedthePisaFABLAB.Healso
+developedin2011anacquisitionandanalysissoftware
+forawearableelectricalimpedancetomographydevice.
+Giacomoisco-inventorofthreepatents.
+Gualtiero Fantoni AssociateProfessoratUniversityof
+Pisa, President of the Pisa Leaning Lab, co-founder
+of Fablab Pisa and some companies (one university
+spin-off included). MEng in Mechanical Engineering
+‘‘summacumlaude’’andPhDinRobotics,Automation
+and Bioengineering at the University of Pisa. Princi-
+pal investigator of several EU, National and Regional
+research projects. His research interests are in all
+kindsofautomation:fromhardwaresuchasindustrial
+grippers, handling and feeding systems to software
+suchasnaturallanguageprocessingtoolsfordocument
+analysis,patentanalysis,chatbot,etc..Hispublicationsincludemorethan100
+peer-reviewedpapers,co-inventorof10patents.
+Gabriele Montelisciani Ph.D in Economics and Man-
+agementEngineering.Co-founderandCEOatZerynth.
+Former Research Associate at the University of Pisa,
+focusing on methods and tools for early-stage inno-
+vation,newbusinessdevelopmentandvaluecreation
+from ICT innovation. Project Manager for the project
+ENDuRE - European Network of Design for Resilient
+Entrepreneurship (EU Erasmus+ Knowledge Alliance).
+Researchexperienceinmorethan10EUandNational
+funded projects. Member of the International Review
+Committee of the International Conference on Engi-
+neering,TechnologyandInnovation(ICEConference).Authorofmorethan15
+publicationsandtwopatents.
+Antonio PitasiFullstackSoftwareDeveloperatZerynth.
+He graduated in 2019 in Computer Science at the
+UniversityofPisawithathesisontheapplicationof
+Ethereumblockchainforlogisticsapplications.
+Laura RicciLaura Ricci received the PhD from the
+University of Pisa, in 1990. She is currently As-
+sociate Professor at the textquotedblDepartment of
+Computer Sciencetextquotedbl, textquotedblUniversity
+ofPisa,Italy.Herresearchinterestsincludedistributed
+systems, peer-to-peer networks, cryptocurrencies and
+blockchains and social network analysis. In these
+fields,shehasco-authoredover150paperspublished
+on international journals and conference/workshop
+proceedings. She has served as program committee
+memberandchairofseveralconferences.Shehasbeen
+involvedinseveralresearchprojectsandiscurrentlythelocalcoordinatorof
+the H2020 European Project textquotedblHelios: A context-aware Distributed
+NetworkingFramework.
+Lorenzo Rizzello Embedded Software Engineer at
+Zerynth. Lorenzo Graduates in Robotics and Automa-
+tionEngineeringin2018attheUniversityofPisawith
+a thesis investigating a possible role for Blockchain
+technologyintheRoboticsfield.

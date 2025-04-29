@@ -1,0 +1,834 @@
+See discussions, st ats, and author pr ofiles f or this public ation at : https://www .researchgate.ne t/public ation/352903703
+The T okenization of Everything: T owards a Framework for Understanding the
+Potentials of T okenized Assets
+Conf erence Paper  · July 2021
+CITATIONS
+55READS
+22,389
+4 author s, including:
+Roger Heines
+Univ ersity of St . Gallen
+9 PUBLICA TIONS    186 CITATIONS    
+SEE PROFILE
+Reinhar d Jung
+Univ ersity of St . Gallen
+146 PUBLICA TIONS    1,807  CITATIONS    
+SEE PROFILE
+All c ontent f ollo wing this p age was uplo aded b y Roger Heines  on 11 July 2021.
+The user has r equest ed enhanc ement of the do wnlo aded file.
+Association for Information Systems Association for Information Systems 
+AIS Electr onic Libr ary (AISeL) AIS Electr onic Libr ary (AISeL) 
+PACIS 2021 Pr oceedings Pacific Asia Conf erence on Information 
+Systems (P ACIS) 
+7-12-2021 
+The T okenization of E verything: T owar ds a F ramework for The T okenization of E verything: T owar ds a F ramework for 
+Understanding the P otentials of T okenized Assets Understanding the P otentials of T okenized Assets 
+Roger Heines 
+Univ ersity of St. Gallen , roger .heines@student.unisg.ch 
+Christian Dick 
+Univ ersity of St. Gallen , christian.dick@alumni.unisg.ch 
+Christian P ohle 
+Univ ersity of St. Gallen , christian.pohle@hsgalumni.ch 
+Reinhar d Jung 
+Univ ersity of St. Gallen , reinhar d.jung@unisg.ch 
+Follow this and additional works at: https:/ /aisel.aisnet.or g/pacis2021 
+Recommended Citation Recommended Citation 
+Heines, Roger; Dick, Christian; P ohle, Christian; and Jung, Reinhar d, "The T okenization of E verything: 
+Towar ds a F ramework for Understanding the P otentials of T okenized Assets" (2021). PACIS 2021 
+Proceedings . 40. 
+https:/ /aisel.aisnet.or g/pacis2021/40 
+This material is br ought t o you b y the P acific Asia Conf erence on Information Systems (P ACIS) at AIS Electr onic 
+Library (AISeL). It has been accepted for inclusion in P ACIS 2021 Pr oceedings b y an authoriz ed administr ator of 
+AIS Electr onic Libr ary (AISeL). F or mor e information, please contact elibr ary@aisnet.or g. 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      1 The Tokenization of Everything: Towards a 
+Framew ork for Understanding the Potentials of 
+Tokenized Assets  
+Completed Research Paper  
+Roger Heines  
+University of St.Gallen,  
+St.Gallen, Switzerland  
+roger.heines@bei -sg.ch  Christian Dick  
+University of St.Gallen,  
+St.Gallen, Switzerland  
+christian.dick@alumni.unisg.ch   
+ 
+Christian Pohle  
+University of St.Gallen,  
+St.Gallen, Switzerland  
+christian.pohle@hsgalumni.ch  Reinhard Jung  
+University of St.Gallen,  
+St.Gallen, Switzerland  
+reinhard.jung@unisg.ch  
+Abstract  
+By enabling a new way to digitize transactions, distributed ledger technology allows to 
+fundamentally change how value is digitally issued, transferred, and stored. Accordingly, 
+«tokenization» refers to the concept of crea ting a singular identifier on a distributed ledger 
+in terms of a token that may represent anything from financial assets, goods, to other 
+valuable resources. Where tokenization may disrupt our economic system leading to more 
+efficiency or democracy, it is required to gain insights and facilitate the development of use 
+cases associated with this concept. To illustrate how firms can apply  tokenization to 
+innovate their businesses, we propose a framework of different token properties , drivers, 
+and barriers for  adoption based on  literature and expert interviews and present eight 
+archetyp ical cases  derived from an analysis of 129 ventures. This work provides strategic 
+guidance in a token economy and a starting point  for future research of viable applications . 
+Keywords: Tokenization, Token Economy, Distributed Ledger Technology  
+Introduction  
+Without relying on mediation by trusted third parties, distributed ledger technology (DLT) provides a 
+new technological paradigm in the operation of highly available, tamper -resistant distributed databases 
+for transactions (Beck et al. 2017) . Besides widely discussed implications for innovative information 
+systems, the concept of «tokenization» has emerged in recent years by following DLT’s basic abilities 
+to enable a system for the management of asset ownership of unique digital representations (Hrga et al. 
+2020) . In this context, tokenization refers to the process of creating a singular identifier on a distributed 
+ledger in form of a token . A unique and persistent reference can be established to digitally represent 
+anything that ranges from financial assets and goods to other valuable resources (Harwood -Jones 2019) . 
+It is assumed that the issuance, transfer, and storage of token on decentralized platforms reduce the 
+drawbacks of intermediaries (e.g., single points of failures, lagging processing times). Especially the 
+digital representation of bankable assets (e.g., stocks, bonds) has become a promising use case, where 
+the Financial Times estimates that DLT -driven market infrastructures may save asset managers up to 
+$2.7 billion per year just in the process of buying and selling funds (Mooney 2018) . 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      2 Where many projects focus on the issuance of tokenized  financial  assets (Sazandrishvili 2020) , it is also 
+assumed that tokenization may serve as an enabler for new services and frictionless collaboration in a 
+novel type of economy, a so -called token economy (Sunyaev et al. 2021) . Accordingly, tokenization 
+can be extended and utilized for many other purposes within a system and is not primarily limited to 
+the transfer of ownership of tradea ble objects. Unique  tokens might be used as a means of tracking and 
+tracing  for a  more transparent  product lifecycle  (e.g., food, pharmaceuticals) (Madhwal 2020) . The  
+access  to servic es can be tokenized, letting the holder use a car sharing platform once a specific token 
+is acquired. Organization s can issue a limited amount  of tokens for licensing digital content or other 
+digitized resources (Zhou et al. 2019) . In each  of these  cases  the role and reason  for using tokenized 
+assets  can differ (e.g., improved  transparency, increased  liquidity)  and extend s the perspective  on 
+individual token design  (e.g., native token, non-fungib le token ) (Oliveira et al. 2018) . Although the 
+technic al feasibility of the concept has been broadly tested at prototype stage (e.g., transfer of bonds),  
+expected adoption in established industries has not kept pace with the huge amounts of investments 
+(Grilo and Zutshi 2020) . While everything from art, real estate even oceans or stars may be tokenized, 
+risks  and legal aspects of use case s have to be considered  (Sazandrishvili 2020) . Decision  makers  are 
+required to align their activities by identifying  not only potential s but also  weaknesses  of a DLT -project  
+(Naqvi and Hussain 2020) . To the best of our knowledge, e xisting decis ion-aid tools  (e.g.,  token 
+standards)  have fallen short to take these  factors into account  and lack strategic guidance  for successful  
+use case desig n and token -based business model  development (Harwood -Jones 2019) .  
+Especially for practitioners, the possibilities to create novel products and services seem endless and add  
+complexity in assessing  new business opportunities . For this concept to work, knowledge is required 
+that defines  what a token  offers  to represent , what tokenization enables , and which decentralized 
+platform  requirements  have to be considered  (Zachariadis et al. 2019) . Previous research  associated 
+with tokenization focus mainly on two separated streams: Approaches to describe a token  and general 
+applicability of  tokenization . The first topic deals with a range of different classifications to distinguish 
+cryptoassets from one another. Some publications establish a common knowledge base for 
+categorization and design (Freni et al. 2020; Oliveira et al. 2018)  but neglect the study of broader 
+implications. With regards to the second topic, there are only limited contributions that investigate value 
+drivers or barriers. Mostly, they refer to industry -specific applications in banking (Sazandrishvili 2020)  
+or supply chain management (Babich and Hilary 2020) . It remains unclear how to address applicability 
+between specific tokenized objects (e.g., financial assets, physical goods) in a particular scenario (e.g., 
+increased liquidity, reduced costs). To cover the wide r ange of use cases  offered by a token economy 
+and identify the role of a token as part of a n operating and business model, it is required to unify both 
+research streams.  By extending the understanding beyond descriptive token design , we address criteria 
+for an assessment framework to support  organizations in t his decision -making and selection process  
+through  the following research question : What are criteria  for assessing asset tokenization use cases 
+and which archetypical asset tokenization use cases exist?  
+We applied a three -step research approach to develop a framework and to derive archetypes  of this 
+application area. At first, we carried out a literature review and analysis (Braun and Clarke 2006; 
+Webster and Watson 2002)  to establish an understanding about token -based solutions. Secondly, we 
+conducted semi -structured interviews with 22 participants (e.g., C -level executives, pro duct managers 
+from Banking and FinTechs) following the recommendations by Ayres (2008)  to refine the findings for 
+our final framework. Lastly, we sampled a database of 129 firms in this field and derived eight 
+empirically founde d archetypes on basis of the identified criteria.  
+With our study, we contribute to practice as the framework allows a first assessment of use cases and, 
+thus, facilitates decision making for the selection of viable applications. We contribute to research b y 
+synthesizing existing approaches and generating new means through empirical data. Therefore, our 
+research serves as a foundation for new solutions and adoption towards a token economy. The remainder 
+of this work is organized as follows. First, we introdu ce the domain background and current state of 
+research. Second, we explain our research design applied in the development of the framework and 
+derivation of archetyp ical use cases . Third, we present the identified criteria for assessment and 
+generated arch etypes. Finally, we discuss our findings, implications for both practice and research, as 
+well as limitations, and present an outlook for future research.  
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      3 Background  
+The Tokenization Concept  
+Many transactions involve trusted third parties as a necessity to authenticate a transfer of ownership 
+(e.g., international bank transfers) between unknown participants. These operations are often associated 
+with increased costs, time -consuming processes, and the exposure to a single point of failure. To 
+overcome such challenges, DLT can be utilized to ensure the integrity of transactions in a decentral 
+manner. Basically, it enables an append -only distributed database characterized by high tamper 
+resistance  in untrustworthy environments, known as byzantine fault tolerance (Kannengießer et al. 
+2020) . Cryptocurrencies represent a known application, where its features allow a peer -to peer transfer 
+of ownership without challenging the legitimacy of the transaction through a third party (Nakamoto 
+2008) . According to new DLT frameworks (e.g., Ethereum), advance d features enabled a new form of 
+crowdfunding in the past. So -called, initial coin offerings (ICO), introduced “tokens” to be sold in 
+exchange for cryptocurrencies to investors seeking public investments for their company in return (Roth 
+et al. 2019) . As a known concept in non -DLT systems, tokens are utilized within closed environments 
+such as casino chips, laundry credits or for IT access (Oliveira et al. 2018) . Thus, DLT -based token 
+further developed into an instrument to digitize  anything that may represent an asset, utility or 
+ownership due to their usefulness in their respective field. Pilkington (2015)  highlights the purpose of 
+tokens as ideal value containers for divisibility, ease -of-use, and facilitated trade. In this context, the 
+concept of asset tokenization has gained growing attentio n. Research and practice defines the term and 
+its surrounding environment in various, sometimes conflicting ways. Where Babich and Hilary (2020)  
+mention tokenization to create ownership rights for trade facilitation across the supply chain, Zhou et 
+al. (2019)  addresses the concept to convert data for a secure handling in an IT -system. In fact, the terms 
+‘digital assets’ and ‘cryptoassets’ are also synonymously used to describe token that are mostly 
+associated with an investment purpose (OECD 2020) . Where an asset is primary defined  as anything 
+that has value to a certain stakeholder (Greer 1997) , it is important to gain a deeper understanding of 
+asset tokenization that goes beyond the mer e representation of financial and monetary value.  
+According to the various meanings, tokenization can be initially described as the process of creating a 
+token on a shared ledger in terms of a singular identifier that enables a unique and persistent refer ence. 
+Dependent on the features of the underlying DLT, the token relies on a specific data structure and 
+implemented logic to achieve a desired functionality (Roth et al. 2019) . As ever ything may be 
+represented by creating such reference, we define a token as a cryptographically secured digital 
+representation of value or contractual rights (Distefano et al. 2020) . A token may be then distinguished 
+by serving as a bearer instrument (e.g., liability between issuer and owner), once a legal  relationship is 
+established and a specific bearer is assigned to that right (e.g., ownership rights embedded into a smart 
+contract). By adding individual properties of an asset into a token, it can be designed to be unique, 
+tradeable, scarce, and much more. From a practical perspective, a difference must be further drawn 
+between tokenized assets that exist “off -chain” and “on -chain”. The tokenization of a “physical asset” 
+that exists “off -chain” relies on an underlying object (e.g., digital twin of a ca r). Such systems differ 
+from native record keeping in which a “native” token is built “on -chain”. It is only existent within the 
+system and derive s its value in and of themselves (e.g., Bitcoin) (OECD 2020) .  
+Applicability of Tokenization  
+There is a substantial body of knowledge that mainly refers to grey literature, but only f ew scientific 
+contributions investigate the distinct driver and barrier for adoption. Narayan and Tidström (2020)  
+explore the usage of tokens in building a circular economy to facilitate coopetition. In this context, 
+tokenization creates an effective incentive mechanism to generate ideas and scale up innovation 
+between disconnected product platforms. Lotti (2019)  investigates the features of tokenization for the 
+art market and its potential for disintermediation. By rethi nking the social relations and interactions in 
+art production, art tokens may create new opportunities for digital design incentivized by so -called 
+crypto economics. Beside these benefits in governance, the adoption of tokenization is primarily 
+motivated b y economic reasons. By overcoming the drawbacks related  to costly intermediation, the 
+concept improves the security of business processes and increases the usability in transaction handling. 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      4 Zhou et al. (2019)  converts medical data into on -chain tokens to establish a safe and efficient data 
+exchange. Babich and Hilary (2020)  apply digital claim tokens in supply chain management for 
+production, inventory, and financial controlling that enables a facilitated sha ring, trading, and exchange 
+among multiple stakeholders. Especially a reduced need for third parties is considered highly disruptive 
+for the financial sector and other industries (e.g., intellectual property, collectibles) (Sazandrishvili 
+2020) . Indicated by the surge of projects and initiatives, most references focus on digital representations 
+and management of asset ownership using tokens for existing bankable assets. As a corollary of DLTs 
+basic capabilities, the possibilities for automation (e.g., smart contracts), transparent record keeping, 
+and trusted reconciliation between parties are widely discussed in the context of financial market 
+infrastructures (Hartung et al. 2019) . Shtybel (2019)  explores the benefits of tokenised private securities 
+for improved issuance, trading, and settlement. Also, the impact of tokenized assets on liquidity for 
+otherwise untradable asset classes is highlight ed (Harwood -Jones 2019) . Although the opportunities for 
+DLT and asset tokenization seem promising, often new obstacles before mass adoption may occur. 
+While some publications state that technical immaturity leads to use cases stuck at prototyping phase 
+(Hughes et al. 2019) , other contributions assume that challenges in terms of governance, regulation, and 
+operations need to be overcome to reach commercial adoption (Harwood -Jones 2019) . Especially legal 
+aspects and transition risks relat ing to the issuance of digital securities must be appropriately evaluated 
+against nationally binding law ( Savelyev 2018) . Existing research on the applicability of tokenization 
+mainly focuses on general potentials and challenges and is limited to a few selected applications with a  
+strong emphasis on the financial sector. While  various industries may benefit from this concep t, it still 
+remains unclear how to address the se multifaceted  use cases . Here, i t would be appreciated to establish 
+a common understanding and to provide a basis for strategic guidance  in this highly innovative  area. 
+Token Properties  
+Although the potentia ls of cryptocurrencies have been extensively discussed in literature, there is still 
+a lack of consensus on what a token might represent (OECD 2020) . To close this gap, a review has been 
+conducted to highlight relevant token properties. Oliveira et al. (2018)  propo ses a token classification 
+with four dimensions: purpose, governance, functional, technical groupings based on previous research 
+and empirical data. Another categorization is presented by Euler (2018) , where token are allocated along 
+five groupings: purpose, utility, legal  status, underlying value, and technical layer. According to these 
+classifications, archetypes were further identified by mapping tokens against those parameters (Oliveira 
+et al. 2018) . A comprehensive approach of specific attributes and features is presented by Freni et al. 
+(2020) . With regards to a morphological framework, the shift from economics towards a token economy 
+and the token’s key role within these ecosystems is analyzed. A stronger industry focus is p resented by 
+integrating token characteristics into traditional finance (Ankenbrand et al. 2020) . The taxonomy 
+consists of selected attributes to clas sify tokens (e.g., claim structure, total supply, redemption). 
+Interestingly, it can be stated that the perspective on token slowly shifts from crypto currency driven use 
+cases (e.g., ICO) towards more comprehensive token standards to set the basis for ente rprises with a 
+more diverse and wide view of tokens for existing economic models (e.g., tokens for private DLTs). 
+Beside academia, there are a couple of industry -oriented classifications that add regulatory and utility -
+driven aspects for a practical implem entation of tokenization solutions. Mueller et al. (2018)  
+distinguishes three major classes in terms of native utility, counterparty, or ownership token. The 
+International Token Standardization Associa tion (ITSA) establishes a common understanding on basis 
+of a classification along the four dimensions purpose, industry, technological setup and legal claim 
+(Ketz and Sandner 2019) . Another initiative represents the InterWorkAlliance that drives standards for 
+interoperability. By defining the most industry relevant token prop erties in predefined application areas 
+(e.g., financial services, healthcare), a technical foundation for cross platforms is established to bridge 
+the gap between different stakeholders (e.g., developer s, business executives) based on similar technical 
+features and token behaviours. Most of the frameworks reduce complexity for redundant dimensions 
+and associated attributes. Strongly dependant on a business -, regulatory - or technically oriented 
+perspective, a harmonization of the terminology and standardizat ion of artifacts may help to overcome 
+potential confusion and expand over time. However, previous research has fallen short to provide a 
+framework that defines the unique business value of use cases in the context of respective token 
+characteristics and  to empirically derive wider  implications of tokenization.  
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      5 Research Method  
+Literature Review  
+To generate an initial set of criteria for tokenized objects and to define the applicability of tokenization 
+as part of a n operating and business model, we started the development of our framework by means of 
+a structured literature review following Webster and Watson (2002) . We used the scientific databases 
+EBSCOhost, IEEEXplore, AISeL, Science Direct, ProQuest, and ACM Digital Library in September 
+2020 and defined the following search string  (“Blockchain*” OR “Distributed Ledger*”) AND 
+(“Token*). To increase  topicality, we included a title and abstract search with the term s (“Tokenization” 
+OR “Tokenisation”). The search resulted in 214 documents. We identified the publications relevant to 
+answer our research question and excluded irrelevant papers as well as duplicates. After the full-text 
+screening, the remaining 23 documents represented the basis for a subsequent forward and backward 
+search to enhance theoretical contributions with a practical perspective. At the end we selected 34 
+publications. To identify themes for a distinct assessment of use cases, we applied thematic analysis 
+(Braun and Clarke 2006) . According to the six phases ( familiarization, initial code generation, search 
+for themes, review themes, define and name themes, and report  generation), we selected relevant (1) 
+token attributes, functions, and properties; (2) drivers, potentials, and value propositions of tokenization 
+as well as (3) challenges, limitations, and barriers for adoption. Where the themes represent preliminary 
+dimensions of the f ramework, we refined the results in discussion rounds with researchers. We omitted 
+highly technical features (i.e., burnability, e xpirability, issuance), adapted criteria for applicability (e.g., 
+real-time processing, process automation) and grouped simila r aspects for evaluation (e.g., facilitated 
+access, democratization). Within this iteration, we derived 21 dimensions with a set of 76 sub -criteria.  
+Semi -structured Interviews  
+Based on the initial framework, we conducted two semi -structured interview roun ds to complement our 
+findings and to validate our results (cf. Table 1). All interviewees were either subject matter experts or 
+C-level managers familiar with the concept of tokenization or participating in the development of such 
+DLT -driven solutions. Des pite a focus on the financial sector, we brought together interview partners 
+from interdisciplinary backgrounds to widely represent the current state of the tokenization ecosystem.  
+Table 1. Interview Overview  
+ 
+At first, we aimed for a clear understanding towards the problem domain. The questions addressed the 
+overall phenomenon designed to identify additional potentials and challenges of tokenization illustrated 
+as a basic theme in the framework. We noticed that  the experts highlighted similar aspects from our 
+initial review (e.g., fractional ownership, legal issues). We adapted the structure of the interview guide 
+and initiated a second interview round with the goal to directly validate the proposed criteria acc ording 
+Interview Round Goal of the Interviews ID Function of the Interviewee Affiliation Company Size
+B1 Head New Markets Bank Medium
+D1 Co-Head Clients Digital Asset Bank Medium
+D2 Head Token Platform Digital Asset Bank Medium
+L1 Lawyer  &  Founder Legal & Regulatory Services Medium
+L2 Swiss Senior Legal & Regulatory Expert Legal & Regulatory Services Large
+F1 Co-Founder und Chief Investment Officer FinTech Small
+P1 Head of Fintech IT-Provider Large 
+P2 Manager Technology IT-Provider Large 
+P3 Manager Tokenization Services IT-Provider Large
+D3 CEO / Head of Crypto Payments Digital Asset Bank Medium
+E1 Product Manager Exchange Large
+2nd Interview Round S1 Business Development Start Up Small
+D4 Chief Client Officer Digital Asset Bank Medium
+F2 Chief Executive Officer & Founder FinTech Small
+F3 Chief Executive Officer & Founder FinTech Small
+B2 Project Manger Bank Large
+R1 Researcher Research Medium
+F4 Chief Sales Officer FinTech Medium
+F5 Chief Executive Officer & Founder FinTech Small
+D5 Head of Business Unit Digital Asset Bank Medium
+F6 Chief Marketing Officer FinTech Medium
+D6 	 Board of Directors Digital Asset Bank MediumReevaluation of prior 
+results, refinement of the 
+framework and identification 
+of tokenization use casesUnderstanding of the 
+problem domain, 
+identification of value 
+potentials and barriers of 
+tokenization1st Interview Round 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      6 to a solution artifact. The experts actively reflected the categories and discussed use cases from their 
+domains. In total, we conducted 22 interviews and started the analysis of the results following Gioia et 
+al. (2013) . We establ ished first and second level codes to identify confirmatory aspects towards our 
+framework. Accordingly, we added new dimensions on token properties (e.g., token supply), aggregated 
+sub-criteria on token representations (i.e., digital, physical, contract) a nd merged redundant aspects 
+(e.g., technical complexity associated with oracle problems). This iteration resulted in the final 
+framework illustrated in Table 2, where we conclude 12 dimensions with a set of 44 sub -criteria.  
+Deriving Archetypes  
+For the third phase, we applied the framework as an analytical tool (e.g., morphological box) to derive 
+archetypical  use cases  on basis of a company analysis. This problem -solving technique is used for multi -
+dimensional questions, where an instantiation is assigne d to its specific parameters in a grid box 
+(Zwicky  1969) . For the data collection, we conducted a screening in December 2020 for companies on 
+crunchbase.org, chaineurope.org, and e -foresight.ch. The focus of our selection was on DLT and 
+Blockchain based firms in German -speaking Europe (i.e., Germany, A ustria, Switzerland, 
+Liechtenstein) representing a viable ecosystem around tokenization. The initial database contained 183 
+company profiles as we considered additional sources (i.e., company website, whitepaper, press reports) 
+to ensure data quality for t he subsequent analysis. We included only firms that utilize tokenization as 
+an integral part of their operating and business model (e.g., token issuance services, asset tokenizer). 
+We excluded wallet providers, cryptocurrency exchanges, miners, or broader DLT -infrastructures (e.g., 
+Ethereum) because their usage of tokens are not primarily driven by a tokenized representation 
+associated with a specific product or service. Next, we assigned coding schemes to assess the companies 
+according to the predefined cr iteria of the framework and omitted cases that resulted in insufficient 
+information. We validated the instantiations in various iterations, where disputes were resolved in group 
+discussions (Strauss 1987) . The direct instantiation s highlighted  recurring  combinations of criteria 
+implying  a tendency of companies with similar tokenization us e case s. As a result, we identified eight 
+archetypes (see Appendix) and demonstrated utility of the framework covering a final set of 129 firms.  
+Assessment Framework for the Tokenization of Assets  
+Given the identified token properties, value drivers, and barriers for tokenization, we present a 
+comprehensive framework to be applied in the description and assessment of use cases associated with  
+asset tokenization.  Described below, the resulting framework consists of 12 dimension and 44 sub -
+criteria along the three ov erarching themes allowing for a distinct analysis, comparison, and discussion.  
+Table 2. Framework for the Assessment of Tokenization Use Cases  
+Industry  
+Focus  Financial & 
+Insurance 
+Activities  Prof., Sc. & 
+Technical 
+Activities  Blockchain -
+Specific 
+Application  Transport & 
+Storage  Arts, Enter -
+tainment & 
+Recreation  Wholesale & 
+Retail Trade  Information 
+& Commun.  Public Adm. 
+& Defence  
+Tokenized  
+Representation  e.g., Art  e.g., Gold  e.g., Votes  e.g., Shares  e.g., Membership  
+Underlying  
+Representation  Digital  Physical  Contract  
+Function  Access to a 
+Service  On-Chain 
+Reward 
+Potential  Off-Chain 
+Cash Flow & 
+Dividend  Store of Value  Collectibles  Means of 
+Exchange  Voting Right  
+Purpose  Payment Tokens  Utility Tokens  Asset Tokens  
+Unit Fractional  Whole  Singleton  
+Tradability  Transferable  Non-Transferable  
+Fungibility  Fungible  Non-Fungible  
+Supply  Fixed  Unfixed  
+Technical Setup  Ledger Native  Ledger Non -Native  
+Driver of 
+Tokenization  Democratization &  
+Facilitated Access  Increased 
+Liquidity  Disintermediation  Increased  
+Transparency  Process  
+Optimization  Digital Scarcity  
+Barriers of 
+Tokenization  Legacy Structures &  
+Transition Risk  Data Privacy  Regulatory & Legal  Governance Issues  Oracle Problem  
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      7 Token Properties  
+• Industry Classification:  a token can be described based on the industry of the use case. UK 
+Standard Industry Classification (SIC) is applied (e.g., Financial and Insurance Activities, 
+Professional, Scientific and Technical Activities) (Marshall et al. 2018) . 
+• Tokeni zed Representation:  specifies the reference, value or proxy of the tokenized 
+representation in particular such as art, gold, credit loans, baseball bards, etc.  
+• Underlying Representation: indicates the superordinate category with regards to the 
+underlying c ollateral or generic nature of the token -based asset: digital (e.g., bankable  assets , 
+cryptoassets ), physical (e.g., real estate) or contract (e.g., usage right)  (Oliveira et al. 2018) . 
+• Function:  the reason  for holding tokenized assets is based on the function or target use of a 
+token: access to a service, on -chain reward potential (e.g., staking, airdrops), off -chain cash 
+flow (e.g., dividends), store of value (e.g., stablecoins, gold), collectibles with in trinsic value 
+(e.g., CryptoKitties), means of exchange (e.g., currency), voting right  (Marshall et al. 2018) . 
+• Purpose:  classifies the underlying economic purpose of a token into payment token (e.g., 
+Bitcoin), utility token (e.g., Ether), and asset token (e.g., Crowdlitoken)  (Mueller et al. 2018) . 
+• Unit:  indicates whether a token is sub -divisible into smaller fraction (fractional or partial, 
+whole with no subdivision, singleton with a quantity of one) (InterWorkAlliance IWA 2020) . 
+• Transferability:  relates to the transferability of ownership to another party (e.g., sale of a 
+registe red security)  (Oliveira et al. 2018) . 
+• Fungib ility:  indicates whether a token can be interchanged. While a fungible token has 
+interchangeable value with one another, a non -fungible token is unique and cannot be 
+interchanged due to different values  (Oliveira et al. 2018) . 
+• Total Supply:  describes to which limit a  number of  asset s can be generate d: fixed (e.g., 
+capped), unfixed (e.g., based on predefined conditions, schedule -based supply or managed by 
+authorized parties)  (Ankenbrand et al. 2020) . 
+• Technical Setup : describes  on which layer (e.g.,  protocol -level ) of the distributed ledger a 
+token is applied: native (e.g. , Bitcoin), non -native (e.g., ERC20) (Ketz and Sandner 2019) . 
+Driver of  Tokenization  
+We extend the perspective beyond token properties and consider applicability in terms of six distinct 
+drivers of tokenization  to identify the role of a token as part of a n operating and business model. Each 
+driver is to be selected, if one or  more of the following aspects explicitly applies:  
+• Democratization & Facilitated Access refers to the degree of financial inclusion. While 
+tokenization of real estate enables retail clients to participate in large scale real estate 
+development projects an d therefore is highly correlated to this factor, a token to trace the 
+provenance of items (e.g., diamonds)  is not.  
+• Increased Liquidity:  through the release of untradeable or private assets (e.g., venture capital, 
+real estate in certain market, collectibles such as wine, old -timers etc.) and 24/7 market access, 
+tokenization helps to create liquidity and facilitates the trading and settlemen t (Harwood -Jones 
+2019; Shtybel 2019)  
+• Disintermediation:  tokenization has the potential to reduce the need for trusted intermediaries. 
+Peer-to-peer trading and atomic settlemen t are examples of disintermediation in financial 
+markets (Shtybel 2019) .  
+• Increased Transparency:  tokenization increases transparency and traceability of token 
+ownership (Shtybel 2019) . Single -source -of-truth can improve efficiency, correctness and 
+coordination requirements significantly.  
+• Process Optimization:  typical examples of process optimization through tokenizati on are 
+corporate action (e.g., automated dividend payments through smart contracts) (Shtybel 2019) . 
+• Digital Scarcity:  tokenization introduces the concept of scarcity or predictable supply to the 
+digital domain, which contradicts the characteristics of digital medium such as mutability and 
+copyability (Chen 2020; Lotti 2019; Macedo 2019)  
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      8 Barrier of Tokenization  
+We present further five main barriers of tokenization  describing identified challenges in adoption and 
+implementation of token -based solutions. One or more of the following barriers may explicitly apply:  
+• Legacy Structures & Transition Risk:  existing structures and legacy systems may represent 
+a barrier when implementing use cases (e.g., core banking system, existing infrastructure).  
+• Data Privacy:  depending on the business case the sensitivity to data privacy may vary and can 
+even be in conflict with existing traditional security law (Shtybel 2019) . 
+• Regulatory & Legal:  uncertainties originating from legal , regulatory and compliance. Limited 
+enforceability, lack of global standards and slow adaption of regulation and law represent 
+examples of potential legal barriers for tokenization (Savelyev 2 018). 
+• Governance:  key aspects in token -enabled business models are new governance mechanisms. 
+The extent of barriers might depend on the complexity of the underlying network, the number 
+of involved partners in the ecosystem and applied incentive mechani sm. 
+• Oracle Problem:  gates between the digital and physical world pose challenges in terms of 
+security, authenticity and trust. The more a business case relies on off -chain data, the higher its 
+correlation to this factor. Barriers may vary the number of dif ferent sources, existence and 
+design of technical interface, audit, and quality requirements.  
+Dependencies between Token Properties, D rivers, and Barriers of Tokenization  
+The analysis of 129 firms highlighted recurring combinations of criteria  and allowed us to draw 
+conclusions on various  dependencies . For example, we found that bankable assets are often combined 
+with fractionality to enable increased liquidity. To derive archetypes, we structured these dependencies 
+according to their level of a bstraction and referred to the tokenized representation at first to examine 
+the interrelationships between properties, drivers, and barriers in the respective case.  Our findings 
+revealed that the tokenization of physical assets (e.g., real estate, artwork)  is manly driven by the 
+financial sector, logistics, and arts industry. While tokenized commodities were utilized for track and 
+tracing, tokenized paintings were further applied for provenance and authenticity. However, high value 
+assets (e.g., gold, watch es) are mainly tokenized for specific investment purposes. This pattern is also 
+highlighted by the majority of other products that already exist in a digitized form (e.g., bankable 
+assets). Regarding shares and bonds, a fractional, tradable, and fungible t oken design is required. They 
+fulfill the function to exchange and store value and enable off -chain or on chain reward potentials. 
+Tokenized contracts (e.g., voting, usage rights) show strong dependency towards service and platform 
+access for various indus tries. The ownership of such utility token does not only grant general access but 
+also provides discounts and participation in decision -making processes. They are characterized by 
+fungibility, flexible supply, and transferability between holders. Other uti lity token exist that provide 
+individual asset ownership (e.g., digital twins, identities). Assigned to a unique bearer, they follow a 
+capped token supply and a non -fungible design. Also for collectibles (e.g., luxury cars) a unique 
+reference is establishe d through non -fungibility, as transferability and fractionality is not desirable. 
+Tokenized virtual items on basis of a capped supply (e.g., digital gaming cards) enable further 
+ownership and possession for a limited series of objects. Where fungible and t radable token are mainly 
+represented through non -native DLT -frameworks (e.g., ERC -20), non -fungible token may require 
+extended functionality and application access and refer more often to proprietary DLT -systems.   
+Democratization and facilitated access is highly associated with the tokenization of physical assets, 
+whereas the correlation with tokenized contracts is somewhat less pronounced. Some interrelations  
+highlight the potentials to minimize investment amounts of non -bankable assets typically considere d 
+illiquid (e.g., watches, wine). But also tokenized equity and loans increase financial inclusion for a 
+broader investor base through fractionality (e.g., peer -to-peer lending). Beside these benefits in product 
+innovation, it is assumed that the financial  sector is further driven by process optimization and increased 
+transparency. This dependency refers specifically to automation of administrative tasks and a tamper 
+resistant asset ownership of transactions. Interestingly, the disintermediation of existing  structures is 
+strongly pronounced for native digital currencies as a means of exchange (e.g., stablecoins). However, 
+these aspects can be neglected for tokenized contracts. Where accessibility to services is a prerequisite, 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      9 the use of tokens is driven by process innovation. This combination is also identified for life cycle 
+tracking of physical objects. To provide provenance (e.g., artwork, diamonds), increased transparency 
+is highly appreciated. To prevent replication of tokenized assets, digital scarcity  is further introduced 
+on basis of a fixed token supply. Accordingly, a non -fungible and singleton token design with less 
+pronunciation on fractional ownership and increased liquidity is required.   
+By taking a closer look at the barriers, we need to disti nguish between transformational and enabling 
+capabilities of tokenization. Especially for existing bankable assets, a seamless integration into legacy 
+system is often required and poses a transition risk for implementation. On the contrary, physical 
+tradab le assets show only low to no correlation towards compliant legacy systems. It is assumed that a 
+functional market infrastructure is not established yet and that such use cases offer high potential for 
+new products and services. Use cases for the transfer of asset ownership and tokenization of financial 
+asset classes (e.g., shares, currencies) require further a regulatory basis. While common law often refers 
+to known legal structures, the legislation for a dematerialization of a fully digitized asset owners hip is 
+often not established yet (e.g., legal assertion of smart contracts). Where token solely provide access to 
+a service platform (e.g., tokenized goods in logistics) or serve as a basis for non -fungible collectibles 
+(e.g., trading cards) a legal framew ork is not necessarily required. Some use cases show increased 
+requirements for data privacy. Tokenized health data, for instance, may rely on restricted permission 
+for monitoring sensible transactions. Additional complexity is added when new actors have t o be 
+coordinated or incentivized to join a decentral platform. A minimal viable ecosystem is often necessary 
+that consist of additional stakeholders (e.g., asset tokenizer, custodian). With regards to physical 
+representations (e.g., watches, container), a consistent data connection between the physical and digital 
+world is appreciated. Especially for unique non -fungible token, this oracle problem has to be considered.  
+Archetypical Use Cases for Asset Tokenization  
+We present eight archetypical use cases c overing the different manifestations for tokenization among 
+the analyzed sample of firms (cf. Figure 1). They represent similar configurations of parameters to be 
+understood as recurring applications in existing operating and business models (see Appendix) .  
+Figure 1. Asset Tokenization Archetypes  
+Primarily driven by the financial industry, programmable money  represents applications associated 
+with tokenized currency (e.g., stablecoins, central bank digital currencies) for an efficient means of 
+exchange and store of value. By overcoming drawback of existing applications, payment tokens highly 
+optimize processe s and make it possible to trigger events and automate a multitude of services on 
+automated decentralized platforms (e.g., micropayments). However, governance between stakeholders 
+(e.g., central and commercial banks) and the adaptation of a legal framework,  increase transition risks 
+as centralized solutions already exists. Smart bankable assets  are driven by similar aspects in terms of 
+process optimization and investment rewards potentials. By implementing a financial contract logic, 
+recurring cash flows and  voting rights can be automated. Also market accessibility as well as the usage 
+of tradable and fungible asset token increases transparency and liquidity. The integration into existing 
+legacy systems and complexity of such market structures pose a risk, wh ere legal and regulatory 
+foundations are slowly established. Beside transformational aspects, the opening of illiquid assets 
+focuses on the creation of token as a proxy for physical value. Due to the increased efficiency delivered 
+
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      10 by the digitalization pro cess, representations of real estate or classic cars add additional accessibility by 
+design. The fractionalized investment denominations of token may decrease market friction. Arranged 
+at low amounts, access is provided to a much broader investors base to increase liquidity. However, the 
+complex network of actors and required external data through oracles needs to be considered. Another, 
+more specialized, form of democratization is represented by crowd funding . Emerged in form of ICOs, 
+such applications are  characterized by reduced transaction costs through elimination of external service 
+providers. Where many associated business models were not economically viable before, tokens allow 
+efficient, fractionized, real -time crowd investments ranging from private  projects to participation in 
+venture capital. A focus lies on fast and flexible tradability as basis for increased liquidity. However, 
+obstacles remain for establishing such regulated market infrastructures and to incentivize the usage 
+among stakeholders.  Defined as service access , many use cases utilize tokens as an instrument for 
+acquiring rights to a specific service. Implemented by various industries, tokenized licenses or 
+memberships allow a facilitated and effective access to decentralized platforms.  They are categorized 
+according to the functions a token grants to the holder (i.e., general -, exclusive -, DLT -infrastructure 
+access). Both fungibility and non -fungibility may be implemented to assign a unique private or public 
+functionality. Unlike other cases, the tokens are not regulated at all. The services offered are solely 
+depending on the provider and pose challenges for governance and implementation of external data 
+sources. Platform governance  represents a more abstract field of use cases for toke nizing incentive 
+mechanisms as a means of coordination and cooperation. Embedded into a DLT protocol, tokens are 
+issued as a reward to users for completing specific tasks or meeting a certain behavior (e.g., mining 
+reward for transaction validation). Besid e DLT -specific means of consensus, a token may also be 
+demanded and valued on its own to further incentivize community building or voting. They are not 
+primarily based on future monetarization but have social value by governing voting power and creating 
+community sense. Democratization, process optimization, disintermediation, data privacy (e.g., 
+pseudonymity, anonymity) and increased complexity are characteristic of such use cases. While DLT 
+enables verifiable digital scarcity, we introduce digital soverei gnty for applications that require unique 
+representations and decentralized data access control for token holder in their own right (e.g., digital 
+identities). Once implemented as a non -fungible token, the assets provide proof of authenticity and 
+cannot be  replicated by one governing entity. This democratization of interaction on decentralized 
+platforms allows users to control in -game assets, for instance, independently from a single platform 
+owner (e.g., CryptoKitties). Referring to the tokenization of uni que physical assets or sensible data, data 
+privacy and a secure link between the physical and the digital object have to be considered. At last, 
+track & tracing  is used to establish a tamper -proof -record of ownership among various stakeholders. 
+Such use ca ses are often associated with logistical processes in many industries and allow organizations 
+to utilize token for increased transparency along the lifecycle of tangible or intangible assets. Where 
+tokenized consumer goods may take on fungible properties, non-fungible token are appreciated for high 
+value items. Especially for provenance across supply chains, external data authenticity and integration 
+into legacy systems must be considered . Several combinations between archetypes have been further 
+identified . For example, use cases in supply chain finance that rely on both, track and tracing as wells 
+as the opening of illiquid assets. As one archetype exhibits a main purpose, there might be additional 
+purposes which are combinable and may extend token utility  in a decentralized system.  
+Discussion  
+Given the increasing interest in asset tokenization, t his work  proposes a  first qualitative framework that 
+provides a n understanding about the practicability  of this application area  by identifying relevant 
+criteria for assessment , comparison , and  documentation of use cases. To identify the role of tokenized 
+representations as part of a broader business model, we extended the perspective beyond token 
+properties and integrated selected aspects of applicability  on basis of a literature review and expert 
+interviews (i.e., drivers and barriers of tokenization ). Our empirical data confirmed our initial 
+assumptions that the same tokenized object can exhibit a multipurpose ability for different use cases.  
+We further applied the framework in a structured comparison process based on a sample of companies 
+associated with tokenization. Following our morphological approach, the different instantiations 
+allowed us to further identify dependencies between the different dimen sions and criteria to highlight 
+similarities. Given the dataset, we propose eight archetyp ical use cases . Moreover, our study revealed 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      11 that assessing the applicability of asset tokenization  requires an interdisciplinary  and multifaceted  
+approach . The invol ved criteria uncover a range of various possibilities , strengths , and weaknesses  on 
+an abstract basis and represent  a first set of formal descriptions for the design  and development of uses 
+cases  and token -based business model s. In assisting businesses to align their activities and assess 
+potential trade -offs, applicability between the drive s and barriers  of a specific asset tokenization use 
+case ha s to be illustrated in the first place . These two dimensions  of the  framework help to judge 
+feasibility  and to discern the pros and cons . Subsequently, the token propert y dimensions  further specify  
+the unique business value of a use case in the context of respective token characteristics and provid e 
+additional aspects  from a business standpoint  to clarify scenarios at the backdrop of token design . We 
+regard the framework also as an initial approach for the operationalization of the tokenization concept . 
+Although the development of a quantitative decision model is beyon d the scope of this study, the 
+identified dimensions  may be weighted  individually to improve  an assessment.  It could be shown that 
+an additional perspective on applicability in terms of drivers and barriers is required to evaluate the role 
+of tokens in a p articular scenario . Designed to remain as simple as possible, we were further able to 
+capture significant meaning by representing the current state of the tokenization ecosystem in terms of 
+archetypical use cases. Finally, our results suggest that there is a huge potential o ffered by a token 
+economy that is not limited to the tokenization of assets in the  financial sector . 
+Implications  
+The presented findings contribute to practice in two ways. Firstly, the framework allows strategists and 
+managers to support a comparison of use cases associated with asset  tokenization helping  to assess  the 
+potential in the context of different token desi gns, drivers, and barriers for adoption. By defining  
+applicability according to  the predefined criteria, the framework may be utilized as a decision -aid tool 
+to develop and compare viable solutions for different tokenized objects  and improve managerial 
+practices for entering this highly innovative area . Secondly, the identified dependencies and archetypes 
+highlight  the usability of the  framework and reduce  complexity by providing an overview of ma jor 
+differences in existing token -based solutions . They provi de strategic guidance in the design of tangible 
+applications  and illustrate how firms can a pply this concept to innovate their businesses towards a token 
+economy . Even though various classifications exist and are applied in practice , we observed that the 
+tokenization domain is still heavily influenced by grey literature and that most frameworks are primarily 
+geared towards cryptoassets (e.g., ITSA) without really examining  new roles of token s as part of a n 
+operating and business model . So far, there has been no overview about tokenization use cases that 
+involves relevant  factors  for analysis (e.g., increased liquidity, governance issues) . Accordingly,  this 
+study contributes to  this gap through the synthesis  of the research foci  token description  and 
+applicability of tokenization . Our contributions to research are t hree-fold. First, we extend the e xisting 
+knowledge base beyond token classifications by generating new empirical insights about existing use 
+cases. Secondly, the archetypes serve as a cornerstone for the development of feasible solutions and 
+may foster research on interdisciplinary applications in other industr ies. Thirdly, we support the multi -
+perspective discussion  on the opportunities of a token economy . By combining the requirement s of 
+established industries with the disruptive innovations of its fast -moving open -source  community , we 
+may further  establish a  common understanding from a technological  and economic perspective.  
+Limitation and future research  
+As the framework is initially based on scientific literature, we cannot generalize the presented findings 
+without limitation. Some of the identified driver s and barriers stem from a very new phenomenon that 
+highlight the need to enhance data collection using grey literature and more practical sources. Therefore, 
+it cannot be claimed that the proposed framework is complete nor stops the need for further resea rch at 
+this intersection. Exhaustive and mutually exclusive principles associated with a structured approach to 
+building a taxonomy were therefore neglected. Also limitations of the interview process have to be 
+considered. The chosen experts may have found  it difficult to verbalize feedback on the proposed 
+framework. Especially interviewees with profound knowledge in banking and finance showed a 
+stronger bias towards aspects associated with the tokenization of bankable assets in comparison to other 
+industri es. However, we considered this subjective interpretation by constantly reflecting our interim 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      12 findings by the introduction of two broader discussion rounds. Due to the fast dynamics in this field, 
+we cannot claim general transferability of the archetypes but rather indicate the status quo of a 
+prevailing tokenization ecosystem. By design, there is a notable overlap of groupings. V alidation is 
+therefore pivotal to improve ambiguity and inconsistencies during the coding process. Nevertheless, the 
+findings pr ovide a first useful foundation with relevant distinctions and characteristics. In future 
+research, efforts should be made by generating further insights using longitudinal data or case study 
+approaches. Potentially, this will improve the understanding of token -based  business model associated 
+with tokenization and might lead to an extension of the framework with additional metrics and 
+operationalizations  (e.g., weighted sum model) . New companies may follow with entirely new services 
+and products than the o nes included in our dataset. With an emergence of new projects and players, it 
+is not unlikely that the vast majority of assets will be digitized in the near future.  
+References  
+Ankenbrand, T., Bieri, D., Cortivo, R., Hoehener, J., and Hardjono, T. 2020. “Proposal for a 
+Comprehensive (Crypto) Asset Taxonomy,” in 2020 Crypto Valley Conference on Blockchain 
+Technology (CVCBT) , June, pp. 16 –26.  
+Ayres, L. 2008. “Semi -Structured Interv iew,” in The SAGE Encyclopedia of Qualitative Research 
+Methods , L. Given (ed.), Thousand Oaks, CA, USA: SAGE Publications, Inc., pp. 810 –811.  
+Babich, V., and Hilary, G. 2020. “OM Forum —Distributed Ledgers and Operations: What Operations 
+Management Researc hers Should Know About Blockchain Technology,” Manufacturing & Service 
+Operations Management  (22:2), pp. 223 –240.  
+Beck, R., Avital, M., Rossi, M., and Thatcher, J. B. 2017. “Blockchain Technology in Business and 
+Information Systems Research,” Business & I nformation Systems Engineering  (59:6), pp. 381 –384.  
+Braun, V., and Clarke, V. 2006. “Using Thematic Analysis in Psychology,” Qualitative Research in 
+Psychology  (3:2), Routledge, pp. 77 –101.  
+Chen, Y. 2020. “Information Integration in Libraries,” Library H i Tech  (38:1), pp. 210 –219.  
+Distefano, B., Pocher, N., and Zichichi, M. 2020. “MOATcoin: Exploring Challenges and Legal 
+Implications of Smart Contracts through a Gamelike DApp Experiment,” in Proceedings of the 3rd 
+Workshop on Cryptocurrencies and Blockchains for Distributed Systems , CryBlock ’20, 
+Association for Computing Machinery, September 25, pp. 53 –58.  
+Euler, T. 2018. “The Token Classification Framework: A Multi -Dimensional Tool for Understanding 
+and Classifying Crypto To kens.” Untitled INC , January 18. (http://www.untitled -inc.com/the -
+token -classification -framework -a-multi -dimensional -tool-for-understanding -and-classifying -
+crypto -tokens/, accessed July 27, 2020).  
+Freni, P., Ferro, E., and Moncada, R. 2020. “Tokenization a nd Blockchain Tokens Classification: A 
+Morphological Framework,” in 2020 IEEE Symposium on Computers and Communications , July, 
+pp. 1 –6. 
+Gioia, D. A., Corley, K., and Hamilton, A. L. 2013. “Seeking Qualitative Rigor in Inductive Research: 
+Notes on the Gioia  Methodology,” Organizational Research Methods  (16:1), SAGE Publications 
+Inc., pp. 15 –31.  
+Greer, R. J. 1997. “What Is an Asset Class, Anyway?” The Journal of Portfolio Management  (23:2), 
+Institutional Investor Journals Umbrella, pp. 86 –91.  
+Grilo, A., and  Zutshi, A. 2020. “Preface for Special Issue on Blockchain and Tokenization for Industry 
+and Services,” Computers & Industrial Engineering  (146), N.PAG -N.PAG.  
+Hartung, G., Rutter, K., and Stroemer, G. 2019. “A Solution for Managing High -Quality Liquid Asse ts: 
+How Distributed Ledger Technology Can Benefit the Securities Lending Market,” Journal of 
+Securities Operations & Custody , p. 11.  
+Harwood -Jones, M. 2019. “Digital and Crypto -Assets: Tracking Global Adoption Rates and Impacts 
+on Securities Services,” Journal of Securities Operations & Custody , p. 10.  
+Hrga, A., Capuder, T., and Žarko, I. P. 2020. “Demystifying Distributed Ledger Technologies: Limits, 
+Challenges, and Potentials in the Energy Sector,” IEEE Access  (8), pp. 126149 –126163.  
+Hughes, L., Dwivedi,  Y. K., Misra, S. K., Rana, N. P., Raghavan, V., and Akella, V. 2019. “Blockchain 
+Research, Practice and Policy: Applications, Benefits, Limitations, Emerging Research Themes and 
+Research Agenda,” International Journal of Information Management  (49), pp. 1 14–129.  
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      13 InterWork Alliance IWA. 2020. “Token Taxonomy Framework Overview TTF,” GitHub , , May. 
+(https://github.com/InterWorkAlliance/TokenTaxonomyFramework, accessed January 18, 2021).  
+Kannengießer, N., Lins, S., Dehling, T., and Sunyaev, A. 2020. “Trade -Offs between Distributed 
+Ledger Technology Characteristics,” ACM Computing Surveys  (53:2), pp. 1 –37.  
+Ketz, C., and Sandner, P. 2019. “Market Standards for the Global Token Economy - International Token 
+Standardization Association,” Medium , , July 16. (https://medium.com/@itsa_global/market -
+standards -for-the-global -token -economy -7d9f3d0cde37, accessed January 18, 2021).  
+Lotti, L. 2019. “The Art of Tokenization: Blockchain Affordances and the Invention of Future Milieus,” 
+Media Theory  (3:1), Rethinking Affordance, Media Theory, pp. 287 –320. 
+Macedo, J. M. 2019. “A Taxonomy of Token Models and Valuation Methodologies,” Medium , , May 
+28. (https://medium.com/amazix/a -taxonomy -of-token -models -and-valuation -methodologies -
+7b6c0a1d02a9, accessed January 18, 2021).  
+Madhwal, Y. 2020. “Implementation of Tokenised Supply Chain Using Blockchain Technology,” in 
+2020 IEEE 21st International Symposium on “A World of Wireless, Mobile and Multimedia 
+Networks”  (WoWMoM) , August, pp. 66 –67.  
+Marshall, L., Repin, A., Tsavliris, C., and Humberstones, C. 2018. “CryptoCompare Cryptoasset 
+Taxonomy,” CryptoCompare, October.  
+Mooney, A. 2018. Blockchain ‘Could Save Asset Managers $2.7bn a Year.’  
+(https://www.ft.com/conte nt/b6171016 -171f-11e8 -9e9c -25c814761640).  
+Mueller, L., Glarner, Linder, and Meyer. 2018. “BCP Framework for Assessment of Crypto Tokens - 
+MME - Blockchain Crypto Property.”  
+Nakamoto, S. 2008. “Bitcoin: A Peer -to-Peer Electronic Cash System,” Original White paper, Manubot.  
+Naqvi, N., and Hussain, M. 2020. “Evidence -Based Blockchain: Findings from a Global Study of 
+Blockchain Projects and Start -up Companies,” The Journal of The British Blockchain Association  
+(3), pp. 1 –13.  
+Narayan, R., and Tidström, A. 2020. “Tokenizing Coopetition in a Blockchain for a Transition to 
+Circular Economy,” Journal of Cleaner Production  (263), p. 121437.  
+OECD. 2020. “The Tokenisation of Assets and Potential Implications for Financial Markets,” OECD 
+Blockchain Policy Series, OECD.  
+Oliveira, L., Zavolokina, L., Bauer, I., and Schwabe, G. 2018. “To Token or Not to Token: Tools for 
+Understanding Blockchain Tokens,” ICIS 2018 Proceedings  
+Pilkington, M. 2015. Blockchain Technology: Principles and Applications , Rochester, NY: Social 
+Scien ce Research Network.  
+Roth, J., Schär, F., and Schöpfer, A. 2019. “The Tokenization of Assets: Using Blockchains for Equity 
+Crowdfunding,” SSRN Electronic Journal . 
+Savelyev, A. 2018. “Some Risks of Tokenization and Blockchainizaition of Private Law,” Compu ter 
+Law & Security Review  (34:4), pp. 863 –869. 
+Sazandrishvili, G. 2020. “Asset Tokenization in Plain English,” Journal of Corporate Accounting & 
+Finance  (31:2), pp. 68 –73.  
+Shtybel, U. 2019. “A New Era of Private Securities: Application of Blockchain in Pr ivate Capital 
+Markets Infrastructure,” Journal of Digital Banking  (4:2), pp. 152 –160. 
+Strauss, A. L. 1987. Qualitative Analysis for Social Scientists , Cambridge: Cambridge University Press.  
+Sunyaev, A., Kannengießer, N., Beck, R., Treiblmaier, H., Lacity,  M., Kranz, J., Fridgen, G., 
+Spankowski, U., and Luckow, A. 2021. “Token Economy,” Business & Information Systems 
+Engineering . 
+Webster, J., and Watson, R. T. 2002. “Analyzing the Past to Prepare for the Future: Writing a Literature 
+Review,” MIS Quarterly  (2:26).  
+Zachariadis, M., Hileman, G., and Scott, S. V. 2019. “Governance and Control in Distributed Ledgers: 
+Understanding the Challenges Facing Blockchain Technology in Financial Services,” Information 
+and Organization  (29:2), pp. 105 –117.  
+Zhou, T., Li, X ., and Zhao, H. 2019. “Med -PPPHIS: Blockchain -Based Personal Healthcare 
+Information System for National Physique Monitoring and Scientific Exercise Guiding,” Journal 
+of Medical Systems  (43:9), N.PAG -N.PAG.  
+Zwicky, F. 1969. Discovery, invention, research t hrough the morphological approach , Macmillan.  
+ 
+ Towa rds a Framework for Understanding Asset Tokenization  
+  
+Twenty -fifth Pacific Asia Conference on Information Systems, Dubai , UAE, 2021      14  
+Archetype
+LabelIndustry FocusTokenized 
+RepresentationUnderlying  
+RepresentationFunction Purpose Unit Tradability Fungibility Supply Technical Setup Driver of TokenizationBarriers for 
+Tokenization
+Financial & Insurance Activities Currency Digital Means of ExchangePayment 
+Tokens Fractional Transferable Fungible Fixed Ledger NativeDemocratization & 
+Faciliated AccessLegacy Structures & 
+Transition Risk
+Money Physical Store of Value Unfixed Ledger Non-Native Increased Liquidity Regulatory & Legal
+… Process Optimization Governance Issues
+Financial & Insurance Activities Stocks Digital On-Chain Reward Potential Asset Tokens Fractional Transferable Fungible Unfixed Ledger Non-Native Democratization & 
+Faciliated AccessLegacy Structures & 
+Transition Risk
+Bonds Off-Chain Cash Flow & Dividend Increased Liquidity Regulatory & Legal
+… Voting Right Increased Transparency Governance Issues
+Store of Value Process Optimization
+Financial & Insurance Activities Art Physical Off-Chain Cash Flow & Dividend Asset Tokens Fractional Transferable Fungible Unfixed Ledger NativeDemocratization & 
+Faciliated AccessRegulatory & Legal
+Transport & Storage  Real Estate Store of Value Ledger Non-Native Increased Liquidity Governance Issues
+Arts, Entertainment & Recreation … Disintermediation Oracle Problem
+Financial & Insurance Activities Equity Digital Off-Chain Cash Flow & Dividend Asset Tokens Fractional Transferable Fungible Unfixed Ledger NativeDemocratization & 
+Faciliated AccessLegacy Structures & 
+Transition Risk
+Debt Contract Store of Value Ledger Non-Native Increased Liquidity Regulatory & Legal
+… Voting Right Disintermediation Governance Issues
+Increased Transparency
+Process  optimization
+Financial & Insurance Activities Membership Digital Access to a Service Utility Tokens Fractional Transferable Fungible Fixed Ledger NativeDemocratization & 
+Faciliated AccessData Privacy
+Prof., Sc. & Technical Activities Discount Contract Whole Non-Fungible Unfixed Ledger Non-Native Increased Transparency Governance Issues
+Blockchain-Specific Application … Singleton Process Optimization Oracle Problem
+Transport & Storage Digital scarcity
+Arts, Entertainment & Recreation
+Wholesale & Retail Trade
+Information & Commun.
+Public Adm. & Defence
+Arts, Entertainment & Recreation Governance Digital Access to a Service Utility Tokens Fractional Transferable Fungible Fixed Ledger NativeDemocratization & 
+Faciliated AccessData Privacy
+Blockchain-Specific ApplicationIncentive 
+MechanismContract On-Chain Reward Potential Whole Unfixed Ledger Non-Native Disintermediation Governance Issues
+Financial & Insurance Activities Reward Voting Right Singleton Process Optimization
+Prof., Scientific & Technical Activities …
+Arts, Entertainment & Recreation Identity Digital Collectibles Asset Tokens Whole Non-transferable Non-Fungible Fixed Ledger NativeDemocratization & 
+Faciliated AccessData Privacy
+Financial & Insurance Activities Classic Cars Contract On-Chain Reward Potential Utility Tokens Singleton Ledger Non-Native Disintermediation Oracle Problem
+Information & Commun. Digital Cards Physical Off-Chain Cash Flow & Dividends Digital scarcity
+Transport & Storage … Store of Value
+Arts, Entertainment & Recreation Artwork Digital Access to a Service Asset Tokens Whole Non-transferable Fungible Fixed Ledger Native Increased Transparency Data Privacy
+Financial & Insurance Activities Diamonds Physical Store of Value Utility Tokens Singleton Transferable Non-Fungible Unfixed Ledger Non-Native Process OptimizationLegacy Structures & 
+Transition Risk
+Blockchain-Specific Application Watches Collectibles Digital scarcity Oracle Problem
+Transport & Storage …
+Wholesale & Retail TradeDigital 
+Sovereignty
+Track & 
+Tracing Appendix: Tokenization Archetypes 
+Programmable 
+Money
+Smart Bankable 
+Assets
+Opening of 
+Illiquid Assets
+Crowd 
+Funding
+Service 
+Access
+Platform 
+Governance
+View publication stats

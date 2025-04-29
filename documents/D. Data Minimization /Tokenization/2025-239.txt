@@ -1,0 +1,3639 @@
+DART: Decentralized, Anonymous, and
+Regulation-friendly Tokenization
+Amirreza Sarencheh1, Hamidreza Khoshakhlagh2, Alireza Kavousi3, and
+Aggelos Kiayias4
+1The University of Edinburgh, UK
+amirreza.sarencheh@ed.ac.uk
+2Partisia and Aarhus University, Denmark
+hamidreza@cs.au.dk
+3University College London, UK
+a.kavousi@cs.ucl.ac.uk
+4The University of Edinburgh and IOG, UK
+aggelos.kiayias@ed.ac.uk
+Abstract. We introduce DART, a fully anonymous , account-based pay-
+ment system designed to address a comprehensive set of real-world con-
+siderations, including regulatory compliance, while achieving constant
+transaction size . DART supports multiple asset types , enabling users to
+issue on-chain assets such as tokenized real-world assets. It ensures confi-
+dentiality and anonymity by concealing asset types, transaction amounts,
+balances, and the identities of both senders and receivers, while guaran-
+teeing unlinkability between transactions. Our design provides a mecha-
+nism for asset-specific auditing . Issuers can designate asset-specific audi-
+tors for the assets they issue, with the system preserving the privacy of
+the auditor’s identity to achieve asset type privacy. Only the designated
+auditor is authorized to decrypt transactions related to their associated
+asset, and users efficiently prove the association between the (hidden) as-
+set type and the (hidden) designated auditor in their transactions. DART
+supports non-interactive payments , allowing an online sender to submit
+a transaction even when the receiver is offline, while still incorporating a
+receiver affirmation mechanism that captures the real-world compliance
+consideration where the receiver must confirm (or deny) an incoming
+transaction. To the best of our knowledge, this is the first scheme of this
+kind in the permissionless setting. To accommodate all eventualities,
+DART also incorporates a reversibility mechanism, enabling senders to
+reclaim funds from pending transactions if the receiver’s affirmation is
+not yet provided. Finally, it offers a privacy-preserving proof of balance
+(per asset type) mechanism. Our system achieves full anonymity while
+supporting concurrent incoming and outgoing transactions, resolving a
+common issue that plagues many account-based anonymous systems. We
+further demonstrate how our system supports multi-party transactions ,
+allowing payment to multiple receivers in one transaction efficiently. We
+provide a full formal model in the Universal Composition (UC) setting,
+as well as a UC protocol realization.
+Keywords: Digital Asset Transfer, Privacy, Regulatory Compliance, Real-World
+Assets, Tokenization, Anonymous Payments, Universal Composition.
+Table of Contents
+1 Introduction. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+1.1 Our results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+2 Related works . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+3 Formal modeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+4 Our construction DART . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+4.1 Algorithms . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+4.1.1 Address generation. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+4.1.2 Asset issuance. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+4.1.3 Account registration. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+4.1.4 Increase asset supply. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+4.1.5 Sender transaction. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+4.1.6 Receiver transaction. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+4.1.7 Reversion. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+4.1.8 Proof of balance. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+4.1.9 Auditor operation. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+5 Discussion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+5.1 Multi-party transactions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+5.2 Fee payments . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+5.3 Maintenance of LIAA. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+6 Implementation details . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+7DART security proof . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+7.1 Simulation. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+7.2 Security games . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 48
+A Proof of balance: a generic solution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 53
+B Ideal functionalities . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 58
+B.1 Key generation functionality . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 58
+B.2 Non-interactive zero-knowledge functionality . . . . . . . . . . . . . . . . . . 59
+B.3 Ledger functionality . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 60
+B.4 Communication channel functionality . . . . . . . . . . . . . . . . . . . . . . . . 61
+C Cryptographic schemes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 62
+C.1 Public key encryption (PKE) schemes . . . . . . . . . . . . . . . . . . . . . . . . 62
+C.2 Commitment schemes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 64
+C.3 Pseudorandom function (PRF) schemes . . . . . . . . . . . . . . . . . . . . . . 66
+C.4 Accumulator schemes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 67
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 3
+1 Introduction
+A fully anonymous payment system ensures that users remain hidden within
+the entire set of system participants. Specifically, a payment transcript provides
+the counterparties of any transaction with an anonymity set as large as the to-
+tal number of users in the system. Several existing blockchain systems, such as
+Zerocash [49] and Ouroboros Crypsinous [31], achieve this level of anonymity
+under varying assumptions. A common characteristic of these systems, however,
+is that they utilize coin-based bookkeeping, sometimes referred to as UTXO-
+based bookkeeping5. Intuitively, this means that during a payment protocol,
+users spend existing coins and create new coins (of specified amounts) to fa-
+cilitate value transfer. An inherent consequence of this coin-based operation is
+that the token holdings of any individual account holder are dispersed across the
+various coins they control. It is important to note that this coin-based approach
+is not exclusive to “privacy coins” —Bitcoin [41], for example, also employs
+UTXO-based bookkeeping.
+In contrast to the coin-based approach discussed above, the account-based
+approach employed by systems like Ethereum [10] offers a different method of
+managing transactions. In an account-based system, each account has a unique
+identifier which is publicly known, and senders transfer funds directly from their
+accounts by reducing their balances and crediting the recipient’s account. A key
+advantage of this approach is that the system state has a straightforward rep-
+resentation, such as a table displaying each account’s balance. Consequently,
+various account-related operations can be significantly simpler to perform com-
+pared to the UTXO model, where a user’s balance is distributed.
+The high-level idea behind confidential and anonymous payment schemes,
+whether UTXO-based or account-based, is for the sender to generate a Zero-
+Knowledge Proof (ZKP) that demonstrates the well-formedness of the trans-
+action. The transaction conceals the transferred value within a commitment or
+encryption. In the ZKP, the sender proves the knowledge of secret values required
+for payment authorization, and proves the transferred value is positive and lies
+within the appropriate range as dictated by the input and output balances of the
+coins or accounts involved. Finally, double-spending is prevented by recording
+transaction-specific cryptographic objects, e.g., nullifiers, or by (homomorphi-
+cally) reducing the sender’s balance as soon as the transaction is received.
+From a privacy perspective, the account-based approach poses significant
+challenges in achieving anonymity. Systems like QuisQuis [24]6, Zether [8], Anony-
+mous Zether [19], and PriDe CT [28] restrict the sender’s anonymity set to kout
+ofn, where k≪nis a security parameter, and their transaction size is O(k).7
+The primary challenge arises from the requirement that, for full anonymity, ev-
+ery transaction must interact with the complete ledger state. If certain accounts
+5UTXO stands for “unspent transaction output”.
+6Note that QuisQuis is an account-based cryptocurrency that also uses UTXOs.
+7For instance, kis 64 for QuisQuis and 256 for anonymous Zether. For an anonymity
+set of 16, the transaction size for QuisQuis is 26 KB, whereas for anonymous Zether,
+it is 6 KB. Note that, the maximum block size is assumed to be 100 KB [34].
+4 A. Sarencheh et al.
+are excluded from being updated during a transaction, the anonymity of that
+transaction is compromised, as a small kopens up the possibility of privacy at-
+tacks (e.g., see [33,40]). The limitation on the anonymity set is inherent to these
+systems, as the value of kis constrained by the maximum transaction size that
+a block can hold. Another challenge is the need to carefully choose the accounts
+that are part of the anonymity set as the level of anonymity can be greatly
+diminished depending on the choice of these accounts.
+Standard digital currency transactions (e.g., in Bitcoin [41]) allow the receiver
+to obtain the funds immediately upon blockchain validators processing the trans-
+action. Moving beyond simple payments, the concept of receiver affirmation is
+a well-known regulatory requirement in broader financial transactions such as
+securities transfers, emphasized by the US Securities and Exchange Commis-
+sion (SEC) [55], and others [52], [44], [53], [45], [6], [54]. This mechanism grants
+receivers the authority to accept or reject incoming payments before their ac-
+counts are updated. Receiver affirmation empowers receivers to manage their
+obligations proactively and is particularly important for transactions with legal
+or tax implications, where receivers assume specific responsibilities upon receiv-
+ing an asset.
+Accommodating receiver affirmation introduces additional challenges, such as
+facilitating proof of balance (PoB). PoB allows any verifier to request the balance
+of a specific asset under a specific public key or address. A related concept is
+proof of assets (PoA) [15], which enables a prover to convince a verifier that they
+possess at least a certain amount of assets. Unlike PoB, which requires revealing
+theexact balance in the user’s account, PoA focuses solely on proving sufficiency.
+With receiver affirmation, PoB becomes non-trivial as the sender’s balance in
+their account is split while waiting for the receiver to come online. Depending on
+the receiver’s decision (affirming or rejecting), the funds can either be reversed
+(added back to the sender’s balance) or transferred to the receiver’s account
+balance. Also, receiver affirmation introduces another challenge that addresses
+scenarios in which the receiver does not affirm the transaction. The system should
+support reversibility , ensuring that if a receiver does not affirm, the sender can
+reclaim the funds. By allowing the reclamation of unaffirmed funds, reversibility
+prevents assets from being lost. Moreover, maintaining simultaneous transactions
+allows senders to engage in multiple transactions simultaneously with different
+parties, without waiting for pending transactions to be affirmed or reversed. This
+ensures high throughput in the payment system.
+In the anonymous payment literature, specifically account-based models, a
+well-known issue referred to as concurrency issues may arise, given that the
+ZKP of users depends on their current account state [1, 2, 8, 34]. To illustrate
+the challenge consider that proving a sender’s sufficient balance for an outgoing
+transfer requires referencing a valid account state. However, if the account state
+changes (for instance, the account is a recipient of another user’s transaction
+which modifies its cryptographic form, e.g., by rerandomizing it with zero—–a
+step necessary to achieve anonymity in some schemes), the sender’s ZKP be-
+comes inadmissible. Consequently, the sender’s transaction has to be rejected,
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 5
+and the user may also lose the associated transaction fees. We call a system that
+circumvents this problem as satisfying concurrency of incoming/outgoing trans-
+actions (CIO). To address this problem, a periodic pending transfers mechanism
+can be introduced, where incoming transfers are held in a pending state and
+then rolled into accounts periodically at the end of fixed length epochs (time
+periods consisting of a set number of blocks). By requiring users to publish
+transactions at the beginning of an epoch and ensuring that pending transfers
+are processed only at epoch boundaries, the design preserves ZKP validity and
+prevents conflicts caused by account state changes during transaction processing.
+At the beginning of each epoch, the sender must query the blockchain to obtain
+their most updated account state before generating their ZKP. To mitigate dou-
+ble spending, each user is restricted to generating at most onetransaction per
+epoch (note that the identity of the sender is hidden inside the anonymity set).
+While longer epochs slow down transaction generation, shorter epochs increase
+the likelihood of ZKP invalidation if another user’s transaction rerandomizes the
+sender’s account state.
+For a payment system, it is important to support non-interactivity , allowing
+senders to initiate payments without requiring the receiver to be online at the
+same time. This ensures that transactions are not hindered by the receiver’s
+immediate presence. Additionally, the ability of a sender to send to multiple re-
+ceivers and a receiver to receive (in our context affirm) from multiple senders in a
+single transaction (referred to as a multi-party transaction (MPT), or batchabil-
+ity [28]) becomes particularly important in privacy-preserving payments. Since
+the cost of each transaction is generally higher than in a non-privacy-preserving
+one, supporting MPT increases efficiency. Furthermore, multiple assets support
+refers to the capability of a protocol to manage, process, and facilitate transac-
+tions involving various types of digital assets within a system. Ensuring privacy
+for the asset type being transferred is also an important consideration.
+Regulatory compliance issues arise with full privacy, as auditors may lack
+access to necessary information when all data is encrypted. While ZKPs can en-
+force compliance on-chain without the need for encrypting information under an
+auditor’s public key, decisions involving human discretion, such as judicial rul-
+ings, are subjective and challenging (or may be even impossible in some cases)
+to formalize mathematically. Thus, auditors may require direct access to the
+underlying transaction data. Furthermore, verifying certain regulatory policies
+that rely heavily on off-chain data can be costly and impractical to facilitate
+entirely on-chain. In a system with multiple asset types (potentially spanning
+different jurisdictions), auditing necessitates careful considerations, such as ad-
+dressing asset-specific auditing mechanisms to ensure that only the designated
+auditors associated with each asset are granted access to perform their audits.
+Despite significant advances in anonymous payment systems [4], current
+solutions face critical challenges in achieving a practical balance between full
+anonymity, addressing real-world considerations, and regulatory compliance. Rec-
+onciling the need for receiver affirmation, PoB, non-interactivity, MPT, support
+for multiple asset types, circumventing concurrency issues, and asset-specific
+6 A. Sarencheh et al.
+auditing in a privacy-preserving manner, preferably in a permissionless setting
+remains an open area of investigation. Addressing these limitations altogether
+requires a novel approach that draws from the best features of existing systems
+while overcoming their inherent drawbacks, leading to the design of a versatile,
+anonymous, and permissionless payment system as we do in this paper.
+1.1 Our results
+We design a Decentralized, Anonymous, and Regulation-friendly Tokenization
+system, called DART , which is suitable for a permissionless setting. Our system,
+DART , not only achieves full anonymity but also addresses a number of critical
+considerations, making it suitable for real-world applications. DART supports
+the issuance of on-chain representations of real-world assets (i.e., tokenization)
+as well as the creation of on-chain native assets. Users can act as issuers, minting
+and distributing digital assets. DART exhibits strong privacy-preserving proper-
+ties by concealing sensitive information such as transaction values, user balances,
+public keys, and asset types, while ensuring unlinkability between transactions,
+thus hiding the transaction graph. Despite these privacy guarantees, DART fa-
+cilitates publicly verifiable state transitions by settling transactions on a public
+ledger maintained permissionlessly.
+Our system builds upon the account-based model of PEReDi [47] and Platy-
+pus [56] as well as the unlinkability techniques of Zerocash [49] while overcoming
+their inherent drawbacks in our setting. In PEReDi and Platypus each user holds
+an account and for each transaction, they update their account and efficiently
+prove in zero-knowledge that the update was performed correctly. However, these
+account state transitions are authorized by (possibly distributed) validator using
+a blind re-randomizable signature. Importantly, the public key of the validator
+must be fixed and known to all network participants. In Zerocash, on the other
+hand, the idea for achieving anonymity is to generate an anonymity set that
+includes all coins ever introduced into the system and efficiently prove knowl-
+edge of a (fresh) UTXO as a member of this anonymity set, without revealing it.
+While this aligns well with permissionless operation it appears to be inherently
+dependent on a coin/UTXO oriented mode of operation.
+A natural crossover of the two approaches is to generate an anonymity set
+comprising all account states with transactions of constant size. Whenever a
+user wants to perform an account state transition, they prove knowledge of an
+unused (old) account state in the ledger and submit their new account state. The
+validators can verify that the old account is not being reused (e.g., preventing
+double-spending) without seeing the old account itself, allowing the user’s new
+account to be added to the ledger. Importantly, the old account remains hidden
+from validators to ensure unlinkability. To prevent double-spending, a determin-
+istic nullifier (also known as a tag) is derived and revealed from the account
+state. This nullifier is recorded on the ledger, ensuring that each account state
+can be used only once. The nullifier set on-chain grows linearly with respect to
+the number of transactions. Note, however, that this account update process
+requires both the sender and receiver to be online to update their respective
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 7
+accounts at the same time, as only the users themselves have the necessary ZKP
+witness to make the account updates.
+In our construction DART , we adopt this crossover approach but obviate
+the need for interactivity. This is achieved as follows: when the sender submits
+a transaction, an ephemeral account-update-record (AUR) is generated for the
+(possibly offline) receiver, who can claim it anytime later when they will update
+their account. The AUR remains pending (as “funds in transit”) until the receiver
+affirms it or the sender reclaims it using reversibility mechanism. Importantly,
+the receiver affirmation step (which claims an AUR) does not reveal any details
+about the receiver. It is worth highlighting that the notion of ephemeral AUR in
+DART crucially differs from a coin or UTXO based approach. Particularly, an
+AUR itself is notspendable by the receiver and may be reclaimed by the sender
+at any time, prior to the receiver affirms and incorporates it into their account.
+To prevent double-spending, the sender’s balance is debited so that the sender
+can initiate other transactions while any previous ones are pending. Additionally,
+the sender can initiate an efficient AUR reversion protocol anytime before the
+receiver affirms AUR, thereby preventing indefinite resource locking. Note that
+once the sender reclaims the funds the receiver becomes permanently unable to
+claim them as their own. Additionally, a malicious sender cannot reclaim an AUR
+more than once. Note that, by definition , to achieve receiver affirmation there is
+a need for the receiver to submit a transaction/affirmation on-chain. Hence, for
+aDART transaction to be considered finalized, two transactions are necessary:
+one from the sender and one from the receiver. Importantly, in DART , these two
+transactions do not need to be concurrent.
+To address regulatory compliance, in our construction, asset issuers can des-
+ignate asset-specific auditors for their assets. When transacting with a specific
+asset type, users must include the designated auditor (if any) in the transac-
+tion, ensuring that the auditor can decrypt the required data. Only the auditor
+registered for that asset type can decrypt the transaction data, while other au-
+ditors remain oblivious to the transaction details. Achieving asset-type privacy
+in such a regulated framework presents challenges. Crucially, to maintain asset
+type privacy, it is necessary to also conceal the public key of the auditor involved
+in the transaction, as it could reveal the underlying asset type due to the ex-
+istence of a publicly known mapping between asset types and their associated
+auditors. Thus, the challenge is twofold: (i) to hide both the asset type and the
+corresponding auditor’s public key8, (ii) to enable the sender to efficiently prove
+that the hidden public key belongs to the correct auditor for the asset being
+transferred.
+We note that the sender and receiver could, in principle, agree off-chain by
+privately communicating to update their account states and subsequently sub-
+mitting a proof on-chain to prove that the state transition was executed correctly.
+However, our system intentionally avoids this approach for several reasons: (i)
+8We need key-privacy [3], as CPA-security alone is insufficient for the problem at
+hand. Without key-privacy, the encryptions under auditors’ public keys could reveal
+the public keys, thereby compromising privacy.
+8 A. Sarencheh et al.
+We do not assume the existence of an off-chain communication channel between
+the sender and receiver at the time of value transfer, although such an assump-
+tion is common in the literature (see e.g., [29]). Note that, with this assumption,
+the receiver in DART can operate more efficiently, as they no longer need to scan
+the ledger to identify the receipt of AUR. (ii) This approach would necessitate
+interactive payments to avoid concurrency issues (as discussed before) as there is
+no way for on-chain validators to verify account state transitions anonymously.
+Therefore, we adopt the approach of requiring two on-chain submissions for each
+payment. This is crucial for maintaining asynchrony between sender and receiver
+as well as avoiding concurrency issues.
+Supporting multiple assets in users’ accounts requires careful consideration,
+particularly in maintaining the hiding properties. The subtlety lies in minimiz-
+ing the overhead on transaction generation for the sender’s ZKP. For instance,
+if all asset types were to be included within a single account, the witness for the
+sender’s proof in every account state transition would need to encompass all as-
+set types associated with that account. This approach would result in witnesses
+proportional to the total number of assets supported by the system. Although
+SNARKs can provide succinct proof sizes, the proving time would remain consid-
+erably high since the proof generation complexity scales linearly with the witness
+size9. To address this, we adopt the use of asset-specific accounts. This approach
+confines the witness for transaction generation to only the relevant asset type,
+thereby reducing the computational overhead involved in proof generation10.
+DART efficiently facilitates multi-party transactions (MPT), namely, trans-
+fer of a specific asset to multiple receivers in a single transaction, and further
+receipt/affirm from multiple senders within a single transaction, thereby en-
+hancing efficiency (also known as batchability [28]). Moreover, DART supports
+a proof of balance (PoB) mechanism, which allows any party to request the
+balance from some user given an account identifier. Users register asset-specific
+accounts, and the ledger maintains mappings between account identifiers and
+their associated asset types. A user can prove their balance for a particular asset
+without revealing any additional details. It is crucial to ensure that a malicious
+user cannot bypass the PoB protocol. For instance, a malicious sender could ini-
+tiate a transaction reducing their spendable finalized balance, then engage with
+the PoB verifier and subsequently reverse the pending transaction without the
+PoB verifier being aware of the pending transaction. To prevent such an exploit,
+the system enforces the sender to update their (non-spendable) pending balance
+9Notably, while the witness size grows linearly with the number of supported as-
+sets, most witness elements are likely zero for typical users who interact with only
+a subset of assets. This raises an intriguing direction for future work: leveraging
+witness sparsity. Employing recent techniques such as sparse polynomial commit-
+ments [50, 51], it is worth exploring proof systems whose efficiency—particularly in
+proof generation—depends mainly on the number of non-zero witness elements.
+10Having asset-specific accounts leads to linear on-chain storage growth proportional
+to the number of assets linked to each key. In contrast, consolidating all assets within
+a single account can reduce storage requirements. However, our system prioritizes
+sender proof efficiency over on-chain storage minimization in this trade-off.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 9
+within their account (hidden) data. This ensures that information about the
+pending balance is also available to the PoB verifier, allowing them to account
+for the possibility of potential reversion in the future. Moreover, our reversibility
+functionality provides an incentive for the receiver to claim their AUR promptly,
+as the sender retains the ability to reverse the transaction at any time. Not only
+the sender has financial incentives to do so but also it is preferable for the sender
+to have no pending transactions for privacy reasons (we elaborate on this later).
+This creates another incentive for the sender to reverse any pending transactions
+which in turn results in the receiver losing access to the funds.
+Summary of our contributions. With DART , we make the following contri-
+butions:
+•Full anonymity and confidentiality in an account-based model with constant
+transaction size. We formalize the notion of a payment system that ensures
+privacy of balances, transaction values, and the identities/public keys of
+both senders and receivers, while also guaranteeing unlinkability between
+transactions. Moreover, payments in DART obscure the underlying asset
+types and the identities of auditors. Our system operates under an account-
+based bookkeeping model that differs from other account-based systems with
+respect to anonymity guarantees in that they are: (i) partially anonymous ,
+such as QuisQuis [24], Zether [8], Anonymous Zether [19], and PriDe CT [28].
+(ii)permissioned , like PEReDi [47] and PARScoin [48]. (iii) centralized like
+Platypus [56]. (iv) inherently inefficient where the validator has complexity
+proportional to the account set for each transaction and have concurrency
+issues like PriFHEte [34].
+•Support for receiver affirmation, proof of balance, reversibility, and simul-
+taneous transactions. We formalize the concept of receiver affirmation in
+digital currencies, enabling receivers to affirm incoming payments before ac-
+count updates, thus aligning blockchain-based payments with well-known
+regulatory requirements in financial transactions and empowering receivers
+to manage obligations, particularly in scenarios involving legal or tax im-
+plications. We address the challenges introduced by incorporating receiver
+affirmation, specifically by: (i) introducing proof of balance (PoB) protocol to
+enable verifiers to check exact balances, while accommodating the complex-
+ities of split balances during receiver affirmation. (ii) ensuring reversibility ,
+allowing senders to reclaim unaffirmed funds to prevent indefinite asset lock-
+ing. (iii) supporting simultaneous transactions , enabling senders to engage in
+multiple transactions concurrently, while waiting for previous transactions’
+receiver affirmations.
+•Support for non-interactivity, multi-party transaction, multiple asset-types,
+and asset-specific auditing while avoiding concurrency issues. We support
+non-interactivity for offline receivers, multi-party transactions (MPT) to en-
+able batch transactions for improved efficiency in privacy-preserving set-
+tings, and multiple asset-types to handle a diverse set of digital assets while
+ensuring privacy. We address regulatory compliance challenges in privacy-
+preserving systems by incorporating encrypted transaction data with au-
+10 A. Sarencheh et al.
+ditor access when necessary, enabling asset-specific auditing to ensure ju-
+risdictional alignment and granting designated auditors access. Finally, our
+design does not suffer by the concurrency issues common in account-based
+anonymous payments as discussed above.
+•Universal composition (UC) security and efficient instantiation. We formal-
+ize decentralized and fully anonymous payments with all the properties de-
+scribed above in a Universal Composition (UC) [13] framework via our ideal
+functionality FDART and provide an efficient realization of FDART via our con-
+struction ΠDART. This ensures that ΠDART can be securely integrated with
+other decentralized finance (DeFi) systems or traditional finance (TradFi)
+legacy systems. In our construction ΠDART, we employ well-established cryp-
+tographic schemes and we utilize two non-interactive zero-knowledge proof
+systems: Σ-protocols and Bulletproofs [9], to efficiently verify statements on
+algebraically encoded data.
+Overview of the related works. Early research highlighted that Bitcoin [41]
+provides only pseudonymity rather than anonymity [35, 36]. This limitation
+spurred significant academic and practical efforts to address the issue, leading to
+the development of a rich body of privacy-preserving payment systems each op-
+erating under distinct assumptions, settings, and properties. These systems can
+be broadly categorized into two classes: UTXO-based systems and account-based
+systems. In the UTXO-based category, notable examples include Zerocoin [39],
+Zerocash [49], and Monero [43]. On the other hand, examples of account-based
+systems include Zether [8], Anonymous Zether [19], Platypus [56], PEReDi [47],
+PriDe CT [28], PARScoin [48], and PriFHEte [34]. We present an overview of
+these systems as well as how they compare to DART in Table 1; more details are
+provided in Section 2.
+2 Related works
+Among the first pioneering approaches to privacy enhanced payments was Zero-
+cash [49], which builts upon the earlier protocol Zerocoin [39]. These works intro-
+duced the concept of decentralized anonymous payments , proposing a payment
+system that guarantees strong confidentiality, anonymity, and public verifiabil-
+ity. Zerocash, a UTXO-based fully anonymous payment system, employs com-
+mitments and zero-knowledge succinct non-interactive arguments of knowledge
+(zk-SNARKs) to conceal transaction details, including the transaction value and
+the identities or public keys of both the sender and the receiver. Each transaction
+in Zerocash includes the value of a cryptographic accumulator that aggregates
+all coins ever introduced into the system, thereby forming the anonymity set.
+The sender proves ownership of a coin within this set by generating a zk-SNARK
+proof, without explicitly revealing the specific coin being spent. Notably, the size
+of each transaction remains constant independent of the size of the anonymity
+set different from majority of (partially) anonymous account-based systems. To
+prevent double-spending, each coin is associated with a unique nullifier, which
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 11
+Full
+anonymityProof ofbalance ConcurrencyReceiver
+affirmationNon-
+interactivityMulti partytransactionTransactionsize
+Zerocash [49] ✓ ✗ ✓ ✗ ✓ ✗ O(1)
+Monero [43] ✗ ✗ ✓ ✗ ✓ ✓ O(k)
+zkLedger [42] ✓∗✓ ✓ ✗ ✓ ✓ O(k)
+QuisQuis [24] ✗ ✗ ✗ ✗ ✓ ✓ O(k)
+Zether [8] ✗ △ ✗ ✗ ✓ ✗ O(k)
+Ano. Zether [19] ✗ △ ✗ ✗ ✓ ✓ O(k)
+Veksel [11] ✗ ✗ ✓ ✗ ✓ ✗ O(1)
+Platypus [56] ✓ △ ✓ ✓∗✗ ✗ O(1)
+PEReDi [47] ✓ △ ✓ ✓∗✗ ✗ O(1)
+PriDe CT [28] ✗ △ ✗ ✗ ✓ ✓ O(k)
+PARScoin [48] ✓ ✗ ✓ ✗ ✓ ✗ O(1)
+Ocash [29] ✓ ✗ ✓ ✗ ✓ ✓ O(1)
+PriFHEte [34] ✓ △ ✗ ✗ ✓ ✗ O(1)
+DART ✓ ✓ ✓ ✓ ✓ ✓ O(1)
+Table 1: Overview of privacy-preserving payment systems and their properties.
+Full anonymity (✓∗: The system only supports a small number of users.)
+Proof of balance (△: The scheme does not offer the property, but it can be
+achieved with reasonable modifications to the construction.)
+Concurrency: concurrency of incoming/outgoing transactions
+Receiver affirmation and reversibility (✓∗: The system has interactive
+transactions, hence receiver affirmation is trivially addressed.)
+Note: additional properties such as permissionlessness ,multiple assets sup-
+port, and asset specific auditing are not included in this table to maintain
+clarity and conciseness. For a more detailed comparison, refer to Section 2.
+is publicly revealed upon spending as in Chaum’s original blind signature-based
+e-cash [16].
+One of the main distinctions between DART and Zerocash [49] is that PoB
+is not supported by Zerocash, as the user’s balance in Zerocash is distributed
+across (potentially many) UTXOs, which a malicious receiver may selectively
+omit during a PoB procedure. Note that once a sender submits their transac-
+tion, the ownership of the funds is transferred to the receiver. In contrast, in
+DART , ownership is nottransferred to the receiver until they claim AUR and
+update their account balance accordingly (i.e., AURs are not spendable). Until
+that moment, the sender retains the ability to reclaim AUR at any time via re-
+versibility operation. Furthermore, the PoB prover has to disclose any pending
+funds. The authors of Zerocash assume two inputs and two outputs for sim-
+12 A. Sarencheh et al.
+plicity, but their scheme can be extended to ninputs and moutputs. As such,
+Zerocash can in principle support MPT. However, for nUTXOs consumed as in-
+puts, the user must provide naccumulator membership proofs, which constitute
+the computationally costly part of the user’s ZKP. In contrast, our approach
+allows a receiver to claim multiple AURs within a single account state transi-
+tion, requiring only oneaccumulator membership proof via a single transaction.
+Similarly, a sender can provide a single accumulator membership proof while
+simultaneously creating multiple AURs intended for different receivers within a
+single transaction. Note that the number of AURs is upper-bounded by the block
+size. For more details on our approach to MPT, see Section 5.1.
+Monero [43] employs a UTXO-based model to ensure transaction anonymity.
+It leverages ring signatures, where the anonymity set consists of a group of public
+keys included in the signature’s ring and a transaction grows proportionally to
+that. In QuisQuis [24], each user maintains an account, and transactions utilize
+UTXO inputs rather than direct account debits. To preserve anonymity, Quisquis
+incorporates anonymity sets with updatable keys that provide unlinkability.
+To support auditing functionalities, zkLedger [42] introduced a ledger repre-
+sentation using a table-based structure, where each row corresponds to a trans-
+action with entries for all participants in the system. Each transfer is recorded
+as a transaction containing commitments to values, depending on whether the
+amount is being debited (commitment to a negative value) or credited (commit-
+ment to a positive value). This design allows auditors to efficiently verify the
+balance of each user. However, zkLedger has a significant limitation: it is de-
+signed to support anonymity for only a small number of users as the transaction
+size grows linearly in the number of users unlike DART where transaction size is
+of constant size. Moreover, zkLedger performs over a permissioned system and
+requires participants to have out-of-band communications.
+Zether [8] and Anonymous Zether [19] are anonymous payment system de-
+signs that hide the user balance, transaction value, and sender and receiver
+identities. These systems are account-based, where each public key holder is as-
+sociated with an ElGamal encryption of their balance under their own public
+key. To generate a transaction, the sender encrypts the transaction value un-
+der the receiver’s public key and the negative transaction value under their own
+public key. Additionally, the sender encrypts zero under some randomly chosen
+(dummy) public keys. These dummy public keys, along with the sender’s and
+receiver’s public keys, form an anonymity set (a ring), concealing the identities of
+both the sender and the receiver. The sender then proves in zero knowledge that
+all encryptions are well-formed and that the transaction has been constructed
+correctly. The system restricts each sender to at most onetransaction per epoch,
+where an epoch consists of kconsecutive blocks. At the beginning of each epoch,
+the sender must query the blockchain to obtain their most updated state be-
+fore generating their ZKP. This update is necessary because, at the end of each
+epoch, the blockchain rolls over all pending states to permanent ones. If other
+users include the sender’s public key in their anonymity sets, the sender’s state
+will be updated accordingly at the end of the epoch. Anonymous Zether makes
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 13
+ZKPs of Zether more efficient. These works only support k-anonymity and have
+concurrency issues, with a transaction size of O(k).
+PriFHEte [34], while achieving full anonymity in an account-based model
+with a constant transaction size of O(1), similarly suffers from concurrency is-
+sues (further discussion on PriFHEte follows). In contrast, in DART , no one
+updates another user’s account state except the user themselves, allowing the
+sender to submit transactions at any time and avoiding such concurrency issues.
+Moreover, receiver affirmation, multiple assets, and asset-type-specific auditing
+are not supported in [8, 19, 34]. We note, however, that unlike DART , the nul-
+lifier set in Zether, Anonymous Zether, and PriFHEte does not grow, as it is
+reset to empty at the end of each epoch. PriDe CT [28] is a follow-up work
+on Anonymous Zether, inheriting some of its properties such as being account-
+based, achieving k-anonymity, and having a transaction size of O(k), while also
+introducing support for MPT.
+Veksel [11] is an anonymous account-based payment system that shares sim-
+ilarities with Zerocash [49] in that it supports an arbitrarily large anonymity
+set. Payments in Veksel are facilitated by having the sender generate a coin
+commitment along with its encryption under the receiver’s public key. During
+the collection process, a random spending tag (i.e., nullifier) is revealed. While
+the system ensures unlinkability for each transaction to its sender and receiver
+and obscures the transferred value, it does not hide the identities of the involved
+parties (e.g. balance updates are known), thus lack the anonymity.
+PEReDi [47] and Platypus [56] are fully anonymous, account-based Central
+Bank Digital Currency (CBDC) payment systems. In Platypus, a central entity
+(the central bank) maintains the state of the system. PEReDi employs a dis-
+tributed architecture, where cryptographically thresholdized maintainers man-
+age the state of the system in a distributed (also referred to as permissioned )
+and asynchronous manner. In both schemes, the sender interacts with the re-
+ceiver (hence, these are interactive systems11) to generate a transaction, proving
+in zero-knowledge that their account state transitions are correct. Each account
+state transition leaves a unique nullifier as a footprint, enabling the state main-
+tainer(s) to detect double-spending. Additionally, for each state transition, users
+receive a signature from the state maintainer(s), confirming the validity of the
+operation. Payments in PEReDi’s distributed setting do not require Byzantine
+Agreement or Byzantine Broadcast during the optimistic path of a transaction.
+This leads to efficient state transitions whenever transaction counterparties be-
+have honestly. Maintainers independently sign each user’s account state transi-
+tion using a threshold blind and randomizable signature without communicating
+with one another. Users then collect signature shares from maintainers to con-
+solidate a full signature on their updated account state. PEReDi introduces an
+approach for tracing potentially malicious users through the collaboration of
+a threshold number of maintainers. The revealed double-spending prevention
+unique tags also serve as a means to trace users. Multiple assets and asset-type-
+11A limitation of interactive systems is that a sender cannot send funds if the receiver
+is not online and engaged in the transaction submission.
+14 A. Sarencheh et al.
+specific auditing are not supported in PEReDi and Platypus. In Platypus, the
+entire system operates under a centralized auditor, while in PEReDi, it oper-
+ates under a cryptographically thresholdized set of auditors (the auditors are
+not asset-specific). These systems do not have concurrency issues and have a
+transaction size of O(1). Due to their interactive nature, they trivially support
+receiver affirmation by default.
+PARScoin [48] is a fiat currency tokenization follow-up work on PEReDi that
+similarly has a fully anonymous, asynchronous, account-based and distributed
+model with no concurrency issues and transaction size of O(1). Note that fiat-
+backed stablecoins are a specific use case of our general solution. In the case of
+PARScoin, the real-world asset is specifically a fiat currency, and as a result of
+tokenization, the on-chain asset is referred to as a stablecoin—representing the
+tokenized form of the fiat currency12. PARScoin extends the interactive pay-
+ment model of PEReDi to a non-interactive one. It supports privacy-preserving
+auditability using homomorphic encryptions ensuring that the stablecoin in cir-
+culation is backed by sufficient off-chain funds, which is important for price
+stability. In PARScoin, if the receiver is unable to claim the funds for any reason
+(e.g., unwillingness to affirm the transaction due to tax liabilities, loss of access
+to their wallet, etc.), the sender’s funds are locked forever. In contrast, a DART
+sender is able to reclaim funds if the receiver does not affirm the transaction.
+Our reversibility solution incentivizes the receiver to affirm the transaction and
+update their account balance as soon as possible to guarantee the ownership
+transfer. This differs from PARScoin’s setting, in which ownership is immedi-
+ately transferred to the receiver as soon as the sender submits their transaction.
+In PARScoin, the receiver must update their account balance by claiming the
+funds sent by the sender to be able to spend them. However, the receiver can
+perform this action at any time. For example, consider a balance upper-bound
+requirement, which is a common regulatory requirement [47,48,56]. A potentially
+malicious receiver could delay claiming the incoming funds until after sending
+funds to others (reducing their balance), ensuring that their balance remains
+within the permissible range to accept new funds.
+Recently, OCash [29] introduced a novel approach to anonymous payment
+systems in the account-based model, specifically designed to accommodate light
+clients. At a high level, the payer conducts payments by placing coins on the
+ledger, which can later be collected by the payees in a privacy-preserving manner.
+The system offers two levels of anonymity. In the weaker variant, the payer is
+able to observe when a payee claims the coin. However, the proposed design
+is limited by two assumptions that constrain its practical usability. First, it
+assumes the existence of a private channel between the payer and the payee.
+Second, the system requires an anonymizer service that maintains a private
+state and regularly posts messages on the ledger. The anonymity guarantees of
+OCash heavily depend on this second assumption, as the anonymizer functions
+12Since DART supports multiple asset types, one of these asset types can be a stable-
+coin.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 15
+as the core of an Oblivious RAM-like structure [26], with the ledger acting as
+the database containing the committed or encrypted coins.
+PriFHEte [34] is a novel approach to ensuring anonymity and confidentiality
+in account-based cryptocurrency transactions. The proposed protocol achieves
+full anonymity while having O(1) transaction size. This work leverages a prop-
+erty known as wrong-key decryption (WKE). The authors combine this property
+with fully homomorphic encryption (FHE) to design a payment system capable
+of facilitating “compact” transactions, which, with the assistance of chain val-
+idators, simultaneously update all accounts in the system for each transaction.
+The protocol employs a key-private public key encryption scheme with the WKE
+property to encrypt transactions, and an FHE scheme to encrypt user balances
+stored on-chain. When Alice sends an amount vto Bob, she creates a transaction
+that encrypts vusing both her and Bob’s WKE public keys. She also generates
+a corresponding NIZK proof to verify the transaction’s validity. User balances
+are stored on-chain as ciphertexts, encrypted under their respective FHE pub-
+lic keys. Chain validators, equipped with the WKE public key, the FHE public
+key, and an encryption of the WKE secret key under the user’s FHE public key,
+facilitate account state transitions. Validators must maintain this information
+for all users (accounts). After validating the sender’s proof, validators execute
+the following steps for each account commitment recorded on-chain: Using the
+ciphertext of the WKE secret key encrypted under the user’s FHE public key
+and the sender’s transaction (which contains the encryption of vunder both
+the sender’s and receiver’s WKE public keys), they generate encryptions with
+a plaintext value of zero for all non-counterparty users. For the actual sender
+and receiver, the plaintext value is v. Next, the FHE scheme is used to homo-
+morphically deduct the amount vfrom the sender’s balance and add it to the
+receiver’s balance. The balances of all other users remain unchanged, as their
+old balances are updated by zero. The approach leverages the WKE property to
+avoid requiring the sender to generate zero-value encryptions for dummy pub-
+lic keys. Instead, validators utilize the WKE property to blindly generate these
+zero-value encryptions for all non-counterparty users. In addition to concur-
+rency issues (discussed above), PriFHEte [34] needs homomorphic updates to
+allaccount commitments recorded on-chain for each transaction by blockchain
+validators (the validator complexity is O(n) for each transaction), raising con-
+cerns about its practicality in terms of both transaction fees andcomputational
+efficiency13. Biccer and Tschudin [5] demonstrated a double-spending attack on
+PriFHEte. In response, the authors proposed a mitigation technique involving
+two commitments to address this vulnerability.
+13As the number of accounts in the system grows, the fees associated with each trans-
+action would increase, since validators must update more on-chain entries, including
+the sender’s. This dynamic seems counterintuitive, as network effects typically reduce
+user costs.
+16 A. Sarencheh et al.
+3 Formal modeling
+We define FDART as an ideal functionality for anonymous and regulation-friendly
+tokenization, capturing the desired properties. A party Pcan take the roles of
+issuer, sender Ps, receiver Pr, and auditor A. The adversary is A, and the session
+identifier as sidis selected by the environment Z.FDART is parameterized by an
+upper bound on transaction value vmax.Acan delay the delivery of messages or
+prevent a message from being delivered to the intended recipient. This models
+real-world scenarios where Ahas control over the communication channel. The
+ideal functionality FDART is composed of the following interfaces:
+Address generation. A party Pinvokes FDART, which in turn queries the
+adversary Afor an address addr pk. Upon receiving it from A,FDART verifies
+whether it is fresh. If so, it records the party identifier Palong with the address
+and outputs addr pktoP.
+Asset issuance. A party Pinvokes this interface to issue a new asset by
+providing the asset type (identifier) a.tand the associated auditor Aassigned to
+a.t.FDART first verifies whether PandAhave already generated their addresses
+and checks whether a.tis fresh, as it must be unique. FDART does not enforce
+uniqueness for the auditor Aassigned to a.t, allowing a single auditor Ato serve
+as the auditor for more than one a.t.FDART registers the issuer along with a.t
+in the list IAand registers the associated auditor Aalong with a.tin the list AA.
+FDART leaks ( P,a.t,A) toA, as there is no privacy preservation at the issuance.
+Account registration. By invoking this interface, the party Pregisters an
+asset-specific account. FDART verifies whether Phas generated an address and
+checks whether an account with the same a.thas already been registered for P
+via checking R(P,a.t), which is initially set to ⊥.FDART also checks whether
+a.tis a valid asset using IA.FDART then updates R(P,a.t) = ( f.b,p.b) = (0 ,0),
+where the initial finalized (spendable) balance f.band pending (non-spendable)
+balance p.bare set to zero.
+Increase asset supply. The issuer Pof an asset a.tinvokes this interface to
+increase the supply of a.tby a value v.FDART checks whether Phas initialized
+their account and verifies that they are indeed the associated issuer of a.t.FDART
+records ( c,P,a.t, v) to prevent replay attacks by verifying c, which is initially set
+to 0.FDART then waits for confirmation from Ato finalize the supply increase
+by increasing f.bof the issuer’s account by vand setting cto 1.
+Functionality FDART part I
+The functionality is parameterized by vmax, and the lists IAand AAare
+initialized as empty.
+Address generation.
+•Upon receiving ( Gen.Addr,sid) from P, send ( Gen.Addr,sid,P) toA.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 17
+•Upon receiving ( Gen.Addr.Ok,sid,P,addr pk) from A, ignore if ( ·,addr pk)
+is already recorded. Else, record ( P,addr pk). Output ( Addr.Gened ,sid,
+addr pk) toP.
+Asset issuance.
+•Upon receiving ( Issue ,sid,a.t,A) from P, ignore if ( P,·) or ( A,·) is not
+recorded or ( ·,a.t)∈IA. Else, send ( Issue ,sid,P,a.t,A) toA.
+•Upon receiving ( Issue .Ok,sid,P,a.t,A) from A, set IA←IA∪{(P,a.t)}
+and AA←AA∪ {(A,a.t)}. Output ( Issued ,sid,a.t) to Pvia public-
+delayed output.
+Account registration.
+•Upon receiving ( Register ,sid,a.t) from P, ignore if ( P,·) is not
+recorded, or R(P,a.t)̸=⊥, or (·,a.t)/∈IA. Else, send ( Register ,sid,P,
+a.t) toA.
+•Upon receiving ( Register .Ok,sid,P,a.t) from A, ifR(P,a.t) =⊥, set
+R(P,a.t)←(0,0) and send ( Registered ,sid,a.t) to Pvia public-
+delayed output.
+Increase asset supply.
+•Upon receiving ( Increase ,sid,a.t, v) from P, ignore if R(P,a.t) =⊥,
+or (P,a.t)/∈IA, orv≤0. Else, record ( c,P,a.t, v) for c= 0. Send
+(Increase ,sid,P,a.t, v) toA.
+•Upon receiving ( Increase .Ok,sid,P,a.t, v) from A, ignore if (0 ,P,a.t,
+v) is not recorded. Else, retrieve R(P,a.t) = ( f.b,p.b). Set f.b←f.b+v
+andc←1. Output ( Increased ,sid,a.t, v) to user Pvia public-delayed
+output.
+Sender transaction. A sender Psinvokes this interface by providing the
+receiver’s identifier Prand specifying the value vas the transfer amount of asset
+type a.t.FDART then verifies several conditions, such as whether the sender’s
+finalized balance contains sufficient funds. In cases where the receiver Pror
+a.t’s auditor Ais malicious, FDART leaks ( Ps,Pr, v,a.t) toA. Otherwise, Aonly
+observes a random identifier β, while FDART internally maintains a mapping list
+L(·) to associate βwith the transaction details. Upon receiving confirmation from
+A,FDART decreases the sender’s finalized balance and increases their pending
+balance. Note that a unique identifier TNX is submitted by AtoFDART, which
+uses it to uniquely identify each transaction (rejecting if TNX is not unique).
+αis an associated flag to TNX representing the status of the transaction. It is
+necessary to check the balance of the sender again, ensuring f.bs< vbefore the
+balance update, as the sender may have already initiated other transactions.
+L(β) is set to ⊥after updating the balance to prevent replay attacks.
+Receiver transaction. A receiver Prinvokes this interface by providing
+the unique identifier of a transaction TNX.FDART verifies whether a payment
+associated with TNX exists, belongs to Pr, and has not yet been affirmed (i.e., α=
+18 A. Sarencheh et al.
+0). No information is leaked to the adversary, except TNX. In case Psis malicious
+FDART leaks ( Ps,Pr, v,a.t,TNX) toA. Upon receiving A’s confirmation, FDART
+outputs ( Ps, v,a.t,TNX) to Pr. IfPraffirms the transaction by sending back
+(Affirm ,sid,TNX),FDART increases Prfinalized balance f.br+v, and decreases
+the associated pending balance for a.tofPs.FDART ensures the funds in this
+transaction cannot be claimed again or reversed by setting α←1.
+Reversion. Using this interface, a sender Psprovides as input a unique
+identifier TNX of a transaction. FDART then verifies whether Psis indeed the
+sender of TNX and checks the status αassociated with TNX to determine if
+the transaction has already been affirmed by the receiver. Similar to receiving,
+FDART leaks only TNX toA, and upon confirmation, reverses the transaction by
+updating the sender’s finalized and pending balances. FDART ensures that the
+receiver cannot affirm this transaction in the future by setting αto 2 (recall
+that affirmation requires α= 0) and prevents the sender from reversing the
+transaction again (reversion also requires α= 0).
+Functionality FDART part II
+Sender transaction.
+•Upon receiving ( Send,sid,Pr, v,a.t) from Ps, ignore if R(Ps,a.t) =⊥, or
+v≤0, or v >vmax. Else, retrieve R(Ps,a.t) = ( f.bs,p.bs) and ignore if
+f.bs< v. Else, sample a new βand set L(β)←(Ps,Pr, v,a.t). Retrieve
+(A,a.t) from AA. IfAorPris malicious, overwrite β←(Ps,Pr, v,a.t).
+Send ( Send,sid, β) toA.
+•Upon receiving ( Send.Ok,sid, β,TNX) from A, ignore if L(β) =
+⊥, or ( ·,·,·,·,·,TNX) is already recorded. Else, retrieve L(β) =
+(Ps,Pr, v,a.t) and then R(Ps,a.t) = ( f.bs,p.bs). Ignore if f.bs< v.
+Else, set R(Ps,a.t)←(f.bs−v,p.bs+v), and L(β)← ⊥ . Record
+(Ps,Pr, v,a.t, α,TNX), where α= 0. Output ( Sent,sid, ,Pr, v,a.t,TNX)
+toPsvia private-delayed output.
+Receiver transaction.
+•Upon receiving ( Receive ,sid,TNX) from Pr, ignore if ( ·,Pr,·,a.t,0,
+TNX) for some a.tis not recorded. Retrieve R(Pr,a.t) using a.t, and
+ignore if it equals ⊥. Else, retrieve ( A,a.t) from AAand retrieve ( Ps,Pr,
+v,a.t, α,TNX). If Psis malicious send ( Receive ,sid,Ps,Pr, v,a.t,TNX)
+toA. Else, send ( Receive ,sid,TNX) toA.
+•Upon receiving ( Receive .Ok,sid,TNX) from A, retrieve ( Ps,Pr, v,
+a.t, α,TNX). Ignore if α̸= 0. Output ( Receiving ,sid,Ps, v,a.t,TNX)
+toPrvia private-delayed output.
+•Upon receiving ( Affirm ,sid,TNX) from Pr, ignore if ( Received ,sid,
+Ps, v,a.t,TNX) has not been output to Pryet or ( ·,·,·,·,1,TNX) is
+recorded. Otherwise, send ( Affirmed ,sid,TNX) toA. Upon receiving
+(Affirmed .Ok,sid,TNX) from A, retrieve R(Pr,a.t) = ( f.br,p.br), and
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 19
+R(Ps,a.t) = ( f.bs,p.bs). Update f.br←f.br+v,p.bs←p.bs−v, and
+α←1. Output ( Received ,sid,TNX) toPrvia public-delayed output.
+Reversion.
+•Upon receiving ( Reverse ,sid,TNX) from Ps, ignore if ( Ps,·,·,a.t,0,
+TNX) for some a.tis not recorded. Retrieve R(Ps,a.t) using a.t, and
+ignore if it equals ⊥. Else, send ( Reverse ,sid,TNX) toA.
+•Upon receiving ( Reverse .Ok,sid,TNX) from A, retrieve ( Ps,Pr, v,a.t,
+α,TNX). Ignore if α̸= 0. Else, retrieve R(Ps,a.t) = ( f.bs,p.bs). Set
+f.bs←f.bs+v,p.bs←p.bs−v, and α←2. Output ( Reversed ,sid,
+TNX) toPs.
+Proof of balance. The user provides a.ttoFDART, which in turn outputs a
+fresh random identifier γtoA. Ifa.thas the auditor Awho is corrupted, then
+FDART overwrites γwith ( P,a.t). Upon receiving A’s message FDART outputs ( P,
+a.t,f.b,p.b) to the auditor.
+Auditor operation. The auditor Ainvokes this interface by providing the
+unique identifier of a transaction TNX.FDART checks whether a transaction exists
+that is recorded with the specified TNX and verifies whether a.tassociated with
+TNX has the caller as its auditor. If the auditor is indeed the associated auditor,
+FDART, upon A’s confirmation, outputs the transaction metadata to A.
+Functionality FDART part III
+Proof of balance.
+•Upon receiving ( Balance ,sid,a.t) from P, ignore if R(P,a.t) =⊥.
+Else, given a.t, retrieve ( A,a.t) from AA. Generate a new γ, and set
+L(γ)←(P,a.t,A). If Ais malicious, overwrite γ←(P,a.t). Send
+(Balance ,sid, γ) toA.
+•Upon receiving ( Balance .Ok,sid, γ) from A, ignore if L(γ) =⊥. Else,
+retrieve L(γ) = ( P,a.t,A). Retrieve R(P,a.t) = ( f.b,p.b). Output
+(Balance ,sid,P,a.t,f.b,p.b) to Avia private-delayed output and set
+L(γ)← ⊥.
+Auditor operation.
+•Upon receiving ( Audit ,sid,TNX) from an auditor A, ignore if ( ·,·,·,a.t,
+·,TNX) for some a.tis not recorded. Else, ignore if ( A,a.t)/∈AA. Else,
+sample a new η, and set L(η)←(A,TNX). Send ( Audit ,sid, η) toA.
+•Upon receiving ( Audit .Ok,sid, η) from A, ignore if L(η) =⊥. Else,
+retrieve L(η) = ( A,TNX), and then retrieve ( Ps,Pr, v,a.t,·,TNX). Out-
+put ( Audited ,sid,Ps,Pr, v,a.t) toAvia private-delayed output, and set
+L(η)← ⊥.
+20 A. Sarencheh et al.
+4 Our construction DART
+As previously discussed, users maintain accounts where old account acct oldtran-
+sitions into a new account acct newas a result of a transaction. To achieve un-
+linkability, users do not reveal their acct oldand only reveal their acct new, and to
+achieve confidentiality the commitment to the new account acctcm
+newis revealed.
+Users prove in zero-knowledge that acctcm
+oldis a valid member of the blockchain’s
+state acctcm
+old∈state and that it has not been used. This is done by revealing
+the nullifier nul=PRF skacct(ρ), which is a pseudorandom function (PRF) (Def-
+inition 11) output. It is proved that nulis well-formed with respect to acctcm
+old
+for which the membership proof is provided. The ledger then checks if nulhas
+already appeared in the ledger’s state. Moreover, the user proves that acctcm
+new,
+which is revealed, is consistent with acctcm
+old, according to the type of the trans-
+action. For instance, in the case transaction type is Send,tnxSend, the sender
+proves that f.binacctcm
+newhas been correctly reduced by the transaction value v,
+i.e.,f.bs
+new=f.bs
+old−vholds. Once the transaction tnxis validated, the ledger
+records acctcm
+oldnullifier nulold, and adds acctcm
+newtostate.
+In our construction ΠDART, we employ the following ideal functionalities:
+the key generation FKeyReg (Appendix B.1), the non-interactive zero-knowledge
+FNIZK (Appendix B.2), the ledger FLedger (Appendix B.3), and the communi-
+cation channel Fch(Appendix B.4). Additionally, ΠDART incorporates several
+cryptographic primitives, specifically a public-key encryption scheme (Defini-
+tion 1), a commitment scheme (Definition 6), a pseudorandom function (PRF)
+(Definition 11), and an accumulator scheme (Definition 14). See Appendix C for
+formal definitions and security properties. See Section 6 for their instantiations.
+User account acctis defined as a tuple acct:= (skacct,f.b,p.b,a.t, ρ, s) contain-
+ing an account secret key skacct, finalized balance f.bthat is spendable, pending
+balance p.bthat is not spendable, an asset type a.t, and randomness values ρ
+ands, respectively for deriving nullifier nuland generating account commitment
+acctcm. We denote the NIZK statement, witness, relation, and proof by x,w,
+R, and π, respectively. Similar to FDART,ΠDART is parameterized by vmax, en-
+suring that both f.band p.bwill not overflow. FLedger maintains the state of
+the ledger state = (state′,LIAA,LKA,LNUL,vACCU).state parses into all transac-
+tions submitted to the chain state′, the most recent accumulator value vACCU,
+andmost recent state of three lists ( LIAA,LKA,LNUL), where LNULis an append-
+only list of account nullifiers updated by consensus and LIAAandLKAwill be
+described in the following sections. FLedger is parameterized by two functions:
+(i) (0 or 1) ←Validate (state,tnx), and (ii) statenew←Update (stateold,tnx),
+both taking as input blockchain state and a transaction tnx. Each of these func-
+tions includes several sub-algorithms tailored to different types of transactions
+as we will see later. Each consensus member—whether part of a permissioned or
+permissionless blockchain—reads the blockchain state state and verify the trans-
+action by executing Validate (state,tnx). If the transaction is verified, state is
+updated accordingly by executing Update (state,tnx).
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 21
+4.1 Algorithms
+Figure 1 illustrates the sender’s transaction status tnxst
+Send∈ {0,1,2}. Each tran-
+sition between these values is triggered by a specific transaction. By submitting
+tnxSendto the ledger, the sender’s finalized balance decreases by the transaction
+value f.bs
+new=f.bs
+old−vand pending balance p.bsincreases by the same value
+p.bs
+new=p.bs
+old+v. Without handling p.bs, a malicious sender could circumvent
+PoB as discussed in Section 1. As Figure 1 illustrates, from tnxst
+Send= 0 two
+tnxst
+Send=0(pending)
+set f.bs←f.bs−v
+set p.bs←p.bs+vtnxst
+Send=1(finalized)
+set f.br←f.br+v
+set p.br←p.brtnxst
+Send=2(reversed)
+set f.bs←f.bs+v
+set p.bs←p.bs−vtnx Receive
+receiver
+tnx Reverse
+sender
+Fig. 1: Transaction status tnxst
+Send.
+possible transitions can occur. A transition to tnxst
+Send= 1 when the receiver
+affirms by submitting tnxReceive . Or, a transition to tnxst
+Send= 2 when the sender
+reverses by submitting tnxReverse . A transition from tnxst
+Send= 1 to tnxst
+Send= 2 is
+impossible; once the receiver affirms, the sender can no longer reverse. Similarly,
+a transition from tnxst
+Send= 2 to tnxst
+Send= 1 is not possible; once the sender
+reverses, the receiver cannot affirm. Whenever the receiver submits tnxReceive ,
+their finalized balance increases f.br
+new=f.br
+old+v. Once tnxst
+Send= 1 the transfer
+of fund ownership from the sender’s account to the receiver’s account is com-
+pleted. When the sender submits tnxReverse , they perform the exact opposite of
+what they did in the initial transaction tnxSend. After key generation, each party
+ignores environment Z’s instruction if ( addr pk,addr sk) is not recorded but for
+simplicity we avoid explicitly addressing it.
+4.1.1 Address generation. Each user calls FKeyReg to receive two pairs of
+cryptographic keys: one pair ( pken,sken) for PKE and another pair ( pkacct,skacct)
+for their account. The algorithm is provided in Figure 2.
+▷Upon receiving ( Gen.Addr,sid) from ZcallFKeyReg with ( Gen.Key,sid).
+▷Upon receiving ( Gen.Key,sid,addr pk,addr sk) from FKeyReg , record ( addr pk,
+addr sk).
+▷Output ( Addr.Gened ,sid,addr pk) toZ.
+Fig. 2: Address generation
+4.1.2 Asset issuance. There is a public list called the Issuer- Asset-Auditor
+list, denoted by LIAA, which is maintained by consensus (on-chain) and initially
+set to empty. When a party Pissues an asset a.t,LIAAis updated accordingly.
+22 A. Sarencheh et al.
+LIAAcontains tuples of the form ( pkacct,a.t,pkA
+en), where pkacctis issuer’s account
+public key and pkA
+enis the auditor’s public key encryption14. In our NIZK rela-
+tions, we may need a concise representation of LIAA, which only contains pairs of
+(a.t,pkA
+en). We will therefore abuse the notation when describing proof relations
+so that for an index i, we write ( a.t,pkA
+en) =LIAA[i] to indicate that ( a.t,pkA
+en) is
+thei-th entry in LIAA, providing the association of a.tandpkA
+en. In Section 5.3,
+we discuss how to address situations where it becomes necessary to revoke an
+auditor. The algorithm is provided in Figure 3.
+The NIZK witness, statement, and relation are defined as follows.
+•wIssue =skacct
+•xIssue = (pkacct,a.t,pkA
+en)
+•The relation RIssue(xIssue, wIssue) is defined as:
+RIssue =n
+(pkacct,skacct)∈Acc.KeyGen (1λ)o
+.
+tnxIssueGeneration
+▷Upon receiving ( Issue ,sid,a.t,A) from Z: ignore if ( addr pk,addr sk) is not
+recorded.
+▷Else, call FLedger with ( Read,sid). Upon receiving ( Read,sid,state) from
+FLedger , parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Ignore if ( ·,a.t,·)∈LIAA.
+▷Else, parse addr pk= (pkacct,pken), and addr sk= (skacct,sken).
+▷CallFKeyReg with ( Rtrv.Key,sid,A) and upon receiving ( Rtrv.Key,sid,A,
+addrA
+pk) retrieve pkA
+enfrom addrA
+pk.
+▷CallFNIZKwith ( Prove ,sid, xIssue, wIssue) and receive ( Proof ,sid, πIssue).
+▷SettnxIssue←(xIssue, πIssue).
+▷CallFLedger with ( Append ,sid,tnxIssue).
+▷CallFLedger with ( Read,sid); upon receiving back ( Read,sid,state), if
+tnxIssue∈state′forstate′∈state output ( Issued ,sid,a.t) toZ.
+tnxIssueVerification
+▷Execute Validate Issue(state,tnxIssue):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxIssue = (xIssue,
+πIssue), and xIssue = (pkacct,a.t,pkA
+en).
+•ignore if any of the following conditions hold:
+– (·,a.t,·)∈LIAA
+– upon calling FNIZKwith ( Verify ,sid, xIssue, πIssue), (Vrfed ,sid,0)
+is returned.
+•else, call FKeyReg with ( Rtrv.id,sid,pk) for pk=pkacct, and pk=pkA
+en.
+•upon receiving ( Rtrved .id,sid,P) from FKeyReg forP=P∗andP=A
+output 1.
+14We assume a single auditor Ain our formal analysis. We believe our approach can
+be straightforwardly extended to accommodate a group of auditors.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 23
+▷Execute Update Issue(state,tnxIssue):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxIssue = (xIssue,
+πIssue), and xIssue = (pkacct,a.t,pkA
+en).
+•setLIAA←LIAA∪ {(pkacct,a.t,pkA
+en)}.
+•setstate←state∪ {(·,LIAA,·,·,·)}.
+•output state.
+Fig. 3: Asset issuance transaction tnxIssue
+4.1.3 Account registration. There is a public list called the Key-Asset list,
+denoted by LKA, which is maintained by consensus. The list is initially set to
+empty and is updated when a party Pregisters an asset-specific account acct.
+TheLKAlist stores tuples of the form ( pkacct,a.t), where each pkacctcan register
+one account for a given a.t.Pproves that account commitment acctcmis well-
+formed, and that they possess knowledge of the associated secret key of pkacct.
+The algorithm is provided in Figure 4.
+The NIZK witness, statement, and relation are defined as follows.
+•wRegister = (skacct, ρ, s)
+•xRegister = (acctcm,pkacct,a.t)
+•The relation RRegister (xRegister , wRegister ) is defined as:
+RRegister =n
+acctcm=Com(skacct,0,0,a.t, ρ;s)
+∧(pkacct,skacct)∈Acc.KeyGen (1λ)o
+.
+tnxRegister Generation
+▷Upon receiving ( Register ,sid,a.t) from Z, ignore if ( addr pk,addr sk) is not
+recorded.
+▷Else, parse addr pk= (pkacct,pken).
+▷CallFLedger with ( Read,sid), and upon receiving back ( Read,sid,state),
+parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Ignore if any of the following conditions hold:
+•(·,a.t,·)/∈LIAA
+•(pkacct,a.t)∈LKA
+▷Else, sample ρ$← −Zq, and s$← −Zq.
+▷Parse addr sk= (skacct,sken).
+▷Setacct←(skacct,0,0,a.t, ρ, s).
+▷Compute acctcm←Com(skacct,0,0,a.t, ρ;s).
+▷CallFNIZK with ( Prove ,sid, xRegister , wRegister ) and receive ( Proof ,sid,
+πRegister ).
+▷SettnxRegister ←(xRegister , πRegister ).
+24 A. Sarencheh et al.
+▷CallFLedger with ( Append ,sid,tnxRegister ).
+▷CallFLedger with ( Read,sid), and upon receiving back ( Read,sid,state), if
+tnxRegister ∈state′forstate′∈state, record ( acctcm,acct).
+▷Output ( Registered ,sid,a.t) toZ.
+tnxRegister Verification
+▷Execute Validate Register (state,tnxRegister ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxRegister = (xRegister ,
+πRegister ),xRegister = (acctcm,pkacct,a.t).
+•ignore if any of the following conditions hold:
+– (·,a.t,·)/∈LIAA
+– (pkacct,a.t)∈LKA
+– upon calling FNIZK with ( Verify ,sid, xRegister , πRegister ), (Vrfed ,
+sid,0) is returned.
+•else, call FKeyReg with ( Rtrv.id,sid,pkacct) and upon receiving back
+(Rtrved .id,sid,P) output 1.
+▷Execute Update Register (state,tnxRegister ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxRegister = (xRegister ,
+πRegister ),xRegister = (acctcm,pkacct,a.t).
+•callvACCU←ACCU .Add(ppACCU,vACCU,acctcm).
+•setLKA←LKA∪ {(pkacct,a.t)}.
+•setstate←state∪ {(·,·,LKA,·,vACCU)}.
+•output state.
+Fig. 4: Account registration transaction tnxRegister
+4.1.4 Increase asset supply. The asset issuer can increase the supply of
+the asset they have previously issued. The ledger verifies whether the issuer is
+the legitimate issuer of the specified asset based on LIAA. The issuer’s finalized
+balance increases f.bnew=f.bold+v. Note that in this algorithm, there are no
+privacy-preserving operations, and pkacctis part of the public values. However,
+acctcm
+oldis kept private, as revealing it would link the issuer’s previous, potentially
+anonymous transaction (e.g., a send transaction) to this one, thereby compro-
+mising the privacy of those transactions. The issuer reveals their new account
+commitment acctcm
+newalong with the nullifier nuloldofacctcm
+oldfor which accumula-
+tor membership proof is computed. The issuer proves the knowledge of skacctand
+discloses a.tandv. Furthermore, the well-formedness of acctcm
+newis also proved.
+The algorithm is provided in Figure 5.
+The NIZK witness, statement, and relation are defined as follows.
+•wIncrease = (skacct,f.bold,p.bold, ρold, sold, ρnew, snew,acctcm
+old, πACCU)
+•xIncrease = (nulold,acctcm
+new,pkacct,a.t, v)
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 25
+•The relation RIncrease (xIncrease , wIncrease ) is defined as:
+RIncrease =n
+ACCU .VfyMem (ppACCU,vACCU,acctcm
+old, πACCU) = 1
+∧acctcm
+new=Com(skacct,f.bold+v,p.bold,a.t, ρnew;snew)
+∧acctcm
+old=Com(skacct,f.bold,p.bold,a.t, ρold;sold)
+∧nulold=PRF skacct(ρold)
+∧(pkacct,skacct)∈Acc.KeyGen (1λ)o
+.
+tnxIncrease Generation
+▷Upon receiving ( Increase ,sid,a.t, v) from Z, ignore if any of the following
+conditions hold:
+•(addr pk,addr sk) is not recorded.
+•v≤0
+▷Else, parse addr pk= (pkacct,pken).
+▷Retrieve the recorded entry ( acctcm
+old,acct old) where acct old= (skacct,f.bold,
+p.bold,a.t, ρold, sold).
+▷CallFLedger with ( Read,sid). Upon receiving ( Read,sid,state) from FLedger ,
+parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Ignore if ( pkacct,a.t,·)/∈LIAA.
+▷Else, compute nulold←PRF skacct(ρold).
+▷Sample ρnew$← −Zq, and snew$← −Zq.
+▷Setacct new←(skacct,f.bold+v,p.bold,a.t, ρnew, snew).
+▷Compute acctcm
+new←Com(skacct,f.bold+v,p.bold,a.t, ρnew;snew).
+▷Compute πACCU←ACCU .PrvMem (ppACCU,state′,acctcm
+old).
+▷CallFNIZK with ( Prove ,sid, xIncrease , wIncrease ) and receive ( Proof ,sid,
+πIncrease ).
+▷SettnxIncrease ←(xIncrease , πIncrease ).
+▷CallFLedger with ( Append ,sid,tnxIncrease ).
+▷CallFLedger with ( Read,sid), upon receiving ( Read,sid,state) from FLedger ,
+iftnxIncrease ∈state′forstate′∈state, set ( acctcm
+old,acct old)←(acctcm
+new,
+acct new).
+▷Output ( Increased ,sid,a.t, v) toZ.
+tnxIncrease Verification
+▷Execute Validate Increase (state,tnxIncrease ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxIncrease = (xIncrease ,
+πIncrease ), and xIncrease = (nulold,acctcm
+new,pkacct,a.t, v).
+•ignore if any of the following conditions hold:
+–v≤0
+–nulold∈LNUL
+– (pkacct,a.t,·)/∈LIAA
+26 A. Sarencheh et al.
+– calling FNIZK with ( Verify ,sid, xIncrease , πIncrease ), (Vrfed ,sid,0)
+is returned.
+•else, output 1.
+▷Execute Update Increase (state,tnxIncrease ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxIncrease = (xIncrease ,
+πIncrease ), and xIncrease = (nulold,acctcm
+old,acctcm
+new,addr pk,a.t, v).
+•callvACCU←ACCU .Add(ppACCU,vACCU,acctcm
+new).
+•setLNUL←LNUL∪ {nulold}.
+•setstate←state∪ {(·,·,·,LNUL,vACCU)}.
+•output state.
+Fig. 5: Increase asset supply transaction tnxIncrease
+4.1.5 Sender transaction. The transaction occurs between a sender Psand
+a receiver Pr, transferring an amount vof asset type a.tfrom the sender’s account
+acctsto the receiver’s account acctrvia the help of ephemeral account-update-
+record AUR.Psdeducts vfrom f.bsand adds it to p.bs, they also generate AUR for
+Prwith a value of v.AUR includes ( pks
+acct, v,a.t;pkr
+en).Psencrypts ( pks
+acct, v,a.t)
+under pkr
+enusing a key-private encryption generating AUR en. This enables Prto
+later scan the ledger using skr
+ento identify whether AUR enbelongs to them and
+to claim it by providing a proof of knowledge of skr
+en. The sender proves the well-
+formedness of AUR with respect to their account. Upon receiving a (valid) sender
+transaction tnxSend, the ledger assigns transaction status tnxst
+SendtotnxSendwith
+initial value of 0. As long as Prhas not claimed AUR en,tnxst
+Send= 0, indicating
+that Pscan still reclaim the AUR enusing the reversion algorithm (as we will
+discuss later). Once Prclaims AUR en,tnxst
+Sendis updated to 1, indicating that
+AUR encan no longer be reversed and also that Prcannot claim it again.
+Pslocally maintains a list LAUR(which is initially empty) that contains tuples
+of the form ( AUR,AUR en,tnxid
+Send) where tnxid
+Sendis a unique transaction identifier
+assigned by the ledger. LAURis used when Psneeds to reverse a transaction (as
+described later). Psproves ownership of fresh acctcm,s
+oldby providing a ZK proof
+of membership πACCU in the accumulator. Psreveals nuls
+oldofacctcm,s
+oldand proves
+the well-formedness of acctcm,s
+new.Psalso proves the well-formedness of AUR enand
+ψ, proving that the correct values are included in the plaintext, and that ψis
+created under the public key of the auditor pkA
+enassociated with the relevant asset
+type a.t. Note that pkA
+enanda.tare part of the witness; and the link between
+the two is defined by ( a.t,pkA
+en) =LIAA[i], where the index iis also part of the
+witness. The algorithm is provided in Figure 6.
+The NIZK witness, statement, and relation are defined as follows.
+•wSend = ( sks
+acct,f.bs
+old,p.bs
+old, ρs
+old, ss
+old,acctcm,s
+old, ρs
+new, ss
+new,pkA
+en,pkr
+en, v,a.t,
+πACCU, i)
+•xSend= (vACCU,nuls
+old,acctcm,s
+new,AUR en, ψ)
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 27
+•The relation RSend(xSend, wSend) is defined as:
+RSend=n
+ACCU .VfyMem (ppACCU,vACCU,acctcm,s
+old, πACCU) = 1
+∧acctcm,s
+new=Com(sks
+acct,f.bs
+old−v,p.bs
+old+v,a.t, ρs
+new;ss
+new)
+∧acctcm,s
+old=Com(sks
+acct,f.bs
+old,p.bs
+old,a.t, ρs
+old;ss
+old)
+∧0< v≤vmax
+∧f.bs
+old≥v
+∧nuls
+old=PRF sks
+acct(ρs
+old)
+∧(a.t,pkA
+en) =LIAA[i]
+∧(pks
+acct,sks
+acct)∈Acc.KeyGen (1λ)
+∧AUR en=Enc pkr
+en(pks
+acct, v,a.t)
+∧ψ=EncpkA
+en(pks
+acct,pkr
+en, v,a.t)o
+.
+tnxSendGeneration
+▷Upon receiving ( Send,sid,Pr, v,a.t) from Zproceed as follows.
+▷Ignore if v≤0 orv >vmax. Else, parse addrs
+pk= (pks
+acct,pks
+en), and addrs
+sk=
+(sks
+acct,sks
+en).
+▷CallFKeyReg with ( Rtrv.Key,sid,Pr); upon receiving back ( Rtrv.Key,sid,
+Pr,addrr
+pk) retrieve pkr
+en.
+▷Retrieve the recorded entry ( acctcm,s
+old,accts
+old) where accts
+old= (sks
+acct,f.bs
+old,
+p.bs
+old,a.t, ρs
+old, ss
+old).
+▷Compute nuls
+old←PRF sks
+acct(ρs
+old).
+▷Sample ρs
+new$← −Zq, and ss
+new$← −Zq.
+▷Setaccts
+new←(sks
+acct,f.bs
+old−v,p.bs
+old+v,a.t, ρs
+new, ss
+new).
+▷Compute acctcm,s
+new←Com(sks
+acct,f.bs
+old−v,p.bs
+old+v,a.t, ρs
+new;ss
+new).
+▷SetAUR←(pks
+acct, v,a.t;pkr
+en).
+▷Compute AUR en←Enc pkr
+en(pks
+acct, v,a.t).
+▷CallFLedger with ( Read,sid), upon receiving back ( Read,sid,state), parse
+state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Using a.t, retrieve ( a.t,pkA
+en) =LIAA[i].
+▷Compute ψ←EncpkA
+en(pks
+acct,pkr
+en, v,a.t).
+▷Compute πACCU←ACCU .PrvMem (ppACCU,state′,acctcm,s
+old).
+▷CallFNIZKwith ( Prove ,sid, xSend, wSend) and receive ( Proof ,sid, πSend).
+▷SettnxSend←(xSend, πSend).
+▷CallFLedger with ( Append ,sid,tnxSend).
+▷CallFLedger with ( Read,sid); upon receiving back ( Read,sid,state), if
+TNX ∈state′forstate′∈state where tnxSend∈TNX, set ( acctcm,s
+old,
+accts
+old)←(acctcm,s
+new,accts
+new). Else, ignore.
+▷Parse TNX = (tnxSend,tnxid
+Send,tnxst
+Send), and set LAUR←LAUR∪ {(AUR,
+AUR en,tnxid
+Send)}.
+▷Output ( Sent,sid,Pr, v,a.t,TNX) toZ.
+28 A. Sarencheh et al.
+tnxSendVerification
+▷Execute Validate Send(state,tnxSend):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxSend= (xSend, πSend),
+andxSend= (vACCU,nuls
+old,acctcm,s
+new,AUR en, ψ).
+•Ignore if any of the following conditions hold:
+–nuls
+old∈LNUL
+– upon calling FNIZKwith ( Verify ,sid, xSend, πSend), (Vrfed ,sid,0) is
+returned.
+•else, output 1.
+▷Execute Update Send(state,tnxSend):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxSend= (xSend, πSend),
+andxSend= (vACCU,nuls
+old,acctcm,s
+new,AUR en, ψ).
+•sample a fresh tnxid
+Send, and set tnxst
+Send←0,TNX←(tnxSend,tnxid
+Send,
+tnxst
+Send), and state′←state′∪ {TNX}.
+•callvACCU←ACCU .Add(ppACCU,vACCU,acctcm,s
+new).
+•setLNUL←LNUL∪ {nuls
+old}.
+•setstate←state∪ {(state′,·,·,LNUL,vACCU)}.
+•output state.
+Fig. 6: Sender transaction tnxSend
+4.1.6 Receiver transaction. Given TNX viaZ, the receiver Pridentifies
+whether AUR en∈TNX is intended for them. Prproves knowledge of the secret
+keyskr
+enthat can successfully decrypt AUR en. Following this, Prperforms their
+account transition, proving that their new account is correctly updated with
+respect to the value vand asset type a.tcontained within AUR en. The algorithm
+is provided in Figure 7.
+The NIZK witness, statement, and relation are defined as follows.
+•wReceive = (skr
+acct,f.br
+old, ρr
+old, sr
+old,acctcm,r
+old, πACCU,p.br
+old, ρr
+new, sr
+new, v,a.t,skr
+en)
+•xReceive = (vACCU,nulr
+old,acctcm,r
+new,AUR en,tnxid
+Send)
+•The relation RReceive (xReceive , wReceive ) is defined as:
+RReceive =n
+ACCU .VfyMem (ppACCU,vACCU,acctcm,r
+old, πACCU) = 1
+∧acctcm,r
+new=Com(skr
+acct,f.br
+old+v,p.br
+old,a.t, ρr
+new;sr
+new)
+∧acctcm,r
+old=Com(skr
+acct,f.br
+old,p.br
+old,a.t, ρr
+old;sr
+old)
+∧(pks
+acct, v,a.t) =Dec skr
+en(AUR en)
+∧nulr
+old=PRF skr
+acct(ρr
+old)o
+.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 29
+tnxReceive Generation
+▷Upon receiving ( Receive ,sid,TNX) from Z, callFLedger with ( Read,sid),
+upon receiving back ( Read,sid,state), ignore if TNX /∈state′forstate′∈
+state.
+▷Else, parse addrr
+sk= ( skr
+acct,skr
+en),TNX = ( tnxSend,tnxid
+Send,tnxst
+Send),
+tnxSend= (xSend, πSend), and xSend= (v′
+ACCU,nuls
+old,acctcm,s
+new,AUR en, ψ). Ig-
+nore if tnxst
+Send̸= 0.
+▷Compute o←Dec skr
+en(AUR en). Ignore if o=⊥.
+▷Else, parse o= (pks
+acct, v,a.t), and retrieve the recorded entry ( acctcm,r
+old,
+acctr
+old) where acctr
+old= (skr
+acct,f.br
+old,p.br
+old,a.t, ρr
+old, sr
+old).
+▷CallFKeyReg with ( Rtrv.id,sid,pks
+acct), upon receiving back ( Rtrved .id,
+sid,Ps) proceed.
+▷Output ( Receiving ,sid,Ps, v,a.t,TNX) toZ.
+▷Parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Compute nulr
+old←PRF skr
+acct(ρr
+old).
+▷Sample ρr
+new$← −Zq, and sr
+new$← −Zq.
+▷Setacctr
+new= (skr
+acct,f.br
+old+v,p.br
+old,a.t, ρr
+new, sr
+new).
+▷Compute acctcm,r
+new←Com(skr
+acct,f.br
+old+v,p.br
+old,a.t, ρr
+new;sr
+new).
+▷Compute πACCU←ACCU .PrvMem (ppACCU,state′,acctcm,r
+old).
+▷CallFNIZK with ( Prove ,sid, xReceive , wReceive ) and receive ( Proof ,sid,
+πReceive ).
+▷SettnxReceive ←(xReceive , πReceive ).
+▷If (Affirm ,sid,TNX) has been received from Z, callFLedger with ( Append ,
+sid,tnxReceive ).
+▷CallFLedger with ( Read,sid); upon receiving back ( Read,sid,state), if
+tnxReceive ∈state′forstate′∈state, set ( acctcm,r
+old,acctr
+old)←(acctcm,r
+new,
+acctr
+new)
+▷Output ( Received ,sid,TNX) toZ.
+tnxReceive Verification
+▷Execute Validate Receive (state,tnxReceive ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxReceive = (xReceive ,
+πReceive ), and xReceive = (vACCU,nulr
+old,acctcm,r
+new,AUR en,tnxid
+Send).
+•ignore if any of the following conditions hold:
+– given tnxid
+Send∈xReceive , retrieve the associated AUR∗
+en∈state′and
+AUR∗
+en̸=AUR en.
+–nulr
+old∈LNUL
+– upon calling FNIZK with ( Verify ,sid, xReceive , πReceive ), (Vrfed ,
+sid,0) is returned.
+–tnxst
+Send̸= 0
+•Else, output 1.
+▷Execute Update Receive (state,tnxReceive ):
+30 A. Sarencheh et al.
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxReceive = (xReceive ,
+πReceive ), and xReceive = (vACCU,nulr
+old,acctcm,r
+new,AUR en,tnxid
+Send).
+•given tnxid
+Send, retrieve TNX = (tnxSend,tnxid
+Send,tnxst
+Send).
+•settnxst
+Send←1,TNX←(·,·,tnxst
+Send), and state′←state′∪ {TNX}.
+•callvACCU←ACCU .Add(ppACCU,vACCU,acctcm,r
+new).
+•setLNUL←LNUL∪ {nulr
+old}.
+•setstate←state∪ {(state′,·,·,LNUL,vACCU)}.
+•output state.
+Fig. 7: Receiver transaction tnxReceive
+4.1.7 Reversion. The AUR enis reversible by the sender Psas long as the
+corresponding receiver Prhas not claimed it. Psproves that they are the creator
+ofAUR enby proving knowledge of the associated secret key sks
+acct, thereby proving
+their role as its creator. If tnxst
+Send= 0 (see Figure 1), Pscan reverse/reclaim
+AUR en. Given the value vofAUR en,Psreverses the transaction by increasing
+their finalized balance f.bs
+old+vand decreasing their pending balance p.bs
+old−v
+(recall, p.bsis increased by vwhen Psinitially generated AUR en). The algorithm
+is provided in the Figure 8.
+The NIZK witness, statement, and relation are defined as follows.
+•wReverse = (sks
+acct,f.bs
+old, ρs
+old, ss
+old,acctcm,s
+old,p.bs
+old, ρs
+new, ss
+new,pkr
+en, v,a.t, πACCU)
+•xReverse = (vACCU,nuls
+old,acctcm,s
+new,AUR en,tnxid
+Send)
+•The relation RReverse (xReverse , wReverse ) is defined as:
+RReverse =n
+ACCU .VfyMem (ppACCU,vACCU,acctcm,s
+old, πACCU) = 1
+∧nuls
+old=PRF sks
+acct(ρs
+old)
+∧acctcm,s
+new=Com(sks
+acct,f.bs
+old+v,p.bs
+old−v,a.t, ρs
+new;ss
+new)
+∧acctcm,s
+old=Com(sks
+acct,f.bs
+old,p.bs
+old,a.t, ρs
+old;ss
+old)
+∧AUR en=Enc pkr
+en(pks
+acct, v,a.t)
+∧(pks
+acct,sks
+acct)∈Acc.KeyGen (1λ)o
+.
+tnxReverse Generation
+▷Upon receiving ( Reverse ,sid,TNX) from Z, callFLedger with ( Read,sid),
+upon receiving ( Read,sid,state) from FLedger , ignore if TNX /∈state.
+▷Else, parse addrs
+sk= ( sks
+acct,sks
+en),TNX = ( tnxSend,tnxid
+Send,tnxst
+Send),
+tnxSend= (xSend, πSend), and xSend= (v′
+ACCU,nuls
+old,acctcm,s
+new,AUR en, ψ). Ig-
+nore if tnxst
+Send̸= 0.
+▷Else, retrieve the entry ( ·,·,tnx∗id
+Send), from LAURwhere tnx∗id
+Send=tnxid
+Send
+and parse AUR = (pks
+acct, v,a.t;pkr
+en). Ignore if no such entry exists.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 31
+▷Else, retrieve the recorded entry ( acctcm,s
+old,accts
+old) where accts
+old= (sks
+acct,
+f.bs
+old,p.bs
+old,a.t, ρs
+old, ss
+old).
+▷Compute nuls
+old←PRF sks
+acct(ρs
+old).
+▷Sample ρs
+new$← −Zq, and ss
+new$← −Zq.
+▷Setaccts
+new←(sks
+acct,f.bs
+old+v,p.bs
+old−v,a.t, ρs
+new, ss
+new).
+▷Compute acctcm,s
+new←Com(sks
+acct,f.bs
+old+v,p.bs
+old−v,a.t, ρs
+new;ss
+new).
+▷Parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Compute πACCU←ACCU .PrvMem (ppACCU,state′,acctcm,s
+old).
+▷CallFNIZK with ( Prove ,sid, xReverse , wReverse ) and receive ( Proof ,sid,
+πReverse ).
+▷SettnxReverse ←(xReverse , πReverse ).
+▷CallFLedger with ( Append ,sid,tnxReverse ).
+▷CallFLedger with ( Read,sid); upon receiving ( Read,sid,state) from FLedger ,
+iftnxReverse ∈state′forstate′∈state, set ( acctcm,s
+old,accts
+old)←(acctcm,s
+new,
+accts
+new), and set LAUR←LAUR\ {(AUR,AUR en,tnxid
+Send)}.
+▷Output ( Reversed ,sid,TNX) toZ.
+tnxReverse Verification
+▷Execute Validate Reverse (state,tnxReverse ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxReverse = (xReverse ,
+πReverse ), and xReverse = (vACCU,nuls
+old,acctcm,s
+new,AUR en,tnxid
+Send).
+•ignore if any of the following conditions hold:
+– given tnxid
+Send∈xReverse , retrieve the associated AUR∗
+en∈state′and
+AUR∗
+en̸=AUR en.
+–nuls
+old∈LNUL
+– upon calling FNIZK with ( Verify ,sid, xReverse , πReverse ), (Vrfed ,
+sid,0) is returned.
+–tnxst
+Send̸= 0
+•else, output 1.
+▷Execute Update Reverse (state,tnxReverse ):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxReverse = (xReverse ,
+πReverse ), and xReverse = (vACCU,nuls
+old,acctcm,s
+new,AUR en,tnxid
+Send).
+•given tnxid
+Send, retrieve TNX = (tnxSend,tnxid
+Send,tnxst
+Send).
+•settnxst
+Send←2,TNX←(·,·,tnxst
+Send), and state′←state′∪ {TNX}.
+•callvACCU←ACCU .Add(ppACCU,vACCU,acctcm,s
+new).
+•setLNUL←LNUL∪ {nuls
+old}.
+•setstate←state∪ {(state′,·,·,LNUL,vACCU)}.
+•output state.
+Fig. 8: Reversion transaction tnxReverse
+32 A. Sarencheh et al.
+4.1.8 Proof of balance. We present two approaches for proof of balance
+(PoB). In the first approach, the party Pinteracts with the associated auditor
+A(for the asset type a.twhose balance is requested). Aoutputs f.band p.b
+to the environment Z. In the second approach, outlined as a generic solution
+in Appendix A, Pproves both their f.band p.bdirectly to any PoB verifier,
+without relying on A. The first approach is provided in Figure 9, where Preveals
+their f.band p.bfrom their associated account and proves the correctness of
+the revealed values. There is no account state transition in PoB; however, P
+must reveal the nullifier nulto enable Ato verify that Pis disclosing f.band
+p.bcorresponding to their most recent account. Palso provides pointers to all
+transactions with tnxst
+Send= 0 and tnxst
+Send= 1 to justify the value of p.b. The
+values f.bandp.b−V(1)are revealed to Z, where V(1)is the sum of the values
+ofP’s transactions that have been finalized (with tnxst
+Send= 1) and in which P
+has been the sender.
+The NIZK witness, statement, and relation are defined as follows.
+•wA
+PoB= (skacct, ρ, s)
+•xA
+PoB= (pkacct,nul,acctcm,f.b,p.b,a.t)
+•The relation RPoB(xA
+PoB, wA
+PoB) is defined as:
+RPoB=n
+acctcm=Com(skacct,f.b,p.b,a.t, ρ;s)
+∧(pkacct,skacct)∈Acc.KeyGen (1λ)
+∧nul=PRF skacct(ρ)o
+.
+tnxPoBGeneration executed by P
+▷Upon receiving ( Balance ,sid,a.t) from Z, parse addr pk= (pkacct,pken),
+andaddr sk= (skacct,sken).
+▷CallFLedger with ( Read,sid), upon receiving ( Read,sid,state) from FLedger ,
+parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Retrieve the recorded entry ( acctcm,acct) where acct = (skacct,f.b,p.b,
+a.t, ρ, s).
+▷Compute nul←PRF skacct(ρ).
+▷CallF†
+NIZKwith ( Prove ,sid, xA
+PoB, wA
+PoB) and receive ( Proof ,sid, πA
+PoB).
+▷Retrieve all entries ( AURi,AURi
+en,tnxidi
+Send) in LAURwhere, upon parsing
+AURi= (pksi
+acct, v(i),a.ti;pkri
+en) the conditions a.ti=a.tandpksi
+acct=pkacct
+hold.
+▷Define two lists− →tnxid
+(1)and− →tnxid
+(0), both initially set to ∅.
+▷Retrieve all TNXj∈state′where TNXj= (tnxj
+Send,tnxidj
+Send,tnxstj
+Send).
+▷For each tnxidi
+Sendretrieved from LAUR:
+•addtnxidi
+Sendto− →tnxid
+(1)iftnxidi
+Send=tnxidj
+Send&tnxstj
+Send= 1 for some TNXj=
+(tnxj
+Send,tnxidj
+Send,tnxstj
+Send).
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 33
+•addtnxidi
+Sendto− →tnxid
+(0)iftnxidi
+Send=tnxidj
+Send&tnxstj
+Send= 0 for some TNXj=
+(tnxj
+Send,tnxidj
+Send,tnxstj
+Send).
+▷Using a.t, retrieve pkA
+enfromLIAA.
+▷CallFKeyReg with ( Rtrv.id,sid,pkA
+en), upon receiving ( Rtrved .id,sid,A)
+proceed.
+▷SettnxA
+PoB←(xA
+PoB, πA
+PoB,− →tnxid
+(1),− →tnxid
+(0)), and call Fchwith ( Send,sid,A,
+tnxA
+PoB).
+PoB output executed by A
+▷Upon receiving ( Received ,sid,P,tnxA
+PoB) from Fch, parse tnxA
+PoB= (xA
+PoB,
+πA
+PoB,− →tnxid
+(1),− →tnxid
+(0)), and xA
+PoB= (pkacct,nul,acctcm,f.b,p.b,a.t).
+▷CallFKeyReg with ( Rtrv.Key,sid,P). Ignore if ( Rtrv.Key,sid,P,(pk′
+acct,·))
+is received from FKeyReg where pk′
+acct̸=pkacct.
+▷CallFLedger with ( Read,sid), upon receiving ( Read,sid,state) from FLedger ,
+parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Ignore if any of the following conditions hold:
+•nul∈LNUL
+•acctcm/∈state′
+•upon calling F†
+NIZKwith ( Verify ,sid, xA
+PoB, πA
+PoB), (Vrfed ,sid,0) is re-
+turned.
+▷For all tnxidi
+Send∈− →tnxid
+(1):
+•ignore if there is no TNXi∈state′where TNXi= (tnxi
+Send,tnxidi
+Send,
+tnxsti
+Send) with tnxsti
+Send= 1.
+•parse tnxi
+Send= (xi
+Send, πi
+Send), and xi
+Send= (vi
+ACCU,nuli,acctcm,i,AURi
+en,
+ψi).
+•compute decryption oi←DecskA
+en(ψi). Ignore if oi=⊥. Else, parse
+oi= (pk(i)
+acct,·, v(i),a.t(i)), and ignore if pk(i)
+acct̸=pkacct, ora.t(i)̸=a.t.
+Else, set V(1)←V(1)+v(i)where initially V(1)= 0.
+▷For all tnxidi
+Send∈− →tnxid
+(0):
+•ignore if there is no TNXi∈state′where TNXi= (tnxi
+Send,tnxidi
+Send,
+tnxsti
+Send) with tnxsti
+Send= 0.
+•parse tnxi
+Send= (xi
+Send, πi
+Send), and xi
+Send= (vi
+ACCU,nuli,acctcm,i,AURi
+en,
+ψi).
+•compute decryption oi←DecskA
+en(ψi). Ignore if oi=⊥. Else, parse
+oi= (pk(i)
+acct,·, v(i),a.t(i)), and ignore if pk(i)
+acct̸=pkacct, ora.t(i)̸=a.t.
+Else, set V(0)←V(0)+v(i)where initially V(0)= 0.
+▷Ignore if V(1)+V(0)̸=p.b.
+▷Else, output ( Balance ,sid,P,a.t,f.b, V(0)) toZ.
+Fig. 9: Proof of balance transaction tnxPoB– 1st Approach
+34 A. Sarencheh et al.
+4.1.9 Auditor operation. The auditor can access the hidden information of
+a particular transaction where its underlying asset type corresponds to them.
+The algorithm is provided in Figure 10.
+▷Upon receiving ( Audit ,sid,TNX) from Z, call FLedger with ( Read,sid),
+upon receiving ( Read,sid,state) from FLedger , ignore if TNX /∈state.
+▷Else, parse addrA
+sk= (skA
+acct,skA
+en),TNX = (tnxSend,tnxid
+Send,tnxst
+Send),
+tnxSend= (xSend, πSend), and xSend= (vACCU,nuls
+old,acctcm,s
+new,AUR en, ψ).
+▷Compute o←DecskA
+en(ψ). Ignore if o=⊥.
+▷Else, parse o= (pks
+acct,pkr
+en, v,a.t).
+▷CallFKeyReg with ( Rtrv.id,sid,pks
+acct) and ( Rtrv.id,sid,pkr
+en).
+▷Upon receiving ( Rtrved .id,sid,Ps) and ( Rtrved .id,sid,Pr) from FKeyReg
+respectively output ( Audited ,sid,Ps,Pr, v,a.t) toZ.
+Fig. 10: Auditor algorithm (off-chain operation)
+5 Discussion
+5.1 Multi-party transactions
+DART facilitates efficient multi-party transactions (MPTs). Specifically, a single
+sender can, with one account state transition (i.e., one accumulator proof), send
+funds to multiple receivers. Similarly, a single receiver can, with one account
+state transition, affirm (receive) funds from multiple independent senders who
+have sent funds in separate transactions. The process works as follows: a sender
+generates multiple AUR enand proves, in zero-knowledge, that the total value
+deducted from their account equals the sum of all values encapsulated within
+these AUR en. The sender then submits a transaction such that each associated
+receiver can subsequently claim their respective AUR en. The ledger updates the
+status of each AUR enindividually, determining whether the corresponding re-
+ceiver has affirmed it so that the sender can reverse any AUR enindependently.
+Similarly, when a receiver wishes to affirm (claim) multiple AUR en, they prove
+that they can successfully decrypt all associated AUR enand that the total value
+added to their account equals the sum of the affirmed AUR en. In this way, DART
+enables efficient MPTs through a single account state transition. Note that in
+MPTs, ephemeral anonymous linkability occurs. An anonymous sender in one
+transaction includes multiple AUR ento anonymous receivers, or an anonymous
+receiver references multiple AUR engenerated by anonymous senders. However,
+each transaction is unlinkable to any previous or subsequent transactions. This
+ensures that an adversary cannot link the transactions of an entity involved in
+a MPT (whether as a sender or receiver) to their prior or future transactions,
+thereby preserving unlinkability.
+Aggregatable transactions for efficient account updates. With the same
+mechanism described above for MPT, a user (sender) can batch a group of
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 35
+transactions and reverse them all via a single account transition in one tnxReverse ,
+rather than submitting separate transactions individually. The user references
+multiple transactions and proves that they are the creator of those transactions.
+Additionally, the user proves that the value being added to their finalized balance
+and deducted from their pending balance equals the sum of the values within all
+the transactions they intend to reverse.
+5.2 Fee payments
+In our formal modeling, we do not explicitly address transaction fee payments
+to maintain focus on our primary contribution. However, we outline here how
+fee payments can be incorporated into the system. Each user account could in-
+clude an additional element representing the balance in the system’s currency
+dedicated to fee payment, from which transaction fees are deducted. This ex-
+tension can be easily integrated into the zero-knowledge relations. The NIZK
+proof would enable efficient verification, ensuring that the correct transaction
+fee has been deducted from the balance of the fee payment asset. Each transac-
+tion type could have a predefined fee (reflecting differences in their verification
+costs). Users would then prove, in zero-knowledge, that the appropriate fee has
+been deducted from their balance based on the transaction type.
+5.3 Maintenance of LIAA
+The list LIAAwith entries of the form ( pkacct,a.t,pkA
+en) is publicly maintained
+on-chain and can be updated arbitrarily. For instance, in practice, an issuer may
+choose to change the associated auditor Afor their asset due to regulations. This
+could occur, for example, if the originally assigned auditor becomes unavailable
+or is revoked, prompting the issuer to update the auditor’s address pkA
+ento an-
+other one. In such a case, the list will undergo an update. The issuer proves that
+they are the legitimate associated issuer for the specific LIAAentry to authorize
+this update. Consequently, the list can be updated arbitrarily, and this could
+invalidate a user’s zero-knowledge proof if it was generated based on a previ-
+ous state of the list that has since changed. To mitigate this issue, we propose
+introducing structured update intervals; specifically, updates to lists can be re-
+stricted to predefined times. Users can generate their zero-knowledge proofs with
+the assurance that the list will remain stable within a defined period.
+Moreover, we do not accumulate elements of LIAA, e.g., using a cryptographic
+accumulator as we do for accumulating account commitments. We note that it
+is straightforward to accumulate the list LIAAso that chain validators do not
+need to read the whole list for each transaction. Instead, they read the updated
+list at the beginning of an interval and compute the accumulator value for it.
+Later, until the end of the interval, they only check a user’s proof against a single
+accumulator value. Users also generate their proof based on the accumulator, not
+the list itself, similar to how they do so for their account commitments.
+In implementation, LIAAcould bear other attributes such as an asset description
+to provide more information about the asset, or the total value issued of a.t
+36 A. Sarencheh et al.
+for auditability purposes (e.g., checking the balance of the off-chain real-world
+assets (RWAs) against their on-chain representations as in PARScoin [48]).
+6 Implementation details
+In Section 4, we described the components of our system ΠDART in terms of
+cryptographic building blocks. In this section, we elaborate on the instantiation
+of these elements by specifying the concrete schemes used.
+Building blocks. Our system leverages cryptographic schemes such as ElGa-
+mal encryption [23] (Definition 5) for AUR enandψ, Pedersen commitments [46]
+(Definition 10) for acctcm, and the Dodis-Yampolskiy pseudorandom function
+(PRF) [21] (Definition 13) for nul=PRF skacct(ρ). These schemes are algebraic
+and hence integrate efficiently with the algebraic-friendly non-interactive zero-
+knowledge proofs. A critical component of our design is the use of cryptographic
+accumulators. Our accumulator scheme is instantiated using Curve Trees [12],
+which are transparent and do not require a trusted setup. A key feature of Curve
+Trees is that they support efficient updates to the accumulator value without
+necessitating access to the entire set, analogous to the behavior of Merkle Trees.
+Curve Trees relays on the commit-and-prove capabilities of Bulletproofs—to
+prove accumulator membership in zero-knowledge.
+NIZK proofs. In our implementation, we use two types of NIZK proofs: Σ- pro-
+tocols and Bulletproofs [9], both made non-interactive through the Fiat-Shamir
+transform [25]. Both have transparent setups and are computationally sound in
+the random oracle model under the discrete logarithm assumption. While neither
+of these protocols in their standard forms provides UC security, transformations
+like the one in [32] show how they can be adapted to achieve UC security. We
+refer the reader to [18] for further details about such transformations.
+Some of the statements we have, such as proving the well-formedness of com-
+mitments, encryptions, or decryption computations, can be handled straightfor-
+wardly with Σ-protocols. Here, we focus on the more complex statements. Range
+checks are handled using Bulletproof range proofs. To prove the correct mapping
+between asset types and their corresponding auditors, we assume that the pub-
+lic list LIAA={(a.t,pkA
+en)}is represented as two vectors L(1)
+IAA:={a.t1, . . . , a.tn}
+andL(2)
+IAA:={pkA1
+en, . . . , pkAn
+en}, respectively storing all registered asset types and
+public keys of their associated auditors. At any point in time when nassets are
+registered, the prover can demonstrate the correct mapping by committing to a
+binary vector VIof size nwith exactly one non-zero entry, and then showing that
+the asset type and auditor’s public key involved in the statement correspond to
+the inner products of ⟨VI,L(1)
+IAA⟩and⟨VI,L(2)
+IAA⟩, respectively. This again can be
+accomplished using Bulletproof’s inner-product argument [9].
+To prove accumulator membership in zero-knowledge, we use Curve Trees [12],
+which relies on the commit-and-prove capabilities of Bulletproofs. While other
+candidates for instantiating our accumulator scheme exist (e.g., Merkle trees),
+we choose an algebraic accumulator as it better integrates with our design and
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 37
+makes the arithmetization of Bulletproofs required for converting accumulator
+statements into R1CS more efficient.
+Handling historical accumulators for proof verification. The blockchain
+validators cannot just maintain the most recent accumulator value, because,
+in that case, a proof generated using an old accumulator will no longer pass
+verification. To overcome this issue, the chain stores a list of the last several
+accumulator values. This means one can reference an older accumulator value
+when generating their proof. As long as that accumulator value is still within
+the list of stored historical values, the user’s NIZK proof is validated.
+Avoiding exhaustive search. We use “ElGamal in the exponent” for encrypt-
+ing field elements in AUR en=Enc pkr
+en(pks
+acct, v,a.t) and ψ=EncpkA
+en(pks
+acct,pkr
+en,
+v,a.t). This results in an inefficient decryption, where the decryptor needs to ex-
+tract xfrom gx. To address this, we use a method that integrates an additional
+encryption scheme, denoted by ENCcnst, into the construction while ensuring
+constant-time decryption. In our formal model, ENCcnstis not explicitly incor-
+porated and remains an implementation-level enhancement that can be added
+alongside the existing ElGamal encryption. Also, the original encryption scheme
+cannot be replaced by ENCcnst, as the ability to efficiently prove properties about
+plaintexts in zero-knowledge proofs must be preserved. ENCcnstis employed to
+recover field element plaintexts in constant time, and the result is verified against
+their group encoding, which is computed from ElGamal decryption (recall that
+the sender proves the well-formedness of the ElGamal ciphertext). If, for exam-
+ple, the decryption of AUR en(resulted in gv) and the ENCcnstciphertext (resulted
+inv′) are inconsistent gv̸=gv′, the receiver may simply ignore the transaction15
+and the sender can reverse the transaction, requiring them to pay additional fees
+to do so. Hence, the potentially malicious sender has an incentive to generate the
+ENCcnstciphertext correctly. Moreover, any claims to the funds rely solely on the
+ElGamal ciphertext (for which efficient zero-knowledge proof of well-formedness
+has already been submitted) and not on ENCcnst.
+For completeness, the construction of ENCcnstis specified below. The key gen-
+eration process mirrors the procedure outlined in Definition 5 for ElGamal en-
+cryption. The constant-time encryption and decryption algorithms Enccnstand
+Deccnstare defined as follows:
+•Enccnst(pk, m): Given a public key pkand a message m∈M, sample r, q$← −
+Zpuniformly at random. Compute:
+ψ1=gr, ψ 2=pkr·hq, ψ 3=H(hq)⊕m,
+and output the ciphertext C= (ψ1, ψ2, ψ3).
+•Deccnst(sk, C): Parse C= (ψ1, ψ2, ψ3). Compute: hq=ψ2
+ψsk
+1,and recover the
+plaintext message as m=H(hq)⊕ψ3.
+15However, in principle, the receiver could still brute-force vinAUR enand claim the
+funds.
+38 A. Sarencheh et al.
+Account recovery. For account recovery, we adopt a similar approach to
+PARScoin [48], which relies on standard recovery methods. Values such as nulli-
+fier randomness ρor commitment randomness scan be pseudorandomly derived
+from a secret key by inputting a counter (e.g., starting at zero) and the secret key
+into a pseudorandom function (PRF). To recover the account, the user regener-
+ates nullifier nulvalues up to the latest one recorded on the blockchain, retrieving
+the most recent randomness values. For account balance, once the randomness
+is recovered, balances can be found either via brute-force or by decrypting pub-
+lic ciphertexts—encrypted by the user per transaction. Similarly, randomness
+for encryptions AUR enandψcan be regenerated via a pseudorandom genera-
+tor, with associated values brute-forced or decrypted using the user’s long-term
+secret key (requiring the user to generate separate encryptions per transaction).
+7DART security proof
+In this section, we prove the security of our construction ΠDART. The following
+is our main theorem:
+Theorem 1. Assuming that the public key encryption scheme (Definition 1) is
+(i) unconditionally correct (Definition 2), (ii) computationally CPA secure (Def-
+inition 3), and (iii) computationally key private (Definition 4); the commitment
+scheme (Definition 6) is (i) unconditionally correct (Definition 7), (ii) uncondi-
+tionally hiding (Definition 8) and (iii) computationally binding (Definition 9);
+the pseudorandom function (PRF) scheme (Definition 11) is (i) unconditionally
+correct, and (ii) computationally pseudorandom (Definition 12); the accumula-
+tor scheme (Definition 14) is (i) unconditionally correct (Definition 15), and
+(ii) computationally sound (Definition 16); no PPT environment Zcan dis-
+tinguish the real-world execution EXEC ΠDART,A,Zfrom the ideal-world execution
+EXEC FDART,S,Zin the {FNIZK,F†
+NIZK,FLedger ,Fch,FKeyReg}-hybrid model with
+static corruptions in the presence of arbitrary number of malicious parties (in-
+cluding all entities within the system issuers, senders, receivers, and auditors)
+with advantage better than:
+AdvBind
+A+AdvIND -CPA
+A +AdvKeyPriv
+A +AdvPRF.Pseudo
+A +AdvSound
+A
+7.1 Simulation
+In the following, we present our simulator Sdescription, which ensures that the
+real-world execution EXEC ΠDART,A,Zis indistinguishable from the ideal-world ex-
+ecution EXEC FDART,S,Zfor any PPT environment Z. The environment Zselects
+the session identifier sid. The simulator Soperates by internally running an in-
+stance of ΠDART and the real-world adversary A, while simulating the actions
+of honest users. Its purpose is to ensure that the internally simulated view of A
+in the ideal-world is indistinguishable from its real-world view. Sextracts nec-
+essary information (from adversary’s messages) and instructs the functionality
+to produce outputs that are indistinguishable for honest users.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 39
+At the start of execution, the environment Zdirects the adversary (simula-
+tor in the ideal-world) to corrupt specific parties through a message of the form
+(Corrupt ,sid,P), where Prepresents a network entity. Upon receiving corruption
+messages, the simulator Sinforms FDART of the corrupted parties by sending the
+message ( Corrupt ,sid,P) and records these corrupted parties for future interac-
+tions. The adversary Ahas control over the corrupted parties, and Sinteracts
+withFDART on their behalf. During the ideal-world execution EXEC FDART,S,Z,
+honest dummy parties directly transmit their inputs from ZtoFDART. The
+simulator Sis designed to reproduce the adversary A’s view in the real-world
+execution for the dummy internally run adversary in the ideal world, while sim-
+ulating the behavior of honest parties. Semulates FNIZK,F†
+NIZK,FLedger ,Fch,
+andFKeyReg , so whenever the adversary, on behalf of a malicious network en-
+tity, calls a functionality, the simulator sees the identifier (e.g., P). Emulation of
+these ideal functionalities involves maintaining specific lists associated with each
+functionality. However, for simplicity and without loss of generality, we assume
+thatSmanages the states of these functionalities without explicitly elaborating
+on all such list maintenance.
+Throughout the following, we assume that the simulator Sadheres to the real-
+world algorithms described in Section 4.1 whenever emulating an honest entity
+or an ideal functionality, without explicitly detailing steps of the algorithms.
+However, in instances where the simulator diverges from these real-world proce-
+dures—such as simulating cryptographic elements based on information disclosed
+by the ideal functionality FDART or extracting a zero-knowledge witness from the
+adversary’s proof—we explicitly highlight such deviations.
+Address generation.
+(i) Honest user P:
+•Upon receiving ( Gen.Addr,sid,P) from FDART, initiate honest user Pemula-
+tion.
+•Emulating FKeyReg , generate key pairs ( addr pk,addr sk) and update the state
+ofFKeyReg .
+•Send ( Gen.Addr.Ok,sid,P,addr pk) toFDART.
+(ii) Malicious user P:
+•Emulating FKeyReg , upon receiving ( Gen.Key,sid) from the adversary (mali-
+cious party P), submit ( Gen.Addr,sid) on behalf of PtoFDART.
+•Upon receiving ( Gen.Addr,sid,P) from FDART, if emulating FKeyReg (P,addr pk,
+·) has been recorded, output ( Gen.Addr.Ok,sid,P,addr pk) toFDART.
+Asset issuance.
+(i) Honest user P:
+•Upon receiving ( Issue ,sid,P,a.t,A) from FDART, start honest user Pemula-
+tion.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+40 A. Sarencheh et al.
+•Emulating FKeyReg , using Pand Aleaked by FDART, retrieve
+(P,addr pk,addr sk) and ( A,addrA
+pk,addrA
+sk), respectively. Ignore if such
+entries do not exist.
+•Retrieve pkacctfrom addr pkandpkA
+enfrom addrA
+pk.
+•SetxIssue←(pkacct,a.t,pkA
+en).
+•Emulating FNIZK, leak ( Prove ,sid, xIssue) toA.
+•Upon receiving ( Proof ,sid, πIssue) from A, update the FNIZKstate by storing
+(xIssue, πIssue).
+•Emulating FLedger , leak ( Append .req,sid,tnxIssue) toA, where tnxIssue =
+(xIssue, πIssue).
+•Upon receiving ( Append .req.Ok,sid,tnxIssue) from A, send ( Issue .Ok,sid,P,
+a.t,A) toFDART.
+•Update the FLedger state by executing Update Issue following the real-world
+algorithms provided in Figure 3.
+(ii) Malicious user P:
+•Emulating FLedger , receive ( Append ,sid,tnxIssue) upon calling FLedger by the
+adversary (malicious party P).
+•Parse tnxIssue = (xIssue, πIssue). Emulating FNIZK, send ( Verify ,sid, xIssue,
+πIssue) toA.
+•Upon receiving ( Witness ,sid, wIssue) from A, check if the relation
+RIssue(xIssue, wIssue) holds. If so, store ( xIssue, πIssue); otherwise, ignore.
+•Parse xIssue = (pkacct,a.t,pkA
+en).
+•Emulating FKeyReg , given pkA
+en, retrieve A.
+•Send ( Issue ,sid,a.t,A) on behalf of corrupted party PtoFDART.
+•Upon receiving ( Issue ,sid,P,a.t,A) from FDART, submit ( Issue .Ok,sid,P,
+a.t,A) back to FDART if execution of Validate Issue, following the real-world
+algorithm provided in Figure 3, outputs 1.
+•Execute Update Issue provided in Figure 3.
+Account registration.
+(i) Honest user P:
+•Upon receiving ( Register ,sid,P,a.t) from FDART, start honest user Pemu-
+lation.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•Emulating FKeyReg , retrieve ( skacct,pkacct) using Pleaked by FDART.
+•Compute acctcmas in the algorithm described in Figure 4 using a.tleaked
+byFDART.
+•SetxRegister ←(acctcm,pkacct,a.t).
+•Emulating FNIZK, leak ( Prove ,sid, xRegister ) toA.
+•Upon receiving ( Proof ,sid, πRegister ) from A, update the FNIZKstate by stor-
+ing (xRegister , πRegister ).
+•Emulating FLedger , leak ( Append .req,sid,tnxRegister ) to A, where
+tnxRegister = (xRegister , πRegister ).
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 41
+•Upon receiving ( Append .req.Ok,sid,tnxRegister ) from A, send ( Register .Ok,
+sid,P,a.t) toFDART.
+•Update the state of FLedger by executing Update Register following the real-
+world algorithm provided in Figure 4.
+(ii) Malicious user P:
+•Emulating FLedger , receive ( Append ,sid,tnxRegister ) upon calling FLedger by
+the malicious user P.
+•Parse tnxRegister = (xRegister , πRegister ). Emulating FNIZK, send ( Verify ,sid,
+xRegister , πRegister ) toA.
+•Upon receiving ( Witness ,sid, wRegister ) from A, check if the relation
+RRegister (xRegister , wRegister ) holds. If so, store ( xRegister , πRegister ); other-
+wise, ignore.
+•Parse xRegister = (acctcm,pkacct,a.t).
+•Send ( Register ,sid,a.t) toFDART on behalf of the malicious user P.
+•Upon receiving ( Register ,sid,P,a.t) from FDART, send back ( Register .Ok,
+sid,P,a.t) toFDART if the execution of Validate Register , following the real-
+world algorithm provided in Figure 4, outputs 1.
+•Execute Update Register provided in Figure 4.
+Increase asset supply.
+(i) Honest user P:
+•Upon receiving ( Increase ,sid,P,a.t, v) from FDART, start honest user Pem-
+ulation.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•Compute a commitment acctcm
+newon dummy values.
+•Sample a fresh random value from the PRF range as nulold, subject to the
+condition described in proof of balance simulation (step *), using the user
+identifier Pleaked via FDART.
+•Emulating FKeyReg , retrieve pkacctgiven Pleaked via FDART.
+•SetxIncrease ←(nulold,acctcm
+new,pkacct,a.t, v).
+•Emulating FNIZK, leak ( Prove ,sid, xIncrease ) toA.
+•Upon receiving ( Proof ,sid, πIncrease ) from A, update the FNIZKstate by stor-
+ing (xIncrease , πIncrease ).
+•Emulating FLedger , leak ( Append .req,sid,tnxIncrease ) to A, where
+tnxIncrease = (xIncrease , πIncrease ).
+•Upon receiving ( Append .req.Ok,sid,tnxIncrease ) from A, send ( Increase .Ok,
+sid,P,a.t, v) toFDART.
+•Update the FLedger state by executing Update Increase following the real-
+world algorithm provided in Figure 5.
+•Record ( ·,P, v,a.t,·,increased ).
+(ii) Malicious user P:
+•Emulating FLedger , receive ( Append ,sid,tnxIncrease ) upon calling FLedger by
+the malicious user P.
+42 A. Sarencheh et al.
+•Parse tnxIncrease = (xIncrease , πIncrease ).
+•Emulating FNIZK, send ( Verify ,sid, xIncrease , πIncrease ) toA.
+•Upon receiving ( Witness ,sid, wIncrease ) from A, check if the relation
+RIncrease (xIncrease , wIncrease ) holds. If so, store ( xIncrease , πIncrease ); other-
+wise, ignore.
+•Parse xIncrease = (nulold,acctcm
+new,pkacct,a.t, v).
+•Send ( Increase ,sid,a.t, v) on behalf of the corrupted user PtoFDART, where
+(a.t, v)∈xIncrease .
+•Upon receiving ( Increase ,sid,P,a.t, v) from FDART, send back
+(Increase .Ok,sid,P,a.t, v) toFDART if the execution of Validate Increase ,
+following the real-world algorithm provided in Figure 5, outputs 1.
+•Execute Update Increase provided in Figure 5.
+Sender transaction.
+(i) Honest sender Ps:
+•Upon receiving ( Send,sid, β) from FDART, start emulation of an honest
+sender.
+•In case the auditor Aor receiver Pris malicious, parse β= (Ps,Pr, v,a.t).16
+•In case the auditor Aor receiver Pris malicious, emulating FKeyReg , retrieve
+key pairs addrr
+pk= (pkr
+acct,pkr
+en) and addrs
+pk= (pks
+acct,pks
+en) using the identi-
+fiers PsandPrleaked by FDART; ignore if such an entry does not exist.
+•In case the auditor Aor receiver Pris malicious, retrieve ( ·,pkA
+en,a.t) from
+LIAAusing a.tleaked by FDART; ignore if such an entry does not exist.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•Compute a commitment acctcm,s
+newon dummy values.
+•Sample a fresh random value from the PRF range as nuls
+old, subject to the
+condition described in proof of balance simulation (step *), using the sender
+identifier Psleaked via FDART in case the auditor Ais malicious.
+•Compute AUR enandψ:
+– In case both the auditor Aand receiver Prare honest, compute encryp-
+tions on dummy values as AUR enandψ.
+– In the case of a malicious receiver Pr, compute AUR en←Enc pkr
+en(pks
+acct,
+v,a.t) (recall that in this case, the simulator receives β= (Ps,Pr, v,a.t)
+fromFDART).
+– In the case of a malicious auditor A, compute ψ←EncpkA
+en(pks
+acct,pkr
+en,
+v,a.t) (recall that in this case, the simulator receives β= (Ps,Pr, v,a.t)
+fromFDART).
+•Emulating FLedger , retrieve the most recent vACCU.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•SetxSend←(vACCU,nuls
+old,acctcm,s
+new,AUR en, ψ).
+•Emulating FNIZK, leak ( Prove ,sid, xSend) toA.
+16Otherwise, βis a random value.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 43
+•Upon receiving ( Proof ,sid, πSend) from A, update the FNIZKstate by storing
+(xSend, πSend).
+•Emulating FLedger , leak ( Append .req,sid,tnxSend) toA, where tnxSend =
+(xSend, πSend).
+•Upon receiving ( Append .req.Ok,sid,tnxSend) from A, send ( Send.Ok,sid, β,
+TNX) toFDART, where TNX is generated by executing Update Sendas de-
+scribed in Figure 6.
+•In case the auditor Ais malicious, record ( Ps,Pr, v,a.t,TNX,sent).
+(ii) Malicious sender Ps:
+•Emulating FLedger , receive ( Append ,sid,tnxSend) upon calling FLedger by the
+malicious sender Ps.
+•Parse tnxSend = (xSend, πSend). Emulating FNIZK, send ( Verify ,sid, xSend,
+πSend) toA.
+•Upon receiving ( Witness ,sid, wSend) from A, check if the relation
+RSend(xSend, wSend) holds. If so, store ( xSend, πSend); otherwise, ignore.
+•Parse
+wSend= (sks
+acct,f.bs
+old,p.bs
+old, ρs
+old, ss
+old,acctcm,s
+old, ρs
+new, ss
+new,pkA
+en,pkr
+en, v,a.t, πACCU, i).
+•Emulating FKeyReg , retrieve Prgiven pkr
+en.
+•Submit ( Send,sid,Pr, v,a.t) on behalf of the malicious sender PstoFDART.
+•Upon receiving ( Send,sid, β) from FDART, proceed as follows.
+•Similar to the case above, if AorPris malicious, parse β= (Ps,Pr, v,a.t)
+and ignore if there is an inconsistency with wSendextracted.
+•Otherwise, ignore if executing the Validate Sendalgorithm provided in Fig-
+ure 6 does not output 1.
+•Otherwise, execute the Update Sendalgorithm provided in Figure 6 to gen-
+erate TNX = (tnxSend,tnxid
+Send,tnxst
+Send).
+•Submit ( Send.Ok,sid, β,TNX) toFDART.
+•In case the auditor Ais malicious, record ( Ps,Pr, v,a.t,TNX,sent) where
+(v,a.t)∈wSend.
+Receiver transaction.
+(i) Honest receiver Pr:
+•Start emulation of an honest receiver:
+– Upon receiving ( Receive ,sid,TNX) from FDART ifPsis honest.
+– Upon receiving ( Receive ,sid,Ps,Pr, v,a.t,TNX) from FDART ifPsis ma-
+licious.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•In case Psis malicious, ignore if any of the following conditions hold, following
+the algorithm described in Figure 7:
+–TNX /∈state′forstate′∈state, where state is retrieved by emulating
+FLedger .
+44 A. Sarencheh et al.
+–o̸= (pks
+acct, v,a.t), where skr
+en(inDec skr
+en(AUR en)) and pks
+acctare retrieved
+given PrandPsleaked via FDART.17
+–tnxst
+Send̸= 0.
+•Otherwise, send ( Receive .Ok,sid,TNX) toFDART.
+•Compute a commitment acctcm,r
+newon dummy values.
+•Sample a fresh random value from the PRF range as nulr
+old, subject to the
+condition described in proof of balance simulation (step *), using the receiver
+identifier Prretrieved from the entry recorded ( ·,Pr,·,·,TNX,sent) using
+TNX leaked via FDART in case the auditor Ais malicious (see the sender
+transaction emulation).
+•Parse
+TNX = (tnxSend,tnxid
+Send,tnxst
+Send),tnxSend= (xSend, πSend),
+xSend= (v′
+ACCU,nuls
+old,acctcm,s
+new,AUR en, ψ).
+•Emulating FLedger , retrieve the most recent vACCU.
+•SetxReceive ←(vACCU,nulr
+old,acctcm,r
+new,AUR en,tnxid
+Send), where AUR en∈xSend
+andtnxid
+Send∈TNX.
+•Emulating FNIZK, leak ( Prove ,sid, xReceive ) toA.
+•Upon receiving ( Proof ,sid, πReceive ) from A, update the FNIZKstate by stor-
+ing (xReceive , πReceive ).
+•Emulating FLedger , leak ( Append .req,sid,tnxReceive ) toA, where tnxReceive =
+(xReceive , πReceive ).
+•Upon receiving ( Append .req.Ok,sid,tnxReceive ) from A, proceed as follows.
+•Upon receiving ( Affirmed ,sid,TNX) from FDART, execute Update Receive as
+described in Figure 7.
+•Submit ( Affirmed .Ok,sid,TNX) toFDART.
+•In case the auditor Ais malicious, given TNX, retrieve the entry recorded
+(Ps,Pr, v,a.t,TNX,sent), and record ( Ps,Pr, v,a.t,TNX,received ).
+(ii) Malicious receiver Pr:
+•Emulating FLedger , receive ( Append ,sid,tnxReceive ) upon calling FLedger by the
+malicious receiver Pr.
+•Parse tnxReceive = (xReceive , πReceive ). Emulating FNIZK, send ( Verify ,sid,
+xReceive , πReceive ) toA.
+•Upon receiving ( Witness ,sid, wReceive ) from A, check if the relation
+RReceive (xReceive , wReceive ) holds. If so, store ( xReceive , πReceive ); otherwise,
+ignore.
+•Parse
+xReceive = (vACCU,nulr
+old,acctcm,r
+new,AUR en,tnxid
+Send).
+•Emulating FLedger , given tnxid
+Send∈xReceive , retrieve the associated TNX and
+submit ( Receive ,sid,TNX) toFDART on behalf of the malicious receiver Pr.
+If no such TNX exists, ignore.
+17The simulator could also check this via witness extraction in the malicious sender’s
+proof using tnx Send= (xSend, πSend).
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 45
+•In case Psis honest, receive ( Receive ,sid,TNX) from FDART and proceed
+to the next step. If Psis malicious, upon receiving ( Receive ,sid,Ps,Pr, v,
+a.t,TNX) from FDART, check the consistency of leaked information with
+wReceive = (skr
+acct,f.br
+old, ρr
+old, sr
+old,acctcm,r
+old, πACCU,p.br
+old, ρr
+new, sr
+new, v,a.t,skr
+en).
+Given the keys, retrieve the associated identifiers by emulating FKeyReg . Ig-
+nore if there is inconsistency.
+•Submit ( Receive .Ok,sid,TNX) toFDART.
+•Ignore if executing the Validate Receive algorithm provided in Figure 7 does
+not output 1.
+•Otherwise, execute the Update Receive algorithm provided in Figure 7.
+•Submit ( Affirm ,sid,TNX) on behalf of PrtoFDART.
+•Upon receiving ( Affirmed ,sid,TNX) from FDART, submit back
+(Affirmed .Ok,sid,TNX).
+•In case the auditor Ais malicious, given TNX, retrieve the entry recorded
+(Ps,Pr, v,a.t,TNX,sent), and record ( Ps,Pr, v,a.t,TNX,received ).
+Reversion.
+(i) Honest sender Ps:
+•Upon receiving ( Reverse ,sid,TNX) from FDART, start emulation of an honest
+sender.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•Compute a commitment acctcm,s
+newon dummy values.
+•Sample a fresh random value from the PRF range as nuls
+old, subject to
+the condition described in proof of balance simulation (step *), using the
+sender identifier Psretrieved by looking for an entry recorded of the form
+(Ps,·,·,·,TNX,sent) where TNX is leaked via FDART in case the auditor A
+is malicious.
+•Parse
+TNX = (tnxSend,tnxid
+Send,tnxst
+Send),tnxSend= (xSend, πSend),
+xSend= (v′
+ACCU,nuls
+old,acctcm,s
+new,AUR en, ψ).
+•Emulating FLedger , retrieve the most recent vACCU.
+•Set
+xReverse ←(vACCU,nuls
+old,acctcm,s
+new,AUR en,tnxid
+Send).
+•Emulating FNIZK, leak ( Prove ,sid, xReverse ) toA.
+•Upon receiving ( Proof ,sid, πReverse ) from A, update the FNIZKstate by stor-
+ing (xReverse , πReverse ).
+•Emulating FLedger , leak ( Append .req,sid,tnxReverse ) toA, where tnxReverse =
+(xReverse , πReverse ).
+•Upon receiving ( Append .req.Ok,sid,tnxReverse ) from A, send ( Reverse .Ok,
+sid,TNX) toFDART.
+•Execute Update Reverse as described in Figure 8.
+46 A. Sarencheh et al.
+•In case the auditor Ais malicious, given TNX, retrieve the entry recorded
+(Ps,Pr, v,a.t,TNX,sent), and record ( Ps,Pr, v,a.t,TNX,reversed ).
+(ii) Malicious sender Ps:
+•Emulating FLedger , receive ( Append ,sid,tnxReverse ) upon calling FLedger by the
+malicious sender Ps.
+•Parse tnxReverse = (xReverse , πReverse ). Emulating FNIZK, send ( Verify ,sid,
+xReverse , πReverse ) toA.
+•Upon receiving ( Witness ,sid, wReverse ) from A, check if the relation
+RReverse (xReverse , wReverse ) holds. If so, store ( xReverse , πReverse ); otherwise,
+ignore.
+•Parse
+xReverse = (vACCU,nuls
+old,acctcm,s
+new,AUR en,tnxid
+Send).
+•Emulating FLedger , given tnxid
+Send∈xReverse , retrieve the associated TNX and
+submit ( Reverse ,sid,TNX) toFDART on behalf of the malicious sender Ps.
+If no such TNX exists, ignore.
+•Upon receiving ( Reverse ,sid,TNX) from FDART, proceed as follows.
+•Ignore if executing the Validate Reverse algorithm provided in Figure 8 does
+not output 1.
+•Otherwise, execute the Update Reverse algorithm provided in Figure 8.
+•Submit ( Reverse .Ok,sid,TNX) toFDART.
+•In case the auditor Ais malicious, given TNX, retrieve the entry recorded
+(Ps,Pr, v,a.t,TNX,sent), and record ( Ps,Pr, v,a.t,TNX,reversed ).
+Proof of balance.
+(i) Honest user P:
+•Upon receiving ( Balance ,sid, γ) from FDART:
+– IfAis malicious, parse γ= (P,a.t).
+– Otherwise, parse γas a random value.
+•Emulating FLedger , leak ( Read,sid, γ) to the adversary Afor a randomly
+chosen γ. Proceed as follows if ( Read.ok,sid, γ) is received from A.
+•IfAis malicious:
+– Emulating FKeyReg , retrieve pkacctgiven Pleaked by FDART.
+– (*) Sample a fresh random value from the PRF range as nuland record
+(P,nul,0). Use the recorded entry ( P,nul,0) whenever it is necessary to
+simulate a nullifier value for the honest user Pin any protocol (with the
+malicious auditor A) that requires revealing a nullifier.18Retrieve nul
+from ( P,nul,0), set the nullifier to be simulated as nul, and update the
+entry to ( P,nul,1). The next time a nullifier needs to be simulated for
+honest P, if the entry for Pis (P,nul,1), sample a fresh random value
+from the PRF range as the nullifier.
+– Retrieve the latest commitment (on dummy values) simulated for Pas
+acctcm.19
+18Namely, increasing asset supply, sender transactions, receiver transactions, and re-
+version.
+19Recall, the simulator assigns TNX for each transaction, and in case Ais malicious,
+the simulator gets to know the sender Psand receiver Prof the transaction.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 47
+– Retrieve all the entries recorded of the form:
+∗(·,P∗,·,·,·,increased )
+∗(P∗,·,·,·,·,sent)
+∗(·,P∗,·,·,·,sent)
+∗(P∗,·,·,·,·,received )
+∗(·,P∗,·,·,·,received )
+∗(P∗,·,·,·,·,reversed )
+∗(·,P∗,·,·,·,reversed )
+where P∗=P.
+– Compute f.bandp.bofPbased on the entries retrieved.
+– Given the retrieved TNX values from entries, retrieve− →tnxid
+(1)and− →tnxid
+(0).
+– Compute πA
+PoB←SimProve (xA
+PoB), and check that Verify (xA
+PoB,
+πA
+PoB) = 1. If so, record the entry ( xA
+PoB, πA
+PoB).
+– Set
+xA
+PoB←(pkacct,nul,acctcm,f.b,p.b,a.t).
+– Set
+tnxA
+PoB←(xA
+PoB, πA
+PoB,− →tnxid
+(1),− →tnxid
+(0)).
+•Emulating Fch, leak ( Send,sid,mid,|tnxA
+PoB|) to the adversary Afor a ran-
+domly chosen mid. Proceed as follows if ( Ok,sid,mid) is received from A.
+•Emulating Fch, ifAis malicious, submit ( Received ,sid,P,tnxA
+PoB) to the
+adversary.
+•Send ( Balance .Ok,sid, γ) toFDART.
+(ii) Malicious user P:
+•Emulating Fch, receive ( Send,sid,A,tnxA
+PoB) upon calling Fchby the mali-
+cious user P.
+•Emulating F†
+NIZK, parse tnxA
+PoB= (xA
+PoB, πA
+PoB,− →tnxid
+(1),− →tnxid
+(0)).
+•Extract the witness wA
+PoB= (skacct, ρ, s) by running Extract (xA
+PoB, πA
+PoB).
+Check if the relation RPoB(xA
+PoB, wA
+PoB) holds. If so, store ( xA
+PoB, πA
+PoB); oth-
+erwise, ignore.
+•Emulating an honest auditor A, execute the algorithm described in Figure 9
+and abort if the algorithm aborts.
+•Otherwise, parse
+xA
+PoB= (pkacct,nul,acctcm,f.b,p.b,a.t).
+•Submit ( Balance ,sid,a.t) toFDART on behalf of the malicious user P.
+•Upon receiving ( Balance ,sid, γ) from FDART, send back ( Balance .Ok,sid, γ)
+toFDART if emulating Fch, (Ok,sid,mid) is received from the adversary A,
+Auditor operation.
+•Upon receiving ( Audit ,sid, η) from FDART, emulating FLedger , leak ( Read,sid,
+γ) to the adversary Afor a randomly chosen γ.
+•Send ( Audit .Ok,sid, η) toFDART if (Read.ok,sid, γ) is received from A.
+48 A. Sarencheh et al.
+7.2 Security games
+Indistinguishability games for Theorem 1 (sketch). Through a sequence of games,
+we show that the random variables EXEC ΠDART,A,ZandEXEC FDART,S,Zare statis-
+tically close. We denote by Pr[ Game(i)] the probability that the environment Z
+outputs 1 in Game(i). Each game Game(i)has its own F(i)
+DARTandS(i). We start
+from the most leaky functionality F(0)
+DARTand the associated simulator S(0)and
+gradually move toward the main functionality FDART and the simulator S.
+•Game(0): Initially, the most leaky functionality F(0)
+DARTforwards whatever it
+receives from the environment Zto the simulator S(0). The simulator S(0)
+corresponds to the real-world protocol execution EXEC ΠDART,A,Z.
+•Game(1): Same as Game(0), except that F(1)
+DARTprevents the simulator S(1)
+from submitting any message to F(1)
+DARTon behalf of the adversary AifA
+provides two different messages with the same corresponding commitment.
+This game is indistinguishable from Game(0)due to the binding property of
+the underlying commitment scheme (Definition 9). Therefore,
+|Pr[Game(1)]−Pr[Game(0)]| ≤AdvBind
+A.
+•Game(2): Same as Game(1), except that all ciphertexts generated
+by honest users, including AUR en=Enc pkr
+en(pks
+acct, v,a.t) and ψ=
+EncpkA
+en(pks
+acct,pkr
+en, v,a.t), are replaced with simulated ones. Particularly, the
+simulator S(2)encrypts dummy values as plaintexts for AUR enandψ. This
+game is indistinguishable from Game(1)due to the IND-CPA security of the
+underlying encryption scheme (Definition 3). Therefore,
+|Pr[Game(2)]−Pr[Game(1)]| ≤AdvIND-CPA
+A .
+•Game(3): Same as Game(2), except that for all ciphertexts generated by the
+simulator, including AUR en=Enc pkr
+en(·,·,·) and ψ=EncpkA
+en(·,·,·,·), the re-
+ceivers’ and auditors’ encryption public keys pkr
+enandpkA
+en, respectively, are
+replaced with dummy public keys selected by S(3). This game is indistin-
+guishable from Game(2)due to the key privacy of the underlying encryption
+scheme (Definition 4). Therefore,
+|Pr[Game(3)]−Pr[Game(2)]| ≤AdvKeyPriv
+A .
+•Game(4): Same as Game(3), except that all pseudorandom values gener-
+ated by honest users, including nullifiers nul=PRF skacct(ρ), are replaced by
+those simulated by S(4)through sampling random values from the pseudo-
+random function (PRF) range. This game is indistinguishable from Game(3)
+due to the pseudorandomness property of the underlying PRF scheme (Def-
+inition 12). Therefore,
+|Pr[Game(4)]−Pr[Game(3)]| ≤AdvPRF.Pseudo
+A .
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 49
+•Game(5): Same as Game(4), except that F(5)
+DART=FDART prevents the simu-
+latorS(5)=Sfrom submitting any message on behalf of the adversary Aif
+Aprovides a valid membership proof πACCU for an element that is not part
+of the accumulator. This game is indistinguishable from Game(4)due to the
+soundness property of the underlying accumulator scheme (Definition 16).
+Therefore,
+|Pr[Game(5)]−Pr[Game(4)]| ≤AdvSound
+A.
+This sequence of games starts from the real-world protocol execution
+EXEC ΠDART,A,Zand ends with the ideal-world execution EXEC FDART,S,Z.
+Given that each pair of consecutive games is computationally indistin-
+guishable, the probability for any PPT environment Zto distinguish
+EXEC ΠDART,A,Zfrom EXEC FDART,S,Zis upper-bounded by
+AdvBind
+A+AdvIND-CPA
+A +AdvKeyPriv
+A +AdvPRF.Pseudo
+A +AdvSound
+A.
+This concludes the security proof.
+□
+Acknowledgements
+Part of the work of the first author was supported by the Polymesh Associa-
+tion. The authors thank Adam Dossa and Robert Gabriel Jakabosky from the
+Polymesh Association for valuable discussions. This work was also supported
+by Input Output (iohk.io) through its funding of the University of Edinburgh
+Blockchain Technology Lab.
+References
+1. Almashaqbeh, G., Solomon, R.: Sok: Privacy-preserving computing in the
+blockchain era. In: 2022 IEEE 7th European Symposium on Security and Privacy
+(EuroS&P). pp. 124–139. IEEE (2022)
+2. Baldimtsi, F., Chalkias, K.K., Madathil, V., Roy, A.: SoK: Privacy-preserving
+transactions in blockchains. Cryptology ePrint Archive, Paper 2024/1959 (2024),
+https://eprint.iacr.org/2024/1959
+3. Bellare, M., Boldyreva, A., Desai, A., Pointcheval, D.: Key-privacy in public-key
+encryption. In: International Conference on the Theory and Application of Cryp-
+tology and Information Security. pp. 566–582. Springer (2001)
+4. Benarroch, D., Gillespie, B., Lai, Y.T., Miller, A.: Sok: Programmable privacy in
+distributed systems. Cryptology ePrint Archive (2024)
+5. Bi¸ cer, O., Tschudin, C.: Oblivious homomorphic encryption. Cryptology ePrint
+Archive (2023)
+6. BNP Paribas: T+1 trade affirmation and settlement (2024), available at: Link
+7. Boneh, D., Boyen, X., Shacham, H.: Short group signatures. In: Annual interna-
+tional cryptology conference. pp. 41–55. Springer (2004)
+50 A. Sarencheh et al.
+8. B¨ unz, B., Agrawal, S., Zamani, M., Boneh, D.: Zether: Towards privacy in a smart
+contract world. In: International Conference on Financial Cryptography and Data
+Security. pp. 423–443. Springer (2020)
+9. B¨ unz, B., Bootle, J., Boneh, D., Poelstra, A., Wuille, P., Maxwell, G.:
+Bulletproofs: Short proofs for confidential transactions and more. In: 2018
+IEEE Symposium on Security and Privacy, SP 2018, Proceedings, 21-23 May
+2018, San Francisco, California, USA. pp. 315–334. IEEE Computer Society
+(2018). https://doi.org/10.1109/SP.2018.00020, https://doi.org/10.1109/
+SP.2018.00020
+10. Buterin, V.: Ethereum white paper (2013), https://github.com/ethereum/
+wiki/wiki/White-Paper
+11. Campanelli, M., Hall-Andersen, M.: Veksel: Simple, efficient, anonymous payments
+with large anonymity sets from well-studied assumptions. In: Proceedings of the
+2022 ACM on Asia Conference on Computer and Communications Security. pp.
+652–666 (2022)
+12. Campanelli, M., Hall-Andersen, M., Kamp, S.H.: Curve trees: Practical
+and transparent zero-knowledge accumulators. In: Calandrino, J.A., Tron-
+coso, C. (eds.) 32nd USENIX Security Symposium, USENIX Security 2023,
+Anaheim, CA, USA, August 9-11, 2023. pp. 4391–4408. USENIX Associa-
+tion (2023), https://www.usenix.org/conference/usenixsecurity23/
+presentation/campanelli
+13. Canetti, R.: Universally composable security: A new paradigm for cryptographic
+protocols. In: Proceedings 42nd IEEE Symposium on Foundations of Computer
+Science. pp. 136–145. IEEE (2001)
+14. Chase, M., Lysyanskaya, A.: On signatures of knowledge. In: Advances in
+Cryptology-CRYPTO 2006: 26th Annual International Cryptology Conference,
+Santa Barbara, California, USA, August 20-24, 2006. Proceedings 26. pp. 78–96.
+Springer (2006)
+15. Chatzigiannis, P., Chalkias, K.: Proof of assets in the diem blockchain. In: Applied
+Cryptography and Network Security Workshops: ACNS 2021 Satellite Workshops,
+AIBlock, AIHWS, AIoTS, CIMSS, Cloud S&P, SCI, SecMT, and SiMLA, Ka-
+makura, Japan, June 21–24, 2021, Proceedings. pp. 27–41. Springer (2021)
+16. Chaum, D.: Blind signatures for untraceable payments. pp. 199–203 (1982)
+17. Crites, E., Kiayias, A., Kohlweiss, M., Sarencheh, A.: SyRA: Sybil-resilient anony-
+mous signatures with applications to decentralized identity. Cryptology ePrint
+Archive, Paper 2024/379 (2024), https://eprint.iacr.org/2024/379
+18. Damgaard, I., Ganesh, C., Khoshakhlagh, H., Orlandi, C., Siniscalchi, L.: Bal-
+ancing privacy and accountability in blockchain identity management. In: Pa-
+terson, K.G. (ed.) Topics in Cryptology - CT-RSA 2021 - Cryptographers’
+Track at the RSA Conference 2021, Virtual Event, May 17-20, 2021, Proceed-
+ings. Lecture Notes in Computer Science, vol. 12704, pp. 552–576. Springer
+(2021). https://doi.org/10.1007/978-3-030-75539-3 23,https://doi.org/10.
+1007/978-3-030-75539-3_23
+19. Diamond, B.E.: Many-out-of-many proofs and applications to anonymous zether.
+In: 2021 IEEE Symposium on Security and Privacy (SP). pp. 1800–1817. IEEE
+(2021)
+20. Dingledine, R., Mathewson, N., Syverson, P.F.: Tor: The second-generation onion
+router. pp. 303–320 (2004)
+21. Dodis, Y., Yampolskiy, A.: A verifiable random function with short proofs and keys.
+In: Vaudenay, S. (ed.) Public Key Cryptography - PKC 2005, 8th International
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 51
+Workshop on Theory and Practice in Public Key Cryptography, Les Diablerets,
+Switzerland, January 23-26, 2005, Proceedings. Lecture Notes in Computer Sci-
+ence, vol. 3386, pp. 416–431. Springer (2005). https://doi.org/10.1007/978-3-540-
+30580-4 28,https://doi.org/10.1007/978-3-540-30580-4_28
+22. Dodis, Y., Yampolskiy, A.: A verifiable random function with short proofs and keys.
+In: International Workshop on Public Key Cryptography. pp. 416–431. Springer
+(2005)
+23. ElGamal, T.: A public key cryptosystem and a signature scheme based on discrete
+logarithms. IEEE transactions on information theory 31(4), 469–472 (1985)
+24. Fauzi, P., Meiklejohn, S., Mercer, R., Orlandi, C.: Quisquis: A new design for
+anonymous cryptocurrencies. In: Advances in Cryptology–ASIACRYPT 2019: 25th
+International Conference on the Theory and Application of Cryptology and Infor-
+mation Security, Kobe, Japan, December 8–12, 2019, Proceedings, Part I 25. pp.
+649–678. Springer (2019)
+25. Fiat, A., Shamir, A.: How to prove yourself: Practical solutions to identification and
+signature problems. In: Odlyzko, A.M. (ed.) Advances in Cryptology - CRYPTO
+’86, Santa Barbara, California, USA, 1986, Proceedings. Lecture Notes in Com-
+puter Science, vol. 263, pp. 186–194. Springer (1986). https://doi.org/10.1007/3-
+540-47721-7 12,https://doi.org/10.1007/3-540-47721-7_12
+26. Goldreich, O.: Towards a theory of software protection and simulation by oblivious
+rams. In: Proceedings of the nineteenth annual ACM symposium on Theory of
+computing. pp. 182–194 (1987)
+27. Groth, J., Ostrovsky, R., Sahai, A.: Perfect non-interactive zero knowledge for np.
+In: Annual International Conference on the Theory and Applications of Crypto-
+graphic Techniques. pp. 339–358. Springer (2006)
+28. Guo, Y., Karthikeyan, H., Polychroniadou, A., Huussin, C.: Pride ct: Towards pub-
+lic consensus, private transactions, and forward secrecy in decentralized payments.
+In: 2024 IEEE Symposium on Security and Privacy (SP). pp. 3904–3922. IEEE
+(2024)
+29. Hansen, A.B., Nielsen, J.B., Simkin, M.: Ocash: Fully anonymous payments be-
+tween blockchain light clients. Cryptology ePrint Archive (2024)
+30. JAP: Jap anonymity & privacy (2009), http://anon.inf.tu-dresden.de/
+31. Kerber, T., Kiayias, A., Kohlweiss, M., Zikas, V.: Ouroboros crypsinous: Privacy-
+preserving proof-of-stake. In: 2019 IEEE Symposium on Security and Privacy (SP).
+pp. 157–174. IEEE (2019)
+32. Kosba, A.E., Zhao, Z., Miller, A., Qian, Y., Chan, T.H., Papamanthou, C., Pass, R.,
+Shelat, A., Shi, E.: How to use snarks in universally composable protocols. IACR
+Cryptol. ePrint Arch. p. 1093 (2015), http://eprint.iacr.org/2015/1093
+33. Kumar, A., Fischer, C., Tople, S., Saxena, P.: A traceability analysis of monero’s
+blockchain. In: Computer Security–ESORICS 2017: 22nd European Symposium on
+Research in Computer Security, Oslo, Norway, September 11-15, 2017, Proceedings,
+Part II 22. pp. 153–173. Springer (2017)
+34. Madathil, V., Scafuro, A.: Prifhete: Achieving full-privacy in account-based cryp-
+tocurrencies is possible. Cryptology ePrint Archive (2023)
+35. Meiklejohn, S., Orlandi, C.: Privacy-enhancing overlays in bitcoin. In: International
+Conference on Financial Cryptography and Data Security. pp. 127–141. Springer
+(2015)
+36. Meiklejohn, S., Pomarole, M., Jordan, G., Levchenko, K., McCoy, D., Voelker,
+G.M., Savage, S.: A fistful of bitcoins: characterizing payments among men with no
+names. In: Proceedings of the 2013 conference on Internet measurement conference.
+pp. 127–140 (2013)
+52 A. Sarencheh et al.
+37. Metere, R., Dong, C.: Automated cryptographic analysis of the pedersen commit-
+ment scheme. In: Computer Network Security: 7th International Conference on
+Mathematical Methods, Models, and Architectures for Computer Network Secu-
+rity, MMM-ACNS 2017, Warsaw, Poland, August 28-30, 2017, Proceedings 7. pp.
+275–287. Springer (2017)
+38. Micali, S., Rabin, M., Kilian, J.: Zero-knowledge sets. In: 44th Annual IEEE Sym-
+posium on Foundations of Computer Science, 2003. Proceedings. pp. 80–91. IEEE
+(2003)
+39. Miers, I., Garman, C., Green, M., Rubin, A.D.: Zerocoin: Anonymous distributed
+e-cash from bitcoin. In: 2013 IEEE symposium on security and privacy. pp. 397–
+411. IEEE (2013)
+40. M¨ oser, M., Soska, K., Heilman, E., Lee, K., Heffan, H., Srivastava, S., Hogan, K.,
+Hennessey, J., Miller, A., Narayanan, A., et al.: An empirical analysis of traceability
+in the monero blockchain. arXiv preprint arXiv:1704.04299 (2017)
+41. Nakamoto, S.: Bitcoin: A peer-to-peer electronic cash system (October 31 2008),
+https://bitcoin.org/bitcoin.pdf
+42. Narula, N., Vasquez, W., Virza, M.: zkledger: Privacy-preserving auditing for dis-
+tributed ledgers. In: 15th USENIX symposium on networked systems design and
+implementation (NSDI 18). pp. 65–80 (2018)
+43. Noether, S., Mackenzie, A., et al.: Ring confidential transactions. Ledger 1, 1–18
+(2016)
+44. Norton Rose Fulbright: SEC’s Division of Trading and Markets Issues No-Action
+Letter. Published by Norton Rose Fulbright (October 2020), available at: Link
+45. Payment Systems Regulator: Confirmation of payee - preventing app scams (2024),
+available at: Link
+46. Pedersen, T.P.: Non-interactive and information-theoretic secure verifiable secret
+sharing. In: Annual international cryptology conference. pp. 129–140. Springer
+(1991)
+47. Sarencheh, A., Kiayias, A., Kohlweiss, M.: PEReDi: Privacy-enhanced, regulated
+and distributed central bank digital currencies. Cryptology ePrint Archive, Paper
+2022/974 (2022), https://eprint.iacr.org/2022/974
+48. Sarencheh, A., Kiayias, A., Kohlweiss, M.: PARScoin: A privacy-preserving, au-
+ditable, and regulation-friendly stablecoin. Cryptology ePrint Archive, Paper
+2023/1908 (2023), https://eprint.iacr.org/2023/1908
+49. Sasson, E.B., Chiesa, A., Garman, C., Green, M., Miers, I., Tromer, E., Virza,
+M.: Zerocash: Decentralized anonymous payments from bitcoin. In: 2014 IEEE
+symposium on security and privacy. pp. 459–474. IEEE (2014)
+50. Setty, S.T.V.: Spartan: Efficient and general-purpose zksnarks without trusted
+setup. In: Micciancio, D., Ristenpart, T. (eds.) Advances in Cryptology -
+CRYPTO 2020 - 40th Annual International Cryptology Conference, CRYPTO
+2020, Santa Barbara, CA, USA, August 17-21, 2020, Proceedings, Part
+III. Lecture Notes in Computer Science, vol. 12172, pp. 704–737. Springer
+(2020). https://doi.org/10.1007/978-3-030-56877-1 25,https://doi.org/10.
+1007/978-3-030-56877-1_25
+51. Setty, S.T.V., Thaler, J., Wahby, R.S.: Unlocking the lookup singularity with
+lasso. In: Joye, M., Leander, G. (eds.) Advances in Cryptology - EURO-
+CRYPT 2024 - 43rd Annual International Conference on the Theory and Ap-
+plications of Cryptographic Techniques, Zurich, Switzerland, May 26-30, 2024,
+Proceedings, Part VI. Lecture Notes in Computer Science, vol. 14656, pp.
+180–209. Springer (2024). https://doi.org/10.1007/978-3-031-58751-1 7,https:
+//doi.org/10.1007/978-3-031-58751-1_7
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 53
+52. The National Law Review: Time to Do the Foxtrot: The Three-Step SEC Estab-
+lishes for Improved Process in Settlement of Digital Asset Trades. Published in
+The National Law Review (September 2020), available at: Link
+53. The Securities Transfer Association (STA): Guidelines (2023), available at: Link
+54. UK Finance: Confirmation of payee guidance (2024), available at: Link
+55. U.S. Securities and Exchange Commission: FINRA ATS Role in Settlement of
+Digital Asset Security Trades (September 2020), available at: Link
+56. W¨ ust, K., Kostiainen, K., Delius, N., Capkun, S.: Platypus: A central bank digital
+currency with unlinkable transactions and privacy-preserving regulation. In: Pro-
+ceedings of the 2022 ACM SIGSAC Conference on Computer and Communications
+Security. pp. 2947–2960 (2022)
+A Proof of balance: a generic solution
+In Section 4.1.8 we proposed our first proof of balance (PoB) protocol that relies
+on asset specific auditor. In this section, we describe our second approach for
+PoB, which allows users to independently prove their finalized f.band pending
+balances p.bdirectly to any verifier, without reliance on auditors.
+Recall that in addition to f.b, the user must also reveal their p.bto the PoB
+verifier. If p.b>0, this implies that there exists at least one transaction that is
+either in tnxst
+Send= 0 or tnxst
+Send= 1. In this case, the user needs to take further
+action by pointing to the transactions and justifying the value of p.b. This is
+crucial from the balance verifying perspective because the transaction status
+determines whether the funds can still be reversed and, therefore, whether they
+could be potentially part of the user’s balance or not. (i) if tnxst
+Send= 0, reversion
+is still possible, and (ii) if tnxst
+Send= 1, reversion is not possible. Therefore, in
+this case, the sender should point to transactions with tnxst
+Send= 0 and tnxst
+Send=
+1, and prove that p.bequals the sum of the values of all transactions with
+tnxst
+Send= 0 plus the sum of the values of all transactions with tnxst
+Send= 1. This
+allows the PoB verifier to understand how much of p.bis irreversible and how
+much is reversible.
+Therefore, in case p.b>0, the user needs to point to all finalized ( tnxst
+Send= 1)
+and pending transactions ( tnxst
+Send= 0). If the sender has many finalized transac-
+tions, pointing to all transactions becomes inefficient and also introduces infor-
+mation leakage. This is due to the ability of the PoB verifier to link every trans-
+action in which the user has been the sender, which is undesirable as the PoB
+verifier needs to (only) verify the balance. To address this, the sender can scan
+the ledger for their transactions whose status has changed from the initial state
+oftnxst
+Send= 0 to tnxst
+Send= 1, and submit a specific transaction called pending-
+balance-update ( pbu) transaction ( tnxpbu), to reduce p.b, thereby moving the
+transaction status to tnxst
+Send= 3. Figure 11 illustrates the sender’s transaction
+status tnxst
+Send∈ {0,1,2,3}that is the extension of Figure 1. A transition occurs
+from tnxst
+Send= 1 to tnxst
+Send= 3 when the sender submits tnxpbu.20
+20Note that tnxpbupoints to a transaction with tnxst
+Send= 1, and any two transac-
+tions tnxpbuandtnx∗
+pbuare unlinkable, as they reference different transactions with
+54 A. Sarencheh et al.
+tnxst
+Send=0
+set f.bs←f.bs−v
+set p.bs←p.bs+vtnxst
+Send=1
+set f.br←f.br+v
+set p.br←p.br
+tnxst
+Send=2
+set f.bs←f.bs+v
+set p.bs←p.bs−vtnxst
+Send=3
+set f.bs←f.bs
+set p.bs←p.bs−v
+tnx Send
+sendertnx Receive
+receiver
+tnx Reverse
+sendertnxpbu
+sender
+Fig. 11: Transaction status tnxst
+Send(extended).
+The transition to tnxst
+Send= 3 avoids referencing finalized transactions (with
+tnxst
+Send= 1) for the PoB verifier and limits the pointer to only pending transac-
+tions (with tnxst
+Send= 0).
+The pending balance p.band tnxpbutransaction (which reduces p.b) are only
+relevant for PoB. In other words, if a user knows that a specific asset type they
+hold will never be balance-verified, there is no need for the user to submit tnxpbu
+to reduce p.b. The sole purpose of maintaining p.bin the user’s account is to
+support PoB.
+The user submits tnxpbuif applicable e.g., there exists a transaction with
+tnxst
+Send= 1. This can be done, in a single transaction, pointing to all finalized
+transactions and transitioning the account state by submitting a large tnxpbu(see
+aggregatable transactions in Section 5.1). This reduces their pending balance by
+the sum of the values of all finalized transactions in one step, offering better
+efficiency. However, this approach introduces linkability, as all finalized transac-
+tions are linked to each other through the single tnxpbu. Alternatively, for better
+privacy, the user can submit separate tnxpbutransactions for each finalized trans-
+action, reducing their pending balance sequentially. While this approach avoids
+linking finalized transactions, it comes at the cost of efficiency.
+Note that pointing to transactions with tnxst
+Send= 0 still introduces privacy leak-
+age, as the PoB verifier will link all these pending transactions. To mitigate this,
+the sender can reverse all pending transactions using the Reversion algorithm
+(Figure 8), reducing p.band thus avoiding the need to link pending transac-
+tions. Reversing transactions, however, may be inefficient, as it would require
+reinitiating the transactions after completing the PoB protocol (assuming that
+the sender is still interested in completing these transactions).
+tnxst
+Send= 1 and user’s account state transition occurs anonymously via the accu-
+mulator membership proof. In other words, the account state transition in tnxpbu
+provides unlinkability similar to all other transactions in DART .
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 55
+As discussed earlier, the sender has two incentives for reversing the transaction,
+making it in the receiver’s best interest to affirm the transaction and increase
+their account balance as soon as possible. Furthermore, the incorporation of an
+asset-specific auditor in DART allows auditors to construct a decrypted view
+of the ledger for all transactions involving a specific asset type. This includes
+identifying any pending AUR for a receiver who may either be potentially ma-
+licious or simply unaware of the incoming AUR due to not scanning the ledger
+prior to the PoB verification. Collaboration between the asset-specific auditor
+and the PoB verifier provides the necessary information to the verifier21. In the
+following, we present our second PoB approach, which operates independently
+of the auditor.
+Upon receiving ( Balance ,sid,a.t) from the environment to prove the balance of
+the account associated with asset type a.t, the user calls FLedger to identify all
+transactions whose status has changed from tnxst
+Send= 0 to tnxst
+Send= 1. Then,
+the user submits tnxpbuto the ledger, where the user’s account transitions to a
+new state, with the pending balance decreased by the value of the transaction
+whose status is tnxst
+Send= 1. The user proves, in ZK, that they are indeed the
+creator/sender of the transaction. The submission of tnxpbuis done sequentially
+to avoid likability. The algorithm is provided in the Figure 12.
+The NIZK witness, statement, and relation are defined as follows.
+•wpbu= (skacct,f.bold,p.bold, ρold, sold,acctcm
+old, ρnew, snew,pkr
+en, v,a.t, πACCU)
+•xpbu= (vACCU,nulold,acctcm
+new,AUR en,tnxid
+Send)
+•The relation Rpbu(xpbu, wpbu) is defined as:
+Rpbu=n
+ACCU .VfyMem (ppACCU,vACCU,acctcm
+old, πACCU) = 1
+∧acctcm
+new=Com(skacct,f.bold,p.bold−v,a.t, ρnew;snew)
+∧acctcm
+old=Com(skacct,f.bold,p.bold,a.t, ρold;sold)
+∧nulold=PRF skacct(ρold)
+∧(pkacct,skacct)∈Acc.KeyGen (1λ)
+∧AUR en=Enc pkr
+en(pkacct, v,a.t)o
+.
+tnxpbuGeneration
+▷Upon receiving ( Balance ,sid,a.t) from Z, parse addr pk= (pkacct,pken),
+andaddr sk= (skacct,sken).
+▷CallFLedger with ( Read,sid). Upon receiving ( Read,sid,state) from FLedger ,
+parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷Retrieve the recorded entry ( acctcm
+old,acct old) where acct old= (skacct,f.bold,
+p.bold,a.t, ρold, sold).
+21Note that this differs from our first PoB approach (Section 4.1.8), in which the
+auditor selectively decrypts transactions explicitly pointed to by the user.
+56 A. Sarencheh et al.
+▷Retrieve all entries ( AURi,AURi
+en,tnxidi
+Send) in LAURwhere, upon parsing
+AURi= (pksi
+acct, v(i),a.ti;pkri
+en), the conditions a.ti=a.tandpksi
+acct=pkacct
+hold.
+▷For each such entry ( AURi,AURi
+en,tnxidi
+Send), if there is any transaction
+TNXj∈state′where TNXj= (tnxj
+Send,tnxidj
+Send,tnxstj
+Send),tnxstj
+Send= 1, and
+tnxidi
+Send=tnxidj
+Send, proceed as follows:
+•parse AURj= (pkacct, v(j),a.t;·).
+•compute nulold←PRF skacct(ρold).
+•sample ρnew$← −Zq, and snew$← −Zq.
+•setacct new←(skacct,f.bold,p.bold−v(j),a.t, ρnew, snew).
+•compute acctcm
+new←Com(skacct,f.bold,p.bold−v(j),a.t, ρnew;snew).
+•compute πACCU←ACCU .PrvMem (ppACCU,state′,acctcm
+old).
+•callFNIZKwith ( Prove ,sid, xpbu, wpbu) and receive ( Proof ,sid, πpbu).
+•settnxpbu←(xpbu, πpbu), and call FLedger with ( Append ,sid,tnxpbu).
+•callFLedger with ( Read,sid); upon receiving back ( Read,sid,state), if
+tnxpbu∈state′forstate′∈state, set ( acctcm
+old,acct old)←(acctcm
+new,
+acct new), and set: LAUR←LAUR\ {(AURi,AURi
+en,tnxidi
+Send)}.
+•else, ignore.
+Proceed by executing the tnxPoBgeneration algorithm, Figure 13 ( note: there is
+no output to Zyet).
+tnxpbuVerification
+▷Execute Validate pbu(state,tnxpbu):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxpbu= (xpbu, πpbu), and xpbu=
+(vACCU,nulold,acctcm
+new,AURj
+en,tnxidj
+Send).
+•given tnxidj
+Send∈xpbu, retrieve associated tnxstj
+Send∈state′andAUR∗
+en∈state′.
+•ignore if any of the following conditions hold:
+–AUR∗
+en̸=AURj
+en
+–nulold∈LNUL
+–tnxstj
+Send̸= 1
+– upon calling FNIZK with ( Verify ,sid, xpbu, πpbu), (Vrfed ,sid,0) is re-
+turned.
+•else, output 1.
+▷Execute Update pbu(state,tnxpbu):
+•parse state = (state′,LIAA,LKA,LNUL,vACCU),tnxpbu= (xpbu, πpbu), and xpbu=
+(vACCU,nulold,acctcm
+new,AURj
+en,tnxidj
+Send).
+•given tnxidj
+Send∈xpbu, retrieve associated TNXj= (tnxj
+Send,tnxidj
+Send,tnxstj
+Send).
+•settnxstj
+Send←3,TNXj←(·,·,tnxstj
+Send) and state′←state′∪ {TNXj}.
+•callvACCU←ACCU .Add(ppACCU,vACCU,acctcm
+new).
+•setLNUL←LNUL∪ {nulold}.
+•setstate←state∪ {(state′,·,·,LNUL,vACCU)}and output state.
+Fig. 12: Pending balance update ( pbu) transaction tnxpbu
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 57
+Finally, the user executes PoB generation algorithm described in Figure 13.
+The NIZK witness, statement, and relation are defined as follows.
+•wPoB= (skacct, ρ, s,− − →AUR,{pkrk
+en}k)
+•xPoB= (nul,acctcm,pkacct,f.b,p.b,a.t,− − →AUR en,− →tnxid
+Send)
+•The relation RPoB(xPoB, wPoB) is defined as:
+RPoB=n
+acctcm=Com(skacct,f.b,p.b,a.t, ρ;s)
+∧nul=PRF skacct(ρ)
+∧AURk
+en=Encpkrken(AURk)∀AURk∈− − →AUR
+∧X
+kAURk.v=p.b
+∧(pkacct,skacct)∈Acc.KeyGen (1λ)o
+.
+tnxPoBGeneration
+▷Execute steps 1 to 4 of the tnxpbugeneration algorithm, Figure 12.
+▷For each tnxidi
+Send: retrieve all TNXj∈state′values where TNXj= (tnxj
+Send,
+tnxidj
+Send,tnxstj
+Send),tnxstj
+Send= 0, and tnxidi
+Send=tnxidj
+Sendhold.
+▷Let the aggregation of AURj,AURj
+en, and tnxidj
+Sendfor all jbe denoted as− − →AUR,− − →AUR en, and− →tnxid
+Sendrespectively.
+▷Retrieve the recorded entry ( acctcm,acct) where acct= (skacct,f.b,p.b,a.t,
+ρ, s).
+▷Compute nullifier nul←PRF skacct(ρ).
+▷CallFNIZKwith ( Prove ,sid, xPoB, wPoB) and receive ( Proof ,sid, πPoB).
+▷Set PoB transaction tnxPoB←(xPoB, πPoB).
+▷Output ( Balance ,sid,tnxPoB) toZ.
+tnxPoBVerification (off-chain executed by PoB verifier)
+▷Upon receiving ( VerifyPoB ,sid,tnxPoB) from Zproceed as follows.
+▷Parse tnxPoB= (xPoB, πPoB), and xPoB= (nul,acctcm,pkacct,f.b,p.b,a.t,− − →AUR en,− →tnxid
+Send).
+▷CallFLedger with ( Read,sid). Upon receiving ( Read,sid,state) from FLedger ,
+parse state = (state′,LIAA,LKA,LNUL,vACCU).
+▷For each j,tnxidj
+Send∈− →tnxid
+Send: ignore if any of the following conditions hold:
+•tnxidj
+Send/∈state′
+•tnxidj
+Send̸= 0
+•given tnxidj
+Send∈− →tnxid
+Send,AUR∗j
+en̸=AURj
+enwhere AUR∗j
+en∈state′and
+AURj
+en∈− − →AUR en.
+▷Else, ignore if any of the following conditions hold:
+58 A. Sarencheh et al.
+•nul∈LNUL
+•upon calling FNIZKwith ( Verify ,sid, xPoB, πPoB), (Vrfed ,sid,0) is re-
+turned.
+▷Else, output ( pkacct,a.t,f.b,p.b).
+Fig. 13: Proof of balance transaction tnxPoB– 2nd approach
+B Ideal functionalities
+B.1 Key generation functionality
+The ideal functionality FKeyReg specifies a public key encryption (PKE)
+and account key generations, parameterized by a PKE key generation algo-
+rithm ( pken,sken)$← −PKE.KeyGen (1λ) (Definition 1) and an account key pair
+(pkacct,skacct) derived from Acc.KeyGen (1λ), where skacct$← −Z∗
+qand pkacct←
+gskacctfor a generator gof a cyclic group Gof prime order q. The functionality
+supports three operations: (i) key generation: upon receiving a key generation
+request from a party P, it generates new PKE and account key pairs if none al-
+ready exist for P, otherwise output already exist ones. Upon generation FKeyReg
+stores them as addr pk= (pkacct,pken) and addr sk= (skacct,sken) under P, and
+outputs them to P. (ii) key retrieval: upon receiving P∗from any network enti-
+ties,FKeyReg returns the public key pair addr pkcorresponding to P∗if it exists.
+(iii)identifier retrieval: upon receiving pkfrom any network entity P,FKeyReg
+identifies and returns the associated party P∗ifpkmatches either the PKE or
+account public key recorded for P∗.
+Functionality FKeyReg
+•Key generation. Upon input ( Gen.Key,sid) from some party P, if there
+already exists ( P,addr pk,addr sk), output ( Gen.Key,sid,addr pk,addr sk) to
+Pand abort. Else, call PKE.KeyGen , and Acc.KeyGen to generate
+(pken,sken) and ( pkacct,skacct) respectively (re-call if they are not fresh).
+Setaddr pk←(pkacct,pken), and addr sk←(skacct,sken). Record ( P,
+addr pk,addr sk). Output ( Gen.Key,sid,addr pk,addr sk) to Pvia private-
+delayed output.
+•Key retrieval. Upon input ( Rtrv.Key,sid,P∗) from some party P, ig-
+nore if ( P∗,addr pk,addr sk) is not recorded. Else, output ( Rtrv.Key,sid,
+P∗,addr pk) toP.
+•Identifier retrieval. Upon input ( Rtrv.id,sid,pk) from some party
+P, ignore if ( P∗,(pk,·),·) or ( P∗,(·,pk),·) is not recorded for some P∗.
+Else, output ( Rtrved .id,sid,P∗) toP.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 59
+B.2 Non-interactive zero-knowledge functionality
+The functionality FNIZK defines a non-interactive zero-knowledge (NIZK) proof
+system parameterized by a relation R(x, w), where xis a statement and wis
+a corresponding witness introduced by Groth et al. [27]. FNIZK consists of two
+main operations: proof generation andproof verification . In contrast to interac-
+tive zero-knowledge proofs, NIZK does not require the prior specification of the
+verifier. Consequently, the resulting proof can undergo verification by any party.
+In the proof generation phase, when a party Urequests to generate a proof by
+sending ( x, w),FNIZK first checks if wsatisfies the relation R(x, w) = 1. If the
+relation holds, it notifies the adversary Awith xbut not w. The adversary then
+sends back a proof π, which FNIZKstores together with xand returns πtoU.
+In the proof verification phase, when a party Usends a request ( x, π) to verify a
+proof, FNIZKchecks if the pair ( x, π) has already been stored. If so, it outputs a
+verification success. If not, it forwards the request to the adversary Aand waits
+for a response in the form of a witness w. IfR(x, w) = 1, the proof is considered
+valid, and FNIZK stores the pair ( x, π) and outputs verification success. This
+ensures that proofs can only be verified if valid witnesses exist, while maintaining
+zero-knowledge by hiding the witness during proof generation.
+Functionality FNIZK
+FNIZKis parameterized by a relation R.
+•Proof generation: On receiving ( Prove ,sid, x, w ) from some party P,
+ignore if R(x, w) = 0. Else, send ( Prove ,sid, x) toA. Upon receiving
+(Proof ,sid, π) from A, store ( x, π) and send ( Proof ,sid, π) toP.
+•Proof verification: Upon receiving ( Verify ,sid, x, π) from some party
+P, check whether ( x, π) is stored. If not send ( Verify ,sid, x, π) toA.
+Upon receiving the answer ( Witness ,sid, w) from A, check R(x, w) = 1
+and if so, store ( x, π). If ( x, π) has been stored, output ( Vrfed ,sid,1)
+toP, else output ( Vrfed ,sid,0).
+A concept closely related to NIZK is the notion of signatures of knowledge
+(SoK). SoK combines digital signatures with zero-knowledge proofs and allows
+a signer to authenticate a message not only by proving possession of a secret
+key but also by demonstrating knowledge of a witness wfor an NP statement
+x∈L. Such a signature ensures that, upon verification, it is confirmed that the
+signer possesses a valid witness for the truth of the statement. The concept of
+SoK was formally defined by Chase et al. [14] via an ideal functionality FSoK.
+Similar to FNIZK,FSoKis for ( x, w)∈ R. It consists of three primary phases:
+setup ,signature generation , and signature verification . Unlike FNIZK,FSoKre-
+ceives ( Verify ,Sign,SimSign ,Extract ) from the adversary A. Upon receiving a
+request ( Sign,sid, m, x, w ) from a party P,FSoKchecks whether ( x, w)∈ R. If
+the check passes, FSoKcomputes σ←SimSign (m, x). Unlike FNIZK,FSoKdoes
+60 A. Sarencheh et al.
+not leak the statement xto the adversary. To avoid leaking the statement to
+the adversary in the proof generation of proof of balance, we utilize FSoK, which
+inherently prevents such leakage. Although FSoKintroduces a message mas
+part of the signature, this component is unnecessary in our setting. Therefore,
+we simplify FSoKby fixing mto a predefined dummy message for all sessions.
+This transforms FSoKinto a form that functions as FNIZKwithout the undesired
+statement leakage. Therefore, in the following we present the formal definition of
+FSoKfrom [14] under a simplifying assumption: the message min all interfaces
+and algorithms is a predefined (dummy) message, hence, we avoid addressing it.
+Without loss of generality, we denote the following functionality as F†
+NIZK.
+Functionality F†
+NIZK
+The functionality is parameterized by a relation R.Prove ,SimProve , and
+Extract are descriptions of PPT TMs, and Verify is a description of a
+deterministic polytime TM.
+•Setup: Upon receiving ( Setup ,sid) from some party P, if this is the
+first time that ( Setup ,sid) is received, send ( Setup ,sid) toA. Upon
+receiving ( Algorithms ,sid,Prove ,Verify ,SimProve ,Extract ) from A,
+store these algorithms. Output ( Algorithms ,sid,Prove ,Verify ) toP.
+•Proof Generation: Upon receiving ( Prove ,sid, x, w ) from P, if
+(x, w)/∈ R, ignore. Else, compute π←SimProve (x), and check that
+Verify (x, π) = 1. If so, output ( Proof ,sid, π) toPand record the en-
+try (x, π). Else, output an error message ( Completeness error ) toPand
+halt.
+•Proof Verification: Upon receiving ( Verify ,sid, x, π) from P, check
+whether ( x, π) is stored. If stored, output ( Vrfed ,sid,1) to P. Else, let
+w←Extract (x, π). If ( x, w)∈ R, output ( Vrfed ,sid,1) to P. Else,
+ifVerify (x, π) = 0, output ( Vrfed ,sid,0) to P. Otherwise, output an
+error message ( Verification error ) toPand halt.
+B.3 Ledger functionality
+The ledger functionality FLedger abstracts a public ledger and provides a global
+access to the ledger to all parties, parameterized by a Validate predicate (to
+check transaction validity), an Update function (to update the ledger state),
+and an initial state state (which is empty at the start). The functionality supports
+two main operations: read andappend . In the read operation, a party Urequests
+the current state of the ledger. Upon receiving this request, FLedger informs the
+adversary Athat a request for read is submitted. If the adversary permits the
+read, the current ledger state is returned to the requester. Otherwise, the request
+is ignored, ensuring that reads occur only when permitted by A.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 61
+In the append operation, a party submits a transaction tnxto be added to
+the ledger. The functionality forwards this tnxto the adversary. If the adver-
+sary approves, the Validate function checks whether the transaction tnxis
+valid according to the current state state. If valid, the Update function up-
+dates the state by appending tnxto the ledger. Otherwise, the transaction is
+discarded. This model captures both transparency and adversarial control typ-
+ical in blockchain systems, where reads and appends are subject to validation
+rules and external influence while ensuring consistent state updates. Depending
+on the type of transaction tnx, the functionality FLedger invokes a sub- Validate
+and sub- Update algorithms tailored to different transaction types described in
+Figures 3 to 8 and 12.
+Functionality FLedger
+The functionality is globally available to all parties and is parameterized
+by a predicate Validate , and Update function and a variable state where
+initially state← ∅.
+•Read: Upon receiving ( Read,sid) from a party P, generate a fresh γand
+setL(γ)←P. Send ( Read,sid, γ) toA. Upon receiving ( Read.ok,sid, γ)
+fromA, ignore if L(γ) =⊥. Else, return ( Read,sid,state) to Pwhere
+L(γ) =P. Set L(γ)← ⊥.
+•Append: Upon receiving ( Append ,sid,tnx) from a party P, send
+(Append .req,sid,tnx) toA. Upon receiving ( Append .req.Ok,sid,tnx)
+fromA, invoke Validate (state,tnx), and if it outputs 1, update state
+via calling state←Update (state,tnx). Otherwise, ignore.
+B.4 Communication channel functionality
+As described in [17] despite robust cryptographic protections at the protocol
+level, “network leakage” can still reveal information about the communicat-
+ing parties. Therefore, in our UC framework, maintaining a degree of sender
+anonymity is essential to preserve (UC) anonymity. This issue is not unique to
+ΠDART but arises in any UC-based formalization of privacy-preserving mecha-
+nisms. For example, Zerocash [49] would provide no anonymity without a sender-
+anonymous channel. Practical deployments of ΠDART could use a VPN, the Tor
+network [20], temporary network identities (e.g., public terminals), or JAP [30].
+The functionality Fchdefines a secure and anonymous communication channel
+between a sender Psand a receiver Pr. When the sender Psinputs a message m
+along with the receiver’s identifier Pr,Fchrecords the sender and receiver identi-
+fiers, and message in an internal mapping associated with a randomly generated
+message ID, mid. It notifies the adversary Aofmidand the message length.
+When the adversary approves, Fchretrieves the corresponding message and de-
+62 A. Sarencheh et al.
+livers it to the receiver, indicating the sender’s identifier and the full message
+contents.
+Functionality Fch
+LetPsbe a sender and Prbe a receiver. The message is denoted by m.
+•Upon input ( Send,sid,Pr, m) from Ps, record a mapping P(mid)←
+(Ps,Pr, m) where midis chosen at random. Output ( Send,sid,mid,|m|)
+toA.
+•Upon receiving ( Ok,sid,mid) from A, retrieve P(mid) = ( Ps,Pr, m) and
+send ( Received ,sid,Ps, m) toPrvia private-delayed output.
+C Cryptographic schemes
+C.1 Public key encryption (PKE) schemes
+Definition 1 (Public key encryption (PKE) scheme). LetPKE =
+(PKE.KeyGen ,PKE.Enc,PKE.Dec)denote a public key encryption (PKE)
+scheme. A PKE scheme is defined by the following components:
+•PKE.KeyGen (Key generation): This algorithm takes a security parameter
+λas input and outputs a pair (pk,sk), where pkis the public key and skis
+the secret (private) key. The public key pkalso (implicitly) defines a cor-
+responding message space MessageSpace (pk)which specifies the set of valid
+plaintexts for encryption.
+•PKE.Enc(Encryption): This algorithm takes the public key pkand a plain-
+text message m(where m∈MessageSpace (pk)) as input and produces a
+ciphertext C.
+•PKE.Dec(Decryption): The decryption algorithm takes the private key sk
+and a ciphertext Cas input and outputs either the original plaintext message
+mor a special failure symbol ⊥if decryption fails.
+Definition 2 (PKE correctness). A public key encryption (PKE) scheme
+PKE = (PKE.KeyGen ,PKE.Enc,PKE.Dec)is said to be correct if, for all λ∈
+N, for all key pairs (pk,sk)←PKE.KeyGen (1λ), and for all messages m∈
+MessageSpace (pk),PKE.Dec(sk,PKE.Enc(pk, m)) = mholds with overwhelming
+probability.
+Definition 3 (PKE CPA security). A public key encryption (PKE) scheme
+PKE = (PKE.KeyGen ,PKE.Enc,PKE.Dec)isIND-CPA-secure if, for all PPT ad-
+versaries A, the advantage AdvIND -CPA
+A (λ)in the following experiment is negligible
+inλ:AdvIND -CPA
+A (λ)≤negl(λ).
+The experiment, denoted IND-CPAb
+PKE(A, λ), is defined between a probabilistic
+polynomial-time (PPT) adversary Aand a challenger, with a security parameter
+λand a bit b∈ {0,1}:
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 63
+1. The challenger generates a key pair (pk,sk)by running PKE.KeyGen (1λ)and
+sends the public key pkto the adversary A.
+2. The adversary Asubmits two plaintext messages (m0, m1), ensuring that
+|m0|=|m1|andm0, m1∈MessageSpace (pk).
+3. The challenger selects a random bit b$← − {0,1}, chooses one of the two
+plaintexts based on b, and computes the ciphertext Cb=PKE.Enc(pk, mb).
+4. The challenger sends the ciphertext Cbto the adversary A.
+5. The adversary Aoutputs a bit b′as its guess for b. IfAdoes not output any
+value, the guess b′is set to 0 by default.
+The adversary’s advantage AdvIND -CPA
+A (λ)in this experiment is defined as:
+AdvIND -CPA
+A (λ) =Pr[IND-CPA1
+PKE(A, λ) = 1] −Pr[IND-CPA0
+PKE(A, λ) = 1].
+Definition 4 (PKE key privacy). Key privacy ensures that the public key
+used to generate a ciphertext remains hidden [3]. The KeyPriv security experi-
+ment is conducted between a probabilistic polynomial-time (PPT) adversary A
+and a challenger. A public key encryption scheme PKE isKeyPriv -secure if, for
+all PPT adversaries A, the advantage AdvKeyPriv
+A (λ)is negligible in the security
+parameter λ:AdvKeyPriv
+A (λ)≤negl(λ).
+This experiment, denoted KeyPrivb
+PKE(A, λ), is defined with a bit b∈ {0,1}and
+a security parameter λ:
+1. The adversary is given access to two encryption-decryption oracles associated
+with different public keys.
+2. For k∈ {0,1}:(pkk,skk)$← −PKE.KeyGen (1λ), where pkkand skkare the
+public and secret keys for the k-th oracle, respectively.
+3. The adversary submits a message m, where: m← AOsk0,pk0,Osk1,pk1(pk0,pk1).
+4. The challenger selects a random bit b$← − {0,1}.
+5. A ciphertext Cis generated by encrypting munder the public key pkb:C←
+PKE.Enc(pkb, m).
+6. The adversary receives Cand outputs a bit b′as its guess for b:b′←
+AOsk0,pk0,Osk1,pk1(pk0,pk1, C).
+7. The adversary wins if b=b′. The oracles reject decryption queries for the
+challenge ciphertext C.
+The adversary’s advantage AdvKeyPriv
+A (λ)in this experiment is defined as:
+AdvKeyPriv
+A (λ) =Pr[KeyPriv1
+PKE(A, λ) = 1] −Pr[KeyPriv0
+PKE(A, λ) = 1].
+Definition 5 (ElGamal encryption scheme). The ElGamal encryption
+scheme [23], denoted EG, is a public-key encryption (PKE) scheme that op-
+erates over a prime-order cyclic group Gqwith generator g. The scheme consists
+of three main algorithms EG= (EG.KeyGen ,EG.Enc,EG.Dec)defined as follows:
+•EG.KeyGen (Key generation): LetGbe a prime-order group generator that
+outputs (q, g), where qis a prime and gis a generator of the cyclic group
+Gq. The key generation algorithm proceeds as follows:
+64 A. Sarencheh et al.
+– Take the security parameter 1λas input.
+– Sample the secret key sk=x$← −Zquniformly at random.
+– Compute the public key component P=gx.
+– The public key is pk= (q, g,P), and the secret key is sk=x.
+•EG.Enc(Encryption): To encrypt a message M∈Gq, the encryption pro-
+cess is as follows:
+– Sample a random value r$← −Zq.
+– Compute: C1=gr,B=Pr.
+– Compute the ciphertext components: ψ= (C1,C2),where C2=B·M.
+•EG.Dec(Decryption): Given a ciphertext ψ= (C1,C2), the decryption
+process is as follows:
+– Compute: B=Cx
+1
+– Recover the original message Mby computing: M=C2·B−1.
+The security of the ElGamal encryption scheme under chosen-plaintext attack
+relies on the hardness of the decisional Diffie-Hellman (DDH) problem in the
+group Gq.
+C.2 Commitment schemes
+Definition 6 (Commitment scheme). Let COM = ( COM .KeyGen ,
+COM .Commit ,COM .Verify )denote a commitment scheme. A commitment
+scheme is defined by the following components:
+•COM .KeyGen (Key generation): This probabilistic algorithm takes a secu-
+rity parameter λas input and outputs a pair of keys (ck,vk), where ckis the
+commitment key used by the committer and vkis the verification key used by
+the verifier. In the case of a publicly verifiable scheme, ck=vk.
+•COM .Commit (Commitment phase): This probabilistic algorithm takes
+the commitment key ckand a message m(where m∈MessageSpace (ck)) as
+input. It outputs a commitment value cand an opening value d:(c, d)←
+COM .Commit (ck, m). The pair (c, d)allows the committer to convince the
+verifier that the committed message is mduring the verification phase.
+•COM .Verify (Verification phase): This deterministic algorithm takes the
+verification key vk, a message m, and an opening value das input. It outputs
+accept if(c, d)correctly reconstructs the message mand satisfies the com-
+mitment’s consistency conditions; otherwise, it outputs reject . More formally:
+COM .Verify (vk, c, m, d ) =(
+accept if(c, d)is a valid opening for m,
+reject otherwise.
+Definition 7 (Commitment correctness). The correctness property ensures
+that, assuming honest behavior by both the committer and the verifier, a valid
+commitment for any (valid) message mis always accepted by the verifier with
+the probability 1.
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 65
+Definition 8 (Commitment hiding). Let COM = ( COM .KeyGen ,
+COM .Commit ,COM .Verify )denote a (publicly verifiable) commitment scheme.
+Hiding security, for all probabilistic polynomial-time (PPT) adversaries A, is
+defined as follows. The hiding experiment Hideb
+COM(A, λ)between a PPT adver-
+saryAand a challenger proceeds as follows:
+1. The challenger generates a key ck=vkby running COM .KeyGen (1λ)and
+sends the key ckto the adversary A.
+2. The adversary Asubmits two messages (m0, m1), ensuring that |m0|=|m1|
+andm0, m1∈MessageSpace (ck).
+3. The challenger selects a random bit b$← − {0,1}, computes the commitment
+(c, d)←COM .Commit (ck, mb), and sends the commitment cto the adversary
+A.
+4. The adversary Aoutputs a bit b′as its guess for b.
+The adversary’s advantage AdvHide
+A(λ)in this experiment is defined as:
+AdvHide
+A(λ) =Pr[Hide1
+COM(A, λ) = 1] −Pr[Hide0
+COM(A, λ) = 1].
+A commitment scheme satisfies the hiding security property if:
+•Perfect hiding: For all adversaries A,AdvHide
+A(λ) = 0
+•Computational hiding: For all PPT adversaries A,AdvHide
+A(λ)≤negl(λ)
+Intuitively, this guarantees that no adversary can distinguish the commitment of
+m0from m1with probability significantly better than a random guess. Hence, the
+commitment hides the underlying message.
+Definition 9 (Commitment binding). Let COM = ( COM .KeyGen ,
+COM .Commit ,COM .Verify )denote a (publicly verifiable) commitment scheme.
+Thebinding security for all probabilistic polynomial-time (PPT) adversaries
+Ais defined as follows. The binding experiment Bind COM(A, λ)between a PPT
+adversary Aand a challenger proceeds as follows:
+1. The challenger generates a key ck=vkby running COM .KeyGen (1λ)and
+sends the key ckto the adversary A.
+2. The adversary Aoutputs a tuple (c, m, d, m′, d′), where m, m′∈
+MessageSpace (ck).
+3. The challenger checks:
+COM .Verify (vk, m, c, d ) = 1 and COM .Verify (vk, m′, c, d′) = 1 .
+4. If both verifications succeed and m̸=m′, the adversary Awins the binding
+game. Otherwise, the adversary fails.
+The adversary’s advantage AdvBind
+A(λ)in this experiment is defined as:
+AdvBind
+A(λ) =Pr[Bind COM(A, λ) = 1] .
+A commitment scheme satisfies the binding security property if:
+66 A. Sarencheh et al.
+•Perfect binding: For all adversaries A,AdvBind
+A(λ) = 0 .
+•Computational binding: For all PPT adversaries A,AdvBind
+A(λ)≤
+negl(λ).
+Intuitively, this guarantees that no adversary can produce a valid commitment
+that can be opened to two different messages with probability significantly better
+than negligible. Hence, the commitment binds the committer to a single value.
+Definition 10 (Pedersen commitment scheme). Let PCOM =
+(PCOM .KeyGen ,PCOM .Commit ,PCOM .Verify )denote the Pedersen commitment
+scheme [46]. The Pedersen commitment scheme is defined by the following com-
+ponents:
+•PCOM .KeyGen (Key generation): This probabilistic algorithm takes a se-
+curity parameter λas input and outputs the cyclic group parameters (G, q, g ),
+where Gis a cyclic group of prime order q, and gis a generator of
+G. Additionally, it selects a random group element h$← −Gand outputs
+ck=vk= (G, q, g, h ).
+•PCOM .Commit (Commitment): This probabilistic algorithm takes the com-
+mitment key ck= (G, q, g, h )and a message m∈Zqas input. It gener-
+ates a random opening value d$← −Zqand computes the commitment value
+c=gd·hm. The output is the pair (c, d):(c, d)←PCOM .Commit (ck, m).
+•PCOM .Verify (Verification): This deterministic algorithm takes the veri-
+fication key vk= (G, q, g, h ), a message m∈Zq, an opening value d∈Zq,
+and a commitment value c∈Gas input. The algorithm outputs accept if the
+equality gd·hm=cholds, indicating a valid commitment to m, and reject
+otherwise: PCOM .Verify (vk, c, m, d ) =(
+accept ifgdhm=c,
+reject otherwise.
+The Pedersen commitment scheme PCOM is perfectly hiding and computation-
+ally binding [37,38].
+C.3 Pseudorandom function (PRF) schemes
+Definition 11 (Pseudorandom function (PRF) scheme). LetPRF =
+(F.KeyGen ,F.Eval)denote a pseudorandom function (PRF) scheme. A PRF
+scheme is defined by the following components:
+•F.KeyGen (Key generation): This algorithm takes a security parameter λ
+as input and outputs a secret key k∈K, where Kdenotes the key space.
+•F.Eval(Function evaluation): This algorithm takes the secret key kand
+an input x∈X, where Xis the domain, and outputs a value y∈Y, where
+Yis the range. Formally, the function is defined as Fk:X→Y, where
+Fk(x) =y.
+Definition 12 (PRF pseudorandomness). A pseudorandom function
+(PRF) scheme PRF = (F.KeyGen ,F.Eval)is pseudorandom if, for all probabilis-
+tic polynomial-time (PPT) adversaries A, the advantage AdvPRF.Pseudo
+A (λ)in the
+following experiment is negligible in λ:AdvPRF.Pseudo
+A (λ)≤negl(λ).
+DART: Decentralized, Anonymous, and Regulation-friendly Tokenization 67
+The security experiment, denoted Pseudob
+PRF(A, λ)forb∈ {0,1}, is defined be-
+tween a probabilistic polynomial-time (PPT) adversary Aand a challenger as
+follows:
+1. The challenger takes the security parameter λand generates a secret key
+k∈Kby running F.KeyGen (1λ).
+2. For b= 0: The challenger defines the function Fk:X→YasFk(x) =
+F.Eval(k, x), where Xis the domain and Yis the range.
+3. For b= 1: The challenger chooses a truly random function f:X→Y
+uniformly at random.
+4. The challenger selects a random bit b$← − {0,1}.
+5. The adversary Asubmits qqueries x1, . . . , x q∈X. For each query xi, the
+challenger responds with f(xi)(ifb= 1) orFk(xi)(ifb= 0).
+6. The adversary Aoutputs a bit b′∈ {0,1}, indicating its guess of whether the
+function is pseudorandom ( b= 0) or truly random ( b= 1).
+The adversary’s advantage AdvPRF.Pseudo
+A (λ)is defined as:
+AdvPRF.Pseudo
+A (λ) =Pr[Pseudo1
+PRF(A, λ) = 1] −Pr[Pseudo0
+PRF(A, λ) = 1],
+Definition 13 (Dodis-Yampolskiy PRF). LetDY= (DY.KeyGen ,DY.Eval)
+denote the Dodis-Yampolskiy pseudorandom function (DY PRF) scheme [22],
+which is based on the Boneh-Boyen unpredictable function [7]. The DY PRF is
+defined as follows:
+•DY.KeyGen (Key generation): This algorithm takes a security parameter
+λas input and outputs a secret key k∈Zq, where qis the order of a cyclic
+group G=⟨g⟩.
+•DY.Eval(Function evaluation): This algorithm takes the secret key k∈Zq
+and an input xand outputs a value y∈G. The evaluation function is defined
+as:
+Fk(x) =g1/(k+x),
+where gis a generator of the cyclic group G.
+The security of the Dodis-Yampolskiy PRF relies on the hardness of the q-
+Decisional Diffie-Hellman Inversion ( q-DDHI) problem [22].
+C.4 Accumulator schemes
+An accumulator scheme enables the compact representation of an arbitrarily
+large set Sof elements. Given a membership witness for an accumulated el-
+ement xand the current accumulator value vACCU, it is possible to efficiently
+verify whether xis a valid member of the accumulated set. Importantly, the
+accumulated set can be dynamically updated as elements are added.
+Definition 14 (Accumulator scheme). LetACCU = (ACCU .Setup ,Accu,
+ACCU .Add,ACCU .PrvMem ,ACCU .VfyMem )denote an accumulator scheme over
+the universe U. An accumulator scheme is defined by the following components:
+68 A. Sarencheh et al.
+•ACCU .Setup (Setup): This algorithm takes the security parameter λas input
+and outputs the public parameters ppACCU:ppACCU←ACCU .Setup (1λ).
+•Accu (Accumulate): This deterministic algorithm takes the public param-
+eters ppACCU and a set S⊆ U as input and computes an accumulator value
+vACCU for the set S:vACCU←Accu(ppACCU, S).
+•ACCU .Add (Add element): This algorithm takes the public parame-
+ters ppACCU, an accumulator value vACCU, and an element x∈ U
+as input and outputs an updated accumulator value v′
+ACCU:v′
+ACCU ←
+ACCU .Add(ppACCU,vACCU, x).
+•ACCU .PrvMem (Prove membership): This algorithm takes the public pa-
+rameters ppACCU, a set S, and an element xas input and outputs a mem-
+bership proof πACCU showing that xis in the accumulated set S:πACCU←
+ACCU .PrvMem (ppACCU, S, x).
+•ACCU .VfyMem (Verify membership): This algorithm takes the pub-
+lic parameters ppACCU, an accumulator value vACCU, an element x, and
+a membership proof πACCU as input and outputs a bit {0,1}indi-
+cating whether xbelongs to the set accumulated in vACCU:{0,1} ←
+ACCU .VfyMem (ppACCU,vACCU, x, π ACCU).
+Definition 15 (Accumulator correctness). LetACCU = (ACCU .Setup ,
+Accu,ACCU .Add,ACCU .PrvMem ,ACCU .VfyMem )denote an accumulator scheme
+over the universe U. An accumulator scheme is said to be correct if the following
+properties hold, for all security parameters λ∈N, all elements x∈ U, and all
+setsS⊆ U:
+•letppACCU←ACCU .Setup (1λ)and vACCU←Accu(ppACCU, S). Then, for
+the updated accumulator v′
+ACCU←ACCU .Add(ppACCU,vACCU, x), we have:
+v′
+ACCU =Accu(ppACCU, S∪ {x}).
+•forx∈S, let ppACCU←ACCU .Setup (1λ),vACCU←Accu(ppACCU, S), and
+πACCU←ACCU .PrvMem (ppACCU, S, x). Then the membership proof πACCU is
+valid, i.e., ACCU .VfyMem (ppACCU,vACCU, x, π ACCU) = 1 .
+Definition 16 (Accumulator soundness). Soundness guarantees that no
+efficient adversary can choose a set Sand generate a proof that verifies against
+Accu(ppACCU, S)for an element x /∈S. More formally, an accumulator ACCU is
+said to be sound if the following property holds for all security parameters λ∈N,
+and PPT adversaries A:
+PrppACCU←ACCU .Setup (1λ)
+(S, x, π ACCU)← A(ppACCU):x /∈S∧vACCU←Accu(ppACCU, S)∧
+ACCU .VfyMem (ppACCU,vACCU, x, π ACCU) = 1
+≤negl(λ)
