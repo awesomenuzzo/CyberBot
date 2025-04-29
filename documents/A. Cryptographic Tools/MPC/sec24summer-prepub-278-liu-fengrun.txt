@@ -1,0 +1,1894 @@
+Scalable Multi-Party Computation Protocols for Machine Learning in the
+Honest-Majority Setting
+Fengrun Liu
+University of Science and Technology of China &
+Shanghai Qi Zhi Institute
+
+Xiang Xie
+Shanghai Qi Zhi Institute & PADO Labs
+
+Yu Yu
+Shanghai Jiao Tong University &
+State Key Laboratory of Cryptology, P. O. Box 5159, Beijing, 100878, China
+Abstract
+In this paper, we present a novel and scalable multi-party
+computation (MPC) protocol tailored for privacy-preserving
+machine learning (PPML) with semi-honest security in the
+honest-majority setting. Our protocol utilizes the DamgårdNielsen (Crypto’07) protocol with Mersenne prime fields.
+By leveraging the special properties of Mersenne primes,
+we are able to design highly efficient protocols for securely
+computing operations such as truncation and comparison.
+Additionally, we extend the two-layer multiplication protocol
+in ATLAS (Crypto’21) to further reduce the round complexity
+of operations commonly used in neural networks.
+Our protocol is very scalable in terms of the number of
+parties involved. For instance, our protocol completes the
+online oblivious inference of a 4-layer convolutional neural
+network with 63 parties in 0.1 seconds and 4.6 seconds in
+the LAN and WAN settings, respectively. To the best of our
+knowledge, this is the first fully implemented protocol in the
+field of PPML that can successfully run with such a large
+number of parties. Notably, even in the three-party case, the
+online phase of our protocol is more than 1.4× faster than the
+Falcon (PETS’21) protocol.
+
+1
+
+Introduction
+
+In recent years, machine learning (ML) has gained immense
+popularity across various domains, including medicine, banking, recommendation systems, and biometric authentication.
+However, the widespread use of ML models has raised significant privacy concerns. Moreover, many companies offer
+pre-trained ML models, and performing inference operations
+on sensitive data introduces additional privacy considerations.
+Regulations like HIPAA and GDPR impose significant constraints on institutions aggregating personal data from individuals. To enable effective machine learning while preserving
+privacy, the ideal approach is for individuals to retain their personal information locally while collaborating to train models
+in a secure multi-party manner.
+
+Secure Multi-Party Computation (MPC) [3, 21, 47] enables a group of n parties to collectively compute a function
+on their private inputs while preserving the privacy of the
+inputs. MPC offers a promising approach to address these privacy challenges in ML. It enables privacy-preserving machine
+learning (PPML) by performing secure computations on distributed datasets without exposing the individual data points
+or the model itself. This allows multiple parties to collaborate
+on training or inference tasks while keeping their data private.
+By leveraging cryptographic techniques and secure protocols,
+MPC-based PPML ensures that sensitive information remains
+protected throughout the computation process.
+In the context of PPML, there have been significant research efforts to enhance secure multi-party computation protocols in different settings. In the dishonest-majority setting,
+the majority of PPML protocols concentrate on the two-party
+scenario [7, 12, 24, 31, 33, 35, 38, 40, 41, 42]. On the other
+hand, in the honest-majority setting, existing PPML protocols only consider the three-party [8, 12, 29, 34, 39, 44, 45]
+and four-party cases [4, 9, 13, 28], where the protocols tolerate one corrupted party. However, many applications like
+federated learning involve large numbers of participants, yet
+existing privacy-preserving machine learning protocols focus
+on 2-4 parties only, falling short of real-world needs. There is
+a pressing need to develop scalable protocols that can accommodate machine learning with many distributed data owners.
+In theory, there are general-purpose MPC protocols, such
+as those mentioned in [10, 17, 18, 26], that can support an
+arbitrary number of parties. However, these protocols lack
+efficient methods for securely computing non-linear functions
+like truncation and comparison. This limitation is the primary
+reason why they do not report specific performance results
+when applied to a large number of parties in PPML.
+Previous protocols often utilize power-of-two rings Z2ℓ and
+prime fields F p . Power-of-two rings, specifically those with
+ℓ = 32 or 64, are particularly favored due to their superior
+computation efficiency. This efficiency stems from the compatibility of the ring operations with native datatypes. Prime
+fields offer significant advantages when it comes to leveraging
+
+the fast protocol proposed by Damgård and Nielsen [17], hereafter known as the DN protocol, which is based on Shamir
+Secret Sharing.
+In PPML, the secure computation of truncation and comparison functions plays a vital role. Practical truncation protocols
+are based on the approaches (and their extensions) proposed
+in [35] and [6] in the power-of-two rings and prime fields
+setting, respectively. However, these methods result in a significant gap between the shares and the secret, necessitating
+the use of either a large modulus or low precision to mitigate
+truncation errors. For the secure computation of the comparison function, protocols (such as [15, 34]) typically rely on
+the computation of boolean circuits with bit shares. These
+methods also introduce a large gap between the shares and
+secrets. Moreover, the online round complexity can be as high
+as O(log ℓ). Note that [12, 20] show how to reduce the gap of
+the truncation protocol in the power-of-two rings setting, but
+the round complexity of their comparison protocols is still
+high. Additionally, [32] shows how to mitigate the gap in the
+comparison protocol in the prime fields setting. But the gap
+in the truncation protocol still persists.
+
+protocol works for any prime field, which is of independent interest.
+3. We simplify and extend the techniques of evaluating twolayer multiplication in [22], to securely compute ReLU
+(Maxpool) operations in neural networks, resulting in
+efficient protocols with 3 rounds (3 log m rounds) online
+complexity.
+4. We implement our framework with C++ and conduct
+experiments of oblivious inference for neural networks
+with varying numbers of parties, ranging from 3 to 63.
+For example, when performing inference on a 4-layer
+convolutional neural network with 63 parties, the online
+(preprocessing) time is 0.4 s (2.4 s) and 4.3 s (12.3 s)
+in the LAN and WAN setting, respectively. To the best
+of our knowledge, this is the first fully implemented
+protocol in the field of PPML that can successfully run
+with such a large number of parties. Even in the threeparty case, our protocol outperforms the Falcon protocol
+[45] in terms of online phase speed, being more than
+1.4× faster.
+An overview of the different protocols considered in this work
+is provided in Appendix A
+
+1.1
+
+Our Contribution
+
+We design and implement a general framework of scalable
+multi-party computation protocols for privacy-preserving inference, where the model is secret-shared among all data owners, with semi-honest security in the honest majority setting.
+This establishes a foundation for realizing practical largescale privacy-preserving collaborative training in the future.
+Our schemes leverage the DN [17] protocol with Mersenne
+prime fields. I.e., the prime is in the form p = 2ℓ − 1. It is
+worth noting that we are the first to take advantage of the
+unique properties of Mersenne primes to optimize truncation and comparison from a theoretical standpoint. The key
+contributions of this paper are as follows.
+1. We propose a novel protocol to securely compute the
+truncation function in the setting of prime fields with
+Mersenne primes. This new protocol reduces the gap
+between shares and the secret to just 1 bit. As a result,
+It allows us to use a smaller modulus or achieve higher
+precision, thereby directly improving both computation
+and communication efficiency. We further combine it
+with the DN multiplication protocol, resulting in an efficient protocol for fixed-point multiplication with 1 round
+online complexity.
+2. We propose an efficient protocol to securely compute the
+bitwise comparison function in the setting of Mersenne
+prime fields. It eliminates the gap between shares and
+the secret with 1 round online complexity. To achieve
+this, besides utilizing the special properties of Mersenne
+primes, we also present an optimized Prefix-OR protocol
+with only 1 round online complexity. This new Prefix-OR
+
+1.2
+
+Overview of Techniques
+
+Let p be a Mersenne prime, which is in the form of p = 2ℓ − 1
+for some prime ℓ. It is well known that the distribution of
+Mersenne primes is quite sparse. However, for practical purposes in privacy-preserving machine learning, it is fortunate
+that values of ℓ such as 31, 61, and 127 are often sufficient.
+These specific values of ℓ are typically suitable for most use
+cases in PPML, allowing for efficient computations within
+the domain.
+Advantages of Mersenne Primes. A key observation in
+this paper is that Mersenne primes are very close to powerof-two numbers. Mersenne primes exhibit similar properties
+to power-of-two numbers, which leads to several advantages
+in computations. In particular, modular operations performed
+over Mersenne primes involve simple operations such as bit
+shifts and additions, making them highly efficient. When
+encoding a signed integer a ∈ [−(p − 1)/2, (p − 1)/2] into a
+representation ā within the range of [0, p − 1] in F p , the most
+significant bit (MSB) of ā effectively indicates the sign bit
+of a. This is due to the fact that (p − 1)/2 = 2ℓ−1 − 1. The
+plain truncation protocol in F p is quite simple when p is a
+Mersenne prime. Truncating ā ∈ F p by d bits is just shifting
+the bits of ā down by d positions and filling the top d bits
+with the MSB of ā.
+Probabilistic Truncation with Only 1-Bit Gap. Let
+Truncd (x) denote the truncation of x ∈ F p with d bits.
+The starting point is the method presented in ABY3 [34].
+In a nutshell, they utilize the property that Truncd (z) =
+
+Truncd (x = z + r) − Truncd (r) + e for small z with high probability for uniformly random r ∈ F p , where |e| ≤ 1 is some
+rounding error. The constraints on z and the probability mentioned in the previous statement are imposed due to certain
+cases where the equation does not hold. This deviation from
+the equation occurs when there is a “wapping around” event.
+The “wapping around” event happens in two cases. 1)
+z, r represent two postive integers, but x = z + r represents a
+negative integer. 2) z, r represent two negative integers, but
+x = z + r represents a positive integer. This is due to the
+implicit modulo operation involved in operations within the
+prime field F p . The constraints on z and r make this bad
+case occur only
+probability. In conclusion, for
+ with a small
+
+z ∈ 0, 2ℓz ∪ p − 2ℓz , p , the equation holds with probability
+ℓz +1
+
+1− 2 p
+
+for some ℓz > 0.
+
+It is easy to see that the gap between z and p should be
+large enough to make the equation hold. In this paper, we
+fully leverage the properties of Mersenne primes to narrow
+the gap between z and p to just 1 bit.
+We consider z ∈ [0, (p − 1)/2] representing a positive integer. Under this condition, only one specific case will trigger
+the “wrapping around” event. I.e., r represents a positive
+integer, but x represents a negative integer. In other words,
+rmsb = 0 ∧ xmsb = 1. In this case, let us look into the result
+of Truncd (x = z + r). As described before, Truncd (x = z + r)
+shifts down x by d bits and fills the first d bits with the MSB
+of x, which is bit 1. Surprisingly, the deviation in the equation
+is caused by the “misfilled” first d bits, and we simply remove
+this term to make the equation hold again in this case!
+Removing the first d bits with all 1’s is equivalent to substract (2d − 1) · 2ℓ−d = (2ℓ − 2ℓ−d ) = p − (2ℓ−d − 1). This is
+equivalent to adding 2ℓ−d − 1 in the field. In the MPC setting,
+we remain to compute the share of (1 − rmsb ) · xmsb to obliviously indicate whether the “wrapping around” event occurs
+or not. Fortunately, x = z + r will be revealed in the protocol
+because r is uniformly random, and xmsb can be computed
+locally. Further, in the preprocessing phase, we will prepare
+the share of rmsb . Therefore the share of (1 − rmsb ) · xmsb can
+be computed locally!
+Note that our truncation protocol can be simply modified to
+support elements that represent negative integers as well. Let
+z̄ ∈ [0, 2ℓ−2 ) ∩ [p − 2ℓ−2 , p), set z = z̄ + 2ℓ−2 ∈ [0, (p − 1)/2].
+Then, we can easily obtain Truncd (z̄) by applying our protocol
+on z. This is because Truncd (z) ≈ Truncd (z̄) + 2ℓ−d−2 .
+In PPML, the secure truncation protocol typically follows a
+secure multiplication protocol. Specifically, there is a need to
+securely compute the truncation of the product of two values,
+denoted as Truncd (a · b). This operation is often referred to as
+a secure fixed-point multiplication protocol. In the DN [17]
+multiplication protocol, ab + r will be revealed anyway. This
+enables us to further reduce the online round complexity of
+secure fixed-point multiplication protocol to 1 round.
+
+Round-Efficient Comparison. Our secure bitwise comparison protocol follows from [15]. The core and bottleneck
+of this protocol are to compute all the Prefix-ORs of a bit
+vector.
+Specifically, given a bit vector (a1 , . . . , aℓ ), compute
+W
+bi = ij=1 a j for 1 ≤ j ≤ ℓ. Several works [15, 36] of secure
+Prefix-OR protocols are proposed to optimize the online round
+complexity. These protocols have achieved constant online
+round complexity, but the actual number of rounds involved
+can still be relatively large. [6] proposed a small constantround version that requires a large gap.
+A key observation of this paper is that instead of computing
+all Prefix-ORs, we compute itsWdual problem Prefix-ANDs. This
+is because computing bi = ij=1 a j is identical to compute
+V
+bi = ij=1 a j , where bi = 1 − bi and ai = 1 − ai . The PrefixANDs problem is indeed to compute all prefix products bi =
+∏ij=1 a j for 1 ≤ j ≤ ℓ, which could be securely computed
+with 1 round online complexity using the unbounded fan-in
+multiplication protocol from [1, 6, 15, 36].
+With this efficient secure comparison protocol, we could
+design a fast secure DReLU protocol. DReLU is the derivative
+of the non-linear activation ReLU function. It serves as a core
+building block in PPML. Given a number a, DReLU(a) =
+0 if a < 0, and DReLU(a) = 1 otherwise. In other words,
+DReLU(a) = 1 − amsb . Follow the idea from SecureNN [44],
+we have amsb = tlsb , where t = 2a ∈ F p , because p is odd.
+In the preprocessing phase, we generate the shares of a
+random value r, denoted as [r] p , and the shares of the bits of r,
+denoted as [r]B . In the online phase, [y] p = [t + r] p is revealed,
+and one can compute [tlsb ] p = ylsb ⊕ [rlsb ] p ⊕ [(t + r ≥ p)] p .
+Note that t + r ≥ p if and only if y < r. Since we already have
+[r]B , using the secure bitwise comparison protocol on bits
+results in an efficient secure DReLU protocol.
+Vertorized Secure Two-Layer Multiplication. Many operations in neural networks can be derived from DReLU. For example, the ReLU functions can be represented as ReLU(a) =
+DReLU(a) · a, and Max(a, b) = DReLU(a − b) · (a − b) + b.
+We observe that the last step of secure DReLU involves securely XORing two shares of bits, which is essentially a secure multiplication. Therefore the ReLU and Max functions
+can be seen as two-layer multiplications. We adopt a vectorized version of the optimized two-layer multiplication protocol proposed in the recent work [22]. This approach allows
+us to further reduce the online round complexity associated
+with these operations.
+
+1.3
+
+Other Related Work
+
+Truncation. The protocol of truncation over fields in the
+recent work from Escudero et al. [20] indeed originates from
+the previous works presented by Catrina and de Hoogh [6],
+which entails a large gap between the secrets and the actual
+modular in the field to assure the correctness with statistical
+security.
+
+Authors in ABY3 [34] and [14] propose alternative methods for truncation over rings, but unfortunately their methods
+require a large gap or involve complex bitwise subprotocols in
+logarithmic rounds. The current state-of-the-art for truncation
+in the ring case [12, 20] uses the fact that the input is positive
+to reduce the gap to 1-bit without any bitwise subprotocols.
+Our method for truncation over fields is similar to this idea yet
+with a more intuitive and simple way of detecting and correcting the error caused by the "wrap around" event. Moreover,
+we seamlessly combine the truncation and DN multiplication
+to instantiate the fixed-point multiplication.
+Comparison. Catrina and de Hoogh [6] proposed a (small)
+constant-round comparison protocol that requires a large gap
+for correctness. The most recent work for comparison is Rabbit [32], which removes the need for a large gap but depends
+on several logarithmic bitwise subprotocols. The comparison
+with no gap requirement was first studied in [15], and optimized by [36], with non-negligible constant cost, in which
+the main bottleneck is the bitwise less-than protocol involved
+a very costly circuit for evaluating prefix-OR. In our work,
+we propose a naive approach to compute the prefix-OR in the
+field setting, directly optimizing the bitwise less-than protocol in [15]. Various protocols for complex computations, e.g.
+deterministic truncation and DReLU, can benefit from this
+efficient bitwise less-than primitive.
+
+1.4
+
+Paper Organization
+
+We organize the paper as follows: In Section 2, we provide an
+overview of the known techniques used in Damgård-Nielsen
+protocols [19]. In Section 3, we discuss our secure truncation
+protocol with only a 1-bit gap and propose a detailed protocol
+for fixed-point multiplication. Then, in Section 4, we introduce the optimized bitwise primitives that we have developed.
+Section 5, presents our efficient building blocks, including
+DReLU, ReLU, and Maxpool, which are essential for neural networks. Finally, in Section 6, we analyze the efficiency
+of our frameworks based on the results obtained from our
+implementation.
+
+2
+
+Preliminary
+
+2.1
+
+Model.
+
+We use P1 , . . . , Pn to denote n parties, respectively, which are
+to do the secure computation. We assume that each pair of
+parties share an authenticated channel and the parties have
+an authenticated broadcast channel, and the corrupted parties are assumed to be poly-time bounded. We describe our
+protocols in the so-called "honest-but-curious" model with
+passive security in the honest-majority setting, but standard
+techniques will be applicable to make our protocols robust
+with malicious security.
+
+2.2
+
+The Field over Mersenne Primes.
+
+A Mersenne prime is a prime number that can be expressed in
+the form Mℓ = 2ℓ − 1, where ℓ is a prime number. Examples
+of Mersenne primes include ℓ = 31, 61, 127. Throughout the
+rest of the paper, we will work with a fixed Mersenne prime
+p = 2ℓ − 1 to establish a finite field F p on which most of our
+computations will be performed. The size of an element in
+F p is denoted by ℓ. Let E be the set {−1, 0, 1} and 2E be the
+set {0, ±1, ±2} for brevity.
+
+2.3
+
+Secret Sharing.
+
+This work is based on Shamir’s (t, n)-threshold scheme [43]
+where n is the number of parties and t denotes the number
+of corrupted parties. For ease of simplicity, we let n ≥ 2t + 1.
+Each party is assigned a unique element αi ∈ F p as the identity.
+For notational convenience, we index Pi by the identity αi = i.
+By a t-polynomial we mean a polynomial f (X) ∈ F p [X] of
+degree at most t. To share a secret x ∈ F p with degree t, a uniformly random t-polynomial with f (0) = x is chosen, and Pi
+is given the share xi = f (αi ). We use [x] p to denote a degree-t
+sharing, such that [x] p = (x1 , . . . , xn ) where party Pi is holding
+xi . The scheme is t-privacy and (t + 1)-reconstruction
+such that any ≤ t shares jointly leak no information about
+the secret and any ≥ t + 1 shares can uniquely reconstruct
+the secret. Let Ppking be the party that all parties agree on in
+the beginning. We write x ←ΠReveal ([x] p ) during which each
+party sends its share to Ppking , and Ppking reconstructs x and
+sends it back to other parties. This procedure is a dominant
+factor of the complexity, so we measure the round complexity
+of a protocol by the number of rounds of parallel invocations
+of ΠReveal .1 And the communication complexity is measured
+by the number of field elements sent by each party.
+If [a] p and [b] p are degree-t sharings, multiplying directly
+yields a degree-2t sharing. We use ⟨y⟩ p to denote a degree-2t
+sharing, which requires at least 2t + 1 shares for interpolation.
+In the honest-majority setting, the honest parties could recover
+y since 2t + 1 < n. Similarly, we write y ←ΠReveal (⟨y⟩ p ).
+The Shamir’s scheme allows to compute [a + b mod p] p
+and ⟨a · b mod p⟩ p from [a] p and [b] p with no communication. For simplicity, we write [a + b] p = [a] p + [b] p and
+⟨ab⟩ p = [a] p · [b] p .
+
+2.4
+
+Review: DN Multiplication.
+
+Damgård and Nielsen proposed the most renowned DN protocol [17] in the honest majority setting for semi-honest security.
+The protocol consists of 4 phases: Preprocessing Phase, Input
+Phase, Online Phase, and Output Phase. Here we give a brief
+description of the Preprocessing Phase and the Online Phase.
+1When measuring the round complexity in the preprocessing phase, we
+roughly measure a parallel unit broadcast as one round, which is common in
+the generation of randomness.
+
+Offline Phase. In the offline phase, all parties need to prepare enough shared random numbers. Specifically, there are
+two kinds of random sharings in DN multiplication. The
+first kind is the degree-t sharing [r] p . The second kind is
+a pair of random sharings ([r] p , ⟨r⟩ p ) of the same secret
+r, which is referred to as the random double sharings. We
+write the generation of random sharings as [r] p ←ΠRand and
+([r] p , ⟨r⟩ p ) ←ΠDoubleRand .
+In the original DN protocol, preparing a pair of double shar2n
+ings requires the communication of t+1
+≈ 4 field elements
+n
+per party and t+1 ≈ 2 field elements per party for a random
+sharing [r] p .
+Online Phase. In the online phase, all parties need to evaluate addition and multiplication gates layer by layer. The
+addition gate can be locally computed. For a multiplication
+gate with input sharings [x] p and [y] p , directly multiplying
+two degree-t sharings yields a degree-2t sharing. After that,
+a pair of double sharings ([r] p , ⟨r⟩ p ) is consumed to securely
+reduce the degree. All parties execute the following steps.
+1. All parties compute ⟨xy + r⟩ p = [x] p · [y] p + ⟨r⟩ p .
+2. Ppking collects shares of ⟨xy + r⟩ p and reconstructs the
+value xy + r. Then Ppking sends it back to other parties.
+3. All parties locally compute [xy] p = (xy + r) − [r] p .
+We write the above DN multiplication protocol as
+[xy] p ←ΠMult ([x] p , [y] p ). The online complexity of this protocol is 1 round with 2 field elements per party.
+Reduce Communication Complexity with PRG. The
+communication complexity of distributing sharings can be
+reduced by utilizing pseudo-random generators (PRG). This
+trick has been used in previous works such as [22, 30, 37].
+With PRG, the communication cost of distributing a degree-t
+sharing can be reduced by a factor of 2 and the cost of distributing a degree-2t sharing is free. As a result, preparing a
+random sharing and a pair of double sharing both require the
+communication of 1 field element per party. And the improved
+DN multiplication protocol with PRG has communication
+complexity of 3 field elements per party.
+
+2.5
+
+Useful Techniques
+
+Multiplication with Public Output by PRZS. DN multiplication protocol allows us to securely compute [xy] p from
+input [x] p and [y] p in one round. But using the pseudo-random
+sharing of zero (PRZS [11]) technique, we can securely compute the product of two sharings [x] p , [y] p with public output xy in one round rather than invoking the original DN
+multiplication protocol that computes [xy] p and reveals the
+degree-t sharing. It works as follows: The parties generate a
+pseudo-random degree-2t sharing ⟨0⟩ p that can be done without interactions; each party computes ⟨z⟩ p = [x] p · [y] p + ⟨0⟩ p ;
+then reveals the degree-2t sharing ⟨z⟩ p to obtain xy. We write
+
+xy ← ΠMultPub ([x] p , [y] p ) that can be done in 1 round with
+communication of 2 field elements per party (in the online
+phase).
+Unbounded Fan-in Prefix-products. [1] proposed a technique to do unbounded fan-in multiplication in constant
+rounds. We follow the protocols in [6, 15, 36] to compute
+all prefix-products bi = Πij=1 a j for i = 1, . . . ,t as follows: In
+the preprocessing phase, parties prepare t correlated pairs of
+random sharings ([ri ] p , [ri′ ] p ) where r1′ = r1−1 and ri′ = ri−1 ri−1
+for i > 1 such that ri Πij=1 ri′ = 1, with communication of 7t
+field elements per party. In the online phase:
+1. For i = 1, . . . ,t: Compute ci ←ΠMultPub ([ai ] p , [ri′ ] p ).
+2. For i = 1, . . . ,t: Compute locally [bi ] p = [ri ] p · ∏ij=1 c j .
+We write it as [b1 ] p , . . . , [bt ] p ←ΠPreMult ([a1 ] p , . . . , [at ] p )
+which can be done in 1 round with 2t field elements per party.
+The generation of random values can be done in 2 rounds
+with 7t field elements per party ([36], [6]).
+Random Bitwise-Sharings. [15] proposed a protocol to
+securely generate the shares of a uniformly random element
+along with the shares of its decomposed bits. Let r be an
+i
+unknown uniform number such that 0 ≤ r = ∑t−1
+i=0 2 ri < p
+where each ri ∈ {0, 1}, the parties generate each [ri ] p by com√a +1
+2
+
+puting S(a) = a2
+on a random sharing [a] p ← ΠRand ,
+√
+in which a2 is formulated
+to equal the unique element in
+√
+[1, (p − 1)/2] so a/ a2 is 1 or −1 in half chance when a is
+uniformly random in F∗p . Then the parties generate [r] p locally.
+We use [r]B to denote the generated ([r0 ] p , . . . , [rt−1 ] p ), and
+write the above process as ([r] p , [r]B ) ← ΠSolvedBits . Note that
+the original protocol in [15] invokes a bitwise less-than circuit
+and aborts if r ≥ p to guarantee the generated r lies in the
+field. Under the condition that it does not abort, r is uniformly
+random from F p as desired. In this work, p = 2ℓ − 1 is a
+Mersenne prime, thus the probability that r ≥ p is 2−ℓ . Hence,
+we omit the less-than circuit for larger primes, which can be
+done in 2 rounds with communication of 3t field elements per
+party in the preprocessing phase.
+Beaver Triples. A Beaver triple [2] consists of three degreet sharings ([a] p , [b] p , [c] p ) such that c = a · b. Given two sharings [x] p , [y] p , one can compute [xy] p locally after revealing
+u = x + a and v = y + b as follows.
+[xy] p = u · v − u · [b] p − v · [a] p + [c] p
+
+2.6
+
+Security Model
+
+We use P = {P1 , . . . , Pn } to denote a set of n parties.We consider the honest-majority setting in the presence of static
+semi-honest adversaries. Such an adversary controls t < n/2
+parties at the beginning of the protocol and follows the protocol specification exactly. However, it may try to learn more
+information than allowed by looking at the transcript of messages that the corrupted parties received and their internal
+
+state. We model and prove the security of our protocols under the universal composition (UC) framework [5]. Due to
+space constraints, we formally describe the functionalities
+mentioned in this work in Appendix B.
+
+Proof. If 0 ≤ x ≤ (p − 1)/2, then xℓ−1 = 0. We have
+i−d as desired.
+Truncd (x) = ∑ℓ−1
+i=d xi · 2
+If (p − 1)/2 < x ≤ p − 1, due to the definition, we have
+
+3
+
+The 2ℓ − 1 − x term can be viewed as:
+
+3.1
+
+Our Fixed-Point Multiplication
+Truncation in the Field
+
+In this section,
+ we consider signed integers in the interval
+−2ℓ−1 , 2ℓ−1 where ℓ is the length of the Mersenne prime p.
+
+Given an interger x ∈ −2ℓ−1 , 2ℓ−1 , we can represent x with
+a corresponding integer in F p by computing (x mod p) ∈
+[0, p − 1].
+In Definition 3.1, we define the truncation operation (represented in the field) of integers. It is worth noting that the
+truncation operation is indeed a special division, in which the
+divisor is in the form 2d . Intuitively, given some integer d > 0,
+let x be an integer with |x| = x1 · 2d + x2 and 0 ≤ x2 < 2d , the
+truncation of x is x1 if x ≥ 0, and p − x1 if x < 0.
+Definition 3.1 (Truncation of Represented Integers). Given
+an element x ∈ F p , the truncation of x, denoted by Truncd (x) ∈
+F p , is defined as follows.
+(
+⌊x/2d ⌋,
+0 ≤ x ≤ (p − 1)/2
+Truncd (x) =
+d
+p − ⌊(p − x)/2 ⌋, (p − 1)/2 < x ≤ p − 1
+Note that when 0 ≤ x ≤ (p − 1)/2, x represents a nonnegative number, the truncation operation just removes the
+d least significant bits. x represents a negative number when
+(p − 1)/2 < x ≤ p − 1, and p − x is the absolute value. The
+truncation operation first removes the d least significant bits
+of the absolute value and then represents the resulting negative
+integer in the field. It is easy to check that Truncd (x) = p −
+Truncd (−x) = − Truncd (−x) ∈ F p .
+In applications such as privacy-preserving machine learning, the truncation operation needs to be performed under
+MPC protocols. A common approach involves initially running a comparison circuit to determine the specific case, followed by executing the rounding operations. Running a comparison circuit with MPC is often a bottleneck in the process.
+A key observation of this article is that when considering
+a Mersenne prime p in the form of p = 2ℓ − 1, the sign is
+entirely dependent on the most significant bit. This is because
+(p − 1)/2 = 2ℓ−1 − 1. x represents a negative integer if and
+only if the (ℓ − 1)-th bit is 1. Based on this, we present a more
+efficient truncation procedure as described in Theorem 3.1.
+Intuitively, instead of running a comparison circuit with
+MPC, we simply shift the bits of x down by d positions and
+fill the top d bits with the MSB of x.
+Theorem 3.1. Let p be a Mersenne prime in the form of
+p = 2ℓ − 1. Let x ∈ F p and x0 , x1 , ...xℓ−1 be the bit decomi
+position such that x = ∑ℓ−1
+i=0 xi · 2 . We have: Truncd (x) =
+ℓ−1
+ℓ−1
+∑i=d xi · 2i−d + ∑i=ℓ−d xℓ−1 · 2i .
+
+Truncd (x) = 2ℓ − 1 − ⌊(2ℓ − 1 − x)/2d ⌋
+
+d−1
+
+ℓ−1
+
+i=0
+
+i=d
+
+2ℓ − 1 − x = (2ℓ − 1 − ∑ xi · 2i − ∑ xi · 2i )
+ℓ−1
+
+d−1
+
+i=d
+
+i=0
+
+= (2ℓ − ∑ xi · 2i − 2d ) + (2d − 1 − ∑ xi · 2i )
+i
+d
+Note that 0 ≤ 2d − 1 − ∑d−1
+i=0 xi · 2 ≤ 2 − 1, we have
+ℓ−1
+
+⌊(2ℓ − 1 − x)/2d ⌋ = 2ℓ−d − ∑ xi · 2i−d − 1.
+i=d
+
+Therefore, along with xℓ−1 = 1, we have
+ℓ−1
+
+Truncd (x) = 2ℓ − 2ℓ−d + ∑ xi · 2i−d
+i=d
+ℓ−1
+
+=
+
+ℓ−1
+
+∑ xℓ−1 · 2i + ∑ xi · 2i−d
+i=ℓ−d
+
+i=d
+
+A Big Gap when Truncating. The SecureML paper [35]
+presents a truncation method in the 2PC setting. This technique, along with its extensions, is utilized by many other
+works [34, 44, 45] to perform secure truncation operations.
+For instance, the truncation technique in ABY3 [34], which
+can be extended to any number of parties, involves computing
+Truncd (z) ≈ Truncd (z = x + r) − Truncd (r), where r is uniform. However, using this method, the aboveequation
+only
+
+holds for elements within the range of 0, 2ℓz ∪ p − 2ℓz , p
+ℓz +1
+
+with probability 1 − 2 p for some ℓz . Consequently, the size
+of the truncated value should be much smaller than p. In practice, we have to choose large p (say with 64-bit length) to
+avoid truncation errors of large magnitude. Essentially, we
+impose constraints on z to avoid a "wrapping around" event
+triggered by two cases. 1) z, r represent two positive integers,
+but x = z + r represents a negative integer. 2) z, r represent two
+negative integers, but x = z + r represents a positive integer
+due to the implicit modular operation within F p .
+In the following subsection, we propose a novel truncation
+protocol that narrows the gap to just 1 bit. Concretely, the
+modified constraint z ∈ [0, (p − 1)/2] eliminates the "wrap
+around" event triggered by the first case, facilitating the detection and correction of the truncation errors of large magnitude.
+Further the truncation equation holds for any r (not just for
+uniform r with high probability). This enables us to choose
+smaller p (say with 32-bit length), thereby improving computation and communication efficiency.
+
+3.2
+
+Truncation with Only 1-Bit Gap
+
+We introduce a novel truncation method in Theorem 3.2,
+which effectively reduces the size of the gap between the
+secret value and the actual modulus to just 1 bit. Notably, this
+gap size remains fixed and is independent of the correctness
+of the truncation result.
+Theorem 3.2. In the field F p where p = 2ℓ − 1, let z ∈
+[0, (p − 1)/2] and z can be divided into two field numbers
+x = z + r mod p and y = p − r such that x + y = z mod p
+where r ∈ F p can be any field element. Then we have
+Truncd (x) + Truncd (y) + δ(r, x) · (2ℓ−d − 1) ∈ Truncd (z) + E,
+where δ(r, x) = 1 if rmsb = 0 ∧ xmsb = 1, and 0 otherwise.
+Proof. For z, r ∈ F p , define z = z1 · 2d + z2 , we have
+Truncd (z) = ⌊z/2d ⌋ = z1 . Consider the following cases.
+Case 1: 0 ≤ r ≤ (p−1)/2, which means rmsb = 0. In this case,
+we define r = r1 ·2d +r2 , where 0 ≤ r2 < 2d . It is easy to know
+that, there exists some integers c ∈ {0, 1} and 0 ≤ ε ≤ 2d − 1
+such that r2 + z2 = c · 2d + ε. By definition, Truncd (y) = p −
+⌊r/2d ⌋ = p − r1 because (p − 1)/2 < y < p.
+Since 0 ≤ z ≤ (p − 1)/2, we have x = z + r = (z1 + r1 ) ·
+2d + (z2 + r2 ) ∈ F p . We further discuss the following two
+subcases.
+1. 0 ≤ x ≤ (p − 1)/2, which means xmsb = 0. In this case,
+we have
+
+Case 2: (p − 1)/2 < r ≤ p − 1, which means rmsb = 1. In
+this case, we have 0 < p − r ≤ (p − 1)/2. Define p − r =
+r̃1 · 2d + r̃2 , where 0 ≤ r̃2 < 2d . Therefore, Truncd (y) = ⌊(p −
+r)/2d ⌋ = r̃1 . We further discuss the following two subcases.
+1. 0 ≤ x ≤ (p − 1)/2, which means xmsb = 0. In this case,
+define c̃ ∈ {0, 1} such that c̃ = 0 if r̃2 ≤ z2 , and c̃ = 1
+otherwise. We have x = z + r − p ∈ F p , and
+Truncd (x) = ⌊(z + r − p)/2d ⌋
+= ⌊((z1 − r̃1 ) · 2d + (z2 − r̃2 ))/2d ⌋
+= ⌊((z1 − r̃1 − c̃) · 2d + (z2 − r̃2 + c̃ · 2d ))/2d ⌋
+= z1 − r̃1 − c̃
+The last equation holds because 0 ≤ z2 − r̃2 + c̃ · 2d < 2d .
+Therefore, we have Truncd (x) + Truncd (y) = z1 − r̃1 −
+c̃ + r̃1 = Truncd (z) − c̃.
+2. (p − 1)/2 < x ≤ p − 1, which means xmsb = 1. In this
+case, define ĉ ∈ {0, 1} such that ĉ = 0 if z2 ≤ r̃2 , and
+ĉ = 1 otherwise. We have x = z + r ∈ F p , and
+Truncd (x) = p − ⌊(p − z − r)/2d ⌋
+= p − ⌊(r̃1 · 2d + r̃2 − z1 · 2d − z2 )/2d ⌋
+= p − ⌊((r̃1 − z1 − ĉ) · 2d + (r̃2 − z2 + ĉ · 2d ))/2d ⌋
+= p − r̃1 + z1 + ĉ
+
+Truncd (x) = ⌊(z + r)/2d ⌋
+= ⌊r1 + z1 + (r2 + z2 )/2d ⌋
+d
+
+= r1 + z1 + ⌊(r2 + z2 )/2 ⌋ = r1 + z1 + c
+Therefore, we have Truncd (x) + Truncd (y) = r1 + z1 +
+c + (p − r1 ) = z1 + c = Truncd (z) + c ∈ F p .
+2. (p − 1)/2 < x ≤ p − 1, which means xmsb = 1. In this
+case, we have
+Truncd (x)
+
+The last equation holds because 0 ≤ r̃2 − z2 + ĉ · 2d < 2d .
+Therefore, we have Truncd (x) + Truncd (y) = p − r̃1 +
+z1 + ĉ + r̃1 = Truncd (z) + ĉ ∈ F p .
+This concludes the proof.
+It is worth noting that Theorem 3.2 can be extended to
+a power-of-two ring Z2ℓ in a natural way by replacing the
+Mersenne prime p with 2ℓ . It allows the truncation protocol
+of [12, 20] in Z2ℓ to be realized in a simpler manner.
+
+= p − ⌊(p − (z + r))/2d ⌋
+= p − ⌊(p − (z1 · 2d + r1 · 2d + z2 + r2 ))/2d ⌋
+= p − ⌊(2ℓ − 1 − (z1 + r1 ) · 2d − (z2 + r2 ))/2d ⌋
+j 2ℓ − (z + r + c + 1) · 2d + (2d − 1 − ε) k
+1
+1
+= p−
+2d
+j 2d − 1 − ε k
+= p − (2ℓ−d − 1 − (z1 + r1 + c)) −
+2d
+ℓ−d
+= p − (2 − 1) + (z1 + r1 + c)
+The last equation holds because 0 ≤ 2d − 1 − ε < 2d .
+Therefore, we have Truncd (x) + Truncd (y) + (2ℓ−d −
+1) = p + (z1 + r1 + c) + p − r1 = z1 + c = Truncd (z) +
+c ∈ Fp.
+
+Dealing with Negative Integers. Theorem 3.2 imposes the
+contraint z ∈ [0, (p − 1)/2] on the truncated value z. In fact,
+it is possible to support truncation on negative integers. The
+following Corollary 3.3 shows how to handle field elements
+that represent negative integers.
+Corollary
+In the field F p where p = 2ℓ − 1, let a ∈
+ ℓ−2  3.3.
+
+0, 2
+∪ p − 2ℓ−2 , p and b = a + 2ℓ−2 such that b ∈
+[0, (p − 1)/2]. We have Truncd (b) − 2ℓ−d−2 ∈ Truncd (a) + E.
+Proof. Let z = b, r = −2ℓ−2 and x = z + r = a. According to Theorem 3.2, we have Truncd (a) + Truncd (2ℓ−2 ) ∈
+Truncd (b) + E, because rmsb = 1. The proof follows since
+Truncd (2ℓ−2 ) = 2ℓ−d−2 .
+
+Protocol 3.1. ΠTrunc (Newly added!)
+Input: [a] p where a ∈ [−2ℓ−2 , 2ℓ−2 ).
+Output: [ f ] p ∈ [Truncd (a)] p + 2E.
+Common Randomness: ([r] p , [r]B ) ← FSolvedBits .
+1. [rmsb ] p ← [rℓ−1 ] p
+ℓ−1 i−d
+i
+2. [r′ ] p ← ∑i=d
+2 · [ri ] p + ∑ℓ−1
+i=ℓ−d 2 · [rmsb ] p
+
+3. [b] p ← [a] p + 2ℓ−2 such that b ∈ [0, (p − 1)/2]
+4. ⟨c⟩ p ← [b] p + [r] p
+5. c ← ΠReveal ([c] p ), and compute Truncd (c) and cmsb
+6. [e] p ← (1 − [rmsb ] p ) · cmsb
+7. [ f ] p ← Truncd (c) − [r′ ] p + [e] p · (2ℓ−d − 1)
+8. Output [ f ] p − 2ℓ−d−2
+As a result, we are able
+ to perform
+  truncation operation over
+a signed integer a ∈ 0, 2ℓ−2 ∪ p − 2ℓ−2 , p , described in
+Protocol ΠTrunc . Note that [rmsb ] p and [r′ ] p computed in Step 1
+and Step 2 can be generated in the preprocessing phase. More
+generally, we can think of ([r′ ] p , [r] p , [rmsb ] p ) as a random
+truncation triple consumed for every pure truncation operation
+over secret integers.
+Theorem 3.4. ΠTrunc securely realizes FTrunc in the
+FSolvedBits -hybrid model with abort, in the presence of a fully
+semi-honest adversary controlling t corrupted parties.
+Proof. The correctness follows immediately from Theorem
+3.2 and Corollary 3.3. Step 3 and Step 8 are applying Corollary 3.3 to a, then one gets Truncd (a) ∈ Truncd (b) − 2ℓ−d−2 +
+E. Steps 4 - 7 are applying Theorem 3.2 to b under the
+condition of b = a + 2ℓ−2 ∈ [0, (p − 1)/2], then it holds that
+Truncd (b) ∈ Truncd (b + r) − Truncd (r) + δ(r, b + r) · (2ℓ−d −
+1) + E for some random r, where b + r can be revealed as c in
+Step 5 and δ(r, b + r) can be evaluated locally as e in Step 6.
+As for privacy, note that the only leaked information is c =
+b + r in Step 5, where b is relevant to a. Since r is assumed to
+be a uniformly random, unknown value from F p , independent
+of a and b, it follows that c is uniformly random in F p and
+leaks no information about a.
+
+3.3
+
+Fixed-Point Multiplication
+
+We further extend the truncation process above to build a
+1-round fixed-point multiplication protocol, as described in
+Protocol ΠFixed-Mult . Assuming we have another kind of random truncation triple ([r′ ] p , ⟨r⟩ p , [rmsb ] p ) where r is assumed
+a uniformly random value in F p and r′ = Truncd (r), we can
+realize it with the same online complexity as DN multiplication. Note that the second component is a degree-2t sharing.
+We defer the detailed protocol ΠTrunc-Triple of generating such
+a random truncation triple to Section 3.4.
+
+Protocol 3.2. ΠFixed-Mult
+Input: [a] p and [b] p .
+Output: [y] p ∈ [Truncd (a · b)] p + 2E.
+Common Randomness: A random truncation
+triple ([r′ ] p , ⟨r⟩ p , [rmsb ] p ) ←FTrunc-Triple such that
+r′ = Truncd (r) ∈ F p and rmsb ∈ {0, 1} is the MSB of r.
+1. ⟨c⟩ p ← [a] p · [b] p + ⟨r⟩ p + 2ℓ−2
+2. c ← ΠReveal (⟨c⟩ p ), and compute Truncd (c) and cmsb
+3. [e] p ← (1 − [rmsb ] p ) · cmsb
+4. [ f ] p ← Truncd (c) − [r′ ] p + [e] p · (2ℓ−d − 1) − 2ℓ−d−2
+5. Output [ f ] p
+Before digging into the fixed-point multiplication protocol,
+it is necessary to discuss the translation from a fixed-point
+number to a field element. Considering a fixed-point number
+x in which the bit length is ℓ and the size of the fractioanl
+i−d where x is the i-th bit
+part is d such that x = ∑ℓ−1
+i
+i=0 xi · 2
+of x, we can represent x with a corresponding field element
+by computing a = x · 2d ∈ F p . Similarly, we can represent a
+fixed-point number y with b = y · 2d ∈ F p . Then multiplying
+a and b yields ab = xy · 22d after which a truncation operation
+is required to obtain Truncd (ab) = xy · 2d which preserves the
+original fractional precision.
+Back to our fixed-point multiplication protocol described in
+Protocol ΠFixed-Mult , the inputs are [a] p and [b] p representing
+two fixed-point numbers. In the online phase, only Step 2
+requires communication of 2 field elements per party, which is
+the same as DN multiplication. Hence, the online complexity
+is exactly 1 round with 2 field elements per party. The random
+truncation triple can be generated in the preprocessing phase,
+with complexity of 2 rounds and 3ℓ field elements per party
+(deferred to be described in Section 3.4).
+Theorem 3.5. ΠFixed-Mult securely realizes FFixed-Mult in the
+FTrunc-Triple -hybrid model with abort, in the presence of a fully
+semi-honest adversary controlling t corrupted parties.
+Proof. The correctness can be proved similarly as Theorem
+3.4 where ab is the value to be truncated. As for privacy, the
+value c revealed in Step 2 leaks no information about a or b.
+The sharings [a] p and [b] p are degree-t sharings, so [a] p [b] p is
+a degree-2t sharing of ab. Therefore, ⟨c⟩ p = [a] p [b] p + ⟨r⟩ p +
+2ℓ−2 is a uniformly random degree-2t sharing of ab+r +2ℓ−2 ,
+as r is assumed to be uniformly random.
+
+3.4
+
+Generation of Random Truncation Triple
+
+In this section, we introduce a simple method to generate the
+random truncation triple ([r′ ] p , ⟨r⟩ p , [rmsb ] p ) consumed in the
+fixed-point multiplication protocol, where r ∈ F p is uniformly
+random, r′ = Truncd (r) ∈ F p and rmsb is the MSB of r.
+
+Protocol 3.3. ΠTrunc-Triple
+
+Protocol 4.1. ΠPreOR
+
+Input: None.
+Output: ([r′ ] p , ⟨r⟩ p , [rmsb ] p ), where r′ = Truncd (r).
+
+Input: [a1 ] p , [a2 ] p , . . . , [aℓ ] p where ai ∈ {0, 1}.
+Output: All prefix ORs [a1 ] p , [a1 ∨ a2 ] p , . . . , [∨ℓi=1 ai ] p .
+
+1. ([r] p , [r]B ) ←FSolvedBits
+
+1. For i = 1, . . . , ℓ: compute [bi ] p ← 1 − [ai ] p .
+
+2. [rmsb ] p ← [rℓ−1 ] p .
+
+2. ([c1 ] p , . . . , [cℓ ] p ) ← FPreMult ([b1 ] p , . . . , [bℓ ] p )
+
+ℓ−1 i−d
+i
+· [ri ] p + ∑ℓ−1
+p ← ∑i=d 2
+i=ℓ−d 2 · [rmsb ] p
+ℓ−1 i
+4. ⟨r⟩ p ← ∑i=0
+2 · [ri ] p · [ri ] p + ⟨0⟩ p
+
+3. Output (1 − [c1 ] p , . . . , 1 − [cℓ ] p ).
+
+3. [r′ ]
+
+Protocol 4.2. ΠBitwise-LT
+As described in Protocol ΠTrunc-Triple , we utilize the functionality FSolvedBits to generate ℓ random bits {ri }ℓ−1
+i=0 and the
+i · r as the raw macorresponding random element r = ∑ℓ−1
+2
+i
+i=0
+terial of such a random truncation triple. Note that all the steps
+can be done in the preprocessing phase and the complexity
+of this protocol depends on the generation of the solved bits,
+that is 2 rounds and 3ℓ field elements per party.
+
+i
+Input: a and [b]B where a, b ∈ F p and b = ∑ℓ−1
+i=0 2 bi
+Output: [a < b] p
+
+Theorem 3.6. ΠTrunc-Triple securely realizes FTrunc-Triple in
+the FSolvedBits - hybrid model with abort, in the presence of a
+fully semi-honest adversary controlling t corrupted parties.
+
+5. Set [ei ] p = [di − di+1 ] p where [eℓ−1 ] p = [dℓ−1 ] p
+
+Proof. The correctness of Step 3 follows directly from Theorem 3.1 which tells us that the truncation operation can be
+done at bit-level, i.e. shift the bits of r down by d positions
+and fill the top d bits with the MSB of r. In Step 4, it holds
+i
+that r = ∑ℓ−1
+i=0 2 · ri · ri since ri ∈ {0, 1}. Note that we use
+the pseudo-random sharing of zero (PRZS [11]) technique
+to randomize the polynomial coefficients of ⟨r⟩ p where the
+pseudo-random degree-2t sharing ⟨0⟩ p can be generated by
+PRG without communication.
+The privacy follows from the fact that we only invoke the
+private ideal functionality FSolvedBits .
+
+4
+
+Improved Bitwise Primitives
+
+Before introducing the protocols of building blocks in privacypreserving machine learning, we first propose our novel
+method to compute the prefix-ORs, which is the core and
+bottleneck to realizing the bitwise less-than functionality.
+
+4.1
+
+Prefix-ORs Protocol
+
+In this section, we consider prefix-ORs, which computes b j =
+Wj
+i=1 ai for j = 1, . . . , ℓ where ai ∈ {0, 1}. We propose a simple and efficient method to securely compute prefix-OR, as
+described in Protocol ΠPreOR . Intuitively, instead of computVj
+ing prefix-ORs, we compute a dual problem. I.e., b j = i=1 āi
+for j = 1, . . . , ℓ.
+Note that this protocol only composes one invocation of
+ΠPreMult while other steps can be done locally. Hence, the
+online complexity is 1 round with 2ℓ field elements per party
+
+1. Let a0 , ..., aℓ−1 be the decomposed bits of a.
+2. Set ai = 1 − ai and bi = 1 − [bi ] p for 0 ≤ i ≤ ℓ − 1.
+3. For i = 0, . . . , ℓ − 1: compute [ci ] p = ai ⊕ [bi ] p .
+4. Run ([dℓ−1 ] p , . . . , [d0 ] p ) ←FPreOR ([cℓ−1 ] p , . . . , [c0 ] p )
+6. Output [a < b] p = ∑ℓ−1
+i=0 ai · [ei ] p .
+and the preprocessing complexity is 2 rounds with 7ℓ field
+elements per party.
+Theorem 4.1. ΠPreOR securely realizes FPreOR in the
+FPreMult -hybrid model with abort, in the presence of a fully
+semi-honest adversary controlling t corrupted parties.
+Wj
+
+Proof. The correctness holds because computing b j = i=1 ai
+Vj
+is equivalent to copmute b j = i=1 ai where ai denote the opposite bit of ai and so is b j . The privacy follows from the fact
+that this protocol only invokes the private ideal functionality
+FPreMult .
+
+4.2
+
+Bitwise Less Than Protocol
+
+Based on the above optimized Prefix-ORs protocol, we propose a round-efficient protocol to securely compute the bitwise less-than circuit. Specifically, given a public value a and
+shared bits [b]B , it outputs the share of (a < b). Thanks to
+the special form of Mersenne prime, in the online phase, the
+round complexity of the resulting protocol is just 1 round
+and the communication complexity is 2ℓ field elements per
+party. The preprocessing complexity is 2 rounds and 7ℓ field
+elements per party.
+Our protocol described in Protocol ΠBitwise-LT follows the
+method in [15], with the substitution of our optimized prefixOR subprotocol. In order to further reduce round complexity,
+we equivalently compute p − b < p − a, because p − a is
+public. A key observation is that given the bit representation
+of b = (b0 , . . . , bℓ−1 ), the bit representation of p − b is simply
+(1 − b0 , . . . , 1 − bℓ−1 ). This is because p is a Mersenne prime,
+and its bit representation is (1, . . . , 1).
+
+Theorem 4.2. ΠBitwise-LT securely realizes in the FPreOR hybrid model with abort, in the presence of a fully semi-honest
+adversary controlling t corrupted parties.
+Proof. Note that a, b are in the range of [0, p−1]. Considering
+a, b ∈ Z2ℓ where ℓ is the bit-length of p, define a = p − a and
+b = p − b. Observe that a < b if and only if b < a. One can
+compute [b]B = (1 − [b0 ] p , . . . , 1 − [bℓ−1 ] p ) as described in
+Step 2. This is because p = 2ℓ − 1 is in the form of all 1s.
+In the following steps, we compare b < a. We start from
+the most significant bit and look for the first bit where b and
+a differ. The XOR in Step 3 computes a bitwise sharing [c]B
+with ones on all positions where the bits differ. In Step 4, we
+invoke FPreOR to compute all prefix-ORs starting from MSB.
+This results in a string (dℓ−1 , . . . , d0 ) which contains a series
+of 0’s followed by 1’s starting at the first location where b and
+a differ, denoted by k. As computed in Step 5, we have ei = 1
+if i = k, and ei = 0 otherwise. In the special case b = a, all
+ei = 0 so the output is clear 0 as it should be. Otherwise, the
+output is ak that can be extracted with ek = 1.
+The privacy follows from the fact that the protocol only
+invokes the private ideal functionality FPreOR .
+
+5
+
+Building Blocks in Neural Network
+
+In this section, we first describe an efficient way to realize
+DReLU in a field over Mersenne prime. Then we use the
+state-of-the-art technique in [22] (CRYPTO 2021) to realize
+ReLU and Max (the unit operation in Maxpool) with the same
+round complexity as DReLU.
+
+5.1
+
+DReLU
+
+ReLU is a non-linear activation function that is commonly
+used in neural networks, which can solve the vanishing gradient problem. It can be represented as ReLU(x) = Max(0, x)
+and the derivative of ReLU (DReLU) is 1 for x ≥ 0 and 0 for
+x < 0. The DReLU function on the input of integers is defined
+as follows, and ReLU(x) = DReLU(x) · x.
+(
+1 ,x ≥ 0
+DReLU(x) =
+0 ,x < 0
+As described in Section 3.1, the most significant bit indicates
+the sign of the underlying integers represented in the field of
+Mersenne prime, which means DReLU is related to extracting
+the most significant of its representation in the field. It is
+observed in [44] that amsb = (2a)lsb if the multiplication is
+done over an odd ring. Hence, it holds that DReLU(a) =
+1 − (2a)lsb .
+As in [44], in order to compute [(2a)lsb ] p , we first mask 2a
+with a uniform r such that y = 2a + r and then reveal y. Note
+that ylsb = (2a)lsb ⊕ rlsb if y ≥ r, and ylsb = (2a)lsb ⊕ rlsb ⊕ 1
+otherwise. Given the bits sharing [r]B , we are able to decide
+
+Protocol 5.1. ΠDReLU
+Input: [a] p where a ∈ F p
+Output: [DReLU(a)] p
+Common Randomness: ([r] p , [r]B ) ←FSolvedBits .
+1. [y] p ← [2a + r] p and reveal y ← ΠReveal ([y] p ).
+2. [b] p ← ylsb ⊕ [r0 ] p .
+3. Run [c] p ← FBitwise-LT (y, [r]B )
+4. Output 1 − [b] p ⊕ [c] p
+whether 2a+r wraps around the field by ΠBitwise-LT described
+in Section 4.2. It holds that (2a)lsb = ylsb ⊕ rlsb ⊕ (y < r).
+The detailed protocol is described in Protocol ΠDReLU .
+Note that Step 4 can be realized by a DN multiplication. In
+the online phase, the complexity is 3 rounds with 4 + 2ℓ field
+elements per party (including approximately 2 for ΠReveal ,
+2ℓ for ΠBitwise-LT , and 2 for ΠMult ). As for the preprocessing
+phase, all random values can be generated in 2 rounds with
+1 + 10ℓ field elements per party (including 3ℓ for ΠSolvedBits ,
+7ℓ for ΠBitwise-LT , and 1 for ΠMult ).
+Theorem 5.1. ΠDReLU securely realizes FDReLU in the
+(FBitwise-LT , FMult )-hybrid model with abort, in the presence of
+a fully semi-honest adversary controlling t corrupted parties.
+Proof. The correctness follows easily from (2a)lsb = ylsb ⊕
+rlsb ⊕ (y < r). As for privacy, the revealed value y = 2a + r in
+Step 1 leaks no information about a, as r is uniformly random.
+Then the invocation of the ideal functionality FBitwise-LT is
+private.
+
+5.2
+
+Vectorized Two-Layer DN Multiplication
+
+In the context of neural networks, several operators are derived from the DReLU operation. One crucial observation is
+that the final step of the ΠDReLU protocol involves a multiplication. Additionally, other operators like ReLU and Maxpool
+can be seen as a combination of a two-layer multiplication,
+along with DReLU. In this subsection, we extend and simplify the techniques introduced in [22] to efficiently compute
+vectorized two-layer multiplication with a single round of
+online complexity.
+The vectorized two-layer multiplication protocol aims to
+produce the outputs {[xyzi ] p }m
+i=1 given the inputs [x] p , [y] p ,
+and {[zi ] p }m
+i=1 . The basic idea behind this protocol is as follows:
+1. In the standard DN multiplication protocol, when computing [xy] p , each party receives a value u = xy + r,
+where r is a random value.
+2. We can utilize the fact that 0 = zi + (−zi ), where zi is
+a known input value. If we can prepare Beaver triples
+
+Protocol 5.2. Π2L-DN
+
+Protocol 5.3. ΠReLU
+
+Input: [x] p , [y] p and {[zi ] p }m
+i=1
+Output: {[xyzi ] p }m
+i=1
+Common Randomness: m + 1 pairs of double sharings
+([r] p , ⟨r⟩ p ) and {([ri ] p , ⟨ri ⟩ p )}m
+i=1 .
+
+Input: [a] p where a ∈ F p
+Output: [ReLU(a)] p
+Common Randomness: ([r] p , [r]B ) ←FSolvedBits .
+
+1. Compute ⟨u⟩ p = [x] p · [y] p + ⟨r⟩ p .
+Compute ⟨ui ⟩ p = [r] p · [−zi ] p + ⟨ri ⟩ p .
+
+2. [b] p ← ylsb ⊕ [r0 ] p .
+
+2. Reveal u ← ΠReveal (⟨u⟩ p ) and ui ←ΠReveal (⟨ui ⟩ p ).
+3. Compute [ci ] p = ui − [ri ] p for 1 ≤ i ≤ m.
+4. For i = 1, . . . , m, locally compute:
+[xyzi ] p = u · [zi ] p + [ci ] p
+([r] p , [−zi ] p , [−rzi ] p ) for 1 ≤ i ≤ m, then it becomes possible to compute [xyzi ] p locally for each 1 ≤ i ≤ m.
+3. It is worth noting that computing [rzi ] p and [xy] p can
+be carried out in parallel, resulting in a 1-round online
+complexity.
+By following this approach, we can effectively compute the
+vectorized two-layer multiplication protocol with improved
+efficiency, reducing the online complexity to just one round
+with 2(m + 1) field elements per party. In the preprocessing
+phase, it generates m + 1 pairs of double sharings with communication of m + 1 field elements per party.
+Theorem 5.2. Π2L-DN securely realizes F2L-DN in the FMult hybrid model with abort, in the presence of a fully semi-honest
+adversary controlling t corrupted parties.
+Proof. According to the protocol, we have u = xy + r and
+ui = −rzi + ri for 1 ≤ i ≤ m. Therefore ci = −rzi for 1 ≤ i ≤
+m. Since u is public and u · zi + ci = (xy + r) · zi + ci = xyzi ,
+then Step 4 holds. The privacy follows from the fact that the
+protocol parallelly invokes the ideal functionality FMult .
+
+5.3
+
+ReLU
+
+We now use our vectorized two-layer multiplication protocol
+to realize ReLU. Note that ReLU(a) = DReLU(a) · a. The
+last step of DReLU(a) is 1 − b ⊕ c, which can be rewritten as
+1 − (b − c) · (b − c) for b, c ∈ {0, 1}. Therefore, ReLU(a) =
+a − a(b − c)(b − c), which could be realized using our twolayer multiplication protocol. The online complexity of this
+protocol is 3 rounds with 6 + 2ℓ field elements per party (including 2 for ΠReveal , 2ℓ for ΠBitwise-LT , and 4 for Π2L-DN
+where m = 1). Details are given in Protocol ΠReLU .
+As for the preprocessing phase, all random values can
+be generated in 2 rounds with 2 + 10ℓ field elements per
+party (including 3ℓ for ΠSolvedBits , 7ℓ for ΠBitwise-LT , and 2
+for Π2L-DN ).
+
+1. [y] p ← [2a + r] p and reveal y ← ΠReveal ([y] p ).
+3. Run [c] p ← FBitwise-LT (y, [r]B )
+4. Run [t] p ← F2L-DN ([b − c] p , [b − c] p , {[a] p }).
+5. Output [a] p − [t] p .
+Theorem 5.3. ΠReLU securely realizes FReLU in the
+(FBitwise-LT , F2L-DN )-hybrid model with abort, in the presence of a fully semi-honest adversary controlling t corrupted
+parties.
+Proof. As for the correctness, we have DReLU(a) = 1 − b ⊕
+c = 1 − (b − c) · (b − c) as described in Step 4 of ΠDReLU .
+Hence, it holds that ReLU(a) = DReLU(a) · a = a − (b − c) ·
+(b − c) · a. The correctness holds due to the correctness of
+ΠDReLU and Π2L-DN .
+As for privacy, the revealed value y = 2a + r in Step 1 leaks
+no information about a, as r is uniformly random. Then the
+following invocations of the ideal functionalities FBitwise-LT
+and F2L-DN are private.
+
+5.4
+
+Maxpool
+
+Maxpool is the key component in convolutional neural networks (CNN). When they operate on a vector of m elements,
+Maxpool returns the maximum element. Assume that m is the
+power of two for simplicity.
+The crucial operation is the comparison that can be computed with DReLU. It is easily to check that (a < b) =
+1 − DReLU(a − b). We can represent Max(a, b) as follows,
+that is b if a < b and a otherwise.
+Max(a, b) = DReLU(a − b) · a + [1 − DReLU(a − b)] · b
+= ReLU(a − b) + b
+Hence, it can be realized with the same complexity as ΠReLU .
+To find the maximum value of m elements, we first group
+the values into pairs and compare each pair to obtain the
+maximum of two, resulting in a vector of size m/2. This
+process can be repeated for log m times. Details are given in
+Protocol ΠMaxpool .
+It consists of log m rounds and m − 1 invocations of ReLU,
+which results in the online complexity of 3 log m rounds with
+(m − 1) · (6 + 2ℓ) field elements per party. As for the preprocessing phase, all random values can be generated in 2 rounds
+with (m − 1) · (2 + 10ℓ) field elements per party.
+
+Protocol 5.4. ΠMaxpool
+Input: [a1 ] p , . . . , [am ] p assuming m is powers of two.
+Output: [ak ] p where ak = Maxpool(a1 , . . . , am ).
+1. If m = 1: Output [a1 ] p
+2. Set a 1 ← ([a1 ] p , . . . , [am ] p ) and s ← m.
+3. For i = 1, . . . , log m :
+a. s ← s/2.
+b. Set ([b1 ] p , . . . , [bs ] p , [c1 ] p , . . . , [cs ] p ) ← a i .
+c. For j = 1, . . . , s: [e j ] p ← FReLU ([b j − c j ] p ) + c j .
+d. If s = 1: Output [e1 ] p .
+Else: Set a i+1 ← ([e1 ] p , . . . , [el ] p )
+Theorem 5.4. ΠMaxpool securely realizes FMaxpool in the
+FReLU -hybrid model with abort, in the presence of a fully
+semi-honest adversary controlling t corrupted parties.
+Proof. We have Max(b j , c j ) = ReLU(b j − c j ) + c j as computed in Step c. The process can be described in a binary tree
+of depth log m. Each node (except the leaf nodes) performs
+the Max operation on two child nodes and the root node outputs the maximum value. The privacy follows from the fact
+that the protocol only parallelly invokes FReLU .
+
+6
+
+Evaluations
+
+We first summarize the theoretical round and communication
+complexity in Table 1. The round complexity including the
+online and preprocessing phases is independent of ℓ. Then we
+evaluate the performance of oblivious inference on 3 networks
+using MNIST. A number of prior works [24, 31, 34, 35, 42,
+44, 45] evaluate over these networks.
+Rounds
+Communication
+Online Prep.
+Online
+Prep.
+ΠFixed-Mult 1
+2
+2
+3ℓ
+ΠPreMult
+1
+2
+2ℓ
+7ℓ
+ΠPreOR
+1
+2
+2ℓ
+7ℓ
+ΠBitwise-LT 1
+2
+2ℓ
+7ℓ
+ΠDReLU
+3
+2
+4 + 2ℓ
+1 + 10ℓ
+Π2L-DN
+1
+1
+2(m + 1)
+m+1
+ΠReLU
+3
+2
+6 + 2ℓ
+2 + 10ℓ
+ΠMaxpool 3 log m 2 (m − 1)(6 + 2ℓ) (m − 1)(2 + 10ℓ)
+
+ages the communication backend of MP-SPDZ [25] and the
+neural network frontend of Falcon [45]. We conducted performance evaluations for inference in various settings involving
+different numbers of parties, including 3-party computation
+(3PC), 7PC, 11PC, 21PC, 31PC, and 63PC. Our experiments
+were conducted on a total of 11 servers, each of which was
+equipped with an AMD EPYC 7B12 64-core processor with
+512GB of RAM.
+To simulate different network conditions, we utilized the
+Linux tc command. We considered two network settings: a
+Local Area Network (LAN) setting with a shared 15 Gbps
+connection and an average Round-Trip Time (RTT) latency of
+approximately 0.3ms, and a Wide Area Network (WAN) setting with an RTT latency of 40ms and a maximum throughput
+of 100Mbps. In order to ensure reliable results, we collected
+data from 10 independent runs for each data point in our experiments, and the reported results are presented as the average
+values obtained from these runs.
+In our implementation, all arithmetic operations on the
+shares are performed modulo p = 231 − 1, with a fixed-point
+precision of 12 bits. These operations are carried out on 32-bit
+integers. Thanks to the 1-bit gap of the truncation protocol, we
+can use such a small prime for the underlying protocol. This
+enables us to get improved communication and round complexity without losing accuracy. To accelerate matrix multiplication, we utilize the Eigen library [23], which supports faster
+computation on our custom field type. The computations are
+parallelized using 16 cores to optimize Eigen’s algorithm. Additionally, the servers employ hardware-accelerated AES-NI
+instructions for efficient random number generation. Furthermore, we incorporate an optimization technique inspired by
+the implementation of Falcon [45]. Specifically, we swap the
+order of the ReLU layer and the subsequent Maxpool layer
+to enhance performance. Overall, these optimizations and
+hardware acceleration techniques contribute to the efficiency
+and speed of our implementation.
+
+Protocols
+
+Table 1: Round and communication complexity of building blocks.
+Numbers of communication are reported in field elements per party.
+
+Networks and Datasets. We employ the widely used
+MNIST dataset [46], which consists of a collection of 28 × 28
+pixel images depicting handwritten numbers. The objective
+is to accurately predict the corresponding number for each
+image. We select three standard neural networks from the
+field of privacy-preserving machine learning. Network-A is a
+3-layer DNN network derived from SecureML [35]. NetworkB is a 3-layer CNN network derived from Chameleon [42].
+Network-C is a 4-layer CNN network derived from MiniONN
+[31]. For more specific information and details about these
+neural networks, please refer to Appendix E.
+
+6.2
+6.1
+
+Experimental Setup
+
+We have implemented this framework using approximately
+15.4k lines of code (LOC) in C++. Our implementation lever-
+
+Performance of Oblivious Inference
+
+Table 2 and Table 3 present the specific performance results
+for evaluating different networks in the LAN and WAN settings, respectively. Furthermore, Table 4 provides the commu-
+
+#PC
+3PC
+7PC
+11PC
+21PC
+31PC
+63PC
+
+Network-A
+Network-B
+Network-C
+Online Prep. Online Prep. Online Prep.
+0.006 0.006 0.007 0.02
+0.02 0.178
+0.01 0.008 0.01 0.027 0.03 0.254
+0.011 0.01 0.011 0.038 0.033 0.335
+0.008 0.017 0.01 0.059 0.035 0.508
+0.011 0.023 0.013 0.077 0.047 0.632
+0.024 0.048 0.025 0.149 0.096 1.208
+
+#PC
+3PC
+7PC
+11PC
+21PC
+31PC
+63PC
+
+Network-A
+Network-B
+Network-C
+Online Prep. Online Prep. Online Prep.
+0.047 0.319
+0.2
+1.34
+1.92 12.806
+0.061 0.403 0.257 1.69 2.466 16.154
+0.065 0.425 0.273 1.783 2.615 17.043
+0.068 0.444 0.286 1.86 2.738 17.776
+0.069 0.45 0.291 1.887 2.782 18.035
+0.07 0.457 0.296 1.916 2.829 18.309
+
+Table 2: Online and preprocessing time for oblivious inference in
+
+Table 4: Online and preprocessing communication size per party of
+
+the LAN setting. All numbers are reported in seconds.
+
+oblivious inference. All numbers are reported in MB.
+
+#PC
+3PC
+7PC
+11PC
+21PC
+31PC
+63PC
+
+Network-A
+Network-B
+Network-C
+Online Prep. Online Prep. Online Prep.
+0.37 0.244 0.387 0.392 1.222 2.189
+0.373 0.213 0.404 0.576 1.327 2.768
+0.376 0.216 0.41 0.414 1.346 2.777
+0.386 0.233 0.444 0.57 1.718 4.812
+0.398 0.268 0.478 0.631 2.027 6.65
+0.478 0.52
+0.68 1.885 4.573 10.69
+
+Table 3: Online and preprocessing time for oblivious inference in
+the WAN setting. All numbers are reported in seconds.
+
+nication size observed during the evaluation of these networks
+with varying numbers of parties. The performance evaluation
+focuses on a single batch inference.
+For 63 parties, the online (preprocessing) running time of
+evaluating Network C is only 0.1(1.21) seconds and 4.6(10.7)
+seconds in the LAN and WAN setting, respectively. The online and preprocessing communication cost of evaluating Network C are 2.82 MB and 18.3 MB respectively. As far as
+we know, our protocol is the first fully implemented PPML
+protocol that can support up to 63 parties.
+Analysis of the Online Performance. We have observed
+that in the LAN setting, the time required for computation is
+directly proportional to the number of parties involved. This
+is due to the fact that the party responsible for collecting
+shares of a degree-2t (or degree-t) sharing needs to perform
+the reconstruction of the secret and send it back to the other
+parties. As the number of shares to be collected increases, the
+computation cost also increases, thus impacting the overall
+inference performance.
+On the other hand, in the WAN setting, we have noticed
+that the online time remains relatively consistent across different numbers of parties. In this scenario, the round complexity
+becomes the dominant factor affecting the inference performance rather than the computation cost.
+Comparison to Prior Work In the honest-majority setting,
+most PPML protocols primarily focus on the three-party case
+[8, 12, 29, 34, 39, 44, 45] and the four-party case [4, 9, 13, 28].
+These protocols often face challenges when extending to a
+larger number of parties. While general MPC protocols like
+
+Network-A
+LAN WAN
+Falcon[45] 0.009 0.532
+This
+0.006 0.37
+Times
+1.5× 1.4×
+Protocol
+
+Network-B
+LAN WAN
+0.011 0.535
+0.007 0.387
+1.6× 1.4×
+
+Network-C
+LAN WAN
+0.04 2.171
+0.02 1.222
+1.9× 1.8×
+
+Table 5: Comparing the performance of Falcon and our protocol.
+[10, 14, 16, 18, 26, 27] can be used, they are not scalable,
+particularly in the context of PPML with a large number of
+parties.
+Our protocol is specifically designed to support a large
+number of parties in PPML. The observed performance aligns
+with our expectations. Additionally, we compare our protocol with the state-of-the-art three-party protocol Falcon [45],
+which focuses on power-of-2-rings case. It indeed performs
+truncation as ABY3 [34], inheriting the large gap. For comparison protocol, the main idea of comparison is to indicate
+the first bit (from the MSB) where two numbers differ. Falcon
+uses a more indirect and complicated way to determine it
+with logarithmic rounds while we use our improved primitive
+(prefix-OR) with 1 round. Roughly speaking, the underlying
+reason is that some primitives are much more costly in the
+ring setting than in the field setting, e.g. prefix-multiplication.
+In Table 5, we present a performance comparison between Falcon and our protocol for different networks in semihonest honest-majority settings. It is worth mentioning that
+the source codes of Falcon [45] do not contain the preprocessing. In the online phase, our protocol demonstrates a speed
+improvement of 1.5× to 1.9× compared to Falcon in the LAN
+setting and 1.4× to 1.8× in the WAN setting.
+
+Acknowledgments
+Yu Yu was supported by the National Natural Science
+Foundation of China (Grant Nos.62125204, 92270201 and
+61872236). This work has been supported by the New Cornerstone Science Foundation through the XPLORER PRIZE.
+Fengrun Liu would like to thank Junming Ma from the SPU
+team in Ant Group for his support.
+
+References
+[1] Judit Bar-Ilan and Donald Beaver. Non-cryptographic
+fault-tolerant computing in constant number of rounds
+of interaction. In Proceedings of the eighth annual
+ACM Symposium on Principles of distributed computing,
+pages 201–209, 1989.
+[2] Donald Beaver. Efficient multiparty protocols using circuit randomization. In Advances in Cryptology—CRYPTO’91: Proceedings 11, pages 420–432.
+Springer, 1992.
+[3] Michael Ben-Or, Shafi Goldwasser, and Avi Wigderson. Completeness theorems for non-cryptographic
+fault-tolerant distributed computation. In Providing
+Sound Foundations for Cryptography: On the Work
+of Shafi Goldwasser and Silvio Micali, pages 351–371.
+2019.
+[4] Megha Byali, Harsh Chaudhari, Arpita Patra, and Ajith
+Suresh. Flash: fast and robust framework for privacypreserving machine learning. Cryptology ePrint Archive,
+2019.
+[5] Ran Canetti. Universally composable security: A new
+paradigm for cryptographic protocols. In Proceedings
+42nd IEEE Symposium on Foundations of Computer
+Science, pages 136–145. IEEE, 2001.
+[6] Octavian Catrina and Sebastiaan De Hoogh. Improved
+primitives for secure multiparty integer computation. In
+Security and Cryptography for Networks: 7th International Conference, SCN 2010, Amalfi, Italy, September
+13-15, 2010. Proceedings 7, pages 182–199. Springer,
+2010.
+[7] Nishanth Chandran, Divya Gupta, Aseem Rastogi,
+Rahul Sharma, and Shardul Tripathi. Ezpc: Programmable and efficient secure two-party computation
+for machine learning. In 2019 IEEE European Symposium on Security and Privacy (EuroS&P), pages 496–
+511. IEEE, 2019.
+[8] Harsh Chaudhari, Ashish Choudhury, Arpita Patra, and
+Ajith Suresh. Astra: High throughput 3pc over rings with
+application to secure prediction. In Proceedings of the
+2019 ACM SIGSAC Conference on Cloud Computing
+Security Workshop, pages 81–92, 2019.
+[9] Harsh Chaudhari, Rahul Rachuri, and Ajith Suresh. Trident: Efficient 4pc framework for privacy preserving
+machine learning. arXiv preprint arXiv:1912.02631,
+2019.
+[10] Ronald Cramer, Ivan Damgård, Daniel Escudero, Peter
+Scholl, and Chaoping Xing. Spdz2k: Efficient mpc mod
+
+2k for dishonest majority. In Advances in Cryptology–
+CRYPTO 2018: 38th Annual International Cryptology
+Conference, Santa Barbara, CA, USA, August 19–23,
+2018, Proceedings, Part II, pages 769–798. Springer,
+2018.
+[11] Ronald Cramer, Ivan Damgård, and Yuval Ishai. Share
+conversion, pseudorandom secret-sharing and applications to secure computation. In Theory of Cryptography:
+Second Theory of Cryptography Conference, TCC 2005,
+Cambridge, MA, USA, February 10-12, 2005. Proceedings 2, pages 342–362. Springer, 2005.
+[12] Anders Dalskov, Daniel Escudero, and Marcel Keller.
+Secure evaluation of quantized neural networks. Proceedings on Privacy Enhancing Technologies, 4:355–
+375, 2020.
+[13] Anders PK Dalskov, Daniel Escudero, and Marcel Keller.
+Fantastic four: Honest-majority four-party secure computation with malicious security. In USENIX Security
+Symposium, pages 2183–2200, 2021.
+[14] Ivan Damgård, Daniel Escudero, Tore Frederiksen, Marcel Keller, Peter Scholl, and Nikolaj Volgushev. New
+primitives for actively-secure mpc over rings with applications to private machine learning. In 2019 IEEE
+Symposium on Security and Privacy (SP), pages 1102–
+1120. IEEE, 2019.
+[15] Ivan Damgård, Matthias Fitzi, Eike Kiltz, Jesper Buus
+Nielsen, and Tomas Toft. Unconditionally secure
+constant-rounds multi-party computation for equality,
+comparison, bits and exponentiation. In Theory of Cryptography: Third Theory of Cryptography Conference,
+TCC 2006, New York, NY, USA, March 4-7, 2006. Proceedings 3, pages 285–304. Springer, 2006.
+[16] Ivan Damgård, Marcel Keller, Enrique Larraia, Valerio Pastro, Peter Scholl, and Nigel P Smart. Practical
+covertly secure mpc for dishonest majority–or: breaking
+the spdz limits. In Computer Security–ESORICS 2013:
+18th European Symposium on Research in Computer Security, Egham, UK, September 9-13, 2013. Proceedings
+18, pages 1–18. Springer, 2013.
+[17] Ivan Damgård and Jesper Buus Nielsen. Scalable and
+unconditionally secure multiparty computation. In Advances in Cryptology-CRYPTO 2007: 27th Annual International Cryptology Conference, Santa Barbara, CA,
+USA, August 19-23, 2007. Proceedings 27, pages 572–
+590. Springer, 2007.
+[18] Ivan Damgård, Valerio Pastro, Nigel Smart, and Sarah
+Zakarias. Multiparty computation from somewhat homomorphic encryption. In Advances in Cryptology–
+CRYPTO 2012: 32nd Annual Cryptology Conference,
+
+Santa Barbara, CA, USA, August 19-23, 2012. Proceedings, pages 643–662. Springer, 2012.
+[19] Ivan Damgård and Rune Thorbek. Non-interactive
+proofs for integer multiplication. In Advances in
+Cryptology-EUROCRYPT 2007: 26th Annual International Conference on the Theory and Applications of
+Cryptographic Techniques, Barcelona, Spain, May 2024, 2007. Proceedings 26, pages 412–429. Springer,
+2007.
+[20] Daniel Escudero, Satrajit Ghosh, Marcel Keller, Rahul
+Rachuri, and Peter Scholl. Improved primitives for mpc
+over mixed arithmetic-binary circuits. In Advances in
+Cryptology–CRYPTO 2020: 40th Annual International
+Cryptology Conference, CRYPTO 2020, Santa Barbara,
+CA, USA, August 17–21, 2020, Proceedings, Part II 40,
+pages 823–852. Springer, 2020.
+[21] Oded Goldreich, Silvio Micali, and Avi Wigderson. How
+to play any mental game, or a completeness theorem for
+protocols with honest majority. In Providing Sound
+Foundations for Cryptography: On the Work of Shafi
+Goldwasser and Silvio Micali, pages 307–328. 2019.
+[22] Vipul Goyal, Hanjun Li, Rafail Ostrovsky, Antigoni
+Polychroniadou, and Yifan Song. Atlas: Efficient and
+scalable mpc in the honest majority setting. In Advances in Cryptology–CRYPTO 2021: 41st Annual International Cryptology Conference, CRYPTO 2021, Virtual Event, August 16–20, 2021, Proceedings, Part II 41,
+pages 244–274. Springer, 2021.
+[23] Gaël Guennebaud, Benoît Jacob, et al.
+http://eigen.tuxfamily.org, 2010.
+
+Eigen v3.
+
+[24] Chiraag Juvekar, Vinod Vaikuntanathan, and Anantha
+Chandrakasan. {GAZELLE}: A low latency framework
+for secure neural network inference. In 27th {USENIX}
+Security Symposium ({USENIX} Security 18), pages
+1651–1669, 2018.
+[25] Marcel Keller. MP-SPDZ: A versatile framework for
+multi-party computation. In Proceedings of the 2020
+ACM SIGSAC Conference on Computer and Communications Security, 2020.
+[26] Marcel Keller, Emmanuela Orsini, and Peter Scholl.
+Mascot: faster malicious arithmetic secure computation
+with oblivious transfer. In Proceedings of the 2016 ACM
+SIGSAC Conference on Computer and Communications
+Security, pages 830–842, 2016.
+[27] Marcel Keller, Valerio Pastro, and Dragos Rotaru. Overdrive: making spdz great again. In Advances in
+Cryptology–EUROCRYPT 2018: 37th Annual International Conference on the Theory and Applications of
+
+Cryptographic Techniques, Tel Aviv, Israel, April 29May 3, 2018 Proceedings, Part III, pages 158–189.
+Springer, 2018.
+[28] Nishat Koti, Mahak Pancholi, Arpita Patra, and Ajith
+Suresh. Swift: Super-fast and robust privacy-preserving
+machine learning. In USENIX Security Symposium,
+pages 2651–2668, 2021.
+[29] Nishant Kumar, Mayank Rathee, Nishanth Chandran,
+Divya Gupta, Aseem Rastogi, and Rahul Sharma. Cryptflow: Secure tensorflow inference. In 2020 IEEE Symposium on Security and Privacy (SP), pages 336–353.
+IEEE, 2020.
+[30] Yehuda Lindell and Ariel Nof. A framework for constructing fast mpc over arithmetic circuits with malicious
+adversaries and an honest-majority. In Proceedings of
+the 2017 ACM SIGSAC Conference on Computer and
+Communications Security, pages 259–276, 2017.
+[31] Jian Liu, Mika Juuti, Yao Lu, and Nadarajah Asokan.
+Oblivious neural network predictions via minionn transformations. In Proceedings of the 2017 ACM SIGSAC
+conference on computer and communications security,
+pages 619–631, 2017.
+[32] Eleftheria Makri, Dragos Rotaru, Frederik Vercauteren,
+and Sameer Wagh. Rabbit: Efficient comparison for
+secure multi-party computation. In Financial Cryptography and Data Security: 25th International Conference,
+FC 2021, Virtual Event, March 1–5, 2021, Revised Selected Papers, Part I, pages 249–270. Springer, 2021.
+[33] Pratyush Mishra, Ryan Lehmkuhl, Akshayaram Srinivasan, Wenting Zheng, and Raluca Ada Popa. Delphi: a cryptographic inference system for neural networks. In Proceedings of the 2020 Workshop on PrivacyPreserving Machine Learning in Practice, pages 27–30,
+2020.
+[34] Payman Mohassel and Peter Rindal. Aby3: A mixed
+protocol framework for machine learning. In Proceedings of the 2018 ACM SIGSAC conference on computer
+and communications security, pages 35–52, 2018.
+[35] Payman Mohassel and Yupeng Zhang. Secureml: A
+system for scalable privacy-preserving machine learning.
+In 2017 IEEE symposium on security and privacy (SP),
+pages 19–38. IEEE, 2017.
+[36] Takashi Nishide and Kazuo Ohta. Multiparty computation for interval, equality, and comparison without bitdecomposition protocol. In Public Key Cryptography–
+PKC 2007: 10th International Conference on Practice and Theory in Public-Key Cryptography Beijing,
+China, April 16-20, 2007. Proceedings 10, pages 343–
+360. Springer, 2007.
+
+[37] Peter Sebastian Nordholt and Meilof Veeningen. Minimising communication in honest-majority mpc by
+batchwise multiplication verification. In Applied Cryptography and Network Security: 16th International Conference, ACNS 2018, Leuven, Belgium, July 2-4, 2018,
+Proceedings 16, pages 321–339. Springer, 2018.
+
+A
+
+Protocol Hierachy
+
+An overview of the different protocols considered in this work
+is informally described in Figure 1.
+
+[38] Arpita Patra, Thomas Schneider, Ajith Suresh, and Hossein Yalame. Aby2. 0: Improved mixed-protocol secure
+two-party computation. In USENIX Security Symposium, pages 2165–2182, 2021.
+[39] Arpita Patra and Ajith Suresh. Blaze: blazing fast
+privacy-preserving machine learning. arXiv preprint
+arXiv:2005.09042, 2020.
+[40] Deevashwer Rathee, Mayank Rathee, Nishant Kumar,
+Nishanth Chandran, Divya Gupta, Aseem Rastogi, and
+Rahul Sharma. Cryptflow2: Practical 2-party secure
+inference. In Proceedings of the 2020 ACM SIGSAC
+Conference on Computer and Communications Security,
+pages 325–342, 2020.
+[41] M Sadegh Riazi, Mohammad Samragh, Hao Chen, Kim
+Laine, Kristin E Lauter, and Farinaz Koushanfar. Xonn:
+Xnor-based oblivious deep neural network inference. In
+USENIX Security Symposium, pages 1501–1518, 2019.
+
+Figure 1: Hierachy among the protocols considered in this work. An
+arrow pointing from A to B means that protocol B requires protocol
+A.
+
+Here we list the required randomness that can be generated
+in the preprocessing phase. These random materials are essentially derived from the basic random sharings and double
+random sharings in DN protocol (that are omitted here). For
+brevity, the notation r below denotes a uniformly random
+element in F p , so is ri .
+• Trunc-Triple: The truncation triple is in the form of
+([r′ ] p , [r] p , [rmsb ] p ) or ([r′ ] p , ⟨r⟩ p , [rmsb ] p ) where r′ =
+Truncd (r) and rmsb corresponds to the MSB of r.
+
+[42] M Sadegh Riazi, Christian Weinert, Oleksandr
+Tkachenko, Ebrahim M Songhori, Thomas Schneider,
+and Farinaz Koushanfar.
+Chameleon: A hybrid
+secure computation framework for machine learning
+applications. In Proceedings of the 2018 on Asia
+conference on computer and communications security,
+pages 707–721, 2018.
+
+• SolvedBits: This is a pair in the form of ([r] p , [r]B ).
+• CorrelatedPair: The correlated pairs are a sequential of
+random sharings {([ri ] p , [ri′ ] p )}ti=1 where r1′ = r1−1 and
+ri′ = ri−1 ri−1 for i > 1 such that ri Πij=1 ri′ = 1.
+• BeaverTriple: The beaver triple is in the form of
+([a] p , [b] p , [c] p ) such that c = a · b.
+
+[43] Adi Shamir. How to share a secret. Communications of
+the ACM, 22(11):612–613, 1979.
+
+B
+[44] Sameer Wagh, Divya Gupta, and Nishanth Chandran. Securenn: 3-party secure computation for neural network
+training. Proc. Priv. Enhancing Technol., 2019(3):26–
+49, 2019.
+[45] Sameer Wagh, Shruti Tople, Fabrice Benhamouda, Eyal
+Kushilevitz, Prateek Mittal, and Tal Rabin. Falcon:
+Honest-majority maliciously secure framework for private deep learning. Proceedings on Privacy Enhancing
+Technologies, 2021(1):188–208, 2021.
+[46] Christopher Burges Yann Lecun, Corinna Cortes. Mnist
+database. http://yann.lecun.com/exdb/mnist, 2017.
+[47] Andrew C Yao. Protocols for secure computations. In
+23rd annual symposium on foundations of computer
+science (sfcs 1982), pages 160–164. IEEE, 1982.
+
+Functionality Description
+Functionality B.1. FRand
+Input: The functionality receives no inputs.
+Output: Compute the following
+1. Randomly sample r ∈ F p .
+2. Distribute shares of [r] p to the parties.
+
+Functionality B.2. FDoubleRand
+Input: The functionality receives no inputs.
+Output: Compute the following
+1. Randomly sample r ∈ F p .
+2. Distribute shares of [r] p and ⟨r⟩ p to the parties.
+
+Functionality B.3. FMult
+
+Functionality B.8. FPreMult
+
+Input: The functionality receives inputs [a] p and [b] p .
+Output: Compute the following
+
+Input: The functionality receives inputs {[ai ] p }ti=1 .
+Output: Compute the following
+
+1. Reconstruct a and b to compute ab.
+
+1. Reconstruct a1 , . . . , at .
+
+2. Distribute shares of [ab] p to the parties.
+
+2. Compute all prefix products a1 , a1 · a2 , . . . , Πti=1 ai .
+3. Distribute the shares of these products to the parties.
+
+Functionality B.4. FSolvedBits
+Input: The functionality receives no inputs.
+Output: Compute the following
+1. Randomly sample r ∈ F p .
+2. Compute the decomposed bits (r0 , r1 , . . . , rℓ−1 ) such
+i
+that r = ∑ℓ−1
+i=0 ri · 2 .
+
+Functionality B.9. FMultPub
+Input: The functionality receives inputs [a] p and [b] p .
+Output: Compute the following
+1. Reconstruct a and b to compute ab.
+2. Send ab to the parties.
+
+3. Distribute the shares of [r] p and [r]B to the parties.
+Functionality B.10. FPreOR
+Functionality B.5. FTrunc-Triple
+Input: The functionality receives no inputs.
+Output: Compute the following
+1. Sample a random element r ∈ F p and compute r′ =
+Truncd (r) and rmsb .
+
+1. Reconstruct a1 , . . . , aℓ .
+
+2. Distribute the shares of this triple ([r′ ] p , [r] p , [rmsb ] p )
+to the parties.
+
+3. Distribute the shares of these prefix-ORs to the parties.
+
+Functionality B.6. FTrunc
+
+2. Compute all prefix-ORs a1 , a1 ∨ a2 , . . . , ∨ℓi=1 ai .
+
+Functionality B.11. FBitwise-LT
+
+Input: The functionality receives inputs [a] p .
+Output: Compute the following
+
+Input: The functionality receives inputs a and [b]B where
+a, b ∈ F p .
+Output: Compute the following
+
+1. Reconstruct a.
+
+1. Reconstruct b0 , . . . , bℓ−1 to compute b = ∑ℓi=0 2i · bi .
+
+2. Compute b = Truncd (a).
+
+2. Compute c = (a < b) where c ∈ {0, 1}.
+
+3. Distribute shares of [b] p and send back to the parties.
+
+3. Distribute the shares of [c] p to the parties.
+
+Functionality B.7. FFixed-Mult
+Input: The functionality receives inputs [a] p and [b] p .
+Output: Compute the following
+1. Reconstruct a and b.
+2. Compute c = ab and compute d = Truncd (c).
+3. Distribute shares of [d] p and send back to the parties.
+
+C
+
+Input: The functionality receives inputs [a1 ] p , . . . [aℓ ] p
+where ai ∈ {0, 1}.
+Output: Compute the following
+
+Security Proofs
+
+We only describe the simulation for protocol ΠFixed-Mult , and
+the simulation for protocol ΠTrunc is similar. The simulations
+for the remaining protocols are mostly simple compositions
+of local computations and invocations of ideal functionalities.
+
+Functionality B.12. FDReLU
+Input: The functionality receives inputs [a] p .
+Output: Compute the following
+1. Reconstruct a to compute b = DReLU(a).
+2. Distribute the shares of [b] p to the parties.
+
+We will construct a simulator S to simulate the behaviors
+of honest parties. In the beginning, S receives the input shares
+of [a] p and [b] p held by corrupted parties.
+When invoking FTrunc-Triple , S invokes the simulator of
+FTrunc-Triple and receives from the adversary the shares of
+([r′ ] p , ⟨r⟩ p , [rmsb ] p ) held by corrupted parties.
+
+Functionality B.13. F2L-DN
+Input: The functionality receives inputs [x] p , [y] p and
+{[z(i) ] p }m
+i=1 .
+Output: Compute the following
+(i) m
+1. Reconstruct x, y and {z(i) }m
+i=1 to compute {xyz }i=1 .
+
+2. For i = 1, . . . , m: Distribute the shares of [xyz(i) ] p to
+the parties.
+
+Functionality B.14. FReLU
+Input: The functionality receives inputs [a] p .
+Output: Compute the following
+
+D
+
+Simulate Multi-party Computation on Limited Servers
+
+We use 11 servers to simulate a range of parties. In the setting
+of 3PC, 7PC, and 11PC, a single party controls a single server.
+In the settings of 21PC, 31PC and 63PC, we run multi-parties
+on a single server simultaneously with different ports where
+we guarantee that the number of parties on different servers
+differs by up to one. We use the Linux tc command to set
+the latency and the bandwidth on both the Network Interface
+Controller (NIC) with regard to the IP address for parties on
+different servers and the local loopback NIC for parties on the
+same server, which ensures the ping-time and the throughput
+in each pair of parties is almost consistent.
+
+1. Reconstruct a to compute b = ReLU(a).
+
+E
+
+2. Distribute the shares of [b] p to the parties.
+
+Network-A Network-A is a 3-layer Deep Neural Network
+(DNN) from SecureML [35] which consists of 2 fully connected hidden layers with ReLU activations, each having 128
+nodes along with a 10 node output layer.
+
+Functionality B.15. FMaxpool
+Input: The functionality receives inputs [a1 ] p , . . . , [am ] p .
+Output: Compute the following
+1. Reconstruct a1 , . . . , am .
+2. Compute k = argmax{a1 , . . . , am }.
+3. Distribute the shares of [ak ] p to the parties.
+
+In Step 1, for each honest party, S samples a random element as its shares of ⟨ab + r + 2ℓ−2 ⟩ p . For each corrupted
+party, S computes its share of ⟨ab + r + 2ℓ−2 ⟩ p . In Step 2,
+depending on whether Ppking is a corrupted party, there are
+two cases:
+• If Ppking is an honest party, S uses these shares to reconstruct the secret c = ab + r + 2ℓ−2 , and sends c back to
+corrupted parties.
+• If Ppking is a corrupted party, S sends the shares of
+[ab + r + 2ℓ−2 ] p of honest parties to Ppking . Ppking also
+receives the shares from corrupted parties. Then
+Ppking can reconstruct c and send c back to corrupted
+parties.
+In the following steps, S respectively computes the shares
+of [e] p and [ f ] p held by corrupted parties. Note that S has
+computed the shares of [rmsb ] p and [r′ ] p held by corrupted
+parties when simulating FTrunc-Triple .
+In the real view, c is uniformly random since r is uniformly
+random. Hence, the view generated by the simulator S is
+indistinguishable from the real view underlying the security
+of FTrunc-Triple .
+
+Neural Networks
+
+Network-B Network-B is a 3-layer Convolutional Neural
+Network (CNN) derived from Chameleon [42] where the first
+layer is a 2-dimensional convolutional layer with a kernel of
+5 × 5, stride of 2 (without padding), and 5 output channels.
+The activation function next is ReLU. The size of the kernel
+is optimized to 2 × 2 in Falcon [45]. The second hidden layer
+is a fully connected layer from a vector of size 980 to a vector
+of size 100, followed by ReLU activations. The last layer is a
+10 node output layer from a vector of size 100 to a vector of
+size 10.
+Network-C Network-C is a 4-layer CNN selected from
+MiniONN [31] with 2 convolutional and 2 fully-connected
+layers. The first layer is a 2-dimensional convolutional layer
+with 1 input channel, 16 output channels and a 5 × 5 kernel
+of stride of 1 (without padding). The activation functions
+following is a 2 × 2 Maxpool of stride 2, followed by ReLU
+activations, where the order of these two activation functions
+is swapped to optimize runtimes in Falcon [45]. The second
+layer is a 2-dimensional convolutional layer with 16 input
+channels, 16 output channels and another 5×5 kernel of stride
+1 (without padding), followed by a 2 × 2 Maxpool of stride 2
+and ReLU once again as activation functions. The third layer
+is a fully connected layer from a vector of size 256 to a vector
+of size 100 with ReLU activations. The last layer is a 10 node
+output layer as well.
+
+

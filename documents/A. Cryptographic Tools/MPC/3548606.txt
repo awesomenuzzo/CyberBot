@@ -1,0 +1,1892 @@
+Fast Fully Secure Multi-Party Computation over Any Ring with
+Two-Thirds Honest Majority
+Anders Dalskov
+
+Daniel Escudero
+
+Ariel Nof
+
+Partisia
+Aarhus, Denmark
+anderspkd@fastmail.com
+
+J.P. Morgan AI Research
+New York, USA
+daniel.escudero@protonmail.com
+
+Technion
+Haifa, Israel
+ariel.nof@cs.technion.ac.il
+
+ABSTRACT
+
+In Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security (CCS ’22), November 7–11, 2022, Los Angeles, CA, USA. ACM,
+New York, NY, USA, 14 pages. https://doi.org/10.1145/3548606.3559389
+
+We introduce a new MPC protocol to securely compute any functionality over an arbitrary black-box finite ring (which may not be
+commutative), tolerating 𝑡 < 𝑛/3 active corruptions while guaranteeing output delivery (G.O.D.). Our protocol is based on replicated
+secret-sharing, whose share size is known to grow exponentially
+with the number of parties 𝑛. However, even though the internal
+storage and computation in our protocol remains exponential, the
+communication complexity of our protocol is constant, except for
+a light constant-round check that is performed at the end before
+revealing the output.
+Furthermore, the amortized communication complexity of our
+1
+protocol is not only constant, but very small: only 1 + 𝑡 −1
+𝑛 < 13
+ring elements per party, per multiplication gate over two rounds
+of interaction. This improves over the state-of-the art protocol
+in the same setting by Furukawa and Lindell (CCS 2019), which
+has a communication complexity of 2 23 field elements per party,
+per multiplication gate and while achieving fairness only. As an
+alternative, we also describe a variant of our protocol which has
+only one round of interaction per multiplication gate on average,
+and amortized communication cost of ≤ 1 12 ring elements per party
+on average for any natural circuit.
+Motivated by the fact that efficiency of distributed protocols are
+much more penalized by high communication complexity than local
+computation/storage, we perform a detailed analysis together with
+experiments in order to explore how large the number of parties
+can be, before the storage and computation overhead becomes
+prohibitive. Our results show that our techniques are viable even
+for a moderate number of parties (e.g., 𝑛 > 10).
+
+1
+
+INTRODUCTION
+
+Secure Multiparty computation (MPC) is a set of techniques that
+enables a group of mutually distrustful parties to securely compute
+a given function on private data, while revealing only the output
+of the function. MPC protocols provide a general-purpose tool for
+computing on sensitive data while eliminating single points of
+failure.
+Due to the strong guarantees that MPC protocols provide, together with the wide range of applications that they enable, several real-world problems where computation on sensitive data is
+required have been solved using MPC techniques. Practical applications have been found so far in key management, financial oversight
+[1], MPC secured database [11], market design [12], biomedical
+computations [9, 19] and even satellite collision detection [39].
+Since feasibility results for MPC were established in the 80s [8,
+18, 35, 46], the problem of constructing efficient protocols for secure
+computation has gained significant interest. Applications we see
+today are enabled thanks to a long line of works that have aimed
+at improving the efficiency of MPC protocols, as well as extending
+the theory of the field.
+It is well known that the efficiency, or even the feasibility of
+certain MPC protocols, depends heavily on the type of security
+that is desired. This can be described in different and orthogonal
+categories:
+Who can be corrupted? We assume that the adversary corrupts
+at most 𝑡 out of the 𝑛 participants.1 Ideally, no requirement
+besides 𝑡 < 𝑛 would be imposed. However, it turns out that, if
+we require the stronger condition of 𝑡 < 𝑛/2, or even 𝑡 < 𝑛/3,
+more efficient protocols with better security guarantees can
+be devised.
+How do the corrupt parties behave? If the corrupt parties follow the protocol specification then the corruption is said to
+be passive (or semi-honest). In contrast, under an active (or
+malicious) corruption, the parties are not required to adhere
+to the protocol, and they may deviate arbitrarily.
+What is the adversary’s computational power? Perfect security,
+which ensures that even a computationally unbounded adversary cannot learn anything about the honest parties’ inputs,
+is only achievable if 𝑡 < 𝑛/3. Statistical security allows a
+negligible probability of leakage, and is only achievable if
+
+CCS CONCEPTS
+• Security and privacy → Cryptography.
+
+KEYWORDS
+Multiparty Computation; Honest Majority; Robust Computation
+ACM Reference Format:
+Anders Dalskov, Daniel Escudero, and Ariel Nof. 2022. Fast Fully Secure
+Multi-Party Computation over Any Ring with Two-Thirds Honest Majority.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a
+fee. Request permissions from permissions@acm.org.
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+© 2022 Association for Computing Machinery.
+ACM ISBN 978-1-4503-9450-5/22/11. . . $15.00
+https://doi.org/10.1145/3548606.3559389
+
+1 The so-called generalized adversarial structures allow for a more fine-grained descrip-
+
+tion of the subsets of parties, but in this work we restrict to threshold adversarial
+structures, which are defined by a threshold 𝑡 .
+
+653
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+𝑡 < 𝑛/2. Finally, if 𝑡 < 𝑛 then the adversary has to be computationally bounded, as it must not be able to break certain
+hard computational problems.
+Is the adversary allowed to cause an abort? Finally, we can choose
+if the computation must be guaranteed to terminate, which
+is called full security, or if the adversary can cause an abort,
+perhaps learning the result of the computation before the
+honest parties do or causing a denial-of-service. The former is only possible if 𝑡 < 𝑛/2 given secure point-to-point
+channels and a broadcast primitive [45] (where the latter
+can be realized from a public-key infrastructure using digital
+signatures [31], or alternatively using only secure channels
+assuming 𝑡 < 𝑛/3 [8, 18]).
+
+Different combinations of the categories are either impossible, or
+lead to protocols with different level of efficiencies. For example, it
+is well known that working in the dishonest majority setting, where
+𝑡 < 𝑛, adds a considerable overhead, and requires use of relatively
+expensive public-key cryptography primitives such as oblivious
+transfer. Furthermore, full security, or even fairness, is generally not
+achievable in this setting. In contrast, protocols for honest majority
+(𝑡 < 𝑛/2) or two-thirds honest majority (𝑡 < 𝑛/3) do not need to
+make use of computationally expensive cryptography, and they can
+achieve the strongest notion of full security; this, of course, at the
+expense of tolerating a weaker adversary corrupting less parties.
+A good set of experimental results for different combinations
+of the categories above can be found in [27]. The main take-away
+lesson is that the efficiency of MPC protocols, plus the type of
+guarantees they can provide, depends heavily on different factors.
+For a practical deployment of MPC, it is necessary to look at the
+most realistic combination of the “parameters” above, in such a way
+that the resulting protocol is reasonably efficient and still secure for
+the application at hand. For example, although it may be reasonable
+to assume a passive adversary in a restricted set of settings, it is
+natural to desire security against active adversaries, given that there
+is no way to audit that a given participant of an MPC protocol is
+sending messages correctly, so this constitutes an easy way to cheat
+if there is enough motivation and profit from doing so.
+On the other hand, the bound 𝑡 on the number of corrupted parties is a less clear parameter to set. As mentioned before, the setting
+𝑡 < 𝑛 is ideal since it guarantees security for every single individual
+as long as it behaves honestly, but this might be too strong in some
+scenarios, especially when there is enough diversity among the
+participants and there is no strong reason to expect a large adversarial coalition to be formed. This, coupled with the inefficiency that
+protocols in this setting typically suffer from, leads us to naturally
+consider more lenient adversarial thresholds such as 𝑡 < 𝑛/2 or
+𝑡 < 𝑛/3 that enable much more efficient protocols. Furthermore,
+many applications benefit from—or outright require—full security,
+which is only achievable in these threshold regimes. For example
+applications related to Machine Learning, where the computation
+is very large and thus very costly to run; or applications related
+to voting where rerunning the computation is simply not possible.
+The observations above set the motivation for our work.
+
+1.1
+
+Our Contribution
+
+In this work, we consider the setting of 𝑡 < 𝑛/3 with active and
+full security. Although this adversarial threshold is lower than the
+weak honest-majority and dishonest-majority settings, extremely
+efficient protocols can be designed in this regime, having very simple design and a thin layer that adds full security. In this direction,
+we present a simple new MPC protocol to compute any arithmetic
+circuit with the following characteristics:
+• Full security against an active adversary corrupting at most 𝑡 <
+𝑛/3;2
+• Computation over any finite ring (even non-commutative ones);
+• Communication complexity of 𝑛 + 𝑡 − 1 ring elements in total
+per multiplication gate, plus a term which is independent of the
+number of multiplication gates. This is, the amortized communication cost is ≤ 1 13 ring elements per multiplication gate per
+party.
+• Statistical security, except for the use of a PRG to boost efficiency.
+Our protocol works by computing the circuit using a passive
+protocol which guarantees only privacy, and then verifying the
+correctness of the computation using a novel sub-protocol which
+incurs only constant communication cost (independent of the size
+of the computed circuit) and constant number of rounds. The only
+drawback of our protocol is that, due to the use of replicated secret
+sharing as the underlying secret sharing scheme, local storage and
+computation grows exponentially with the number of parties. However, since this does not affect communication of the underlying
+passive protocol, it is only for larger values of 𝑛 that this weakness
+starts to kick in. In Section 6 we assess experimentally the feasibility
+of our protocol for a reasonably large number of parties. We show
+that replicated secret sharing-based protocols are not restricted in
+practice to only a very small number of parties (such as 3 or 4), as
+traditionally believed. We remark that if one is willing to settle for
+security with abort only, then this restriction can be removed, as
+we use the properties of replicated secret sharing only to identify
+cheaters. When considering security-with-abort only our protocol
+can therefore work with Shamir’s secret sharing and achieve the
+same efficiency as the state-of-the-art protocol in this setting of
+Furukawa and Lindell [33]. However, unlike their work, we are able
+to augment our protocol to full security which is much stronger.
+Our basic protocol requires 2 rounds of interaction per multiplication gate. As an alternative, we present a variant of our protocol
+with only a single round per multiplication, at the expense of increasing the communication cost slightly. In particular, for “natural”
+circuits, where the gate can be divided into groups, where output
+wires from gates in one group only enters gates from the second
+group, the communication cost is ≤ 1.5 sent ring elements per
+multiplication gate for each party. This variant is described in the
+full version of the paper.
+Moreover, for 𝑛 = 4 and 𝑡 = 1, which is the base case of this
+setting, our protocol incurs communication of 1 ring element per
+party, distributed across two rounds. When using the variant with
+only one round of interaction, the cost increases to just 98 elements
+(for natural circuits as defined above). This improves upon the
+recent protocols that were designed only for this setting [28, 36, 41],
+2 Our protocol can be easily generalized to arbitrary Q3 adversarial structures.
+
+654
+
+Fully Secure Multi-Party Computation with Two-Thirds Honest Majority
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+which requires communication of 1.5 ring elements and a single
+online round of interaction, or the more recent work of [42], which
+uses 1 14 elements per party, also in one online round. Furthermore,
+our protocol enjoys a very simple design that generalizes to any
+number of parties beyond 𝑛 = 4.
+Finally, our protocol works over any ring (even non-commutative
+ones) in a black-box way. This is in stark contrast with essentially all
+prior work (we elaborate on this point in Section 1.2), which rely on
+rings that are commutative, or have “high invertibility”, like finite
+fields. As a result, our protocol can operate natively over relevant
+non-commutative rings such as matrix rings, which are widely used
+in settings like machine learning (e.g. neural networks, support
+vector machines, linear regression, etc.).3 In addition, commutative
+rings such as integers modulo 2𝑘 , which have received quite some
+attention recently [2, 3, 20, 24, 29, 44], are also encompassed by our
+protocol.
+
+1.2
+
+much more complicated and computationally expensive compared
+to our protocol which avoids this completely. Without full security,
+for example with security with abort, efficient protocols exist in
+the honest majority setting (e.g. [21] and [3]).
+We also point out that replicated secret-sharing for an arbitrary
+number of parties has been already used in works like [4]. However,
+in their protocol, communication per gate grows exponentially with
+the number of parties, whereas in our protocol the communication
+cost per gate is constant.
+Finally, the feasibility of computation over general rings was
+shown in [26]. The protocol from [6] was generalized to the ring
+of integers modulo 2𝑘 in [2]. Furthermore, the 4-party protocols of
+[28, 36, 41] also work over this ring. In contrast, the work of [33]
+focus on multiparty computation over finite fields. We are thus not
+aware of a concretely-efficient work4 in this setting for more than
+𝑛 = 4 that applies to general rings. More recently, [32] considers
+MPC for arbitrary circuits over black-box finite rings, which could
+be potentially non-commutative. However, their results are mostly
+of theoretical interest since, due to the lack of commutativity, the
+offline phase in their protocols results in a large overhead. Nevertheless, we remark that their local computation, unlike ours, is
+polynomial in the number of parties.
+
+Related Work
+
+The goal of achieving linear communication complexity (in the
+number of parties) and with prefect security when 𝑡 < 𝑛/3 was
+obtained in [6, 37]. The protocol of [6] was used in a more practical
+setting in [5] by settling for security with abort only. Later, this was
+improved by [33], leading to a computationally-secure protocol with
+fairness in which each party sends, on average, 2 23 field elements.
+As explained above, we improve over [33] by achieving full security.
+Several works have focused on achieving full security in the
+setting of 𝑛 = 4 and 𝑡 = 1 [28, 36, 41]. The state-of-the-art protocol
+by Koti et al. [42] requires sending 1.25 ring elements per multiplication per party in one online round, which we improve for any
+natural circuit. It should be noted that [42] also provide a protocol
+for 3-input multiplication gates with 3 ring element sent per party
+in one online round, which we did not consider in this work.
+In the setting of 𝑡 < 𝑛/2 recent breakthrough results have shown
+how to achieve full security with low communication. The protocol
+of [38] requires each party to send 5.5 field elements per multiplication with information-theoretic security, while the protocol
+of [16] reduces communication to 1.5 ring elements by allowing
+use of any PRG. For 𝑛 = 3 and 𝑡 = 1, communication can be further reduced to 1 ring elements as shown in [15]. While the later
+protocols achieve similar amortized communication as ours with
+a more powerful adversary, our protocol has several advantages
+over theirs. First, the additive overhead to achieve active security
+in these protocols is logarithmic in the size of the circuit while ours
+is constant. The same applies to the number of calls to an expensive
+broadcast channel which is logarithmic in the circuit’s size in these
+protocols and constant in ours. Furthermore,for the case of the ring
+Z2𝑘 , their protocol requires arithmetic over Galois ring extensions
+of very large degree (> 50), whose concrete efficiency is unclear
+(see for example [28]). The above is due to the fact that they rely on
+distributed zero-knowledge proofs [13], which we are able to avoid
+in our setting. Finally, achieving robustness in the setting of 𝑡 < 𝑛/2
+requires using authentication tags which makes these protocols
+
+2
+
+PRELIMINARIES
+
+Notation. Let 𝜅 be the security parameter and let 𝑛 be the number
+of parties. We denote the set of involved parties by P = {𝑃1, . . . , 𝑃𝑛 }.
+Let 𝑡 be an upper bound in the number of corrupted parties, and
+assume that 𝑡 < 𝑛/3. Many of our subprotocols will be presented
+with a threshold 𝑑 ≤ 𝑡, since, due to the player elimination framework, they may be executed with a smaller threshold than 𝑡. We
+use the notation [𝑛] for the set {1, . . . , 𝑛}.
+
+2.1
+
+Background in Ring Theory
+
+Let 𝑅 be any finite ring. We only assume procedures for adding and
+multiplying ring elements, as well as sampling uniformly random
+elements. A set 𝐴 ⊆ 𝑅 is called exceptional if, for all 𝑥, 𝑦 ∈ 𝐴 with
+𝑥 ≠ 𝑦, 𝑥 − 𝑦 is invertible.5
+For the rest of the paper, let A be the any of the largest exceptional subsets of 𝑅, and let 𝜔 𝑅 = |A|. We will need the following
+lemma in our protocol (the proof can be found in the full version):
+Lemma 1. Let 𝑎, 𝑏 ∈ 𝑅, with 𝑎 ≠ 0. Then: Pr
+
+$
+
+𝑥 ←A
+
+[𝑥 · 𝑎 + 𝑏 = 0] ≤
+
+1
+𝜔𝑅 .
+
+Observe that if 𝑅 is a field then we may take A = 𝑅, and therefore
+𝜔 𝑅 = |𝑅|. On the other hand, if 𝑅 is the ring of integers modulo 2𝑘 ,
+it can be shown that there are no exceptional sets of size 3 or more,
+so we may take A = {0, 1}, and hence 𝜔 𝑅 = 2.
+
+2.2
+
+MPC Security Definition
+
+In this work, we consider adversaries who can follow an arbitrary
+strategy to carry-out their attack. We use the standard ideal/real
+paradigm [34] in order to define security, where an execution in the
+
+3 Furthermore, for the particular case of matrix rings, our secret-sharing scheme enables
+4 By “concretely-efficient”, we mean protocols with low communication that use only
+
+local conversions between shared matrices and “entry-wise” sharings, which is essential
+for many applications like the ones described above, as they typically manipulate
+individual entries along with the matrix arithmetic. This is not possible for example
+with the work of [32].
+
+cheap symmetric crypto.
+5 In a finite non-commutative ring, 𝑎 is invertible if there exists 𝑏 such that 𝑎 · 𝑏 =
+𝑏 · 𝑎 = 1.
+
+655
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+• share(𝑥, 𝑑): To share a secret 𝑥 with threshold 𝑑, the dealer
+generates 𝜆 random 𝑥𝑇1 , . . . , 𝑥𝑇𝜆 ∈ 𝑅 under the constraint that
+𝑥 = 𝑥𝑇1 + · · · + 𝑥𝑇𝜆 . Then, the dealer hands 𝑥𝑇𝑗 to the parties in
+𝑇 𝑗 . The share 𝑥®𝑖 held by party 𝑃𝑖 is a tuple consisting of all 𝑥𝑇𝑗
+such that 𝑃𝑖 ∈ 𝑇 𝑗 . We say that J𝑥K𝑑 is the collection of all 𝑥®𝑖 s.
+• reconstruct(J𝑥K𝑑 , 𝑖): In this interactive procedure, the parties in
+each subset 𝑇 where |𝑇 | = 𝑛−𝑑 and 𝑃𝑖 ∉ 𝑇 , send all their shares to
+𝑃𝑖 . For each subset of parties 𝑇 holding a share 𝑥𝑇 , if 𝑃𝑖 received
+different values for 𝑥𝑇 , then
+∑︁ 𝑃𝑖 takes the majority value to be 𝑥𝑇 .
+Finally, 𝑃𝑖 sets 𝑥 =
+𝑥𝑇 .
+
+ideal world with a trusted party who computes the functionality for
+the parties is compared a real execution. Although our protocols can
+be computed with information-theoretic security, we use minimal
+computational assumptions to achieve better concrete efficiency.
+Thus, when we say that a protocol “computationally computes” an
+ideal functionality, this means that the output of the ideal execution
+with an ideal world simulator is computationally indistinguishable
+from the output of the real world execution. In some of our protocols, there is also a statistical error, which is independent of the
+computational security parameter. As in [33], we formalize security
+in this case by saying that the outputs of the two executions can be
+distinguished with probability of at most some negligible function
+in the security parameter, plus the statistical error.
+We prove the security of our protocols in a hybrid model, where
+parties run a protocol with real messages and also have access
+to a trusted party computing a subfunctionality for them. The
+modular sequential composition theorem of [17] states that one
+can replace the trusted party computing the subfunctionality with
+a real secure protocol computing the subfunctionality. When the
+subfunctionality is 𝑔, we say that the protocol works in the 𝑔-hybrid
+model.
+Universal Composability. Protocols that are proven secure
+in the universal composability framework have the property that
+they maintain their security when run in parallel and concurrently
+with other secure and insecure protocols. In [43], it was shown that
+any protocol that is proven secure with a black-box non-rewinding
+simulator and also has the property that the inputs of all parties
+are fixed before the execution begins (called input availability or
+start synchronization in [43]), is also secure under universal composability. Since the input availability property holds for all of our
+protocols and subprotocols, it is sufficient to prove security in the
+classic stand-alone setting and automatically derive universal composability from [43]. This also enables us to call the protocol and
+subprotocols that we use in parallel and concurrently (and not just
+sequentially), allowing us to achieve more efficient computation
+(i.e. by running many executions in parallel or running each layer
+of a circuit in parallel).
+
+𝑇 ⊆ P: |𝑇 |=𝑛−𝑑
+
+Secrecy of this scheme follows from the fact any set of 𝑑 corrupted parties miss one additive share (namely, the one indexed by
+their complement), and so the secret could be any value in the ring.
+Note that the sharing procedure described above implies that a
+corrupted dealer may cheat by sending different values to different
+parties in the same subset 𝑇 of parties. In this case, we say that the
+sharing is inconsistent. We formally define the notion of consistency
+in the following definition.
+Definition 2 (Consistency). We say that J𝑥K𝑑 is consistent if for
+each two honest parties 𝑃𝑖 and 𝑃𝑘 , for each 𝑇 ⊂ P, such that
+|𝑇 | = 𝑛 − 𝑑 and 𝑃𝑖 , 𝑃𝑘 ∈ 𝑇 , it holds that the same 𝑥𝑇 is held by both
+𝑃𝑖 and 𝑃𝑘 .
+Relying on the definition of consistency, we next prove that the
+reconstruct procedure defined above is robust, i.e., the receiving
+party will always obtain the correct secret.
+Claim 3. If J𝑥K𝑑 is consistent and 𝑑 < 𝑛3 , then reconstruct(J𝑥K𝑑 , 𝑖)
+ends with 𝑃𝑖 holding 𝑥, even in the presence of malicious adversaries
+controlling up to 𝑑 parties.
+Proof: In the procedure, 𝑃𝑖 receives from all parties in each subset
+𝑇 of 𝑛 − 𝑑 parties with 𝑃𝑖 ∉ 𝑇 , the share 𝑥𝑇 . Since 3𝑑 < 𝑛, we have
+that 𝑛 − 𝑑 ≥ 2𝑑 + 1. This implies that in each subset, there is a
+majority of honest parties. Since J𝑥K𝑑 is consistent, it means that
+all honest parties in each 𝑇 will send the same value, and so by
+taking the majority value, 𝑃𝑖 will obtain the correct share.
+
+2.2.1 Broadcast and Agreement. A protocol for Byzantine agreement takes a bit from all parties as an input, and let all honest
+parties reach a consensus in the presence of 𝑡 corrupted parties. If
+all honest parties holds the same bit 𝑏, then the protocol guarantees that all honest parties will output 𝑏. In our protcol, we will
+use Byzantine agreement to let a party broadcast one bit to the
+other parties. This can be done by letting the party send the bit
+to all parties and then run Byzantine agreement. In our setting
+of 𝑡 < 𝑛/3, perfect Byzantine agreement can be achieved with
+quadratic communication complexity [10, 23]. We stress that the
+number of calls to broadcast in our protocol is constant and so any
+way to implement it suffices.
+
+3
+
+
+Complexity. For 𝑛 parties and threshold 𝑑, there are 𝑑𝑛 dis
+tributed shares. Each party holds 𝑛−1
+When reconstructing
+𝑑 shares.
+𝑛−1
+a secret towards 𝑃𝑖 , party 𝑃𝑖 receives 𝑑 −1 missing shares, and each
+share is sent by 𝑛 − 𝑑 parties. Thus, the overall communication is
+𝑛−1
+𝑛−1
+𝑑 −1 · (𝑛 − 𝑑) = 𝑑 · 𝑑 ring elements.
+Pairwise consistency check. The above definition gives us an easy
+way to check that a sharing is consistent, by having each pair of
+parties comparing their joint shares. Note that each pair of parties
+can check pairwise consistency of an arbitrarily large number of
+sharings by comparing a hash of the string consisting of all their
+joint shares.
+
+REPLICATED SECRET SHARING AND ITS
+OPERATIONS
+
+Replicated secret sharing. The replicated secret sharing scheme [40],
+with threshold
+ 𝑑 ≤ 𝑡, is defined by the following procedures. Below,
+we let 𝜆 = 𝑑𝑛 and let 𝑇1, . . . ,𝑇𝜆 ⊂ P be all subsets of parties of size
+𝑛 − 𝑑.
+
+656
+
+3.1
+
+Local Operations
+
+Linear operations. Let J𝑥K𝑑 and J𝑦K𝑑 be two consistent sharings
+and let 𝛼 ∈ 𝑅 be some public constant. We define the following
+operations:
+
+Fully Secure Multi-Party Computation with Two-Thirds Honest Majority
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+F = {𝐹𝑘 | 𝑘 ∈ {0, 1}𝜅 , 𝐹𝑘 : {0, 1}𝜅 → 𝑅} be a family of pseudorandom functions. The parties work as follows:
+
+• J𝑥K𝑑 + J𝑦K𝑑 : let 𝑥®𝑖 and 𝑦®𝑖 be the two vectors of shares held by 𝑃𝑖 .
+Then, 𝑃𝑖 performs point-wise addition between the two vectors
+and stores the result as its output.
+• 𝛼 · J𝑥K𝑑 : let 𝑥®𝑖 be the vector of shares held by 𝑃𝑖 . Then, 𝑃𝑖 multiplies each component in 𝑥®𝑖 with 𝛼 and store the result as its
+output.
+• 𝛼 + J𝑥K𝑑 : One pre-determined subset of parties 𝑇 with |𝑇 | = 𝑛 −𝑑
+which holds 𝑥𝑇 define 𝑥𝑇 ← 𝑥𝑇 +𝛼. The other 𝜆 −1 shares (where
+𝜆 = 𝑑𝑛 ) remains the same.
+
+From J𝑘K𝑑 to any number of J𝑟 K𝑑 . As shown in [25], given J𝑘K𝑑 ,
+the parties generate the ℓth random sharing J𝑟 ℓ K𝑑 , by having each
+subset 𝑇 holding 𝑘𝑇 , set its share to be 𝑟 𝑇ℓ = 𝐹𝑘𝑇 (ℓ).
+The ideal functionality Fcoin . Let Fcoin be an ideal functionality
+that hands the parties fresh random coins. It can be securely realized
+by having the parties compute a new random sharing J𝑟 K𝑑 and then
+open it by running reconstruct(J𝑟 K𝑑 , 𝑖) for each 𝑖 ∈ [𝑛]. To generate
+any numbers of random coins with a constant cost, the parties can
+use the above procedure to generate a new key 𝑘 from which all the
+required randomness is derived using a pseudo-random function 𝐹𝑘 .
+
+The next claim is straight-forward given the definitions of the
+operations:
+Claim 4. For every J𝑥K𝑑 and J𝑦K𝑑 and a constant 𝛼 ∈ 𝑅 it holds: (i)
+J𝑥 +𝑦K𝑑 = J𝑥K𝑑 +J𝑦K𝑑 ; (ii) J𝛼 ·𝑥K𝑑 = 𝛼 ·J𝑥K𝑑 ; (iii) J𝛼 +𝑥K𝑑 = 𝛼 +J𝑥K𝑑 .
+
+3.2.1 FzeroShare - Generating any number of J0K2𝑑 . In our protocol,
+we will need random sharings of 0 with threshold 2𝑑, which will
+be used to randomize given sharings. We show how the parties can
+generate any number of J0K2𝑑 from a single sharing J𝑘K𝑑 without
+any interaction. To generate the ℓth J0K2𝑑 sharing, the parties work
+in the following way:
+(1) Each subset 𝑆 ∈ P of size 𝑛 − 2𝑑 initializes 𝑟 𝑆 = 0.
+(2) For every subset 𝑇 ∈ P of size 𝑛 − 𝑑, holding 𝑘𝑇 :
+𝑛−𝑑 
+Let 𝜃 = 𝑛−2𝑑
+and let 𝑆 1, 𝑆 2, . . . , 𝑆 𝜃 be all subsets of size 𝑛 − 2𝑑
+in 𝑇 . Then:
+For each 𝑗 ∈ {2, . . . , 𝜃 }, the parties in 𝑆 𝑗 set: 𝑟 𝑆 𝑗 ← 𝑟 𝑆 𝑗 −
+𝐹𝑘𝑇 (ℓ ∥ 𝑗).
+𝜃
+∑︁
+The parties in subset 𝑆 1 set: 𝑟 𝑆 1 ← 𝑟 𝑆 1 +
+𝐹𝑘𝑇 (ℓ ∥ 𝑗).
+
+Multiplication. We next show two local operations for multiplying two shared inputs 𝑥 and 𝑦, in order to generate a sharing of 𝑥 ·𝑦,
+but with a higher threshold. The first operation, which we denote
+by J𝑥K𝑑 · J𝑦K𝑑 , aims to generate J𝑥 · 𝑦K2𝑑 . The second operation,
+which we denote by J𝑥K𝑑 ⊙𝑈 J𝑦K𝑑 , aims to compute an additive
+sharing of 𝑥 · 𝑦 across a pre-determined subset of parties 𝑈 ⊆ P of
+size 𝑛 − 𝑑. We denote such a sharing by ⟨𝑥 · 𝑦⟩𝑈 .
+Recall∑︁
+that 𝑥 =∑︁
+𝑥 1 + · · · + 𝑥∑︁
+𝜆 and 𝑦 = 𝑦 1 + · · · + 𝑦𝜆 . It follows that
+𝑥 ·𝑦 =
+𝑥𝑗 ·
+𝑦𝑘 =
+𝑥 𝑗 ·𝑦𝑘 . This implies that in order
+𝑗 ∈ [𝜆]
+
+𝑘 ∈ [𝜆]
+
+𝑗,𝑘 ∈ [𝜆]
+
+to locally generate a sharing of 𝑥 · 𝑦, we need each product 𝑥 𝑗 · 𝑦𝑘
+to be known by a set of parties of a sufficient size, where the set’s
+size is determined by the desired threshold. In our setting of 𝑑 < 𝑛3 ,
+this indeed holds and utilized in the following two procedures:
+
+𝑗=2
+
+(3) Each party 𝑃𝑖 outputs a vector all 𝑟 𝑆 for which 𝑃𝑖 ∈ 𝑆.
+Note that each
+∑︁𝐹𝑘𝑇 (ℓ ∥ 𝑗) is added once and subtracted once, and
+so overall
+𝑟 𝑆 = 0 as required.
+
+• J𝑥K𝑑 · J𝑦K𝑑 :
+– For each 𝑇 ⊂ P such that |𝑇 | = 𝑛 − 2𝑑: The parties in 𝑇
+initialize 𝑧𝑇 := 0.
+– For each pair 𝑥 𝑗 , 𝑦𝑘 that are known to a set of parties 𝑆 ∈ P:
+let 𝑇 ⊂ 𝑆 be the subset containing the first 𝑛 − 2𝑑 parties in 𝑆
+|𝑆 | 
+and let 𝑞 = 𝑛−2𝑑
+.
+Then, the parties in 𝑇 set: 𝑧𝑇 ← 𝑧𝑇 + 𝑞 · (𝑥 𝑗 · 𝑦𝑘 ).
+For each 𝑇 ′ ⊂ 𝑆 with |𝑇 ′ | = 𝑛 − 2𝑑 and 𝑇 ′ ≠ 𝑇 set: 𝑧𝑇 ′ ←
+𝑧𝑇 ′ − (𝑥 𝑗 · 𝑦𝑘 ).
+– Each party 𝑃𝑖 sets 𝑧®𝑖 to be the tuple of all 𝑧𝑇 for which 𝑃𝑖 ∈ 𝑇
+with |𝑇 | = 𝑛 − 2𝑑, and stores it as its output.
+• J𝑥K𝑑 ⊙𝑈 J𝑦K𝑑 :
+– Each party 𝑃𝑖 ∈ 𝑈 initializes 𝑧𝑖 := 0.
+– For each pair of 𝑥 𝑗 and 𝑦𝑘 , let 𝑇 ⊂ 𝑈 be the set of parties that
+holds both 𝑥 𝑗 and 𝑦𝑘 and let 𝑃ℓ be the party with the smallest
+index in 𝑇 . Then, 𝑃ℓ sets: 𝑧 ℓ ← 𝑧 ℓ + |𝑇 | · (𝑥 𝑗 · 𝑦𝑘 ), whereas
+each 𝑃𝑢 ∈ 𝑇 with 𝑢 ≠ ℓ sets: 𝑧𝑢 ← 𝑧𝑢 − (𝑥 𝑗 · 𝑦𝑘 ).
+– Each party 𝑃𝑖 ∈ 𝑈 stores 𝑧𝑖 as its output.
+
+𝑆 ∈ P:|𝑆 |=𝑛−2𝑑
+
+To prove security, let FzeroShare be an ideal functionality that
+receives from the adversary a share for each subset of parties of size
+𝑛 − 2𝑑 that contains corrupted parties, and then chooses random
+shares for the remaining subsets (which contain honest parties
+only), under the constraint that all shares will sum to 0. Then,
+FzeroShare sends the honest parties their shares. We thus have the
+following (the proof can be found in the full version of this paper):
+Lemma 6. If 𝐹𝑘 is a pseudo-random function, then our protocol
+as described in the text, computationally computes FzeroShare in the
+presence of any malicious adversary controlling up to 𝑑 parties, where
+𝑑 < 𝑛3 .
+3.2.2 FcorRand - Generating any number of (J𝑟 K𝑑 , ⟨𝑟 ⟩𝑈 ) for a pseudorandom 𝑟 ∈ 𝑅 and 𝑈 ⊂ P such that |𝑈 | = 2𝑑 + 1. Recall that ⟨𝑟 ⟩𝑈
+is an additive sharing of 𝑟 across the parties in 𝑈 . To obtain pairs
+of sharings of the same 𝑟 , the traditional approach is to generate
+two sharings with the two thresholds separately, and then check
+that the obtained sharings are of the same secret. We use a different
+approach, where each party in 𝑈 first chooses its additive share,
+shares it to all the other parties, and then the parties use these to
+compute the sharing with threshold 𝑑. Besides the fact that it allows
+us to avoid the need to run a check, we obtain here a property that
+will be used later: the additive share of each party in 𝑈 is robustly
+shared to the other parties. Formally, the parties work as follow:
+
+Claim 5. Let 𝑑 ∈ N be such that 𝑛 > 3𝑑 and let 𝑈 ⊆ P. If
+|𝑈 | ≥ 2𝑑 + 1, then for every two sharings J𝑥K𝑑 and J𝑦K𝑑 it holds: (i)
+J𝑥 · 𝑦K2𝑑 = J𝑥K𝑑 · J𝑦K𝑑 ; (ii) ⟨𝑥 · 𝑦⟩𝑈 = J𝑥K𝑑 ⊙𝑈 J𝑦K𝑑 .
+The proof can be found in the full version.
+
+3.2
+
+Non-Interactive Random Secret Generation
+
+We next show how to generate correlated randomness required by
+our protocol, without any interaction, but a short set-up step. Let
+
+657
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+4.1
+
+• Setup step:
+(1) Each party 𝑃𝑖 ∈ 𝑈 chooses a random 𝑘𝑖 ∈ 𝑅 and shares J𝑘𝑖 K𝑑
+to the parties.
+(2) The parties run pair-wise consistency check. If party 𝑃 𝑗 finds
+that the shares held by him and 𝑃𝑘 are not the same, then it
+broadcasts (inconsistent, 𝑗, 𝑘). Then, 𝑃𝑖 broadcasts all shares
+that are held by subsets that contain both 𝑃 𝑗 and 𝑃𝑘 .
+(Note that since in this case either 𝑃𝑖 , 𝑃𝑘 or 𝑃 𝑗 is corrupted,
+these shares are anyway known to the adversary, and so publishing them gives the adversary no additional information.)
+• Generating the ℓth pair (J𝑟 ℓ K𝑑 , ⟨𝑟 ℓ ⟩𝑈 ):
+(1) For each 𝑖 with 𝑃𝑖 ∈ 𝑈 : the parties compute J𝑟 ℓ,𝑖 K𝑑 from J𝑘𝑖 K𝑑
+as shown above. Knowing all shares, party 𝑃𝑖 computes 𝑟 ℓ,𝑖
+and sets it as its additive share of 𝑟 ℓ .
+Í
+(2) The parties locally compute J𝑟 ℓ K𝑑 = 𝑃𝑖 ∈𝑈 J𝑟 ℓ,𝑖 K𝑑 .
+Í
+Observe that 𝑟 ℓ = 𝑃𝑖 ∈𝑈 𝑟𝑖 and so the parties hold an additive
+sharing and a 𝑑-out-of-𝑛 sharing of 𝑟 ℓ as required. In addition, as
+promised above, the additive share 𝑟𝑖 of each party 𝑃𝑖 ∈ 𝑈 is shared
+to the other parties via a 𝑑-out-of-𝑛 secret sharing. This property
+will be used later in our protocol.
+
+The Damgård-Nielsen protocol [30] is the fastest multiplication
+protocol in the honest majority setting, known to this date. The
+“text-book” version of this protocol, requires the parties to prepare
+in advance a pair of random sharings J𝑟 K𝑑 , J𝑟 K2𝑑 . Then, in order to
+multiply J𝑥K𝑑 and J𝑥K𝑑 , the parties locally compute J𝑥K𝑑 · J𝑦K𝑑 −
+J𝑟 K2𝑑 and send their shares to 𝑃1 (or any other designated party).
+Party 𝑃 1 reconstructs 𝑥𝑦 − 𝑟 and sends it back to the parties. Then,
+the parties locally compute J𝑥 · 𝑦K𝑑 = J𝑟 K𝑑 + (𝑥 · 𝑦 − 𝑟 ).
+While the protocol was constructed and used throughout the
+years for Shamir’s secret sharing scheme, a simple observation
+made by [14] is that all operations required by this protocol can be
+carried-out also when using replicated secret sharing.
+Achieving privacy in the presence of malicious adversaries. The
+text-book version of the DN protocol described above is semi-honest
+secure. A somewhat surprising finding by [37] is that it actually does
+not achieve even privacy in the presence of malicious adversaries
+when 𝑑 < 𝑛/3. In particular, a malicious 𝑃1 can learn intermediate
+values. The attack is carried-out over two gates in two preceding
+layers. Assume that the parties need to multiply J𝑥K𝑑 and J𝑦K𝑑 .
+Then, upon receiving the messages from the parties and computing
+𝑥 · 𝑦 − 𝑟 , party 𝑃1 sends the correct value to all parties, except
+for one honest party, say 𝑃𝑛 , to whom it sends 𝑥 · 𝑦 − 𝑟 + 1. This
+implies that 𝑃𝑛 now holds an incorrect share of the output 𝑥 · 𝑦.
+Next, assume that in the next layer 𝑥 · 𝑦 is being multiplied with
+𝑤. The crux of the attack is that any 𝑛 − 2𝑑 shares of 𝑥𝑦 · 𝑤 − 𝑟 ′
+(where 𝑟 ′ is the random secret mask used in this gate) determine
+deterministically the remaining shares. Thus, upon holding 𝑛 − 2𝑑
+shares of 𝑥𝑦 · 𝑤 − 𝑟 ′ , which do not include shares held by 𝑃𝑛 , party
+𝑃1 can compute the correct shares of 𝑃𝑛 . However, 𝑃𝑛 will send
+shares of (𝑥𝑦 + 𝜖) · 𝑤 − 𝑟 ′ . Thus, by taking the difference between
+the actual share received from 𝑃𝑛 and the share that should have
+been sent, 𝑃1 can learn private information about 𝑃𝑛 ’s shares of 𝑤.
+As can be seen from the above description, the main reason
+behind the attack is the fact that the random masking sharing J𝑟 K2𝑑
+has redundancy, allowing 𝑃1 to use 𝑛 − 2𝑑 shares to compute the
+remaining 2𝑑 shares. Thus, a simple way to prevent this attack is to
+use a mask that is additively shared between the parties. To reduce
+communication, it suffices to use an additive sharing across 2𝑑 + 1
+parties (including 𝑃1 ) only. This means that the parties need to
+prepare a pair of sharings J𝑟 K𝑑 , ⟨𝑟 ⟩𝑈 for each multiplication, where
+𝑈 is a set of 2𝑑 + 1 parties which includes 𝑃1 , and locally compute
+a sharing ⟨𝑥 · 𝑦⟩𝑈 which is opened towards 𝑃1 . Fortunately, as
+shown in Section 3.2, we are able to generate this type of correlated
+randomness. In addition, replicated secret sharing allows computing
+⟨𝑥 · 𝑦 − 𝑟 ⟩𝑈 given J𝑥K𝑑 , J𝑦K𝑑 and ⟨𝑟 ⟩𝑈 , by taking J𝑥K𝑑 ⊙𝑈 J𝑦K𝑑 (see
+the definition of this operation in Section 3.1) which yields ⟨𝑥 · 𝑦⟩𝑈 ,
+and then subtracting ⟨𝑟 ⟩𝑈 .
+
+The FcorRand ideal functionality. In our protocol, each time the
+parties will need correlated randomness from the type defined
+above, they will call the FcorRand ideal functionality defined in Functionality 7. The functionality FcorRand lets the adversary choose the
+shares of the corrupted parties, and then chooses random share for
+honest parties, under the constraint that the same secret 𝑟 is stored
+in ⟨𝑟 ⟩𝑈 and J𝑟 K𝑑 .
+FUNCTIONALITY 7 (The FcorRand ideal functionality).
+The FcorRand ideal functionality works with an ideal world adversary
+S and honest parties. Let 𝐼 ⊂ [𝑛] with |𝐼 | ≤ 𝑑, be the set of the
+corrupted parties’ indices, and 𝐻 = [𝑛] \ 𝐼 be the set of the honest
+parties’ indices. Finally, let 𝑈 ∈ 𝑃 be a predetermined set of parties.
+(1) FcorRand
+receives
+{𝑟𝑖 }𝑖 ∈𝐼 :𝑃𝑖 ∈𝑈
+and
+{𝑟𝑇 }𝑇 ⊂P: (|𝑇 |=𝑛−𝑑 ) ∧(∃𝑖 ∈𝐼 :𝑃𝑖 ∈𝑇 ) from S.
+(2) FcorRand chooses a random 𝑟 𝑗 ∈ 𝑅 for each 𝑗 ∈ 𝐻 such that
+𝑛
+∑︁
+𝑃 𝑗 ∈ 𝑈 , and sets 𝑟 =
+𝑟𝑘 . Then, it chooses a random 𝑟𝑇 ∈ 𝑅
+𝑘=1
+
+for each 𝑇 ⊂ P with |𝑇 | = 𝑛 − 𝑑 that contains
+only honest
+∑︁
+parties, under the constraint that 𝑟 =
+𝑟𝑇 .
+𝑇 ⊂P: |𝑇 |=𝑛−𝑑
+
+(3) For each honest party 𝑃 𝑗 , FcorRand hands {𝑟𝑇 }𝑃 𝑗 ∈𝑇 to 𝑃 𝑗 and,
+if 𝑃 𝑗 ∈ 𝑈 , hands also 𝑟 𝑗 to 𝑃 𝑗 .
+
+Lemma 8. If 𝐹𝑘 is a pseudo-random function, then our protocol
+as described in the text, computationally computes FcorRand in the
+presence of any malicious adversary controlling up to 𝑑 parties, where
+𝑑 < 𝑛3 .
+The proof can be found in the full version.
+
+4
+
+Multiplying Two Shared Values - The DN
+Protocol [30]
+
+BUILDING BLOCKS
+
+Reducing communication. A simple optimization to the DN protocol that we can apply when using replicated secret sharing, is
+letting 𝑃1 send 𝑥 · 𝑦 − 𝑟 to only one subset of parties of size 𝑛 − 𝑑.
+This suffices since adding 𝑥 · 𝑦 − 𝑟 to J𝑟 K𝑑 , is by definition (see
+Section 3.1) carried-out by having one subset adding 𝑥𝑦 − 𝑟 to
+their share of 𝑟 . If this subset includes 𝑃1 , then it follows that 𝑃1
+
+In this section, we outline three sub-protocols that are used in
+our main protocol: a protocol for multiplying shared inputs which
+achieves only privacy, a protocol to verify the correctness of many
+multiplication triples and a protocol for eliminating corrupted parties from the computation.
+
+658
+
+Fully Secure Multi-Party Computation with Two-Thirds Honest Majority
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+needs to send 𝑛 − 𝑑 − 1 ring elements in the second round of the
+protocol. Overall, the number of elements sent in the protocol is
+2𝑑 + 𝑛 − 𝑑 − 1 = 𝑛 + 𝑑 − 1, and so per party the cost is 1 + 𝑑 𝑛−1 sent
+ring elements. For 𝑑 = 1, this yields 1 ring element per party, and
+in general, for 𝑑 < 𝑛/3 this is bounded by 1 31 elements per party.
+
+probability and, in this case, output semi-corrupt pair to eliminate.
+A pair of parties is called “semi-corrupt” if it contains at least one
+corrupted party.
+The idea behind our protocol is that the parties “compress” the
+transcript of all multiplication protocols into one single transcript
+and then verify its correctness. Observe that in our multiplication
+protocol, all messages are public; the only reason for communication through 𝑃1 is to save communication, and in fact each of the
+messages could have been sent to all parties. Thus, the first step of
+our protocol is to agree on the transcript. In this step, the parties
+sample random coefficients and broadcast a linear combination of
+the messages they sent and received in all multiplications. If there
+is conflict between the view of two parties, then a semi-corrupt
+pair has been found. If all views are consistent, then the parties
+proceed to the next step, where they verify the correctness of each
+compressed message. In more details:
+
+Formal description. We present a formal description of the protocol in Protocol 9.
+PROTOCOL 9 (The Optimized DN Multiplication Protocol).
+Let 𝑈 be the set {𝑃 1 , . . . , 𝑃 2𝑑+1 }.
+• Inputs: The parties hold J𝑥K𝑑 , J𝑦K𝑑
+• Set up: The parties call FcorRand to obtain (J𝑟 K𝑑 , ⟨𝑟 ⟩𝑈 ).
+• The protocol:
+(1) The parties in 𝑈 locally compute ⟨𝑥 · 𝑦 − 𝑟 ⟩𝑈 = J𝑥K𝑑 ⊙𝑈
+J𝑦K𝑑 − ⟨𝑟 ⟩𝑈 and send the result to 𝑃 1 .
+(2) 𝑃 1 reconstructs 𝑥 𝑦 − 𝑟 . Let 𝑇 ∈ P be a predetermined subset
+of size 𝑛 − 𝑑 such that 𝑃 1 ∈ 𝑇 . Then, 𝑃 1 sends 𝑥 𝑦 − 𝑟 to the
+parties in 𝑇 .
+(3) The parties compute J𝑧K𝑑 = J𝑟 K𝑑 + 𝑥 𝑦 − 𝑟 and store J𝑧K𝑑 as
+the output.
+
+Step 1: Agree on the transcript. Let 𝑚 be the number of multiplications in the circuit. The parties first call Fcoin to receive 𝑚
+random elements 𝛿 1, . . . , 𝛿𝑚 ∈ A (this can be done with small constant cost by calling Fcoin to receive a random seed from which
+all randomness is derived). Then, each party broadcasts a random
+linear combination of the messages it sent and a random linear
+combination of the messages it received. Note that each 𝑃𝑖 with
+𝑖 ≠ 1, needs to broadcast one sent message (a linear combination
+of the messages sent to 𝑃1 in the first round) if it is included in
+𝑈 , and, if it is included in the subset 𝑇 of parties that receive the
+message in the second round, broadcast one received message (a
+linear combination of the messages received from 𝑃 1 ). At the same
+time, 𝑃1 broadcasts a random linear combination of all messages
+received from each of the other parties and a random linear combination of the messages it sent in the second round. If there is
+an inconsistency between a “compressed” message 𝑃1 claims to
+send/receive to/from 𝑃𝑖 and the “compressed” message 𝑃𝑖 claims
+to receive/send from/to 𝑃1 , then (𝑃1, 𝑃𝑖 ) is the new semi-corrupt
+pair. The fact that either 𝑃1 or 𝑃𝑖 is corrupted holds, since a contradiction cannot occur between two honest parties. If all messages
+are consistent, then the parties proceed to the next step with an
+agreed-upon compressed transcript.
+
+The fact that this protocol is private in the presence of malicious
+adversaries controlling up to 𝑑 parties, follows easily from the
+fact that each message sent by an honest party is masked by a
+new independent random additive mask. Formally, this means that
+the view of the adversary during the execution have the same
+distribution, regardless of the honest parties’ inputs. Let ˝priv be
+a protocol to compute a circuit 𝐶, where each party shares its
+input to the other parties, and then the parties traverse over the
+circuit with topological order, computing multiplication gates using
+𝑓
+Protocol 9. Let view A,˝ ,𝐼 (®
+𝑣 ) be the view of an adversary A (i.e.,
+priv
+
+its randomness, inputs, incoming and outgoing messages during the
+execution) controlling a subset 𝐼 , when computing a functionality
+𝑓 using ˝priv , over a vector of inputs 𝐼 , without the output revealing
+step. We thus have the following:
+Proposition 10. Let 𝑓 be a 𝑛-aty functionality represented by an
+arithmetic circuit 𝐶 over a ring 𝑅. Then, for every adversary A controlling a subset of parties 𝐼 ∈ P with |𝐼 | ≤ 𝑑 < 𝑛3 , and for every two vec𝑓
+
+tor of inputs 𝑣®1, 𝑣®2 it holds that view A,˝
+
+priv ,𝐼
+
+𝑓
+
+(®
+𝑣 1 ) = view A,˝
+
+priv ,𝐼
+
+(®
+𝑣2)
+
+Remark 11. If the parties hold two vectors of shares J𝑥 1 K𝑑 , . . . , J𝑥𝑚 K𝑑
+Í
+and J𝑦1 K𝑑 , . . . , J𝑦𝑚 K𝑑 and wish to compute J 𝑚
+𝑗=1 𝑥 𝑗 · 𝑦 𝑗 K𝑑 , they
+can do so without calling the multiplication protocol 𝑚 times. Instead, this can be done at the cost of one single multiplication, as
+Í
+𝑈
+follows. The parties can locally compute ⟨ 𝑚
+𝑗=1 𝑥 𝑗 ·𝑦 𝑗 −𝑟 ⟩ by taking
+
+Í𝑚
+𝑈
+𝑗 K ⊙𝑈 J𝑦 𝑗 K − ⟨𝑟 ⟩ , and send the result to 𝑃 1 , who recon𝑗=1 J𝑥
+Í
+structs 𝑚
+𝑥 𝑗 · 𝑦 𝑗 − 𝑟 , send it to the parties, which locally compute
+Í 𝑗=1
+J𝑟 K𝑑 + 𝑚
+𝑥
+𝑗=1 𝑗 · 𝑦 𝑗 − 𝑟 . The verification protocol below can be easily
+adapted to incorporate this operation.
+
+4.2
+
+Verifying Correctness of Multiplications
+with Cheating Identification
+
+In this section, we show how the parties can verify that all multiplications were carried out correctly. Our protocol has the property
+that if someone has cheated, then the parties will detect it with high
+
+659
+
+Step 2: Verify each party’s message. Next, the parties verify the
+correctness of each party’s message. Observe that 𝑃1 ’s message is
+computed by summing all messages received from the other parties
+and his own first round’s message (since 𝑃1 sees an additive sharing
+of the masked output). Thus, given the message sent from 𝑃 1 in
+the second round, the parties can compute implicitly the message
+𝑃1 would send in the first round. This implies that the verification
+in this step is reduced to checking that the local computation of
+J𝑥K𝑑 ⊙𝑈 J𝑦K𝑑 − ⟨𝑟 ⟩𝑈 , performed by each of the parties in 𝑈 , is
+correct. Recall that in this computation, each party performs a
+local computation over its shares of 𝑥 and 𝑦, and then subtracts
+its additive share of 𝑟 . Looking at the definition of the operation
+J𝑥K𝑑 ⊙𝑈 J𝑦K𝑑 from Section 3.1, we observe that in this computation,
+the parties compute a linear combination of their shares. Let 𝛾 =
+𝑛−1 
+𝑛−𝑑 −1 be the number of shares held by each party. Denote the
+shares held by 𝑃𝑖 by 𝑥 1𝑖 , . . . , 𝑥𝛾𝑖 and 𝑦𝑖1, . . . , 𝑦𝛾𝑖 and 𝑟 𝑖 . Then, party 𝑃𝑖
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+– If ∃𝑖 : msg′𝑖 ≠ msg𝑖 : Let 𝑖 be the largest such that msg′𝑖 ≠
+msg𝑖 , and let 𝑗 the smallest index of party such that 𝑖 ≠ 𝑗.
+Then, the parties output reject, (𝑖, 𝑗) 7
+• If ∃𝑗 : cons 𝑗 = 1:
+Let 𝑗 be the smallest index for which cons 𝑗 = 1. Let 𝑃𝑢 and
+𝑃 𝑤 be the first pair of parties who sent contradicting shares
+𝑣𝑇𝑢 and 𝑣𝑇𝑤 to 𝑃 𝑗 , with 𝑇 being the first subset for which
+𝑃𝑢 , 𝑃 𝑤 ∈ 𝑇 and 𝑣𝑇𝑢 ≠ 𝑣𝑇𝑤 , and let 𝑖 ∈ [𝑛] be the index of the
+execution in Step 1 where the inconsistency occurred. Then:
+(a) Party 𝑃 𝑗 broadcasts (𝑇 , 𝑖, 𝑢, 𝑤, 𝑣𝑇𝑢 , 𝑣𝑇𝑤 ).
+(b) Party 𝑃𝑢 broadcasts 𝑣˜𝑇𝑢 and party 𝑃 𝑤 broadcasts 𝑣˜𝑇𝑤 .
+(c) If 𝑣˜𝑇𝑢 ≠ 𝑣˜𝑇𝑤 , then the parties output reject, (𝑢, 𝑤).
+Otherwise, if 𝑣𝑇𝑢 ≠ 𝑣˜𝑇𝑢 , then the parties output reject, ( 𝑗, 𝑢).
+Otherwise, the parties output reject, ( 𝑗, 𝑤).
+
+Í𝛾 Í𝛾
+carries-out the computation 𝑘=1 𝑗=1 (𝛼𝑘,𝑗 · 𝑥𝑘𝑖 · 𝑦𝑖𝑗 ) − 𝑟 𝑖 , where
+𝛼𝑘,𝑗 is a public known coefficient (see Section 3.1).
+Next, recalling that in our secret sharing scheme, each share is
+held by 𝑛 − 𝑑 parties, we define J𝑥𝑘𝑖 K𝑑 (and likewise J𝑦𝑖𝑗 K𝑑 ) to be
+a consistent 𝑑-out-of-𝑛 secret sharing of 𝑥𝑘𝑖 in the following way:
+𝑖
+The subset 𝑇 of parties which know 𝑥𝑘𝑖 set 𝑥𝑘,𝑇
+= 𝑥𝑘𝑖 , whereas the
+other subsets define their share to be 0. In addition, recall that in
+Section 3.2, we generated the correlated randomness in a special
+way, such that each party’s additive share 𝑟 𝑖 is also secret shared
+across the parties in a robust way. We thus have the following:
+Fact 12. In our multiplication protocol (Protocol 9), the message
+each party sends in the first round, is a result of a degree-2 computation
+over inputs that are shared across the parties via a consistent 𝑑-outof-𝑛 secret sharing.
+
+Cheating probability. The only way that the protocol can end
+with the parties outputting accept even though a corrupted party
+has cheated in the multiplication protocol, is if a random linear combination of incorrect messages yields the same value as a random
+linear combination of the correct messages. Using Lemma 1, we see
+that this probability is bounded by 𝜔1𝑅 . Thus, to obtain a statistical
+security of 𝑠 bits, the parties will repeat the above protocol ⌈ log𝑠𝜔 ⌉
+𝑅
+times.
+
+Relying on Fact 12, we can thus ask the parties to jointly compute
+a 2𝑑-out-of-𝑛 secret sharing of 𝑃𝑖 ’s additive share of 𝑥 ·𝑦−𝑟 , and then
+compute a 2𝑑-out-of-𝑛 secret sharing of the “compressed message”
+obtained in the previous step. That is, for each 𝑖 ∈ 𝑈 , the parties
+will compute
+Jmsg𝑖 K2𝑑 =
+
+𝑚
+∑︁
+ℓ=1
+
+𝛿 ℓ · J(𝑥 ℓ · 𝑦ℓ − 𝑟 ℓ )𝑖 K2𝑑
+
+(1)
+
+Security. The only security concern in the above protocol, is
+that something can be learned from the additive shares of (𝑥 · 𝑦 −
+𝑟 )𝑖 . This is prevented by randomizing the sharing when adding
+J0K2𝑑 . Formally, we define the ideal functionality FcheckTrans in
+Functionality 13, which receives the sent/received messages from
+all parties, and the inputs and randomness of the honest parties.
+The latter suffices, in our setting of two-thirds honest majority, to
+compute all the messages that corrupted parties should have sent
+in the protocol. Thus, FcheckTrans can find whether any party have
+cheated and sent incorrect messages. In case of cheating, it asks the
+real-world adversary to provide a pair of parties, such that at least
+one of them is corrupted, which is then output to the honest parties.
+Note that also in the case that no one cheated in the multiplication
+protocol, S is allowed to change the output to reject, but then it
+must provide also a semi-corrupt pair to eliminate. This captures
+the case when the corrupted parties send incorrect shares in the
+second step of our protocol, causing the verification to fail.
+To simulate the protocol, note that by the definition of FcheckTrans ,
+the simulator S receives from the trusted party computing FcheckTrans
+all the corrupted parties’ inputs and randomness, as well as all the
+messages sent/received in the protocol by the honest parties. Thus,
+S can perfectly simulate the first step. In the second step, it can
+perfectly simulate the messages sent when verifying msg𝑖 for all
+𝑖 such that 𝑃𝑖 is corrupted. This holds since all messages are a
+function of 𝑃𝑖 ’s inputs and randomness which are known to S, and
+shares distributed by FzeroShare , which is played by S. Finally, when
+simulating the opening of msg𝑖 for an honest 𝑃𝑖 , the simulator S
+chooses random shares for the subsets containing honest parties
+only, under the constraint that all shares will open to msg𝑖 and
+given the corrupted parties’ shares which are known to S. Since for
+
+𝛾 𝛾
+©∑︁ ∑︁
+ª
+𝑖
+=
+𝛿ℓ · ­
+(𝛼𝑘,𝑗 · J𝑥 ℓ,𝑘
+K𝑑 · J𝑦𝑖ℓ,𝑗 K𝑑 ) − J𝑟 ℓ𝑖 K𝑑 ® + J0K2𝑑
+ℓ=1
+«𝑘=1 𝑗=1
+¬
+where J0K2𝑑 is a secret sharing of 0 which is added to randomize
+the parties’ shares (and is handed to the parties by FzeroShare ). Note
+that this computation is completely non-interactive: the parties can
+locally compute J𝑥𝑘𝑖 ·𝑦𝑖𝑗 K2𝑑 = J𝑥𝑘𝑖 K𝑑 · J𝑦𝑖𝑗 K𝑑 and J𝑟 𝑖 K2𝑑 = J𝑟 𝑖 K𝑑 · J1K𝑑
+(where J1K𝑑 is some known sharing of 1) as defined in Section 3.1,
+and then locally perform addition and multiplication with the public
+constants. It remains to open the shared secret and check whether
+it equals to the additive share 𝑃𝑖 sent. Since 3𝑑 + 1 ≤ 𝑛, then
+𝑛 − 2𝑑 ≥ 𝑑 + 1, which implies that in each subset of 𝑛 − 2𝑑 there is at
+least one honest party. This means that by sending incorrect shares,
+the corrupted parties can only cause pair-wise inconsistency, which
+will result with a semi-corrupt pair. Thus, if all shares are consistent,
+the parties will hold the correct msg𝑖 . Then, the parties can compare
+it to the value obtained in the first step and see whether 𝑃𝑖 have
+cheated or not. We thus obtain the following protocol for Step 2:
+(1) For each 𝑖 ∈ 𝑈 :
+(a) The parties locally compute Jmsg𝑖 K2𝑑 via Eq. (1).
+(b) For each 𝑗 ∈ [𝑛], the parties in each subset 𝑇 where |𝑇 | =
+𝑛 − 2 · 𝑑 and 𝑃 𝑗 ∉ 𝑇 send their shares of msg𝑖 to 𝑃 𝑗 .6
+(2) If party 𝑃 𝑗 received contradicting shares in any of the 𝑛 executions in the previous step, then it sets cons 𝑗 = 1. Otherwise, it
+sets cons 𝑗 = 0. Then, it broadcasts cons 𝑗 to the other parties.
+(3) Upon receiving cons 𝑗 from all the parties:
+• If ∀𝑗 : cons 𝑗 = 0:
+The parties reconstruct msg𝑖 for each 𝑖 ∈ [𝑛]. Let msg′𝑖 be
+the compressed message of 𝑃𝑖 agreed upon in the first step.
+– If ∀𝑖 : msg′𝑖 = msg𝑖 : the parties output accept.
+𝑚
+∑︁
+
+7 Note that here we know that 𝑃 is corrupted and we could essentially remove only
+𝑖
+6 This can be optimized by asking only one party in each set 𝑇 to send the share to 𝑃
+
+him. Nevertheless, since removing a pair of parties (with one of them being corrupt)
+maintains the threshold while reducing the overall communication, this is preferable.
+
+𝑗
+
+and the rest send hashes of their shares for all 𝑖 ∈ [𝑛] .
+
+660
+
+Fully Secure Multi-Party Computation with Two-Thirds Honest Majority
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+𝑛 ′ = 𝑛−2 participants, with 𝑑 ′ = 𝑑 −1 being corrupt. This new set of
+parameters preserves the required bound 𝑑 ′ < 𝑛 ′ /3, since 𝑑 < 𝑛/3.
+Removing a semi-corrupt pair is fairly standard technique in Shamir
+secret-sharing-based protocols (e.g. [7]), and it can be extended to
+replicated secret-sharing in a reasonably straightforward manner,
+which we discuss in detail below.
+Removing two parties, from which one is guaranteed to be corrupt, requires the parties to move from a 𝑑-out-of-𝑛 secret sharing
+to a (𝑑 − 1)-out-of-(𝑛 − 2) secret sharing of each value on the output layer of the previous segment (which is the last state that was
+verified and approved by the parties).
+For simplicity let us assume that all the values on the output
+layer of the previous segment are outputs of multiplication gates
+(otherwise, they are a linear function of multiplication’s outputs).
+Recall that in our DN-style multiplication protocol, the output is
+computed by taking J𝑟 K𝑑 + (𝑥𝑦 − 𝑟 ). Recall also that this step is
+carried-out by having one subset of 𝑛 − 𝑑 parties receive 𝑥𝑦 − 𝑟
+from 𝑃1 and add it to their share of 𝑟 . To successfully eliminate a
+semi-corrupt pair, the parties thus need to prepare J𝑟 K𝑑 −1 and then
+let one subset of 𝑛 − 2 − (𝑑 − 1) = 𝑛 − 𝑑 − 1 parties, that do not
+contain the two eliminated parties, add 𝑥𝑦 − 𝑟 to their share of 𝑟 . To
+achieve this, we leverage the fact that 𝑥𝑦 − 𝑟 , as well as each share
+of 𝑟 , is held by a subset of 𝑛 − 𝑑 ≥ 2𝑑 + 1 parties, which means that
+among the 𝑛 − 𝑑 parties there exists an honest majority.
+Assume that 𝑃𝑖 and 𝑃 𝑗 are the parties to eliminate. The parties
+work as follows:
+
+FUNCTIONALITY 13 ( FcheckTrans - Verification of messages with Cheating
+Identification).
+Let S be the ideal-world adversary controlling a subset < 𝑛/3 of
+corrupted parties.
+(1) FcheckTrans receives from the honest parties their inputs, randomness and sent/received messages. These are used to compute the
+inputs and randomness of the corrupted parties.
+(2) FcheckTrans sends S the corrupted parties’ inputs and randomness and all messages the honest parties claimed to send/receive.
+(3) Upon receiving from S all messages the corrupted parties claim
+to send/receive to/from honest parties:
+(a) If there is a contradiction between the message a corrupted
+party 𝑃𝑖 claim to send/receive to/from an honest 𝑃 𝑗 , then
+FcheckTrans sends reject, (𝑖, 𝑗 ) to the honest parties.
+(b) Otherwise, FcheckTrans checks that all messages sent from
+corrupted parties are correct given their inputs and randomness. If it holds, then FcheckTrans sends accept to S.
+Otherwise, FcheckTrans sends reject to S.
+• In the former case, S send back either accept or
+reject, (𝑖, 𝑗 ) to the FcheckTrans , such that either 𝑃𝑖 or 𝑃 𝑗
+(or both) are corrupt. This is then handed to the honest
+parties.
+• In the latter case, S must send back a pair (𝑖, 𝑗 ) such that
+either 𝑃𝑖 or 𝑃 𝑗 (or both) are corrupt. Then, FcheckTrans
+sends reject, (𝑖, 𝑗 ) to the honest parties.
+
+honest parties it holds that msg′𝑖 = msg𝑖 , and since all shares are
+randomized before opening, it holds that the honest parties’ shares
+in the simulation are indistinguishable from their shares in the real
+execution. The only difference between the simulation and real
+execution is the case when FcheckTrans decides to reject, and the
+honest parties in the simulation accept. This happens when there is
+an incorrect message which is not detected since the random linear
+combination yields the same result as if correct messages were sent.
+As we have seen above, this can happen with probability 2 −𝑠 when
+repeating the process sufficient number of times.
+We thus obtain the following:
+
+(1) Random keys update: For each 𝑖 ∈ [𝑛]: for each subset 𝑇 ∈ P
+such that |𝑇 | = 𝑛 − 𝑑 and 𝑃𝑖 , 𝑃 𝑗 ∈ 𝑇 , the parties in 𝑇 send the
+key 𝑘𝑖,𝑇 to some party 𝑃𝑢 ∉ 𝑇 . If 𝑃𝑢 received different value for
+each key, then it chooses the majority value.
+Then, Party 𝑃𝑢 uses these keys to compute 𝑟𝑇 and adds it to its
+shares of 𝑟 .
+(2) Let P ′ = P \ {𝑃𝑖 , 𝑃 𝑗 }, 𝑛 ′ = 𝑛 − 2 and 𝑑 ′ = 𝑑 − 1. Note that after
+the previous step, each share of 𝑟 is known to a set of active
+parties of size at least 𝑛 ′ − 𝑑 ′ = 𝑛 − 2 − (𝑑 − 1) = 𝑛 − 𝑑 − 1.
+(3) From J𝑟 K𝑑 to J𝑟 K𝑑 −1 :
+• For each subset 𝑆 ∈ P ′ such that |𝑆 | = 𝑛 ′ − 𝑑 ′ , the parties in
+𝑆 initialize 𝑟 𝑆 := 0.
+• For each subset 𝑇 ∈ P of size 𝑛 − 𝑑:
+– Case 1: 𝑃𝑖 , 𝑃 𝑗 ∉ 𝑇 .
+Note that there are 𝑛 − 𝑑 subsets of size
+𝑛 ′ − 𝑑 ′ in each 𝑇
+𝑛−𝑑 
+′
+′
+(since 𝑛 − 𝑑 = 𝑛 − 𝑑 − 1 and 𝑛−𝑑 −1 = 𝑛 − 𝑑). Then:
+The subset 𝑆 containing the first 𝑛 ′ − 𝑑 ′ parties in 𝑇 sets
+𝑟 𝑆 ← 𝑟 𝑆 + (𝑛 − 𝑑) · 𝑟𝑇 . The other subsets 𝑆 of size 𝑛 ′ − 𝑑 ′
+parties set their share to be 𝑟 𝑆 ← 𝑟 𝑆 − 𝑟𝑇 .
+– Case 2: 𝑃𝑖 ∈ 𝑇 ∧ 𝑃 𝑗 ∉ 𝑇 or 𝑃 𝑗 ∈ 𝑇 ∧ 𝑃𝑖 ∉ 𝑇 .
+The subset 𝑆 = 𝑇 \ {𝑃𝑖 , 𝑃 𝑗 } of size 𝑛 ′ − 𝑑 ′ sets it share to
+be 𝑟 𝑆 ← 𝑟 𝑆 + 𝑟𝑇 .
+– Case 3: 𝑃𝑖 , 𝑃 𝑗 ∈ 𝑇 .
+Let 𝑆 = 𝑇 \ {𝑃𝑖 , 𝑃 𝑗 }∪{𝑃𝑢 }, where 𝑃𝑢 is the party who
+learned 𝑟𝑇 in the first step. Then, the parties in 𝑆 set: 𝑟 𝑆 ←
+𝑟 𝑆 + 𝑟𝑇 .
+(4) Updating a multiplication’s output: from J𝑧K𝑑 to J𝑧K𝑑 −1 .
+Let 𝑇 ∈ 𝑃 be the set of parties holding 𝑥 · 𝑦 − 𝑟 . Then:
+• Case 1: 𝑃𝑖 , 𝑃 𝑗 ∉ 𝑇 .
+Let 𝑆 be the set of the first 𝑛 ′ − 𝑑 ′ parties in 𝑇 . Then, the
+
+Lemma 14. Our protocol, as described in the text above, computationally computes FcheckTrans in the (Fcoin, FzeroShare )-hybrid model,
+in the presence of malicious adversaries controlling 𝑑 parties, where
+𝑛 > 3𝑑, with statistical error 2 −𝑠 .
+Communication cost. Assume that the elements in 𝑅 are represented using ℓ bits. In the first step, each party broadcasts, on
+average, 2 messages, and so 2ℓ bits. In the second step, each party
+
+sends (2𝑑 + 1) · 𝑛−1
+2𝑑 · 2𝑑 elements to the other parties and broadcasts one bit, but if only one party in each set sends the shares
+and the other parties send a single hash, the factor 2𝑑 + 1 can be
+removed, asymptotically. With this in mind, overall, each party
+
+sends approximately 𝑛−1
+2𝑑 · 2𝑑 · ℓ + 2ℓ · |𝐵𝐶 | bits, where |𝐵𝐶 | is the
+cost of broadcasting one bit per party. When repeating the protocol
+𝑠 times, the above is multiplied by 𝑠. Note that the cost is completely
+independent from the number of verified multiplications.
+
+4.3
+
+Parties’ Elimination and Recovery
+
+In the previous section, we showed how to find a semi-corrupt
+pair. Once such a pair is found, the parties need to remove this
+pair from the computation in a secure way. After removing two
+parties where at least one is corrupt the new set of parties contains
+
+661
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+parties in 𝑆 set: 𝑧𝑆 = 𝑟 𝑆 + 𝑥𝑦 − 𝑟 . For each subset 𝑆 ′ ∈ P ′ of
+size 𝑛 ′ − 𝑑 ′ with 𝑆 ′ ≠ 𝑆, the parties in 𝑆 set 𝑧𝑆 = 𝑟 𝑆 .
+• Case 2: 𝑃𝑖 ∈ 𝑇 ∧ 𝑃 𝑗 ∉ 𝑇 or 𝑃 𝑗 ∈ 𝑇 ∧ 𝑃𝑖 ∉ 𝑇 .
+Note that 𝑆 = 𝑇 \ {𝑃𝑖 , 𝑃 𝑗 } is a set of size 𝑛 ′ − 𝑑 ′ . Thus, the
+parties in 𝑆 set 𝑧𝑆 = 𝑟 𝑆 + 𝑥𝑦 − 𝑟 , whereas for each subset
+𝑆 ′ ∈ P ′ of size 𝑛 ′ − 𝑑 ′ with 𝑆 ′ ≠ 𝑆, the parties in 𝑆 ′ set
+𝑧𝑆 = 𝑟 𝑆 .
+• Case 3: 𝑃𝑖 , 𝑃 𝑗 ∈ 𝑇 .
+The parties in 𝑇 send 𝑥𝑦 − 𝑟 to some party 𝑃𝑢 ∉ 𝑇 . If 𝑃𝑢
+receives different values, then it chooses the majority value.
+Then, the parties in 𝑆 = 𝑇 \ {𝑃𝑖 , 𝑃 𝑗 }∪{𝑃𝑢 } set 𝑧𝑆 = 𝑟 𝑆 +𝑥𝑦 −𝑟 ,
+whereas for each subset 𝑆 ′ ∈ P ′ of size 𝑛 ′ − 𝑑 ′ with 𝑆 ′ ≠ 𝑆,
+the parties in 𝑆 ′ set 𝑧𝑆 = 𝑟 𝑆 .
+
+Computing the next segment. This step begins with the parties
+holding a consistent secret sharing of the values on the input wires
+of the segment.
+(4) The parties compute the segment gate after gate in some
+predetermined topological order. Linear gates are computed
+locally and multiplication gates are computed using Protocol 9.
+(5) The parties send their inputs, randomness and sent/received
+messages in the execution of all multiplication protocols in
+the previous step to FcheckTrans . If FcheckTrans sent accept,
+then they proceed to the next segment. Otherwise, they receive from FcheckTrans a pair of parties (𝑃𝑖 , 𝑃 𝑗 ) to eliminate.
+The parties then run the elimination and recovery subprotocol, set 𝑛 ′ = 𝑛 ′ − 2, 𝑑 = 𝑑 − 1 and go back to Step 4.
+
+Communication cost. The above protocol requires interaction in
+two steps. First, the parties need to send all keys that are known by
+both 𝑃𝑖 and 𝑃 𝑗 . Note that this cost is constant and does not depend
+on the size of the circuit. A second source of interaction is the case
+where both 𝑃𝑖 and 𝑃 𝑗 are in the set of the parties who hold 𝑥𝑦 − 𝑟
+for an output wire on the output layer of the last segment. Here we
+have 𝑛 − 𝑑 elements that are sent for each output wire. Per party,
+the communication cost is thus bounded by 𝑛−𝑑
+𝑛 · 𝑊 < 𝑊 , where
+𝑊 denotes the “width" of the circuit, i.e., the maximal number of
+multiplication gates that are on the same layer of the circuit. Note
+that 𝑊 is always smaller than the size of the circuit, and for any
+“natural” circuit is of sublinear size.
+
+Output reconstruction. At the beginning of this step, the parties
+hold a 𝑑-out-of-𝑛 ′ secret sharing of each output. Then, for each
+output 𝑜𝑘 intended to party 𝑃𝑖 , the parties run reconstruct(J𝑜𝑘 K𝑑 , 𝑖).
+We thus have the following (the proof is in the full version):
+Theorem 15. Let 𝑅 be a finite ring, let 𝑓 be a 𝑛-party functionality represented by an arithmetic circuit over 𝑅, and let 𝑡 ∈ N be a
+security threshold parameter such that 𝑛 = 3𝑡 + 1. Then, our main
+protocol, as described in the text, computationally computes 𝑓 in the
+(FcorRand, FcheckTrans )-hybrid model, in the presence of malicious
+adversaries controlling up to 𝑡 parties.
+
+6
+5
+
+SECURELY COMPUTING ANY
+FUNCTIONALITY OVER RINGS
+
+PERFORMANCE STUDY
+
+In this section we study the concrete performance of our protocol.
+Our goal is to illustrate that, by means of our novel techniques,
+replicated secret-sharing can be used with reasonable efficiency for
+more than 3 or 4 parties, which are the traditional settings in which
+this scheme has been used. To this end, we provide an assessment
+of the communication and storage requirements of our protocol,
+for different parameters, in Section 6.1. In addition, we completely8
+implemented our protocol in C++, and in Section 6.2 we discuss
+in detail the experimental results we have obtained. The source
+code of our implementation can be found in https://github.com/
+anderspkd/ccs-DEN22.git.
+
+We are now ready to present our main protocol to compute arithmetic circuits over the finite ring 𝑅. As explained before, the circuit
+is divided into segments, and each segment is computed separately.
+That is, the parties compute the segment using our private multiplication protocol, and then call FcheckTrans to verify the correctness
+of the computation. If the parties receive accept from FcheckTrans ,
+then they know that the secrets shared on the output layer of the
+current segment are correct, and so they can proceed to the next segment. Otherwise, they receive a semi-corrupt pair from FcheckTrans
+which is removed from the computation. This is carried out by
+updating the secret sharing of the inputs to the current segment
+using our elimination and recovery subprotocol. The segment is
+then recomputed with less parties. More formally:
+
+6.1
+
+Storage and Communication Costs
+
+Communication costs. We begin by deriving an expression for
+the communication complexity of our protocol from Section 5. Let
+|𝐶 | be the size of circuit (measured by the number of multiplication
+gates). Let |𝑆 | be the size of a segment, and let 𝑚 = |𝐶 |/|𝑆 | be the
+number of segments. Recall that the cost of our multiplication protocol is 1 + 𝑑 𝑛−1 ring elements per party, which we upper-bound by
+4/3. Furthermore, let Ch𝑛 be the cost of the multiplication check
+
+with 𝑛 parties, which equals 𝑛−1
+2𝑡 · 2𝑡 ring elements, plus the cost
+of broadcasting two ring elements (recall this overall cost is exponential in 𝑛, but independent of the size of the segment). The
+communication cost of one segment in our protocol is 43 · |𝑆 | + Ch𝑛
+ring elements per party. In the optimistic case, where all parties act
+honestly, there are 𝑚 = |𝐶 |/|𝑆 | segments executed, which leads to
+a communication complexity of 43 |𝐶 | + 𝑚 · Ch𝑛 ring elements per
+party.
+
+Input sharing step. At the end of this step, the parties will hold a
+consistent 𝑑-out-of-𝑛 secret sharing of each input.
+(1) The parties set 𝑛 ′ = 𝑛 and 𝑑 = 𝑡, where 𝑛 = 3𝑡 + 1.
+(2) For each 𝑖 ∈ [𝑛]: party 𝑃𝑖 distributes J𝑘𝑖 K𝑑 to the other
+parties (the parties run a pairwise inconsistency check for
+J𝑘𝑖 K𝑑 . For each share that is inconsistent, 𝑃𝑖 broadcasts the
+share to the parties). Note that this step is carried-out once,
+and J𝑘𝑖 K𝑑 can be used to many computations.
+(3) For the 𝑗th input 𝑥 𝑗 held by 𝑃𝑖 : the parties locally derive
+J𝑟 𝑖𝑗 K𝑑 from J𝑘𝑖 K𝑑 as shown in Section 3.2. Then, 𝑃𝑖 broadcasts
+𝑥 𝑗 − 𝑟 𝑖𝑗 to the parties. Finally, the parties locally compute
+J𝑥 𝑗 K𝑑 = J𝑟 𝑖𝑗 K + 𝑥 𝑗 − 𝑟 𝑖𝑗 .
+
+8 Except for some minor steps that are not expected to affect runtimes drastically.
+
+662
+
+Fully Secure Multi-Party Computation with Two-Thirds Honest Majority
+
+𝑛
+
+Share size
+
+4
+7
+10
+13
+16
+19
+22
+25
+28
+31
+
+24 B
+120 B
+672 B
+3.87 KiB
+23.46 KiB
+145.03 KiB
+908.44 KiB
+5.61 MiB
+35.76 MiB
+229.23 MiB
+𝑛−1
+·ℓ
+𝑡
+
+𝑛
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Communication
+Mult. gate
+Checks
+(opt/worst)
+(opt/worst)
+8 B/16 B
+9.14 B/27.43 B
+9.6 B/38.4 B
+9.85 B/49.23 B
+10 B/60 B
+10.11 B/70.74 B
+10.18 B/81.45 B
+10.24 B/92.16 B
+10.29 B/102.86 B
+10.32 B/113.55 B
+.
+ℓ · (1 + 𝑡 𝑛−1 ) × (1 + 𝑡 )
+
+48 B/48 B
+480 B/528 B
+3.94 KiB/4.45 KiB
+30.94 KiB/35.39 KiB
+234.61 KiB/270 KiB
+1.7 MiB/1.96 MiB
+12.42 MiB/14.38 MiB
+89.78 MiB/104.16 MiB
+643.64 MiB/747.8 MiB
+4.48 GiB/5.21 GiB
+. Í
+Ch𝑛 + 𝑡ℓ =1 Ch𝑛−3ℓ
+
+Table 1: Storage and communication complexity (per party)
+of our protocol for different number of parties 𝑛 = 3𝑡 + 1. The
+bit-size ℓ of each ring element is assumed to be 64 bits. |𝐵𝐶 |,
+the cost of broadcasting one bit per party, is taken to be 0 as
+its contribution is minimal, and the number of repetitions
+of the check to achieve negligible soundness is assumed to
+be 1. We consider the case in which the whole circuit is one
+single segment, so only one check is performed at the end
+of the execution. We report complexities for the optimistic
+case where no cheating occurs, and for the worst case where
+the adversary repeats the circuit 𝑡 times (each time with
+three parties less). This causes a multiplicative overhead
+of (1 + 𝑡) in the complexity per multiplication gate, and an
+Í
+additive overhead of 𝑡ℓ=1 Ch𝑛−3ℓ in the complexity regarding
+
+the checks. Here Ch𝑛 = 𝑛−1
+2𝑡 · 2𝑡 · ℓ + 2ℓ · |𝐵𝐶 |.
+In the case of active cheating, several segments might be executed multiple times. The exact communication complexity in this
+case depends heavily on where the adversary cheats, and how many
+times he does so. However, in terms of the worst case it is easy
+to see that the scenario that leads to the most expensive communication complexity is when the adversary behaves honestly for
+all segments except for the last one, point in which the adversary
+misbehaves, making this segment be executed 𝑡 more times, reducing the number of parties by three in each repetition.9 As a result,
+the worst case communication complexity in the event of active
+cheating by adding, to the optimistic case above, the cost of the 𝑡
+Í
+extra repetitions, which is given by 34 |𝑆 |𝑡 + 𝑡ℓ=1 Ch𝑛−3ℓ .
+This way, we can write the worst case complexity per party as
+𝑡
+∑︁
+4
+𝑡
+|𝐶 |(1 + ) + 𝑚 · Ch𝑛 +
+Ch𝑛−3ℓ .
+3
+𝑚
+ℓ=1
+
+We discuss possible choices of 𝑚 below.
+Concrete complexity for certain parameters. As we have mentioned, certain metrics of our protocol increase exponentially with
+the number of parties. For instance, the communication complexity
+of the final check, although is independent of the number of multiplications being checked, is exponential in 𝑛. In addition, storage
+complexity, which is directly related to the size of each share, is
+
+exponential in 𝑛, and this also affects computation involving shares,
+like locally adding secret-shared values or reconstructing a secret
+from a given set of shares. However, we recall that a crucial aspect
+of our protocol is that its communication complexity, apart from
+the final check, does not grow exponentially with the number of
+parties, and in fact it is kept constant (per-party); this is in contrast
+to many existing work that makes use of replicated secret-sharing.
+In Table 1 we see the share size, together with the communication
+cost of each multiplication gate and the final check, per party, for
+a 64-bit ring and increasing number of parties. We consider one
+single segment corresponding to the whole circuit, meaning that
+𝑚 = 1, and there is only one single check at the end of the execution.
+We report complexities for both the optimistic case (when there is
+no cheating) and the worst-case (when the circuit is re-run 𝑡 more
+times, each with 3 parties less).
+In the optimistic case, the communication cost per multiplication
+gate (regardless of the number of parties) is kept under 11 bytes,
+while in the worst case when the circuit is evaluate 𝑡 more times it
+goes up by a factor of (1 + 𝑡)×. This multiplicative overhead takes
+a toll when 𝑛 is moderately large, like for 𝑛 = 31, where it increases
+the cost per gate from around 10 to 110 bytes, an overhead of 10×.
+Regarding the communication arising from the different checks,
+in the optimistic case only one check is executed, but in the worst
+case 𝑡 more checks must be performed, each with three parties
+less. Fortunately, from Table 1 we see that this overhead, being
+additive, is quite small with respect to the check in the optimistic
+case, increasing from around 4.5 to 5.2 gigabytes for 𝑛 = 31, for
+example.
+We see that the communication complexity of the final check
+grows very fast, even when compared to the share size. However,
+we stress that this is only executed once at the end of the protocol.
+Depending on the application at hand, this overhead could be considered acceptable with respect to the rest of the computation. To
+illustrate this we study, for different number of parties, the number
+of multiplications needed so that the communication complexity
+involved in their computation matches the communication complexity of checking them, which means that the overhead of the
+final check at this point is 2x, and it approaches 1x as the number
+of multiplications grow.10 For moderately large values of 𝑛 such
+as 𝑛 = 10, the check costs the same as less than one thousand
+multiplications, and for larger values like 𝑛 = 22, the check costs
+the same as a bit over one million multiplication. This grows up to
+roughly one billion if 𝑛 = 31. A detailed analysis for more values of
+𝑛 appears in the full version. Furthemore, other additional aspects
+of the communication complexity of our protocol appear in the full
+version.
+Finally, the share size, which grows exponentially with 𝑛, is kept
+in the order of bytes for 𝑛 = 4, 7, 10, kilobytes for 𝑛 = 13, 16, 19, 22,
+and tens of megabytes for 𝑛 = 25, 28. For 𝑛 = 31, this size reaches
+around 200 megabytes, which is large when considering that this
+corresponds to each shared value. However, the following optimization can prove to be crucial for reducing the impact of this overhead
+10We remark that this only measures the amount of messages sent. We must take into
+
+account that the computation of the multiplication gates happens in several rounds,
+while the check only uses a constant number of rounds, which in practice makes it
+more efficient to compute even if its communication is the same (or even more) than
+evaluating several multiplications.
+
+9 The protocol from Section 5 is described as removing two parties in each repetition,
+
+but it is easy to see that the bound 𝑡 < 𝑛/3 can be preserved while removing three,
+which helps efficiency and results in the four-party case being the base case.
+
+663
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+final check increase exponentially, but the communication complexity per multiplication gate remains constant. As a result, one might
+expect our protocol to not be very competitive in scenarios such as
+the following:
+• The number of parties is large (so storage and local computation
+becomes very expensive), and
+• The network is reasonably fast11 (so the fact that the communication per multiplication is small does not provide a benefit with
+respect to the first item), and
+• The circuit is relatively small (so the benefit of the complexity
+of the final check being independent of the circuit size matters
+less).
+However, our protocol can potentially become competitive if
+any of these conditions does not hold. The goal of our experiments
+is to study precisely this hypothesis, that is, in which settings the
+exponential nature of our protocol represents an insurmountable
+overhead, and which cases our protocol can prove beneficial.
+We run several experiments to investigate the computation and
+communication complexity. While the communication complexity
+has already been analyzed in the previous section, the computation
+complexity has not. In particular, the use of replicated secret-sharing
+imposes a non-trivial computationally overhead due to all of the
+combinatorics involved. Thus the goal is to shed some light on
+how this complexity grows with the number of inputs and parties,
+respectively.
+For both multiplication and check protocols, we run several experiments where we vary the number of inputs and parties, respectively. We expect to see that local computation matters more, the
+higher the number of parties, and that this complexity outweighs
+the communication complexity.
+
+in practice. As currently described, our protocol requires the parties
+to store all the secret-shared values computed in a given segment,
+to be able to check them at the verification step. Instead, the parties
+can sample the random coefficients 𝛿𝑖 used to compress the values
+to be checked via a linear combination on the fly. In a bit more detail,
+after performing the computation of a given multiplication layer of
+the circuit (in particular, after the adversary committed to its errors)
+the parties sample the necessary random values for the given layer,
+and aggregate these into a small amount of secret-shared values
+that correspond to these computed in the final verification step.
+This way, the parties can discard the shares obtained in a given
+layer (unless they are required for a subsequent step in the computation). A similar approach was also used in the context of MPC
+with dynamic participants in [22], in order to reduce the number
+of shared values needed from one round to the next.
+On the choice of 𝑚. For the results in Table 1 we have chosen
+𝑚 = 1, so we regarded the whole circuit as one single segment,
+and only one check is performed at the end. If this check fails
+then the entire circuit is re-run, with three parties less. Choosing
+𝑚 = 1 leads to the best possible total communication complexity in
+the optimistic case (which is arguably the scenario more relevant
+in practice), but the gap between the optimistic and worst-case
+scenarios is very large. If, instead, it is the goal to minimize this
+gap, we could take larger values of 𝑚. For example, 𝑚 = 𝑡 leads
+to an overhead in the amortized communication complexity per
+multiplication gate in the worst-case of only 2× with respect to the
+optimistic case, but now the latter is more expensive as the check
+is performed 𝑡 times, instead of just one.
+Different choices of 𝑚 lead to different performance results, and
+which one is optimal depends on the expected “amount of cheating”. We defer to the full version a more detailed discussion on
+some concrete values of 𝑚 and their effect on the communication
+complexity.
+
+6.2
+
+6.2.2 Multiplication. Our first experiment perform a number of
+multiplications, where we measure the time to compute the product ⊙ between the shares; the time it takes to send around shares,
+and the time it takes to receive and adjust them. Results can be
+seen in Figure 1. What is clearly, visible, is that local computation
+quickly becomes dominant, as the number of multiplication grows
+and parties grows.
+
+Experimental Results
+
+We created a proof of concept implementation of the core parts of
+our contribution, namely the multiplication and check protocols.
+Our intention is to investigate, in concrete terms, the overhead of
+our techniques with a varying number of parties and computation
+sizes. Our implementation can be found alongside this submission,
+as can all the experimental data we generated and analyze in this
+section. To the best of our knowledge, our implementation and
+evaluation constitute the first set of experimental results regarding
+replicated secret-sharing for an increasing number of parties.
+Our implementation was written in C++ and all experiments
+where run on a single c5.4xlarge AWS instance, with each party
+being executed in a different procedure. We set our experiments
+in a study a WAN by setting a delay of 100ms and a bandwidth of
+100 Mpb/s. We believe that this creates an experimental setup that
+is easier to replicate. We choose a prime field of approximately 64
+bits (so in particular, the final check only needs to be repeated once
+for a statistical security of ≈ 2 −64 ).
+
+6.2.3 Check. Our second experiment, executes the check protocol
+on a variable number of multiplications. The results can be found in
+Figure 2. As expected, we see that the time is essentially constant,
+regardless of the number of multiplcations. (The outlier for 𝑛 = 4, 7
+can be explained by variability in the experimental data, and we
+believe it should dissapear by increasing the number of trials.)
+However, we also see that local computation (represented by the
+blue bar) increases in significance as both the number of parties
+and the number of things to check, increases.
+6.2.4 End-to-End. Finally, for the sake of completeness we include
+some end-to-end results. As we have already argued, our main goal
+is to explore the concrete practicality of replicated secret-sharingbased protocols for increasing number of parties, for which the
+experiments presented in previous section are more useful since
+they show the relative performance of the different parts of our
+protocol, and they allow us to see how the exponential blow-up
+
+6.2.1 Experiments. Recall that, when the number of parties increases, storage, local computation and the communication of the
+
+11 This is partly our motivation for choosing a (simulation of a) WAN network for our
+
+experiments.
+
+664
+
+Fully Secure Multi-Party Computation with Two-Thirds Honest Majority
+
+·106
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+·106
+
+·106
+
+1.5
+
+·108
+
+·107
+
+4
+
+4
+
+3
+
+3
+
+2
+
+2
+
+1
+
+1
+
+2
+
+2
+1
+
+1
+
+1
+0.5
+
+0
+
+0
+100 101 102 103 104
+
+0
+100 101 102 103 104
+
+0
+100 101 102 103 104
+
+0
+100 101 102 103 104
+
+100 101 102 103
+
+Figure 1: Multiplication protocol. Each graph represents a different choice for the number of parties 𝑛 ∈ {4, 7, 10, 13, 16} while
+each bar in each graph represents the number of multiplications performed (x-axis). The y-axis represents time in microseconds.
+In each graph the blue section corresponds to the local product each party performs, the red section is the time it takes to send
+these messages to 𝑃1 , and the beige section is the time it takes for 𝑃 1 to send the reconstructions back.
+·105
+
+·105
+
+·105
+
+·107
+
+8
+6
+
+6
+
+4
+
+4
+
+3
+6
+2
+4
+
+2
+
+1
+
+2
+2
+
+0
+
+0
+100 101 102 103 104
+
+0
+100 101 102 103 104
+
+0
+100 101 102 103 104
+
+100 101 102 103 104
+
+Figure 2: Check phase. Blue represents preparing Jmsg𝑖 K2𝑑 , while the red represents reconstruction. Each graph corresponds to
+𝑛 ∈ {4, 7, 10, 13}, the x-axis is number of multiplications that is checked, while the y-axis is time in microseconds.
+
+𝑛
+
+Input phase (s)
+
+Mult. phase (s)
+
+Check phase (s)
+
+4
+7
+10
+13
+
+0.6
+1.2
+1.8
+2.5
+
+1.5
+2.4
+3.9
+39.5
+
+0.6
+0.6
+0.8
+25.6
+
+This is in particular relevant, taking into consideration low communication cost of the check, as pointed out earlier.
+
+ACKNOWLEDGMENTS
+A. Nof supported by ERC Project NTSC (742754). This paper was
+prepared in part for information purposes by the Artificial Intelligence Research group of JPMorgan Chase & Co and its affiliates
+(“JP Morgan”), and is not a product of the Research Department of
+JP Morgan. JP Morgan makes no representation and warranty whatsoever and disclaims all liability, for the completeness, accuracy
+or reliability of the information contained herein. This document
+is not intended as investment research or investment advice, or a
+recommendation, offer or solicitation for the purchase or sale of
+any security, financial instrument, financial product or service, or
+to be used in any way for evaluating the merits of participating
+in any transaction, and shall not constitute a solicitation under
+any jurisdiction or to any person, if such solicitation under such
+jurisdiction or to such person would be unlawful. 2021 JP Morgan
+Chase & Co. All rights reserved.
+
+Table 2: End-to-end runtimes (in seconds) for a circuit with
+100 input gates and 10000 multiplication gates distributed
+across one layer, for a varying number of parties.
+of our protocol manifests itself in practice. However, we believe it
+is fruitful to consider end-to-end runtimes as a rough estimate of
+how our protocol would fare in certain tasks. We warn, however,
+that these numbers are highly volatile as they strongly depend on
+the experimental setting, quality of implementation, etc., and they
+should only be used as a coarse guideline.
+We consider a circuit with 100 input gates, and 10000 multiplication gates distributed across one layer. Our results are presented in
+Table 2.
+6.2.5 Discussion. The results of the experiments we performed
+seem to be in accordance with our hypothesis. Specifically, local
+computation quickly becomes dominant, in particular in the multiplication protocol, and so our protocol would, in those cases, benefit
+more from a slower network.
+
+REFERENCES
+[1] Emmanuel Abbe, Amir E. Khandani, and Andrew W. Lo. 2012. Privacy-preserving
+methods for sharing financial risk exposures. American Economic Review 102, 3
+(2012), 65–70.
+
+665
+
+CCS ’22, November 7–11, 2022, Los Angeles, CA, USA
+
+Anders Dalskov, Daniel Escudero, and Ariel Nof
+
+[2] Mark Abspoel, Ronald Cramer, Ivan Damgård, Daniel Escudero, and Chen Yuan.
+2019. Efficient information-theoretic secure multiparty computation over Z/pk Z
+via Galois rings. In Theory of Cryptography Conference. Springer, 471–501.
+[3] Mark Abspoel, Anders P. K. Dalskov, Daniel Escudero, and Ariel Nof. 2021. An
+efficient passive-to-active compiler for honest-majority MPC over rings. In ACNS.
+[4] Alessandro N. Baccarini, Marina Blanton, and Chen Yuan. 2020. Multi-Party
+Replicated Secret Sharing over a Ring with Applications to Privacy-Preserving
+Machine Learning. IACR Cryptol. ePrint Arch. (2020).
+[5] Assi Barak, Martin Hirt, Lior Koskas, and Yehuda Lindell. 2018. An End-to-End
+System for Large Scale P2P MPC-as-a-Service and Low-Bandwidth MPC for
+Weak Participants. In ACM CCS.
+[6] Zuzana Beerliová-Trubíniová and Martin Hirt. 2008. Perfectly-Secure MPC with
+Linear Communication Complexity. In TCC.
+[7] Zuzana Beerliová-Trubíniová and Martin Hirt. 2008. Perfectly-Secure MPC with
+Linear Communication Complexity. In TCC.
+[8] Michael Ben-Or, Shafi Goldwasser, and Avi Wigderson. 1988. Completeness Theorems for Non-Cryptographic Fault-Tolerant Distributed Computation (Extended
+Abstract). In ACM Symposium on Theory of Computing.
+[9] Bonnie Berger, Cho Hyunghoon, and David J. Wu. 2018. Secure genome-wide
+association analysis using multiparty computation. Nature biotechnology 36, 6
+(2018), 547.
+[10] Piotr Berman, Juan A. Garay, and Kenneth J. Perry. 1992. Bit optimal distributed
+consensus. In Computer science. 313–321.
+[11] Dan Bogdanov, Riivo Talviste, and Jan Willemson. 2012. Deploying Secure MultiParty Computation for Financial Data Analysis - (Short Paper). In Financial
+Cryptography and Data Security FC.
+[12] Peter Bogetoft, Dan Lund Christensen, Ivan Damgård, Martin Geisler, Thomas P.
+Jakobsen, Mikkel Krøigaard, Janus Dam Nielsen, Jesper Buus Nielsen, Kurt
+Nielsen, Jakob Pagter, Michael I. Schwartzbach, and Tomas Toft. 2009. Secure
+Multiparty Computation Goes Live. In Financial Cryptography and Data Security
+FC.
+[13] Dan Boneh, Elette Boyle, Henry Corrigan-Gibbs, Niv Gilboa, and Yuval Ishai.
+2019. Zero-Knowledge Proofs on Secret-Shared Data via Fully Linear PCPs. In
+CRYPTO.
+[14] Dan Boneh, Elette Boyle, Henry Corrigan-Gibbs, Niv Gilboa, and Yuval Ishai.
+2019. Zero-Knowledge Proofs on Secret-Shared Data via Fully Linear PCPs. In
+CRYPTO.
+[15] Elette Boyle, Niv Gilboa, Yuval Ishai, and Ariel Nof. 2019. Practical Fully Secure
+Three-Party Computation via Sublinear Distributed Zero-Knowledge Proofs. In
+ACM CCS.
+[16] Elette Boyle, Niv Gilboa, Yuval Ishai, and Ariel Nof. 2020. Efficient Fully Secure
+Computation via Distributed Zero-Knowledge Proofs. In ASIACRYPT.
+[17] Ran Canetti. 2000. Security and Composition of Multiparty Cryptographic Protocols. J. Cryptology 13, 1 (2000), 143–202.
+[18] David Chaum, Claude Crépeau, and Ivan Damgård. 1988. Multiparty Unconditionally Secure Protocols (Extended Abstract). In ACM STOC.
+[19] Erika Check Hayden. 2015. Extreme cryptography paves way to personalized
+medicine. Nature News 519, 7544 (2015), 400.
+[20] Jung Hee Cheon, Dongwoo Kim, and Keewoo Lee. 2021. MHz2k: MPC from HE
+over $\mathbb {Z}_{2ˆk}$ with New Packing, Simpler Reshare, and Better ZKP.
+In CRYPTO.
+[21] Koji Chida, Daniel Genkin, Koki Hamada, Dai Ikarashi, Ryo Kikuchi, Yehuda
+Lindell, and Ariel Nof. 2018. Fast Large-Scale Honest-Majority MPC for Malicious
+Adversaries. In CRYPTO.
+[22] Arka Rai Choudhuri, Aarushi Goel, Matthew Green, Abhishek Jain, and Gabriel
+Kaptchuk. 2021. Fluid MPC: Secure Multiparty Computation with Dynamic
+Participants. In CRYPTO.
+
+[23] Brian A. Coan and Jennifer L. Welch. 1989. Modular Construction of Nearly
+Optimal Byzantine Agreement Protocols. In ACM Symposium on Principles of
+Distributed Computing.
+[24] Ronald Cramer, Ivan Damgård, Daniel Escudero, Peter Scholl, and Chaoping
+Xing. 2018. SPDZ2k: Efficient MPC mod 2k for Dishonest Majority. In CRYPTO.
+[25] Ronald Cramer, Ivan Damgård, and Yuval Ishai. 2005. Share Conversion, Pseudorandom Secret-Sharing and Applications to Secure Computation. In TCC.
+[26] Ronald Cramer, Serge Fehr, Yuval Ishai, and Eyal Kushilevitz. 2003. Efficient
+Multi-party Computation over Rings. In EUROCRYPT.
+[27] Anders P. K. Dalskov, Daniel Escudero, and Marcel Keller. 2020. Secure Evaluation
+of Quantized Neural Networks. Proc. Priv. Enhancing Technol. 2020, 4 (2020), 355–
+375.
+[28] Anders P. K. Dalskov, Daniel Escudero, and Marcel Keller. 2021. Fantastic Four:
+Honest-Majority Four-Party Secure Computation With Malicious Security. In
+USENIX.
+[29] Ivan Damgård, Daniel Escudero, Tore Kasper Frederiksen, Marcel Keller, Peter
+Scholl, and Nikolaj Volgushev. 2019. New Primitives for Actively-Secure MPC
+over Rings with Applications to Private Machine Learning. In IEEE Symposium
+on Security and Privacy, SP.
+[30] Ivan Damgård and Jesper Buus Nielsen. 2007. Scalable and Unconditionally
+Secure Multiparty Computation. In CRYPTO.
+[31] Danny Dolev and H. Raymond Strong. 1983. Authenticated Algorithms for
+Byzantine Agreement. SIAM J. Comput. 12, 4 (1983), 656–666.
+[32] Daniel Escudero and Eduardo Soria-Vazquez. 2021. Efficient InformationTheoretic Multi-party Computation over Non-commutative Rings. In CRYPTO.
+[33] Jun Furukawa and Yehuda Lindell. 2019. Two-Thirds Honest-Majority MPC for
+Malicious Adversaries at Almost the Cost of Semi-Honest. In ACM CCS.
+[34] Oded Goldreich. 2004. The Foundations of Cryptography - Volume 2, Basic Applications. Cambridge University Press.
+[35] Oded Goldreich, Silvio Micali, and Avi Wigderson. 1987. How to Play any Mental
+Game or A Completeness Theorem for Protocols with Honest Majority. In ACM
+STOC.
+[36] S. Dov Gordon, Samuel Ranellucci, and Xiao Wang. 2018. Secure Computation
+with Low Communication from Cross-Checking. In ASIACRYPT.
+[37] Vipul Goyal, Yanyi Liu, and Yifan Song. 2019. Communication-Efficient Unconditional MPC with Guaranteed Output Delivery. In CRYPTO.
+[38] Vipul Goyal, Yifan Song, and Chenzhi Zhu. 2020. Guaranteed Output Delivery
+Comes Free in Honest Majority MPC. In CRYPTO.
+[39] Brett Hemenway, Steve Lu, Rafail Ostrovsky, and William Welser IV. 2016. HighPrecision Secure Computation of Satellite Collision Probabilities. In SCN.
+[40] Mitsuru Ito, Akira Saito, and Takao Nishizeki. 1989. Secret sharing scheme
+realizing general access structure. Electronics and Communications in Japan
+(1989).
+[41] Nishat Koti, Mahak Pancholi, Arpita Patra, and Ajith Suresh. 2021. SWIFT:
+Super-fast and Robust Privacy-Preserving Machine Learning. In USENIX.
+[42] Nishat Koti, Arpita Patra, Rahul Rachuri, and Ajith Suresh. 2021. Tetrad: Actively
+Secure 4PC for Secure Training and Inference. Cryptology ePrint Archive, Report
+2021/755. https://ia.cr/2021/755. To appear at NDSS 2022.
+[43] Eyal Kushilevitz, Yehuda Lindell, and Tal Rabin. 2010. Information-Theoretically
+Secure Protocols and Security under Composition. SIAM J. Comput. 39, 5 (2010),
+2090–2112.
+[44] Emmanuela Orsini, Nigel P. Smart, and Frederik Vercauteren. 2020. Overdrive2k:
+Efficient Secure MPC over $\mathbb {Z}_{2ˆk}$ from Somewhat Homomorphic
+Encryption. In CT-RSA.
+[45] Tal Rabin and Michael Ben-Or. 1989. Verifiable Secret Sharing and Multiparty
+Protocols with Honest Majority. In ACM Symposium on Theory of Computing.
+[46] Andrew Chi-Chih Yao. 1986. How to Generate and Exchange Secrets (Extended
+Abstract). In Symposium on Foundations of Computer Science.
+
+666
+
+

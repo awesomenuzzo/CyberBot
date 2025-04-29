@@ -1,0 +1,3219 @@
+Asterisk: Super-fast MPC with a Friend
+Banashri Karmakar1 , Nishat Koti1 , Arpita Patra1 , Sikhar Patranabis2 , Protik Paul1 ,
+and Divya Ravi3
+IISc Bangalore∗
+IBM Research India†
+3
+Aarhus University‡
+1
+
+2
+
+Abstract
+Secure multiparty computation (MPC) enables privacy-preserving collaborative computation over sensitive data held by multiple mutually distrusting parties. Unfortunately,
+in the most natural setting where a majority of the parties are maliciously corrupt (also
+called the dishonest majority setting), traditional MPC protocols incur high overheads
+and offer weaker security guarantees than are desirable for practical applications. In
+this paper, we explore the possibility of circumventing these drawbacks and achieving
+practically efficient dishonest majority MPC protocols with strong security guarantees
+by assuming an additional semi-honest, non-colluding helper party HP.1 We believe that
+this is a more realistic alternative to assuming an honest majority, since many real-world
+applications of MPC involving potentially large numbers of parties (such as dark pools)
+are typically enabled by a central governing entity that can be modeled as the HP.
+In the above model, we are the first to design, implement and benchmark a practicallyefficient and general multi-party framework, Asterisk. Our framework requires invoking
+HP only a constant number of times, achieves the strong security guarantee of fairness
+(either all parties learn the output or none do), scales to hundreds of parties, outperforms
+all existing dishonest majority MPC protocols, and is, in fact, competitive with stateof-the-art honest majority MPC protocols. Our experiments show that Asterisk achieves
+228 − 288× speedup in preprocessing as compared to the best dishonest majority MPC
+protocol. With respect to online time, Asterisk supports 100-party evaluation of a circuit with 106 multiplication gates in approximately 20 seconds. We also implement and
+benchmark practically efficient and highly scalable dark pool instances using Asterisk.
+The corresponding run times showcase the effectiveness of Asterisk in enabling efficient
+realizations of real-world privacy-preserving applications with strong security guarantees.
+
+∗
+
+Author emails: {banashrik,kotis,arpita,protikpaul}@iisc.ac.in
+Author email: sikhar.patranabis@ibm.com
+‡
+Author email: divya@cs.au.dk
+1
+We refer to this entity as a friend in the title.
+†
+
+1
+
+1
+
+Introduction
+
+In today’s digital landscape, vast amounts of user data are being collected and analyzed. This
+motivates the need for privacy-preserving computation that enable computing on sensitive
+data without compromising data privacy. Secure multiparty computation (MPC) [53] is
+one such technology that facilitates computation over sensitive data without disclosing any
+underlying information. Informally, an MPC protocol allows a set of n distrusting parties
+with private inputs to jointly evaluate a function on these inputs, while ensuring that a
+(centralized) adversary corrupting at most t < n parties learns nothing beyond the function
+output.
+We motivate the practical applicability of MPC with the example use-case of privacypreserving dark pools. Dark pools are private exchanges that allow institutional investors
+to trade large volumes of financial instruments (such as stocks, bonds, shares, etc.) away
+from the prying eyes of the public. Unlike public exchanges, trade requests submitted to
+a dark pool remain hidden until they are matched. At a high-level, dark pools operate as
+follows. Investors submit trade requests to a central dark pool operator who is responsible for
+matching buy orders to sell orders, and publishing the list of matched (or satisfied) orders.
+Submitted requests that are unmatched remain hidden with the dark pool operator until they
+get satisfied. This solution necessitates that the centralized dark pool operator (a) respects
+the privacy of the client’s trade interests, and (b) executes the identification of matches among
+the buy and sell orders honestly. MPC, on the other hand, obviates the need for such trust
+assumptions. To guarantee privacy and ensure that the trade interest is not disclosed in the
+clear to the dark pool operator, one can move to the distributed setting. Here, the clients
+run an MPC protocol among themselves (with their trade requests as the private input)
+to determine the matching orders.2 The protocol would identify the matching orders while
+guaranteeing that no corrupt subset of t < n clients can reconstruct any of the honest client’s
+inputs (and, in fact, does not learn anything beyond the matching orders).
+Honest vs dishonest majority. While MPC appears to be an ideal solution, one needs to
+consider more fine-grained aspects, namely the corruption threshold that the MPC protocol
+can withstand, and the notion of security that the protocol achieves. In practical applications
+such as privacy-preserving dark pools, one would expect a majority of the clients to be corrupt.
+In the context of MPC, this translates to the adversary corrupting up to t = (n − 1) out of
+n parties, and is termed as the dishonest majority setting. The counterpart to this setting is
+the honest majority setting, where the adversary corrupts only a minority of the parties, i.e.,
+t < n/2. Our focus in this paper is on MPC in the dishonest majority setting.
+Traditional dishonest majority MPC. Unfortunately, traditional dishonest majority MPC
+protocols necessarily rely on cryptographic hardness assumptions, which renders them practically inefficient in comparison to their honest majority counterparts, and potentially degrades
+the performance of real-time, throughput-sensitive applications (e.g., dark pools, privacypreserving machine learning, etc.). Additionally, known impossibility results make it impossible for traditional dishonest majority MPC protocols to provide stronger security notions
+2
+
+Depending on the dark pool algorithm, an alternative approach is to employ an MPC protocol to enable
+multiple parties to collectively effectuate the role of a dark pool operator [12, 39, 20].
+
+2
+
+of fairness or full security/guaranteed output delivery (GOD) in the presence of a malicious
+adversary [18].3 Fairness guarantees that corrupt parties do not gain any unfair advantage
+in learning the output (i.e., either all parties learn the output of the computation or none
+do), while GOD provides the stronger guarantee that, irrespective of the corrupt parties’
+misbehaviour, all parties obtain the output. In the absence of fairness (or GOD), a dishonest
+majority protocol empowers an adversary to abort the computation at will as well as learn
+the output. This can be disastrous in applications such as dark pools since this allows the
+adversary to repeatedly abort the computation if the outcome of matching is not favourable
+to the adversary (unlike in a fair protocol where the adversary does not gain any unfair
+advantage in learning the output). These drawbacks tend to render traditional dishonest
+majority MPC protocols insufficient for many practical applications.
+Honest majority MPC. MPC protocols in the honest majority setting [8, 9, 29, 41] avoid
+the above drawbacks and yield practically efficient solutions with strong security guarantees.
+However, the assumption of an honest majority is, in general, stronger than its counterpart
+dishonest majority and may not hold in many application scenarios.
+MPC with a friend. The above discussion motivates the need for alternative MPC models
+that could bypass the inherent drawbacks of traditional dishonest majority protocols, while
+also avoiding the strong corruption threshold assumptions that characterize honest-majority
+solutions. In this paper, we consider such a model that (we believe) realistically captures
+corruption behaviors in certain real-world applications. We dub this model as MPC with a
+friend, where the parties are aided by the presence of an additional helper party HP (which
+is not trusted but is semi-honest, i.e., does not deviate arbitrarily from the protocol). As
+we discuss below, in certain scenarios, as compared to assuming an honest majority within
+a (potentially large) set of parties, it seems more practical to identify a single (semi-honest)
+party, while allowing a majority of the remaining parties to be (maliciously) corrupt. For
+example, in the case of dark pools, the Securities and Exchange Commission (SEC) [12] is
+a trusted entity that governs the integrity of the dark pool operations (including that the
+right algorithm is used to perform matching of buy and sell orders). The SEC can instead
+be modelled as semi-honest (thereby reducing the points of trust in the overall system) and
+yet non-colluding with the clients. Thus, it can enact the role of HP, whereas the clients
+can be maliciously corrupt under a dishonest majority assumption. Analogous to dark pools,
+another motivating application is inventory matching [49], which is a standard mechanism for
+trading financial stocks by which buyers and sellers can be paired so that the related stocks
+can be traded without adversely impacting the market price for either client. In the financial
+world, banks often undertake the task of finding such matches between their clients, thus a
+bank can enact the role of the HP for its clients. In general, the trusted, central entity, that
+is responsible for governing the execution of an application, can be modelled as the HP.
+Related work. We note that several works have considered using a “trusted” HP to achieve
+MPC protocols with stronger security guarantees [26, 27, 32]. However, these works typically assumed that the HP was a small and fully trusted entity (e.g., tamper-proof hardware
+tokens [11, 34, 17, 21, 16, 15, 30, 6]), sometimes doing minimal work. On the other hand,
+3
+
+A malicious adversary may deviate arbitrarily from protocol specification.
+
+3
+
+modeling the HP as a semi-honest entity was introduced in a more recent work [33]. As shown
+in [33], this model circumvents the impossibility of [18], even when the HP is semi-honest, as
+long as it does not collude with the remaining parties (with a maliciously corrupt majority).
+It is additionally shown in [33] that this non-collusion assumption is somewhat necessary for
+strong security notions such as fairness/GOD that we want for practical applications (we expand more on this later). Finally, the authors of [33] propose certain concrete MPC protocols
+in this setting that achieve GOD; however, these are primarily feasibility results based on
+strong cryptographic machinery and are practically inefficient.
+A related MPC model called Assisted MPC (based on a probabilistic semi-honest, noncolluding helper party) was studied in [46]; however, this model differs from the HP-aided
+MPC model of [33] in two ways: (a) the authors of [46] assume that the semi-honest behavior
+of the helper party is probabilistic (i.e., it could also be malicious with some finite non-zero
+probability), and (b) it is not studied in [46] if this model circumvents known impossibilities
+and enables strong security guarantees such as fairness/GOD (the protocols in [46], while
+practically efficient, still achieve the weaker notion of abort security – same as traditional
+dishonest majority MPC protocols). This leads to the question: can we bridge this gap
+between inefficient protocols with strong security guarantees and efficient protocols with
+weak security guarantees using a non-colluding, semi-honest HP?
+Relation to FaF security. We briefly comment on the non-colluding HP assumption above,
+and its relation to another notion of security for MPC called friends-and-foes (FaF) security [1], which requires security to hold not only against the adversarial parties (foes), but
+also against quorums of honest parties (friends). [1] proposed modelling this using a decentralized adversary consisting of two different non-colluding adversaries—(i) a malicious
+adversary that corrupts any subset of at most t out of n parties, and (ii) a semi-honest adversary that corrupts any subset of at most h⋆ out of the remaining (n − t) parties. Further,
+the FaF model requires security to hold even when the malicious adversary sends its view to
+the semi-honest adversary.
+A natural adaptation of this notion to the HP-aided setting would translate to the malicious adversary corrupting up to (n − 1) parties and the semi-honest adversary corrupting
+the HP (this is clearly weaker than traditional FaF security because the HP is a designated
+semi-honest party, but stronger than the fully non-colluding HP assumption of [33], since the
+HP can be given access to the views of the corrupt parties). The impossibility result of [33]
+does not rule out the possibility of getting stronger security guarantees in this model (their
+impossibility assumes that the same centralized adversary corrupts both the HP and a majority of the remaining parties). Unfortunately, we rule out the possibility of achieving fair
+MPC protocols in this model (see Section 3), thus establishing that the non-colluding model
+of HP-aided MPC from [33] is the best we can hope for if we wish to achieve fairness/GOD in
+dishonest majority. In the rest of the paper, we refer to this setting as the dishonest majority
+HP-aided setting. Concretely, we ask the following: Can we achieve highly efficient MPC
+protocols with strong security in the dishonest majority HP-aided setting?
+
+1.1
+
+Our contributions
+
+We answer the above question in the affirmative. Our contributions are as described below.
+
+4
+
+Asterisk. We put forth Asterisk–a highly efficient MPC protocol in the preprocessing paradigm
+that allows computing arithmetic as well as Boolean circuits over secret-shared inputs in the
+dishonest majority HP-aided setting (i.e., in the presence of a semi-honest, non-colluding HP)
+while achieving fairness. Unlike standard dishonest-majority MPC protocols [23, 36, 7] that
+only achieve abort security due to known impossibilities for achieving fairness [18], Asterisk
+achieves stronger security (fairness) by leveraging the HP to bypass this impossibility. In
+particular, Asterisk uses the (semi-honest, non-colluding) HP in both the preprocessing and
+online phases, and, unlike existing dishonest majority protocols, achieves an extremely fast
+and lightweight (function-dependent) preprocessing phase, as well as a highly efficient online
+phase, while maintaining privacy against the (semi-honest) HP. Asterisk makes overall only
+four calls to the HP, which is reasonably small. We expand more on this below.
+Efficient preprocessing. We note that traditional dishonest-majority MPC protocols [23, 36,
+37, 7] crucially rely on cryptographic machinery (such as homomorphic encryption or oblivious
+transfer) in the preprocessing phase, which leads to greater computational and communication
+overheads as compared to honest-majority protocols. Asterisk, on the other hand, achieves
+a highly efficient (function-dependent) pre-processing phase that uses no additional cryptographic machinery, and only requires communicating 3 elements per multiplication gate (this
+is a significant improvement over the O(n2 ) complexity of state-of-the-art dishonest majority
+protocols, such as [36, 37, 7]).
+In fact, Asterisk also outperforms Assisted MPC [46] in terms of preprocessing efficiency.
+Recall that, like Asterisk, Assisted MPC also relies on an external non-colluding semi-honest
+party (however, the helper party is only probabilistically semi-honest in the case of Assisted
+MPC, and the resulting protocol is only abort secure). However, Assisted MPC incurs a
+communication overhead of O(n) per multiplication gate in its preprocessing phase, which
+is significantly higher than the requirement of communicating 3 elements per multiplication
+gate in the preprocessing phase of Asterisk.
+Technically, these efficiency gains stem from careful use of the HP in the preprocessing
+phase of Asterisk, which constitutes a major technical novelty of our work. The (functiondependent) preprocessing phase of Asterisk uses the HP to: (a) produce authenticated additive
+shares of the masks for all wires in the circuit representation of the function to be computed,
+and (b) generate shares of multiplication triples. In particular, the preprocessing phase
+exclusively involves the HP generating and sending messages to the parties, while the parties
+themselves only perform local computations without communicating with each other. This
+minimizes the communication overhead, while also ensuring that the preprocessing phase is
+inherently error-free (thereby avoiding any additional overheads for verification checks). See
+Section 4 for details.
+Efficient online phase. Asterisk achieves better online efficiency in the dishonest majority
+(all but one) protocols [36, 37]. Also, it does not rely on additional primitives such as a
+commitment scheme, which is required in the prior works. Furthermore, we utilize the HP
+in the online phase to achieve a stronger security guarantee of fairness.
+Table 1 provides a comparison of Asterisk dishonest majority protocols [36, 37, 46] as
+well as state-of-the-art honest majority protocols [29, 41] in terms of efficiency and security. Note that Asterisk uses function-dependent preprocessing. We leverage the fact that
+
+5
+
+Preprocessing
+Protocol
+
+Model
+
+Mascot [36]
+Overdrive ‡ [37]
+
+DM
+
+Assisted MPC † [46]
+ATLAS [29] ∗
+
+Online
+
+Security
+Comm.
+
+Rounds
+
+Comm.
+
+Abort
+
+O(n2 )
+
+2
+
+4n
+
+Abort
+
+O(n2 )
+
+2
+
+4n
+
+Abort
+
+2n
+
+2
+
+4n
+
+Abort
+
+NA
+
+2
+
+2n
+
+Fairness
+
+1.5n
+
+2
+
+1.5n
+
+Fairness
+
+3
+
+2
+
+2n
+
+HM
+MPClan [41]
+Asterisk
+
+DM with HP
+
+‡ For preprocessing, [36] relies on OT and [37] relies on SHE.
+† [46] uses an additional helper party in the preprocessing phase.
+∗ The costs reported are for the computational variant. We assume parties have common PRF keys that
+facilitate the non-interactive generation of common random values between them, similar to Asterisk.
+
+Table 1: Comparison of Asterisk with the state-of-the-art dishonest majority (DM) and honest majority (HM) protocols.
+in many practical applications (e.g., dark pools), the target function is known a priori, to
+improve online efficiency of Asterisk significantly. We compare Asterisk with protocols using
+function-independent preprocessing (e.g., [36, 37, 46]) to showcase these efficiency improvements. It is easy to see that Asterisk achieves better efficiency (in both the preprocessing
+and online phases) as well as stronger security guarantees (fairness as opposed to abort security) as compared to dishonest majority protocols [36, 37, 46]. In fact, Asterisk is actually
+closer to the honest majority protocols [29, 41] in terms of efficiency and security guarantees. Finally, Asterisk has fundamentally different design goals as compared to [33], which
+focuses on using the HP minimally and relies on expensive cryptographic tools such MPC
+with identifiable-abort (costly in practice) and succinct functional-encryption (with no practical implementations till date), resulting in protocols of primarily theoretical interest that
+are not suitable for practical applications. Asterisk, on the other hand, relies on minimal cryptographic assumptions and is designed specifically for practical efficiency, as demonstrated
+by our experiments.
+Impossibility of fairness in FaF with HP. We justify our choice of assuming the dishonest majority HP-aided setting (with a semi-honest, fully non-colluding HP) for the design
+of Asterisk by proving that this assumption is, in fact, necessary to achieve dishonest majority MPC protocols satisfying fairness. Concretely, we prove that it is impossible to design
+a fair protocol when considering the model of FaF security with HP. This result, coupled
+with the impossibility of attaining fairness using a colluding HP [33], effectively rules out the
+possibility of designing fair protocols unless the HP is fully non-colluding (which is precisely
+the model we use for designing Asterisk). See Section 3 for more details.
+Applications and building blocks. We build upon Asterisk to design secure and efficient
+protocols in the HP-aided setting for privacy-preserving dark pools. Along the way, we design
+sub-protocols for various granular functionalities, such as equality, comparison, dot product,
+and shuffle (among others). These building blocks are of independent interest (with poten6
+
+300
+
+Run time (sec)
+
+Online
+Total
+200
+
+100
+
+0
+
+510
+
+25
+
+50
+Number of parties
+
+100
+
+Figure 1: Online and total run time over a LAN network of Asterisk for a circuit of size 106 and the
+depth of the circuit is 10, for varying number of parties.
+
+tially other applications such as privacy-preserving machine learning, anonymous broadcast,
+etc.). In fact, the design framework of Asterisk is versatile enough to enable efficient, privacypreserving versions of a wide range of service-based application (e.g., PPML) involving a
+central service-provider with no incentive to act maliciously. However, concretely realizing
+additional applications would require designing application-specific sub-protocols (e.g., for
+evaluating non-linear activation functions in PPML-based applications), which we leave as
+future work.
+Implementation and benchmarks. We implement and benchmark Asterisk to showcase
+its efficiency as well as scalability. When evaluating a circuit comprising 106 multiplication
+gates, Asterisk has a response time (online) of around 20 seconds for as many as 100 parties.
+Fig. 1 summarizes Asterisk’s performance for varying number of parties. Fig. 2 presents a
+comparison between Asterisk and Assisted MPC [46] (both of which use some kind of external
+helper party). We highlight that Asterisk’s preprocessing phase has improvements of up to
+4× and 134×, in terms of run time and communication overheads, respectively, as compared
+to that of Assisted MPC. We present additional experimental results in Section 5 showcasing that, compared to state-of-the-art dishonest majority MPC protocols [36, 37], Asterisk
+achieves gains of up to 6× and 4× in total and online communication, respectively, as well
+as gains of up to 288× in throughput of multiplicative triple-generation in the preprocessing
+phase.
+We also showcase the practicality of Asterisk by benchmarking the application of privacypreserving dark pools. We consider two dark pool algorithms—volume matching and continuous double auctions (CDA). We observe that in the presence of up to 100 clients, volume
+matching has a response time of 93 seconds. In the case of CDA, we observe that processing
+a new buy (or sell) request takes around 13 seconds given a sell (buy) list of size 500.
+Comparison with FaF-secure protocols. As noted earlier, the dishonest majority HPaided model bears some resemblance to the FaF-security model [1], with the difference that
+in the former model, the HP is a designated semi-honest party (there is no such designated
+party in FaF-security), and in FaF-security, the semi-honest adversary may be given access
+to the view of the malicious adversary (this is not allowed in the dishonest majority HP-aided
+
+7
+
+3
+log10 (Time (sec))
+
+log10 (Comm. (MB))
+
+3.5
+3
+2.5
+2
+
+2.5
+2
+1.5
+
+1.5
+
+5
+
+Asterisk
+
+10
+
+25
+50
+# of parties
+
+100
+
+5
+
+Asterisk
+
+Assisted MPC[46]
+
+10
+
+25
+50
+# of parties
+
+100
+
+Assisted MPC[46]
+
+Figure 2: Preprocessing comparison between Assisted MPC [46] and Asterisk for a circuit of size 106
+(the values are scaled in the logarithmic scale with base 10).
+
+model). While [1] presented some feasibility results for FaF-secure MPC without honest majority, more recent works have proposed concretely efficient FaF-secure MPC protocols [31, 39]
+that achieve stronger-than-abort security, albeit for specific numbers of parties (specifically,
+4 parties in [31] and 5 parties in [39]) and specific corruption thresholds (at most one malicious corruption). It is not immediately obvious how one might extend these schemes for any
+general number of parties n while retaining comparable efficiency and security guarantees.
+On the other hand, the efficiency and security guarantees of Asterisk hold for any general
+number of parties (this is well suited for applications such as dark pools, where the number
+of parties could be large in practice). We also note that [31] has a significantly more expensive
+preprocessing phase as compared to Asterisk, and both [31, 39] cannot tolerate a dishonest
+majority. Finally, we believe that for the application that we consider in this paper, the
+dishonest majority HP-aided model more aptly captures the expected behavior of corrupt
+parties, which do not seem to have any particular incentive to share their views with the
+semi-honest HP.
+Organization. Section 2 introduces notations and formally defines the dishonest majority
+HP-aided model. Section 3 justifies this model by presenting our impossibility result for
+fairness in the FaF model with a semi-honest HP. Section 4 describes our main contribution—
+the Asterisk framework. Section 5 presents an outline of how Asterisk is used to realize
+the target application (and the building blocks thereof), followed by implementation details
+and benchmarking results. Finally, Section 6 concludes and discusses some open questions.
+Certain missing details are deferred to the appendix.
+
+2
+
+Preliminaries
+
+Threat model. We begin with a description of the dishonest majority HP-aided model of
+MPC that we use throughout the paper. We consider n parties P = {P1 , . . . , Pn }, where each
+party Pi is initialized with input xi ∈ {0, 1}∗ and random coins ri ∈ {0, 1}∗ . These parties
+interact in synchronous rounds. In every round parties can communicate either over a fully
+connected point-to-point (P2P) network, where we additionally assume all communication
+to be private and ideally authenticated. Further, we assume that there exists a special party
+HP, outside P, called a “helper party” (abbreviated henceforth as HP) such that each party
+
+8
+
+Pi can interact with HP via private and authenticated point-to-point channels. The HP does
+not typically hold any inputs and also does not obtain any output at the end of the protocol.
+Depending on whether we allow the HP to keep any state in between its invocations (where
+an invocation corresponds to all parties interacting with the HP in a single round) or not, we
+refer to the HP as being ‘stateful’ or ‘stateless’ respectively.
+We consider a non-colluding adversary who either corrupts up to n−1 among the n parties
+maliciously or the HP in a semi-honest manner. We prove the security of our protocols based
+on the standard real world / ideal world paradigm [10]. Essentially, the security of a protocol
+is analyzed by comparing what an adversary can do in the real execution of the protocol to
+what it can do in an ideal execution, that is considered secure by definition (in the presence
+of an incorruptible trusted party). For a detailed description of the security model of noncolluding, colluding and a related notion of friends-and-foes (FaF), refer to Appendix A.
+Notations. We also introduce some notations that we use throughout the paper.
+• Data representation: We consider secure computation over finite fields F. F can be either
+a binary field F2 or a prime field Fp where p is a k-bit prime. For computation, we consider
+signed values, that is, where the boolean representation of a value x ∈ Fp is in the 2’s
+complement form. A positive value x ∈ [0, p2 ] has the most significant bit (MSB) as 0 and a
+negative value x ∈ [− p2 , 0) has 1 in the MSB.
+• [1, n] denotes the set {1, . . . , n}.
+• (b)A is used to denote arithmetic equivalent of bit b.
+?
+
+• b = 1(x = 0) denotes b = 1 if x = 0, otherwise b = 0.
+?
+
+• b = 1(x ≤ 0) denotes b = 1 if x ≤ 0, otherwise b = 0.
+• FRand is a random coin-tossing functionality. It allows parties and HP to sample common
+random values such that a corrupt party guesses this value with negligible probability.
+
+3
+
+Impossibility of fairness in FaF with HP
+
+In this section, we show that it is impossible to achieve fairness with FaF security in our HPaided setting. The impossibility result, at a high level, follows similarly to the impossibility of
+attaining fairness for n = 3, t = 1, h∗ = 1 with FaF security, as described in [1]. Note that in
+the standard definition of (t, h⋆ )-FaF security, any subset of h⋆ parties can be semi-honestly
+corrupt. On the other hand, when considering FaF security with HP, it is only a designated
+entity (namely the HP) which is semi-honest (see Appendix A.1 for the formal definition). In
+this way, the standard notion of FaF security is stronger than FaF security with HP. Hence,
+the impossibility of FaF security with HP does not follow directly from the impossibility of
+[1]. We show how the proof of [1] can be modified to extend to the notion of FaF security
+with HP.
+The main difference in our proof and that of [1], is that in our case, the semi-honest party
+(HP) does not have any input, while the semi-honest party in the case of [1] does. Further,
+the proof of [1] relied on this input being unchanged while the simulator invokes the ideal
+functionality. To make this proof work for our setting, we first modify the functionality to
+account for the fact that HP does not have an input. Further, instead of relying on the input
+
+9
+
+of the semi-honest party remaining unchanged, we rely on the fact that the honest party’s
+input to the ideal functionality remains unchanged. We next provide a high-level overview
+of the proof.
+First, we work out the proof for two parties in which one will be maliciously corrupt and
+in addition there is a semi-honestly corrupt HP. The argument for n parties and one HP
+follows from player partitioning technique [44]. Consider 2 parties A and B, and a HP. We
+show that there exists a function F (which takes input from A and B), that cannot have a
+fair protocol in the considered model of FaF security with HP. To prove the above claim, we
+proceed via contradiction. That is, we show that if there exists a fair protocol, then there
+exists a polynomial time algorithm that can invert a one-way permutation. For this, we define
+the function F to be Swapκ using a one-way permutation fκ (κ is the security parameter).
+To be specific, we use the following functionality
+
+
+(a, b) if f (a) = y and f (b) = y
+κ
+A
+κ
+B
+Swapκ ((a, yB ), (b, yA )) =
+
+0κ otherwise
+
+Each party inputs a pair of values (a, yB ), (b, yA ), where a, b is in the domain of fκ , and
+yA , yB is in the range of fκ . Swapκ then outputs (a, b) if fκ (b) = yA and fκ (a) = yB . Let there
+exist a fair protocol to compute Swapκ that comprises r rounds, where r ≤ p(κ), for some
+polynomial p(·). We show that there exists a round i ≤ r such that either (A, HP) gain an
+advantage in learning the output than B or it is the case that (B, HP) gain an advantage in
+learning the output than A. Without loss of generality, consider the case that A is malicious.
+We then show that this advantage of the pair (A, HP) over (B, HP) cannot be simulated,
+thereby breaking the fairness property. For this, we show that if this can be simulated, then
+there exists a polynomial time algorithm which can break the one-wayness property of the
+one-way permutation.
+To showcase that the advantage of (A, HP) over (B, HP) cannot be simulated, consider the
+strategy of a malicious A. A acts honestly (using the original input it held) until this round
+i, after which it aborts. A then sends its entire view to HP. Because of the aforementioned
+claim on the existence of round i, receiving A’s view allows the HP to recover the correct
+output (corresponding to an all-honest execution) with a significantly higher probability than
+B. If there exists a simulator for such an (A, HP) pair, then we can construct a polynomial
+time algorithm M , which can be used to break the one-wayness of the underlying one-way
+permutation. Elaborately, M is the same algorithm performed by HP to obtain the output
+at the end of round i when A aborts. Observe that M takes as input the view of HP (which
+includes the view of corrupt A as well as its input yB ), and generates the output of Swapκ ,
+which comprises the inverse of a one-way permutation (b). Hence, using M , we can construct
+a polynomial-time algorithm to invert a one-way permutation.
+The formal theorem appears below and detailed proof in Appendix B.
+Theorem 3.1. There exists an n-party functionality such that no protocol computes it with
+fairness in the FaF security model with HP.
+
+10
+
+4
+
+Efficient n-PC with HP
+
+Here, we describe the MPC protocol of Asterisk, which is designed in the preprocessing
+paradigm. Computation begins by executing a one-time shared key setup phase, where common PRF keys are established between the parties to facilitate the non-interactive generation
+of common random values among the parties during the protocol execution. Next, the preprocessing phase kicks in, where the necessary preprocessing (input-independent) data is
+generated. This is followed by the online phase once the input is available.
+
+4.1
+
+Shared key setup
+
+Let F : {0, 1}κ × {0, 1}κ → F be a secure pseudo-random function (PRF). Parties rely on a
+one-time setup [3, 2, 41, 42] to establish the following PRF keys among different subsets of
+the parties (including the HP). Specifically, the set of keys established between the parties
+and HP for our protocol is as follows:
+• Every party Pi ∈ P holds a common key with HP, denoted by ki , i ∈ [1, n].
+• P hold a common key kP , unknown to HP.
+• P ∪ {HP} hold a common key kall .
+The ideal functionality for the same appears in Fig. 3. Discussion on how to instantiate
+FSetup is deferred to Appendix C.1.
+
+Functionality FSetup
+FSetup picks random keys {{ki }i∈[1,n] , kP , kall } for {{Pi , HP}i∈[1,n] , P, P ∪ {HP}} respectively.
+• Set yi = {ki , kP , kall }.
+• Set yHP = {{ki }i∈[1,n] , kall }.
+Output: Send (Output, ys ) to Ps ∈ P & (Output, yHP ) to HP.
+
+Figure 3: Ideal functionality for shared-key setup
+
+4.2
+
+Sharing semantics
+
+To achieve (malicious) security in the dishonest majority setting, Asterisk uses authenticated
+additive secret-sharing of the inputs. Let v ∈ F be a secret. We
+P say that v is additively
+shared among parties in P if there exist vi ∈ F such that v = ni=1 vi and Pi ∈ P holds
+vi . For authentication, we use an information-theoretic (IT) MAC (message authentication
+code) under a global MAC key ∆ ∈ F. The authentication tag t for a value v is defined as
+t = ∆ · v, where the MAC key ∆ and the tag t are additively shared among the parties in P.
+The following are the various sharing semantics used by Asterisk.
+1. [·]-sharing: A value v ∈ F is said to be [·]-shared P
+(additively shared) among parties in P
+if the ith party Pi holds [v]i ∈ F such that v = ni=1 [v]i .
+2. ⟨·⟩-sharing: A value v ∈ F is said to be ⟨·⟩-shared among parties in P if, the ith party
+Pi holds ⟨v⟩i = {[v]i , [tv ]i }, where tv = ∆ · v is the tag of v, as discussed above. Along
+
+11
+
+with the share of value v and the tag tv , parties also hold an additive sharing of the
+MAC key ∆, i.e., Pi holds [∆]i .
+3. J·K-sharing: A value v ∈ F is said to be J·K-shared if
+• there exists a mask δv ∈ F that is ⟨·⟩-shared among the parties in P, and
+• there exists a masked value mv = v + δv that is held by each Pi ∈ P.
+We denote Pi ’s J·K-share of v as JvKi = {mv , ⟨δv ⟩i }.
+
+Note that all these sharing schemesP
+are linear, i.e., given shares of values a1 , . . . , am and
+m
+public constants c1 , . . . , cm , shares of
+i=1 ci ai can be computed non-interactively for an
+integer m. Further, Boolean sharing of a secret bit is analogous to arithmetic sharing as
+described above, with the difference that addition/subtraction operations are replaced by
+XOR (⊕). We use the superscript B to denote Boolean sharing of a bit. The Boolean world
+is analogous to the arithmetic world where addition/subtraction operations are replaced with
+XORs, and multiplication is replaced with AND (∧).
+
+4.3
+
+Design of Asterisk
+
+We elaborate on the preprocessing and online phase of Asterisk in the preprocessing model.
+Preprocessing phase. In this phase, parties obtain ⟨·⟩-shares of the masks associated
+with all the wires in the circuit representing the function to be computed, while HP gets
+them all in clear. Specifically, the HP begins by sampling the MAC key ∆ and generates
+its [·]-shares. For an input wire with value v where Pd is the input provider (dealer), parties
+generate ⟨·⟩-shares of a random mask δv such that δv is known to Pd and HP. For wires that
+are the output of an addition gate, HP and all parties locally add the ⟨·⟩-shares of masks of
+the input wires of the addition gate to obtain the ⟨·⟩-shares of the mask for the output wire.
+With respect to a multiplication gate, let x, y be the inputs to this gate and z be the output.
+Parties generate ⟨·⟩-shares of a random mask δz such that it is known to the HP. Moreover,
+HP computes δxy = δx · δy , where δx , δy are the masks corresponding to x and y, respectively.
+Then it generates ⟨·⟩-share of δxy . Looking ahead, δxy will be used to generate the masked
+value for the output of the multiplication gate. Finally, for an output gate where v is the
+output, HP generates and stores the mask δv . During the online phase, it will send δv to all
+the parties to facilitate output reconstruction. The preprocessing phase is described in Fig. 7
+which uses several sub-protocols for generating the ⟨·⟩-shares of different values. We start
+with the latter.
+The preprocessing phase involves generation of ⟨·⟩-sharing of the following kind of secrets–
+(i) a random mask that is known by a designated party and the HP, (ii) a random mask that
+is known only to the HP, (iii) a secret value (not necessarily uniformly random) known to
+the HP. Note that to generate ⟨·⟩-shares of a value v,Pthe HP can sample n − 1 shares [v]i for
+n−1
+i ∈ {1, . . . , n − 1}, followed by computing [v]n = v − i=1
+[v]i . Similarly, it can compute the
+tag tv , then sample n−1 shares for tv followed by computing the last share for tv . The HP can
+the send the ith share of v and tv to Pi . This would require 2n elements of communication.
+We improve this cost by using the common keys established during the setup phase.
+Π⟨·⟩-Sh (Pd , Rand) (Fig. 4) indicates generating a ⟨·⟩-sharing of a random value v such that
+the dealer, Pd , and HP know the value in clear. This requires communication of 2 elements.
+
+12
+
+Protocol Π⟨·⟩-Sh (Pd , Rand)
+Input: ∀i ∈ [1, n], Pi ’s input ki , and HP’s input {{ki }i∈[1,n] , ∆}.
+Output: Pd ’s output v and ⟨v⟩d and Pi (i ̸= d) gets ⟨v⟩i .
+
+Protocol:
+• HP and Pd sample a random value v using the kd .
+• For all i ∈ {1, . . . , n − 1}, HP and Pi sample a random share [v]i and a random share of the tag
+[tv ]i using the ki .
+P
+P
+• HP computes [v]n = v − i∈[n−1] [v]i and [tv ]n = (∆ · v) − i∈[n−1] [tv ]i .
+• HP sends ([v]n , [tv ]n ) to Pn .
+
+Figure 4: Generating ⟨·⟩ of a random value known to Pd
+Π⟨·⟩-Sh (HP, Rand) (Fig. 5) indicates generating a ⟨·⟩-sharing of a random value v sampled
+by HP. This requires communication of 1 element.
+Protocol Π⟨·⟩-Sh (HP, Rand)
+Input: ∀i ∈ [1, n], Pi ’s input ki , and HP’s input {{ki }i∈[1,n] , ∆}.
+
+Output: Pi gets ⟨v⟩i for all i ∈ [1, n].
+Protocol:
+• For all i ∈ {1, . . . , n − 1}, HP and Pi sample a random share [v]i and a random share of the tag
+[tv ]i using ki .
+• HP and Pn sample a random value [v]n using kn .
+Pn
+P
+• HP computes v = i=1 [v]i and [tv ]n = (∆ · v) − i∈[n−1] [tv ]i .
+• HP sends [tv ]n to Pn .
+
+Figure 5: Generating ⟨·⟩ of a random value known only to HP
+Π⟨·⟩-Sh (HP, v) (Fig. 6) indicates generating a ⟨·⟩-sharing of v held by HP. This requires
+communication of 2 elements.
+Protocol Π⟨·⟩-Sh (HP, v)
+Input: ∀i ∈ [1, n], Pi ’s input ki , and HP’s input {{ki }i∈[1,n] , ∆, v}.
+
+Output: Pi gets ⟨v⟩i for all i ∈ [1, n].
+Protocol:
+• For all i ∈ {1, . . . , n − 1}, HP and Pi sample a random share [v]i and a random share of the tag
+[tv ]i using ki .
+P
+P
+• HP computes [v]n = v − i∈[n−1] [v]i and [tv ]n = (∆ · v) − i∈[n−1] [tv ]i .
+• HP sends ([v]n , [tv ]n ) to Pn .
+
+Figure 6: Generating ⟨·⟩ of a value v known to HP
+We emphasize that the complete preprocessing for a circuit C can be performed at once.
+13
+
+Only one round of communication is required from HP to Pn such that all the parties obtain
+the preprocessing data for the circuit C. For the ith party, let preproci be the preprocessing
+data. preproci consists of ⟨·⟩-sharing of all wires of C, additionally, for multiplication gates,
+it contains ⟨·⟩-sharing of the product of the masks of the input wires for the corresponding
+gate. HP’s preprocHP only contains the mask of the output wires, which is used for the output
+reconstruction. We describe the preprocessing phase of our protocol in Fig. 7.
+Protocol ΠPrep
+Input: For all i ∈ [1, n], Pi has input the PRF key ki and the circuit C. HP has {ki }i∈[1,n] and C
+as input.
+
+Output:
+
+Pi ’s output preproci and HP’s output preprocHP .
+
+Protocol:
+• KeyGen:
+For all i ∈ {1, . . . , n}, Pi and HP sample [∆]i using their common key ki . HP computes
+Pn
+∆ = i=1 [∆]i .
+• Input gates: For a gate with input v and input provider Pd , all parties and HP execute
+Π⟨·⟩-Sh (Pd , Rand) to enable generation of mask δv for v in clear among HP and Pd , and generation of its ⟨·⟩-shares among the parties in P.
+• Addition gates: For a gate with inputs x and y, HP and Pi locally compute ⟨δx+y ⟩i = ⟨δx ⟩i +⟨δy ⟩i ,
+where ⟨δx ⟩i + ⟨δy ⟩i = ([δx ]i + [δy ]i , [tx ]i + [ty ]i ).
+• Multiplication gates: For a gate with inputs x and y, all parties and HP execute Π⟨·⟩-Sh (HP, Rand)
+to generate ⟨·⟩-shares of the mask δz for the output wire z = x · y, where δz is known in clear to
+HP. HP computes δxy = δx · δy . All parties and HP execute Π⟨·⟩-Sh (HP, δxy ) to generate ⟨δxy ⟩.
+
+Figure 7: Preprocessing phase of Asterisk for a circuit C
+Note that the preprocessing phase exclusively involves the (semi-honest) HP generating
+and sending certain values to the parties. All other parties’ tasks are limited to local computation, and they are not involved in the communication. Hence, the preprocessing phase is
+inherently error-free, and we do not need any additional verification checks.
+Online phase. Given {{preproci }i∈[1,n] } and preprocHP (generated in the preprocessing
+phase), once the input is available, the online phase involves generating the masked values
+for all the wires in the circuit, as per the J·K-sharing semantics. Recall that the masked value
+mv for a J·K-shared value v is defined as mv = v+δv where ⟨δv ⟩ is generated in the preprocessing
+phase. At a high level, to generate the masked value mv , each party is required to perform
+local computations to generate its [·]-share of mv . The parties are then expected to send
+their [·]-share of mv consistently to every other party. Each party uses the received [·]-shares
+of mv to reconstruct it. Note that a malicious party may send inconsistent [·]-shares to the
+other parties. To ensure consistency of the communicated messages, we resort to performing
+MAC verification before the output reconstruction. To reconstruct the masked value, mv , we
+use PKing based approach [24], where parties in P send their [·]-shares of a value to the PKing
+(which is a designated party among {P1 , . . . , Pn }), followed by PKing sending messages to all
+the parties. In practice, one would balance the workload by choosing the players as PKing
+suitably. While the formal details of the online phase for evaluating the circuit representing
+14
+
+the function to be computed appear in Fig. 11, we next give an overview of the same.
+Input gates. For an input gate gin , let Pd be the designated party, referred to as the dealer,
+providing the input v. Observe that, from the preprocessing phase, Pd holds a random value
+δv as a mask for v, while the i-th party Pi holds ⟨δv ⟩i . All parties, excluding the HP, sample
+a common random value r using their common PRF key kP . Pd computes qv = v + δv + r
+and sends qv to HP. HP sends qv to all the parties. Each party locally computes mv = qv − r,
+thereby generating its J·K-share of v as JvKi = {mv , ⟨δv ⟩i }. The formal details are provided in
+Fig. 8.
+Protocol ΠJ·K-Sh
+Input:
+• Every input provider/dealer Pd , has input v and mask δv .
+• For all i ∈ [1, n], Pi has the input gate gin , ⟨δv ⟩i generated in Fig. 7 for gin and common key kP
+generated in the setup phase.
+Output: For all i ∈ [1, n], Pi ’s output JvKi = (mv , ⟨δv ⟩i ) where mv = v + δv .
+
+Protocol:
+• All parties, excluding the HP, sample a random value r using their common key kP .
+• Pd computes mv = v + δv + r and sends it to the HP.
+• The HP sends qv to all the parties.
+• For all i ∈ [1, n], Pi gets mv = qv − r and outputs JvKi = {mv , ⟨δv ⟩i }.
+
+Figure 8: Online phase of input sharing of Asterisk
+Addition gates. For an addition gate gadd , the parties locally add the J·K-shares of the input
+wires to obtain the J·K-sharing for the output wire. Parties complete this step by locally
+adding the masked values of the input wires of gadd and the addition of the masks is already
+done in preprocessing.
+Multiplication gates. For a multiplication gate gmul , let x and y be the inputs, and let z be
+the output. To generate J·K-shares of z, parties need to generate mz , and ⟨·⟩-shares of the
+mask δz . Recall that ⟨·⟩-shares of δz are generated in the preprocessing phase. With respect
+to mz , it can be computed as follows.
+mz = z + δz = xy + δz = (mx − δx )(my − δy ) + δz
+= mx my − mx δy − my δx + δxy + δz
+
+Given the ⟨·⟩-shares of δx , δy , δz and δxy , which are generated in the preprocessing, and relying
+on the linearity of ⟨·⟩-sharing, parties can locally generate ⟨·⟩-shares of mz using the above
+equation. Elaborately, since ⟨·⟩-share of mz comprises of [·]-shares of mz and its tag tmz ,
+parties compute [mz ] = mx my − mx [δy ] − my [δx ] + [δxy ] + [δz ] , and [tmz ]i = [∆]i mx · my − mx ·
+[ty ]i − my · [tx ]i + [txy ]i + [tz ]i . To reconstruct mz , all parties to send their share of mz to
+the PKing . It reconstructs and sends mz to all the parties in P. Thus all parties obtain JzK.
+Note that, a corrupt party may send incorrect shares to PKing and a corrupt PKing may send
+
+15
+
+inconsistent values to the parties. However, such malicious behavior will get detected in the
+MAC verification step. The formal details appear in Fig. 9.
+Protocol Πmult
+Input:
+• For all i ∈ [1, n], Pi has the multiplication gate gmul . It has the ⟨·⟩ of the following values
+generated in Fig. 7 for gmul δx , δy , δxy , δz .
+Output: For all i ∈ [1, n], Pi ’s output mz = z + δz , where z = x · y.
+
+Protocol:
+• For all i ∈ [1, n], Pi holds JxKi , JyKi and ⟨δxy ⟩i , ⟨δz ⟩i .
+
+• Each party Pi computes [tmz ]i = −mx · [ty ]i − my · [tx ]i + [txy ]i + [tz ]i + [∆]i · (mx · my ).
+
+• P1 computes [mz ]1 = mx · my − mx · [δy ]1 − my · [δx ]1 + [δxy ]1 + [δz ]1 and sends it to PKing .
+• For all i ∈ [1, n] \ {1}, Pi computes [mz ]i = −mx · [δy ]i − my · [δx ]i + [δxy ]i + [δz ]i and sends it to
+PKing .
+• PKing reconstructs mz and sends it to all parties (excluding the HP).
+• For all i ∈ [1, n], Pi outputs JzK = (mz , ⟨δz ⟩i ).
+
+Figure 9: Online phase of multiplication of Asterisk
+Verification. To verify the correctness of the computed mz , it suffices to check if [tmz ]−mz ·[∆]
+is a sharing of 0. To attain an efficient realization of this check, we combine the verification
+with respect to multiple multiplication gates into a single check, and this check is performed
+at the end of the computation, before output reconstruction. This allows us to amortize the
+cost due to this verification check across many multiplication gates. To combine the checks
+corresponding to m multiplication gates into one check, parties proceed as follows.
+• All parties (including the HP) sample a random vector ρ = (ρ0 , ρ1 , . . . , ρm ) ← Fm+1 using
+the common coin functionality FRand . Recall that the FRand functionality allows parties
+and HP to sample common random values such that a corrupt party can guess the sampled
+value with negligible probability. To realize FRand , HP samples a key kver and sends it to all
+the parties in P. Parties can evaluate a PRF with key kver on a common input ctr. Note
+that, we can not use kall for FRand since an adversarial party knows the key beforehand and
+can compute ρ. Thus the soundness of the verification check does not hold. Since the key
+kver is not known to any party, a malicious party can guess ρ with negligible probability.
+Therefore, it can cheat and pass the verification with negligible probability.
+•P
+All parties (excluding the HP) sample a random sharing of 0, i.e., Pi gets αi such that
+n
+i=1 αi = 0, using their common key kP .
+
+
+
+
+Let {mz1 , . . . , mzm } be the reconstructed values to all the parties, and let { tmz1 i , . . . , tmzm i }
+ 
+be the shares of the tags held by party Pi . For j ∈ {1, . . . , m}, Pi computes ωzj i =
+h
+i
+ 
+P
+tmzj − mzj · [∆]i , and sends the following to the HP: [ωz ]i = ρ0 · αi + j∈[m] ρj · ωzj i .
+i
+P
+Finally, the HP checks if ni=1 [ωz ]i = 0, and sends the outcome to all the parties. The details
+of the batched MAC verification are given in Fig. 10.
+
+16
+
+Protocol Πverify
+Input:
+• For every i ∈ [1, n], Pi has the reconstructed values {mz1 , mz2 , . . . , mzm }.
+h
+i
+• For every i ∈ [1, n], Pi has tmzj as the MAC share of mzj and [∆]i as the MAC key share for
+i
+the ith party.
+Output: All parties and HP output 1 if the verification passes, else 0.
+
+Protocol:
+• HP samples a new key kver and send it to all the parties in P.
+h
+i
+ 
+• For all i ∈ [1, n], Pi computes ωzj i = tmzj − mzj · [∆]i .
+i
+
+• For all i ∈ [1, n], Pi samples ρ = (ρ0 , ρ1 , . . . , ρm ) ← Fm+1 using the key kver .
+Pn
+• All parties (excluding the HP) sample a random sharing of 0, i.e., Pi gets αi such that i=1 αi =
+0, using the common key kP .
+ 
+Pm
+• For all i ∈ [1, n], Pi computes [ωz ]i = ρ0 · αi + j=1 ρj · ωzj i and sends to HP.
+Pn
+• The HP checks if i=1 [ωz ]i = 0. If the check fails, the HP sends 0 to all, else it sends 1.
+
+Figure 10: Amortized MAC-Verification of Asterisk
+Output reconstruction. If the parties pass the above verification, then HP sends the masks
+for the output wires. Let v be an output, and δv be the mask generated in the preprocessing
+phase. HP sends δv to all the parties. Each party, holding mv computes v = mv − δv and gets
+the output.
+Remark. Note that throughout our protocol, the HP is invoked a total of 4 times (once
+in the offline phase and thrice in the online phase). Note that by a “single” invocation of
+the HP, we refer to a single instance of the HP receiving messages from all the parties,
+performing some local computations based on these inputs, and sending messages to the
+parties. In the online phase, the HP receives messages from the input providers and sends
+the respective values to all the parties. For verification, HP generates kver , performs the
+verification, and sends either the output masks or “abort” to all the parties. We note that
+a small (constant) number of invocations reduces the overall reliance of our protocol on the
+HP. This is particularly helpful in practical scenarios where the HP could be a busy resource
+that is engaged across multiple protocol executions simultaneously.
+Remark. Note that HP sends the masks of the output wires to all the parties only if the
+verification is passed. Therefore if a malicious party deviates from the protocol, resulting
+in abort, the malicious party fails to learn the output of the protocol. Hence, our protocol
+achieves the fairness security guarantee. Since HP stores the masks of the output wires, this
+requires the HP to be a stateful machine that stores data in memory. However, we can also
+adapt our protocol to use a stateless HP instead using known techniques from [28], which we
+elaborate in the full version.
+
+17
+
+Protocol ΠOnline
+Input:
+• For every input provider/dealer Pd , it has input v.
+• For all i ∈ [1, n], Pi has the circuit C, the preprocessing data preproci generated in Fig. 7 and
+common keys {ki , kP , kall } generated in the setup phase.
+• HP’s input preprocHP .
+
+Output: For all i ∈ [1, n], Pi ’s output C(x1 , x2 , . . . , xn ).
+Protocol:
+• Input gates: Parties execute ΠJ·K-Sh (Fig. 8) for every input gate of C.
+
+• Addition gates: Let gadd be an addition gate, where x and y are the inputs.
+• For all i ∈ [1, n], Pi holds JxKi , JyKi .
+
+• For all i ∈ [1, n], Pi locally computes Jx+yKi = JxKi +JyKi , where JxKi +JyKi = ((mx +my ), (⟨δx ⟩i +
+⟨δy ⟩i )).
+• Multiplication gates: Parties execute Πmult (Fig. 9) for every multiplication gates of C.
+• Amortized verification: At the end of all the multiplication gates, all parties and HP execute
+Πverify (Fig. 10). If parties output 1, then continue, else output ⊥.
+• Output reconstruction: Let g be an output wire and v be an output. HP holds the mask δv of v.
+HP sends δv to all the parties. Parties get the output v = mv − δv .
+
+Figure 11: Online phase of Asterisk for circuit C
+
+4.4
+
+Proof of security
+Functionality FMPC
+
+• Initialize: On input (Init, F) from parties and HP, store F.
+• Input: On input (Input, Pi , id, x) from Pi and (Input, Pi , id) from all other parties, with a fresh
+identifier id and x ∈ F, store (id, x).
+• Add: On command (Add, id1 , id2 , id3 ) from all parties (where id1 , id2 are present in memory),
+retrieve (id1 , x), (id2 , y) and store (id3 , x + y).
+• Multiply:
+On command (Mult, id1 , id2 , id3 ) from all parties (where id1 , id2 are present in
+memory), retrieve (id1 , x), (id2 , y) and store (id3 , x · y).
+• Output: On input (Output, id) from all the parties (where id is present in the memory), output
+id to the adversary. Wait for an input from the adversary; if this is deliver then retrieves (id, y)
+and sends it to all the parties, otherwise if the adversary sends abort then it outputs ⊥ to all the
+parties including the adversary.
+
+Figure 12: Ideal functionality for evaluating f with fairness
+Lemma 4.1. Assuming the existence of a PRF, protocol Asterisk (Fig. 7, Fig. 11) designed in
+the preprocessing-online paradigm realizes FMPC (Fig. 12) with computational non-colluding
+security in the presence of a semi-honest HP.
+
+18
+
+Protocol
+Πmult
+Πmult3
+
+Input
+
+Output
+
+Preprocessing
+
+Online Comm
+
+Online Round
+
+JaK, JbK
+
+JxK: x = a · b
+
+3
+
+2n
+
+2
+
+JaK, JbK, JcK
+
+JyK : y = a · b · c
+
+9
+
+2n
+
+2
+
+JaK, JbK, JcK, JdK
+
+JzK : z = a · b · c · d
+
+23
+
+2n
+
+2
+
+ΠPrefixAND
+
+Jx1 KB , . . . , Jxk KB
+
+Jy1 KB , . . . , Jyk KB : yi = ∧ij=1 xj
+
+35
+4 log4 k
+
+3
+2 n log4 k
+
+2 log4 k
+
+Πk-mult
+
+Jx1 KB , . . . , Jxk KB
+
+JbKB : b = ∧ki=1 xi
+
+8
+
+2n
+3
+
+2 log4 k
+
+12
+
+2n
+3
+
+2 log4 k
+
+Πmult4
+
+ΠEQZ
+ΠBitA
+ΠLTZ
+ΠDotP
+
+JxK
+
+?
+JbKB : b = 1(x = 0)
+
+JbKB
+
+JbK
+
+JxK
+{Jxs K, Jys K}s∈[N]
+
+3
+
+2n
+
+2
+
+JbK : b = 1(x ≤ 0)
+P
+J s∈[N] xs · ys K
+
+5 + k3 + 35
+2 log4 k
+
+2n + 2n
+k + 3n log4 k
+
+2 log4 k + 4
+
+3
+
+2n
+
+2
+
+2nN
+
+2
+
+4n
+
+4
+
+?
+
+Πshuffle
+
+Jx1 K, . . . , JxN K
+
+Jxπ(1) K, . . . , Jxπ(N) K
+
+2N2 + 3N
+
+Πsel
+
+JbKB , Jx0 K, Jx1 K
+
+Jx1−b K
+
+6
+
+Note: k is the number of bits to represent an element of F; N is the vector-length in ΠDotP and Πshuffle .
+
+Table 2: Summary of the various building blocks that we design for our applications
+Below we briefly discuss the proof of Lemma 4.1 and the formal proof is given in Appendix C.2.
+Case I: Consider a malicious adversary corrupting all but one party from P. In the preprocessing, the adversary performs only local computation thus the preprocessing is error-free.
+The online phase is similar to the online phase of [7]. Before the output reconstruction, the
+verification check ensures that the adversary cannot cheat (except with negligible probability)
+by sending incorrect values during the reconstruction phase. Finally, to obtain the output,
+HP sends the masks of the output wires only if the verification check is passed. Thus, either
+all parties get the output or none which ensures fairness.
+Case II: Consider the HP to be semi-honest. In the preprocessing phase, it generates the
+preprocessing data to evaluate the circuit C. In the online phase, all the values sent to HP
+are padded with a randomly sampled value. Therefore, to a semi-honest HP, the messages it
+received in the online phase are indistinguishable from randomly sampled messages. Hence,
+our protocol is secure against the semi-honest HP.
+
+5
+
+Applications and benchmarks
+
+In this section, we discuss the building blocks required to realize practically efficient privacypreserving dark pools via Asterisk. We then describe a prototype implementation of Asterisk
+and compare its performance with other MPC protocols [46, 36, 37]. Finally, we implement
+and benchmark the aforementioned application on top of Asterisk. Our source code is publicly
+available here.
+
+5.1
+
+Building blocks
+
+We realize several building blocks, which are essentially adaptations of Asterisk for certain
+specific (sub-)functionalities such as equality, comparison, dot product, and shuffle (among
+
+19
+
+others). These sub-protocols are then used for the desired application. While these building
+blocks have been studied in the traditional MPC settings [13, 19, 39, 48], we adapt these
+building blocks in the HP-aided setting to attain efficient realizations.
+Table 2 summarizes the various sub-protocols that we use as building blocks for our
+applications, as well as the corresponding overheads. Due to the lack of space in the body of
+the paper, we defer the full details of these building blocks to the full version of the paper.
+Conceptually, our realizations of these sub-protocols follow the same design paradigm as our
+multiplication protocol described in Section 4.3, where all of the communication happens
+via a designated PKing , and the correctness of the computation is verified before output
+reconstruction via a verification phase.
+
+5.2
+
+Prototype implementation
+
+We now describe a prototype implementation of Asterisk, which we use for benchmarking and
+comparison.
+Environment. Benchmarks are performed over LAN and WAN using n1-highmem-64
+instance of Google Cloud. The machine is equipped with a 2.3GHz n1-highmem-64, 64 core,
+Intel® Xeon® E5-2696V3 processor, with 416GB RAM memory. Each party is run as a
+process on a single machine, and we use interprocess communication for emulating the actual
+communication. To simulate the distributed environments, we use the Linux tc command
+from the network emulation package netem to modify the bandwidth and latency. To simulate
+the LAN, we consider a bandwidth of 1 Gbps and 0.5 ms of latency, and for the WAN, we
+consider a bandwidth of 100 Mbps and 50 ms of latency. We demonstrate the performance
+of Asterisk over both LAN and WAN, and we provide a comparison with other works as well
+as the performance for privacy-preserving dark pools over WAN as the applications are more
+suitable over WAN.
+Implementation of Asterisk. We implement Asterisk in C++17 using the codebase of
+QuadSquad [31] and the EMP toolkit [52]. We use computational security parameter κ = 128
+and statistical security of at least 2−40 . We use AES-NI in the CTR mode to realize the PRFs,
+and use the NTL library [51] for all Zp operations (p being a 64-bit prime).4
+Implementation of other protocols. For comparison with [36] and [37], we rely on publicly
+available implementations from the widely used MP-SPDZ [35] framework. We use our own
+implementation for [46], since it does not have a publicly available implementation.
+
+5.3
+
+Performance benchmarks for Asterisk
+
+We evaluate Asterisk on synthetic circuits with a total 1M multiplication gates. We consider
+circuits of depth d = 10, and 100 (with 100000 and 10000 multiplication gates at each level,
+resp.), as well as varying number of parties n ranging from n = 5 to n = 100, in both LAN
+and WAN network settings. The corresponding run times and communication overheads are
+reported in Table 3.
+4
+
+Our implementation is publicly available at: https://github.com/cris-coders-iisc/Asterisk. Our
+code is developed for benchmarking and is not optimized for industry-grade use. We believe that incorporating
+state-of-the-art code optimizations like GPU-assisted computing can further enhance the efficiency of our
+protocols.
+
+20
+
+Depth
+
+10
+
+100
+
+LAN time (sec)
+
+WAN time (sec)
+
+Total comm.
+(MB)
+
+Preproc.
+
+Online
+
+Preproc.
+
+Online
+
+5
+
+89.60
+
+16.20
+
+4.34
+
+18.65
+
+12.20
+
+10
+
+169.60
+
+27.68
+
+4.57
+
+30.10
+
+18.41
+
+25
+
+409.60
+
+60.31
+
+6.39
+
+62.89
+
+32.11
+
+50
+
+809.60
+
+115.25
+
+12.08
+
+115.78
+
+63.11
+
+100
+
+1609.60
+
+226.41
+
+20.60
+
+230.27
+
+127.75
+
+5
+
+89.60
+
+15.57
+
+4.54
+
+18.25
+
+54.30
+
+10
+
+169.60
+
+26.50
+
+5.12
+
+29.03
+
+104.71
+
+25
+
+409.60
+
+58.02
+
+7.19
+
+60.60
+
+255.94
+
+50
+
+809.60
+
+111.67
+
+13.57
+
+112.23
+
+508.40
+
+100
+
+1609.60
+
+218.69
+
+24.45
+
+218.94
+
+1013.40
+
+n
+
+Table 3: Asterisk’s total communication cost and run time over LAN and WAN networks for circuits
+with 106 multiplication gates, for varying depth (d ∈ {10, 100}) and varying numbers of parties
+(n ∈ {5, 10, 25, 50, 100}).
+
+Observe that the overheads for the preprocessing phase are independent of d and n. This
+is precisely as expected (recall that the preprocessing phase of Asterisk is a one-shot message of
+size 24MB from the HP to Pn ) and validates the high practical efficiency of the preprocessing
+phase. For the online phase, the time taken and communication overheads increase with d
+and n resp., which is again as expected (since the number of communication rounds increases
+with d). The overall communication, however, only scales with n and the total number of
+gates (and hence, is independent of d).
+Comparison with preprocessing phase of [46]. We compare the preprocessing phase of
+Assisted MPC [46] with that of Asterisk in Table 4 (Fig. 2) over a WAN network for varying
+number of parties n and for the same synthetic circuit with 106 multiplication gates (the
+online phase of [46] is identical to that of [37], and the corresponding comparison with Asterisk
+is presented subsequently in Table 6).5 Unlike Asterisk, Assisted MPC requires the HP to
+communicate with all the parties in the preprocessing phase. Hence, the communication
+cost of Assisted MPC increases linearly with the n, whereas it remains constant for Asterisk.
+This allows Asterisk to save up to 134× and 4× in communication and run time overheads,
+respectively.
+Comparison with preprocessing phase of [36, 37]. In Table 5, we compare the preprocessing phases of Asterisk with that of [36, 37] (we also include a data-point for Assisted
+5
+
+For a fair comparison, we let the helper in [46] be honest because [46] achieves its best efficiency in the
+presence of an honest helper.
+
+21
+
+Assisted MPC[46]
+
+Asterisk
+
+# of parties
+Comm. (MB)
+
+Time (sec)
+
+Comm. (MB)
+
+Time (sec)
+
+5
+
+161
+
+48.77
+
+24
+
+18.25
+
+10
+
+322
+
+90.67
+
+24
+
+29.03
+
+25
+
+804
+
+219.09
+
+24
+
+60.60
+
+50
+
+1608
+
+432.33
+
+24
+
+112.23
+
+100
+
+3216
+
+866.99
+
+24
+
+218.94
+
+Table 4: Offline phase: Asterisk vs Assisted MPC[46].
+Protocol
+
+Communication (KB)
+
+Throughput (/sec ×103 )
+
+Mascot
+
+8.45
+
+0.19
+
+Overdrive
+
+7.35
+
+0.24
+
+Assisted MPC
+
+0.161
+
+20.50
+
+Asterisk
+
+0.024
+
+54.79
+
+Table 5: Offline phase overheads (per multiplication triple generation for 5 parties): Mascot [36] vs
+Overdrive [37] vs Assisted MPC [46] vs Asterisk.
+
+MPC [46] for completeness) in terms of the cost of generating a single multiplication triple
+coupled with the throughput (number of multiplication triples that can be generated per
+second). We opt for such a comparison since [36, 37] use function-independent preprocessing phases which generate batches of multiplication triples. As expected, Asterisk provides
+a much better throughput, where the gain is up to 288×, 228× and 2.7×, respectively, in
+comparison to [36], [37], and [46], respectively.
+Comparison with online phase of [36, 37, 46]. In Table 6, we compare the online
+phase of Asterisk with the other dishonest majority protocols [36, 37, 46] (since all of these
+have identical online phases, we only report the results for [36]) over a WAN for a circuit
+with 106 multiplication gates with depth 100, and for varying numbers of parties n. Asterisk
+achieves communication savings upto 4×. The relatively poor running time does not follow
+the asymptotic analysis (see Table 1, where Asterisk is clearly better than [36, 37, 46]), and is
+a consequence of the vast gap in terms of optimizations between our implementation (which is
+purely for benchmarking and additional overhead of NTL library [51]) and that of [36] in the
+MP-SPDZ library (which is highly optimized but does not support running Asterisk for a fair
+comparison due to the inherently function-dependent of its preprocessing framework). For a
+fair comparison of the running time, one should use a similarly optimized implementation of
+22
+
+Dishonest Majority
+
+Atlas
+
+Asterisk
+
+# of parties
+Comm. (MB)
+
+Time (sec)
+
+Comm. (MB)
+
+Time (sec)
+
+Comm. (MB)
+
+Time (sec)
+
+5
+
+256
+
+29.2
+
+128
+
+31.2
+
+80
+
+54.30
+
+10
+
+576
+
+54.0
+
+320
+
+42.8
+
+160
+
+104.71
+
+25
+
+1536
+
+142.0
+
+768
+
+109.4
+
+400
+
+255.94
+
+50
+
+3137
+
+291.9
+
+1600
+
+441.5
+
+800
+
+508.40
+
+100
+
+6338
+
+982.4
+
+–
+
+–
+
+1600
+
+1013.40
+
+Table 6: Online phase: Asterisk vs [46, 36, 37] and [29].
+Preproc.
+N =M
+
+Online
+
+n=M +N
+Comm. (KB)
+
+Time (sec)
+
+Comm. (KB)
+
+Time (sec)
+
+Throughput
+(/min)
+
+5
+
+10
+
+10.28
+
+2.77
+
+20.29
+
+9.51
+
+63.09
+
+10
+
+20
+
+19.97
+
+5.33
+
+83.03
+
+18.60
+
+64.52
+
+25
+
+50
+
+49.03
+
+13.85
+
+532.83
+
+46.22
+
+64.91
+
+50
+
+100
+
+97.47
+
+27.84
+
+2151.27
+
+92.30
+
+65.01
+
+Table 7: Communication, run time, and throughput (per minute) for dark pool VM algorithm for
+varying buy list size (N ), and sell list size (M ) and number of parties (n = M + N ).
+
+Asterisk, which we leave as an interesting future work.
+Comparison with online phase of [29]. Additionally, we also compare against the stateof-the-art honest majority protocol Atlas [29] implemented in [35]. We note that the implementation allows running only the online phase of [29], which is reported in Table 6. We
+observe that our protocol has up to 2× improvement in online communication and a comparable run time in comparison to [29], despite the fact that the implementation of [29] is
+highly optimized.
+
+5.4
+
+Benchmarks for Dark Pool
+
+We now benchmark the secure dark pool protocol described in [39], which is adapted to build
+upon Asterisk. Following prior works [39, 12], our benchmarking results focus purely on the
+secure matching functionality. While we expect Asterisk to be general enough to also support
+secure auditing, we leave it as an interesting open question to design and implement the
+corresponding sub-protocols using Asterisk. Here, we do not present a comparison with other
+MPC protocols, since we expect precisely the same performance savings as in Section 5.3.
+We consider two popular algorithms—volume matching (VM) and continuous double auctions
+(CDA)—that are used for matching buy requests with appropriate sell requests in dark pools.
+Volume matching: Consider a list B of N buy orders and a list S of M sell orders that are
+present in the system at a given point in time, where each order is also associated with a
+23
+
+(distinct) client’s name and the number of units to be bought or sold, respectively. A buy
+order is said to match a sell order (and vice-versa) if the units in the buy order are greater
+than or equal to the units of a sell order (known as the volume criteria). To completely
+satisfy a buy order, it is matched with every order in S until this volume criteria fails. Thus,
+the buy order may have more than one matching sell order. In this way, in volume matching,
+matching is performed based on the above volume criteria, and either all of the buy orders
+or all of the sell orders are guaranteed to be satisfied.
+Table 7 discusses the performance of Asterisk for VM, where the buyers in B and sellers
+in S enact the role of parties in MPC and run the privacy-preserving protocol for VM [39]
+among themselves. Since the performance of VM varies with the number of buyers (N ) and
+sellers (M ), we vary N, M to analyze its performance. Observe that even when N, M is as
+large as 50, Asterisk executes within a few seconds (up to 93 seconds). The total amount of
+communication is less than 2 MB. We also report the throughput, which captures the number
+of incoming orders that can be processed in a minute, and is computed as [12] throughput
+(/min) = (M + N ) ∗ 60/online run time.
+Continuous double auction: Unlike volume matching, where orders are matched in one shot,
+in CDA, orders are processed in a continuous manner with B and S constantly being updated
+to keep track of partially satisfied orders. Moreover, each order additionally comprises a
+price, indicating the price at which the buyer (seller) is willing to buy (sell) the stated units.
+Hence, for a buy order to match a sell order (and vice-versa), it is required that not only
+the aforementioned volume criteria should be satisfied, but the price criteria should also be
+met, i.e., the buying price of the buy order should be greater than or equal to the selling
+price of the sell order. The algorithm maintains the invariant that orders in the buy list are
+sorted in descending order as per the buying price, while orders in the sell list are sorted
+in ascending order as per the selling price. When a new buy order arrives, the algorithm
+identifies all possible matching sell orders based on whether the price criteria and volume
+criteria are satisfied. When either one of the matching criteria fails, the buy order may either
+be fully satisfied, i.e., all of its units are exhausted by getting matched to sell orders or,
+it may be partially satisfied, i.e., some of its units are still unmatched. If the buy order
+is partially satisfied, then it is inserted in the right position as per its buying price in the
+sorted B. Thus, the CDA algorithm comprises a matching phase followed by an insertion
+phase (see [39] for details). Observe that due to the constantly changing B and S with
+state information being reused across the changes, we execute this algorithm in the secure
+outsourced computation setting. Here, a small set (n = 5) of powerful external servers are
+hired to carry out the MPC computation. The incoming buy or sell request is secret shared
+among the set of servers, which then execute the protocol on the secret-shared B, S and the
+incoming request, to obtain the result in a secret-shared manner.
+Table 8 demonstrates the performance of Asterisk for CDA. Since the performance of CDA
+varies with N, M , we vary these while analyzing the performance. For processing an incoming
+trade request, Asterisk executes within a few seconds (up to 13 seconds), even when the buy
+list size (N ) and sell list size (M ) is as large as 500. The total amount of communication is
+approximately 2 MB. We also report the throughput, which is computed [12] as throughput
+(/min) = 60/online run time.
+
+24
+
+Preproc.
+
+Online
+
+N =M
+Comm. (KB)
+
+Time (sec)
+
+Comm. (KB)
+
+Time (sec)
+
+Throughput
+(/min)
+
+50
+
+84.24
+
+0.34
+
+92.20
+
+8.49
+
+7.07
+
+100
+
+167.70
+
+0.69
+
+183.52
+
+8.53
+
+7.03
+
+250
+
+418.07
+
+1.87
+
+457.60
+
+9.78
+
+6.13
+
+500
+
+835.35
+
+4.40
+
+914.32
+
+12.05
+
+4.98
+
+Table 8: Communication, run time, and throughput (per minute) for dark pool CDA algorithm for
+n = 5 and varying buy list size (N ), and sell list size (M ).
+
+6
+
+Conclusion and open questions
+
+This work studies a new model, HP-aided MPC, which considers an additional semi-honest
+party. The presence of this semi-honest party helps to attain a security guarantee (fairness)
+which is known to be impossible, in general, for a standard dishonest majority setting. In
+this model, we build a framework, Asterisk, that achieves the following: (a) fairness security
+guarantee, (b) much better efficiency in comparison to dishonest majority protocols, (c)
+comparable efficiency with honest majority protocols, (d) scalability for a large number of
+parties. Moreover, the existence of the HP is natural in various applications, such as the
+Securities and Exchange Commission in the dark pool, which makes the model practically
+relevant.
+Our work gives rise to many interesting open questions. It is worthwhile to check if one
+can extend the security of Asterisk from fairness to GOD while preserving privacy against the
+semi-honest HP. Such an extension is immediate if the HP learns the output: if the protocol
+aborts (implying at least one malicious corruption in P), the HP must be honest (follows
+from our model), and can be used by the parties as a trusted third party (TTP) to compute
+the output. It is also interesting to explore alternative practically motivated models that
+would allow for circumventing and improving the de facto security and efficiency bottleneck
+of dishonest majority MPC. Finally, one could explore using Asterisk for additional privacypreserving applications (e.g., federated cloud computing, PPML, and secure auditing for dark
+pools, where the assumption of a semi-honest HP is naturally justified).
+
+Acknowledgement
+Arpita Patra would like to acknowledge financial support from DST National Mission on
+Interdisciplinary Cyber-Physical Systems (NM-ICPS) 2020-2025. Divya Ravi would like to
+acknowledge the financial support by the European Research Council (ERC) under the European Unions’s Horizon 2020 research and innovation programme under grant agreement No
+803096 (SPEC).
+
+25
+
+References
+[1] Bar Alon, Eran Omri, and Anat Paskin-Cherniavsky. MPC with friends and foes. In
+CRYPTO, 2020.
+[2] Toshinori Araki, Assi Barak, Jun Furukawa, Tamar Lichter, Yehuda Lindell, Ariel Nof,
+Kazuma Ohara, Adi Watzman, and Or Weinstein. Optimized honest-majority mpc for
+malicious adversaries—breaking the 1 billion-gate per second barrier. In IEEE S&P,
+2017.
+[3] Toshinori Araki, Jun Furukawa, Yehuda Lindell, Ariel Nof, and Kazuma Ohara. Highthroughput semi-honest secure three-party computation with an honest majority. In
+ACM CCS, 2016.
+[4] Toshinori Araki, Jun Furukawa, Kazuma Ohara, Benny Pinkas, Hanan Rosemarin, and
+Hikaru Tsuchida. Secure graph analysis at scale. In ACM CCS, 2021.
+[5] Gilad Asharov, Ilan Komargodski, Wei-Kai Lin, Kartik Nayak, Enoch Peserico, and
+Elaine Shi. Optorama: Optimal oblivious ram. In ASIACRYPT, 2020.
+[6] Saikrishna Badrinarayanan, Abhishek Jain, Rafail Ostrovsky, and Ivan Visconti. Noninteractive secure computation from one-way functions. In ASIACRYPT, 2018.
+[7] Aner Ben-Efraim, Michael Nielsen, and Eran Omri. Turbospeedz: Double your online
+spdz! improving spdz using function dependent preprocessing. In ACNS, 2019.
+[8] Dan Boneh, Elette Boyle, Henry Corrigan-Gibbs, Niv Gilboa, and Yuval Ishai. Zeroknowledge proofs on secret-shared data via fully linear pcps. In CRYPTO, 2019.
+[9] Elette Boyle, Niv Gilboa, Yuval Ishai, and Ariel Nof. Efficient fully secure computation
+via distributed zero-knowledge proofs. In ASIACRYPT, 2020.
+[10] Ran Canetti. Universally composable security: A new paradigm for cryptographic protocols. In FOCS, 2001.
+[11] Ran Canetti and Marc Fischlin. Universally composable commitments. In CRYPTO,
+2001.
+[12] John Cartlidge, Nigel P Smart, and Younes Talibi Alaoui. Mpc joins the dark side. In
+ACM ASIACCS, 2019.
+[13] Octavian Catrina and Sebastiaan De Hoogh. Improved primitives for secure multiparty
+integer computation. In Security and Cryptography for Networks, 2010.
+[14] T-H Hubert Chan, Jonathan Katz, Kartik Nayak, Antigoni Polychroniadou, and Elaine
+Shi. More is less: Perfectly secure oblivious algorithms in the multi-server setting. In
+ASIACRYPT, 2018.
+[15] Nishanth Chandran, Wutichai Chongchitmate, Rafail Ostrovsky, and Ivan Visconti. Universally composable secure computation with corrupted tokens. In CRYPTO, pages
+432–461, 2019.
+26
+
+[16] Nishanth Chandran, Vipul Goyal, and Amit Sahai. New constructions for uc secure
+computation using tamper-proof hardware. In EUROCRYPT, 2008.
+[17] Seung Geol Choi, Jonathan Katz, Dominique Schröder, Arkady Yerukhimovich, and
+Hong-Sheng Zhou. (efficient) universally composable oblivious transfer using a minimal
+number of stateless tokens. In TCC, 2014.
+[18] Richard Cleve. Limits on the security of coin flips when half the processors are faulty.
+In ACM STOC, 1986.
+[19] Geoffroy Couteau. New protocols for secure equality test and comparison. In ACNS,
+2018.
+[20] Mariana Botelho da Gama, John Cartlidge, Antigoni Polychroniadou, Nigel P Smart,
+and Younes Talibi Alaoui. Kicking-the-bucket: Fast privacy-preserving trading using
+buckets. Cryptology ePrint Archive, 2021.
+[21] Dana Dachman-Soled, Tal Malkin, Mariana Raykova, and Muthuramakrishnan Venkitasubramaniam. Adaptive and concurrent secure computation from new adaptive, nonmalleable commitments. In ASIACRYPT, 2013.
+[22] Anders Dalskov, Daniel Escudero, and Marcel Keller. Fantastic four: Honest-majority
+four-party secure computation with malicious security. In USENIX Security, 2020.
+[23] Ivan Damgård, Marcel Keller, Enrique Larraia, Valerio Pastro, Peter Scholl, and Nigel P
+Smart. Practical covertly secure mpc for dishonest majority–or: breaking the spdz limits.
+In ESORICS, 2013.
+[24] Ivan Damgård and Jesper Buus Nielsen. Scalable and unconditionally secure multiparty
+computation. In CRYPTO, 2007.
+[25] Saba Eskandarian and Dan Boneh. Clarion: Anonymous communication from multiparty
+shuffling protocols. In NDSS, 2022.
+[26] Matthias Fitzi, Juan A. Garay, Ueli M. Maurer, and Rafail Ostrovsky. Minimal complete
+primitives for secure multi-party computation. In CRYPTO, 2001.
+[27] S. Dov Gordon, Yuval Ishai, Tal Moran, Rafail Ostrovsky, and Amit Sahai. On complete
+primitives for fairness. In TCC, 2010.
+[28] S. Dov Gordon, Yuval Ishai, Tal Moran, Rafail Ostrovsky, and Amit Sahai. On complete
+primitives for fairness. In TCC, 2010.
+[29] Vipul Goyal, Hanjun Li, Rafail Ostrovsky, Antigoni Polychroniadou, and Yifan Song.
+Atlas: Efficient and scalable mpc in the honest majority setting. In CRYPTO, 2021.
+[30] Carmit Hazay, Antigoni Polychroniadou, and Muthuramakrishnan Venkitasubramaniam. Composable security in the tamper-proof hardware model under minimal complexity. In TCC, 2016.
+
+27
+
+[31] Aditya Hegde, Nishat Koti, Varsha Bhat Kukkala, Shravani Patil, Arpita Patra, and Protik Paul. Attaining god beyond honest majority with friends and foes. In ASIACRYPT,
+2022.
+[32] Yuval Ishai, Rafail Ostrovsky, and Hakan Seyalioglu. Identifying cheaters without an
+honest majority. In TCC, 2012.
+[33] Yuval Ishai, Arpita Patra, Sikhar Patranabis, Divya Ravi, and Akshayaram Srinivasan.
+Fully-secure MPC with minimal trust. In TCC, 2022.
+[34] Jonathan Katz. Universally composable multi-party computation using tamper-proof
+hardware. In EUROCRYPT, 2007.
+[35] Marcel Keller. MP-SPDZ: A versatile framework for multi-party computation. In ACM
+CCS, 2020.
+[36] Marcel Keller, Emmanuela Orsini, and Peter Scholl. Mascot: faster malicious arithmetic
+secure computation with oblivious transfer. In ACM CCS, 2016.
+[37] Marcel Keller, Valerio Pastro, and Dragos Rotaru. Overdrive: making spdz great again.
+In EUROCRYPT, 2018.
+[38] Nishat Koti, Varsha Bhat Kukkala, Arpita Patra, Bhavish Raj Gopal, et al. Find thy
+neighbourhood: Privacy-preserving local clustering. PETS, 2023.
+[39] Nishat Koti, Varsha Bhat Kukkala, Arpita Patra, and Bhavish Raj Gopal. Pentagod:
+Stepping beyond traditional god with five parties. In ACM CCS, 2022.
+[40] Nishat Koti, Mahak Pancholi, Arpita Patra, and Ajith Suresh. Swift: Super-fast and
+robust privacy-preserving machine learning. In USENIX Security, 2021.
+[41] Nishat Koti, Shravani Patil, Arpita Patra, and Ajith Suresh. Mpclan: Protocol suite for
+privacy-conscious computations. Journal of Cryptology, 2023.
+[42] Nishat Koti, Arpita Patra, Rahul Rachuri, and Ajith Suresh. Tetrad: Actively Secure
+4PC for Secure Training and Inference. In NDSS, 2022.
+[43] Donghang Lu and Aniket Kate. Rpm: Robust anonymity at scale. Cryptology ePrint
+Archive, 2022.
+[44] Nancy A Lynch. Distributed algorithms. Elsevier, 1996.
+[45] Eleftheria Makri, Dragos Rotaru, Frederik Vercauteren, and Sameer Wagh. Rabbit:
+Efficient comparison for secure multi-party computation. In International Conference
+on Financial Cryptography and Data Security, pages 249–270. Springer, 2021.
+[46] Philipp Muth and Stefan Katzenbeisser. Assisted mpc. Cryptology ePrint Archive, 2022.
+[47] Kartik Nayak, Xiao Shaun Wang, Stratis Ioannidis, Udi Weinsberg, Nina Taft, and
+Elaine Shi. Graphsc: Parallel secure computation made easy. In IEEE S&P, 2015.
+
+28
+
+[48] Arpita Patra, Thomas Schneider, Ajith Suresh, and Hossein Yalame. Aby2. 0: Improved
+mixed-protocol secure two-party computation. In USENIX Security, 2021.
+[49] Antigoni Polychroniadou, Gilad Asharov, Benjamin Diamond, Tucker Balch, Hans
+Buehler, Richard Hua, Suwen Gu, Greg Gimler, and Manuela Veloso. Prime match:
+A privacy-preserving inventory matching system. Cryptology ePrint Archive, 2023.
+[50] A Pranav Shriram, Nishat Koti, Varsha Bhat Kukkala, Arpita Patra, Bhavish Raj Gopal,
+and Somya Sangal. Ruffle: Rapid 3-party shuffle protocols. PETS, 2023.
+[51] Victor Shoup. NTL: A Library for doing Number Theory. https://libntl.org/, 2021.
+[52] Xiao Wang, Alex J. Malozemoff, and Jonathan Katz. EMP-toolkit: Efficient MultiParty
+computation toolkit. https://github.com/emp-toolkit, 2016.
+[53] Andrew C Yao. Protocols for secure computations. In FOCS, 1982.
+
+A
+
+Security model
+
+The real world An n-party protocol Π with n parties P = {P1 , . . . , Pn } is an n-tuple of
+probabilistic polynomial-time (PPT) interactive Turing machines (ITMs),
+We let A denote a special PPT ITM that represents the adversary and that is initialized
+with input that contains the identities of the corrupt parties, their respective private inputs,
+and an auxiliary input. During the execution of the protocol, the maliciously corrupt parties
+(sometimes referred to as ‘active’) receive arbitrary instructions from the adversary A, while
+the honest parties and the semi-honestly corrupt (sometimes referred to as ‘passive’) parties
+faithfully follow the instructions of the protocol. We consider the adversary A to be rushing,
+i.e., during every round the adversary can see the messages the honest parties sent before
+producing messages from actively corrupt parties.
+At the end of the protocol execution, the honest parties produce output, the corrupt
+parties produce no output, and the adversary outputs an arbitrary function of its view. The
+view of a party during the execution consists of its input, random coins and the messages it
+sees during the execution.
+Definition A.1 (Real-world execution). Let Π be an n-party protocol amongst {P1 , . . . , Pn }
+computing an n-party function f : ({0, 1}∗ )n → ({0, 1}∗ )n and let C ⊂ [1, n] ∪ {HP} denote
+the set of indices of the corrupted parties. The execution of Π under (A, C) in the real world,
+on input vector ⃗x = (x1 , . . . , xn ), auxiliary input aux and security parameter κ, denoted
+realΠ,C,A(aux) (⃗x, κ), is defined as the output vector of P1 , . . . , Pn and A(aux) resulting from the
+protocol interaction.
+The ideal world We describe ideal world execution with the fairness security guarantee.
+Definition A.2 (Ideal Computation). Let f : ({0, 1}∗ )n → ({0, 1}∗ )n be an n-party function
+and let C ⊂ [1, n] ∪ {HP} denotes the set of all corrupt parties. Then, the joint ideal execution
+of f under (S, C) on input vector ⃗x = (x1 , . . . , xn ), auxiliary input aux to S and security
+parameter κ, denoted idealf,C,S,(aux) (⃗x, κ), is defined as the output vector of P1 , . . . , Pn and S
+resulting from the following ideal process.
+29
+
+1. Parties send inputs to trusted party: An honest party Pi sends its input xi to the
+trusted party. The simulator S may send to the trusted party arbitrary inputs for the
+actively corrupt parties. Let x′i be the value actually sent as the input of party Pi .
+2. Trusted party speaks to simulator: The trusted party computes (y1 , . . . , yn ) = f (x′1 , . . . , x′n ).
+The trusted party sends ready to S.
+3. Simulator S responds to trusted party: The simulator can send abort to the trusted
+party.
+4. Trusted party answers parties:
+(a) If the trusted party got abort from the simulator S, it sets the abort message
+abortmsg = ⊥.
+(b) Otherwise, it sends yj to every Pj , j ∈ [1, n].
+5. Outputs: Honest parties always output the message received from the trusted party,
+while corrupt parties output nothing. The simulator S outputs an arbitrary function of
+the initial inputs {xi }i∈C , the messages received by the corrupt parties from the trusted
+party and its auxiliary input.
+In this work, we primarily consider the non-colluding security notion of [33], which is
+described below.
+Non-colluding security Informally, protocols with this notion of security are secure
+against a non-colluding adversary that corrupts either any subset of the n parties {P1 , . . . , Pn }
+maliciously or the HP passively (i.e. in a semi-honest manner). The formal definition appears
+below.
+Definition A.3 (Non-colluding security). Let f : ({0, 1}∗ )n → ({0, 1}∗ )n be an n-party
+function. A protocol Π securely computes the function f in the non-colluding model with
+fairness security if for any adversary A, there exists a simulator S such that for every C
+where either (a) C ⊂ [1, n] malicious corruptions or (b) C = HP semi-honest corruption, we
+have
+
+
+realΠ,C,A(aux) (⃗x, κ) ⃗x∈({0,1}∗ )n ,κ∈N ≡ idealf,C,S(aux) (⃗x, κ) ⃗x∈({0,1}∗ )n ,κ∈N .
+Note that the corruption is non-simultaneous. Therefore we need the above indistinguishability to hold in both the corruption cases.
+A protocol achieves computational security, if the above distributions are computationally
+close in the presence of the parties, A, S that are PPT. A protocol achieves statistical (resp.
+perfect) security if the distributions are statistically close (resp. identical).
+
+A.1
+
+Alternative corruption models
+
+As mentioned above, we consider a non-colluding adversary who either corrupts up to n − 1
+among the n parties maliciously or the HP in a semi-honest manner. One might also consider
+the following alternative corruption models.
+A.1.1
+
+Collluding security
+
+Informally, in this corruption model, the adversary can simultaneously corrupt the majority of
+the parties maliciously as well as the HP in a semi-honest manner. More formally, security is
+30
+
+defined similar to non-colluding security (defined above), except that the indistinguishability
+must hold for every C ⊂ [1, n] ∪ {HP}, where the corruptions in [1, n] are malicious and
+corruption of HP is semi-honest.
+A.1.2
+
+Friends and foes (FaF) security with HP
+
+When proving security in the FaF model (as discussed in Section 1), there is the additional
+requirement of simulating the view of any subset of uncorrupted (or semi-honest) parties,
+in addition to simulating the view of the maliciously corrupt parties. This necessitates the
+use of two simulators in the ideal world– one for the malicious adversary and one for the
+semi-honest adversary. Further, the malicious adversary is allowed to send its entire view
+to the semi-honest adversary in the ideal world to capture the behaviour where the malicious adversary may send non-protocol messages to uncorrupted parties in the real world.
+Elaborately, let A denote the probabilistic polynomial time (PPT) malicious adversary in
+the real-world corrupting t parties in I ⊂ P, and SA denote the corresponding ideal-world
+simulator. Similarly, let AH denote the (PPT) semi-honest adversary corrupting h⋆ parties
+in H ⊂ P \ I in the real-world, and SAH , be the ideal-world simulator. Note that in the
+classical definition of ideal-world, H = ϕ and FaF-security with HP definition, H = {HP}
+and t = n − 1.
+Unlike the FaF-security model, where security is required not only against t maliciously
+corrupt parties, but also against any subset of h⋆ semi-honest parties, FaF-security with
+HP is a special case. Here, we require semi-honest security to be provided only against
+the single party designated as the HP. Let A be an adversary corrupting at most n − 1
+parties maliciously, and let AHP be a semi-honest adversary that corrupts the HP. We
+say a protocol, Π, is FaF-secure with HP if Let F be the ideal-world functionality. Let
+REAL λ
+λ
+VIEWREAL
+A,Π (1 , zA ) be the malicious adversary’s (A) view and OUTA,Π (1 , zA ) denote the
+output of the uncorrupted parties (in P \ I) during a random execution of Π, where zA
+λ
+is the auxiliary input of A. Similarly, let VIEWREAL
+A,AHP ,Π (1 , zA , zAHP ) be the semi-honest
+AHP ’s view during an execution of Π running alongside A, where zAHP is the auxiliary
+λ
+input of AHP . Note that VIEWREAL
+A,AHP ,Π (1 , zA , zAHP ) consists of the non-prescribed messages
+λ
+sent by the malicious adversary to AHP . Correspondingly, let VIEWIDEAL
+SA ,F (1 , zA ) be the
+λ
+malicious adversary’s simulated view with SA corrupting parties in I and OUTIDEAL
+SA ,F (1 , zA )
+denote the output of the uncorrupted parties (in P \ I) during a random execution of idealλ
+world functionality F. Similarly, let VIEWIDEAL
+SA ,SAHP ,F (1 , zA , zAHP ) be the semi-honest AHP ’s
+simulated view with SAHP corrupting AHP during an execution of F running alongside A. A
+protocol Π is said to compute F with computational FaF-security with HP if
+
+
+ 
+
+λ
+IDEAL λ
+REAL λ
+REAL λ
+VIEWIDEAL
+(1
+,
+z
+),
+OUT
+(1
+,
+z
+)
+≡
+VIEW
+(1
+,
+z
+),
+OUT
+(1
+,
+z
+)
+,
+A
+A
+A
+A
+SA ,F
+SA ,F
+A,Π
+A,Π
+
+ 
+
+λ
+IDEAL λ
+REAL
+λ
+REAL λ
+VIEWIDEAL
+SA ,SA ,F (1 , zA , zAHP ), OUTSA ,F (1 , zA ) ≡ VIEWA,AHP ,Π (1 , zA , zAHP ), OUTA,Π (1 , zA ) .
+HP
+
+λ
+where, VIEWIDEAL
+A,AHP ,F (1 , zA , zAHP ) is AHP ’s simulated view during an execution of F alongλ
+side A, and VIEWREAL
+A,AHP ,Π (1 , zA , zAHP ) consists of the set of non-prescribed messages sent by
+A to AHP .
+
+31
+
+B
+
+Proof of Theorem 3.1
+
+We present the proof for a two-party functionality. The argument can be extended for any
+number of parties using the player-partitioning argument. We refer to the two parties as
+A, B.
+Lemma B.1. Assume that one-way permutation exists. Then there exists a 2-party functionality that no protocol computes with fairness in the FaF security model with HP (refer to
+precise the definition given in Section A.1.2).
+Proof of Lemma B.1 Let f = {fκ : {0, 1}κ → {0, 1}κ }κ∈N be a one-way permutation. Define the symmetric 2-party functionality Swap = {Swapκ : {0, 1}2κ × {0, 1}2κ → {0, 1}2κ }κ∈N
+as follows. Parties A and B each hold string (a, yB ) and (b, yA ) respectively. The output is
+then defined to be
+
+
+(a, b) if f (a) = y and f (b) = y
+κ
+κ
+A
+B
+Swapκ ((a, yB ), (b, yA )) =
+
+0κ otherwise
+For the sake of contradiction, suppose a protocol Π securely computes the Swap functionality with fairness FaF security with HP model. We fix a security parameter κ and let
+r denote the number of rounds in Π. Consider an evaluation of Swap with the output being
+(a, b). Formally, we consider the following distribution over the inputs.
+• a, b are each selected from {0, 1}κ uniformly at random and independently.
+• yA = fκ (a) and yB = fκ (b).
+For i ∈ {0, . . . , r} let ai be the final output of A assuming that B aborted after sending ith
+round messages. Similarly, for i ∈ {0, . . . , r} we define bi to be the final output of B assuming
+that A aborted after sending ith round messages. Observe that ar (br ) is the output of A (B)
+when B (A) sends messages in all the rounds. We first claim that there exists a round where
+either A and HP jointly or B and HP jointly, gain an advantage in computing the correct
+output.
+Claim B.2. Either there exists i ∈ [0, r] such that
+Pr[ai = (a, b)] − Pr[bi = (a, b)] ≥
+
+1 − neg(κ)
+,
+2r + 1
+
+or there exists i ∈ [1, r] such that
+Pr[bi = (a, b)] − Pr[ai−1 = (a, b)] ≥
+
+1 − neg(κ)
+.
+2r + 1
+
+The probabilities above are taken over the choice of inputs and of random coins for the parties.
+
+32
+
+Proof. The proof follows by the following averaging argument. By correctness and the fact
+that fκ is one-way, it follows that
+1 − neg(κ) ≤ Pr[ar = (a, b)] − P r[b0 = (a, b)]
+r
+X
+
+=
+Pr[ai = (a, b)] − Pr[bi = (a, b)]
+i=0
+
++
+
+r
+X
+
+
+Pr[bi = (a, b)] − Pr[ai−1 = (a, b)]
+
+i=1
+
+Since there are 2r + 1 summands, there must exist an i for which one of the differences is at
+least 1−neg(κ)
+2r+1 .
+Assume without loss of generality that there exists an i ∈ [1, r] such that the former
+equality in Claim B.2 holds (the other case is done analogously). Define a malicious adversary
+A as follows. For the security parameter κ, it receives the round i as auxiliary input. Now, A
+corrupts A and makes it act honestly (using the party’s original input a) up to and including
+round i. After receiving the i-th message, the adversary instructs A to abort. Finally, the
+adversary sends its entire view to HP. Note that this is allowed as per the FaF security
+notion as nothing stops a malicious adversary from sending its view to the semi-honest HP
+in the real-world.
+Next, we show that no pair of simulators SA and SA,HP can produce views for A and HP
+so that the ideal view and the real view are indistinguishable. For that, we assume towards
+∗ ) ∈ {0, 1}2κ be the input that S sent
+contradiction that such simulators do exist. Let (a∗ , yB
+A
+to the ideal functionality. Additionally, denote q = Pr[bi = (a, b)].
+∗ ) = (a, y )], two scenarios are possible. We will analyze
+Now depending upon Pr[(a∗ , yB
+B
+them case by case.
+∗ ) = (a, y )] ≥ q + 1 for some polynomial p(·) for infinitely many κ’s.
+Case I: Pr[(a∗ , yB
+B
+p(κ)
+
+Let OUTIDEAL
+be B’s output in the ideal world. Since fκ is a permutation, we have that
+B
+∗ ) = (a, y )] ≥ q + 1 . Thus, by comparing the output of
+=
+(a, b)] = Pr[(a∗ , yB
+Pr[OUTIDEAL
+B
+B
+p(κ)
+B to (a, b) it is possible to distinguish the real from the ideal with advantage at least 1/p(κ).
+∗ ) = (a, y )] ≤ q + neg(κ). Here we show how to distinguish between
+Case II: Pr[(a∗ , yB
+B
+the view of HP in the real world from its ideal world counterpart. Recall that in the real
+world A sent its view to HP. Let M be the algorithm specified by the protocol, that A and
+HP use to compute their output assuming B has aborted. Namely, M outputs ai in the real
+world. By Claim B.2 it holds that Pr[ai = (a, b)] ≥ q + 1−neg(κ)
+2r+1 . We next consider the ideal
+∗ ) ̸=
+world. Let V be the view generated by SA,HP . We claim that Pr[M (V ) = (a, b) ∧ (a∗ , yB
+(a, yB )] ≤ neg(κ).
+Note that Pr[M (V ) = (a, b) ∧ a∗ ̸= a] ≤ neg(κ). Since fκ is a permutation and B does
+not change the input it sends to the ideal functionality, (i.e. B sends its input (b, yA )) the
+output computed by the ideal functionality will be 0κ . Moreover, as fκ is one-way, it follows
+that if M (V ) did output (a, b), then it can be used to break the security of fκ . At a high
+level, this is because M has computed fκ−1 (yB ). Elaborately, this can be done by sampling
+a ← {0, 1}κ , computing fκ (a), and finally, computing a view V using the simulators and
+
+33
+
+applying M to it (if a∗ computed by SA equals to a then abort). On the other hand,
+∗ ̸= y ] ≤ neg(κ). Since B does not change its input b to the ideal
+Pr[M (V ) = (a, b) ∧ yB
+B
+∗ , due to the well-definedness of the function f . Therefore,
+functionality, thus fκ (b) = yB ̸= yB
+κ
+the output computed by the ideal functionality will be 0κ . Hence,
+∗
+Pr[M (V ) = (a, b) ∧ (a∗ , yB
+) ̸= (a, yB )]
+∗
+≤ Pr[M (V ) = (a, b) ∧ a∗ ̸= a] + Pr[M (V ) = (a, b) ∧ yB
+̸= yB ].
+∗ ) ̸= (a, y )] ≤ neg(κ) Hence, we conclude that
+Thus, Pr[M (V ) = (a, b) ∧ (a∗ , yB
+B
+
+Pr[M (V ) = (a, b)]
+∗
+∗
+= Pr[M (V ) = (a, b) ∧ (a∗ , yB
+) = (a, yB )] + Pr[M (V ) = (a, b) ∧ (a∗ , yB
+) ̸= (a, yB )]
+∗
+≤ Pr[(a∗ , yB
+) = (a, yB )] + neg(κ) ≤ q + neg(κ).
+
+Therefore, by applying M to the view it is possible to distinguish with advantage at least
+1−neg(κ)
+2r+1 − neg(κ).
+
+C
+
+Asterisk: Additional details and proofs
+
+C.1
+
+Shared key setup
+
+Here we provide details about how to instantiate FSetup (Fig. 3). Note that {ki }i∈[1,n] and
+kall can be sampled by HP and sent to the corresponding parties. However, generating kP
+is challenging since this should be generated while ensuring that all parties agree on the key
+despite misbehaviour of corrupt parties. We rely on the following abort secure protocol for
+generating this key. Each party sends a randomly sampled value to all other parties. Upon
+receiving values from all parties, each party takes the sum of the received value and sets
+that as the common key (kP ). To verify that all parties have agreed upon a common key,
+they rely on HP as follows. All parties evaluate the PRF on a common counter (ctr) value
+using the common key and send the output to HP. If all the received values at HP match,
+then HP sends continue to all the parties; else, it sends abort. If parties receive abort, they
+terminate the protocol. Otherwise, the protocol continues with kP as the common key among
+the parties. Note that, though the above-mentioned procedure provides only abort security,
+while running it inside Asterisk it does not impact the fairness guarantee of Asterisk. This is
+because aborting during key setup which is an input independent phase does not allow the
+adversary to learn any information about the output.
+
+C.2
+
+Security proof
+
+The formal security proof of Asterisk is provided here.
+Simulator SA
+Malicious Let A be a malicious adversary corrupting up to n − 1 parties among the computing
+parties P = {P1 , . . . , Pn }. Therefore there is at least one honest party, say Ph . In this case, recall
+that HP is also honest. Let SA denote the simulator for this case.
+• Preprocessing: SA simulates the preprocessing phase of the protocol by acting on behalf of
+HP as per the protocol specifications.
+
+34
+
+• Input: Let Pd be the input provider.
+• Case I: d ̸= h. In the online phase, SA receives qv from Pd (since Pd ̸= Ph , thus corrupted by
+A) and sends qv to all the parties. SA extracts Pd ’s input v = qv − r − δv . Note that r is the
+common random pad known to Ph and δv is known to HP from the preprocessing phase.
+• Case II: d = h. In the online phase, SA samples a random value qv and sends it to all the parties
+on behalf of HP.
+• Multiplication:
+• Case I: Let PKing be corrupt. In the online phase, SA computes [mz ]h according to the protocol.
+Since SA has [δx ]h , [δy ]h , [δxy ]h , [δz ]h from the preprocessing step and mx , my is available to all the
+parties (excluding HP), therefore it can compute [mz ]h correctly. SA sends it to PKing on behalf
+of Ph . Then it receives mz from PKing .
+– If SA receives multiple mz from PKing , then SA sets adversary’s message to FMPC as abort. SA
+continues the steps of the protocol on behalf of the honest parties with the received values.a
+– If mz ̸= mx my − mx δy − my δx + δxy + δz , then SA sets adversary’s message to FMPC as abort. SA
+continues the steps of the protocol on behalf of the honest parties with the received values.
+– If mz = mx my − mx δy − my δx + δxy + δz then SA , then SA continues the steps of the protocol on
+behalf of the honest parties with the received values.
+• Case II: Let PKing be honest. In the online phase, SA receives shares of [mz ]i from the corrupt
+Pi . If [mz ]i ̸= mx my − mx [δy ]i − my [δx ]i + [δxy ]i + [δz ]i then it sets FMPC message as abort. SA
+sends mz to all the parties on behalf of PKing by following the protocol steps honestly.
+• Verification: SA simulates FRand
+obtains ρ. Further, it obtains a sharing of zero, i.e., it
+Pand
+n
+obtains {α1 , α2 , . . . , αn } such that i=1 αi =h 0. For
+i all parties Pi corrupted by A, SA receives
+P
+[ωz ]i . SA checks if [ωz ]i = ρ0 · αi + j∈[m] ρj · ( tmzj − m∗zj · [∆]i ), where m∗zj be the unique opened
+i
+h
+ 
+
+
+ i
+ 
+value. Note that tmzj = −mxj · tyj i − myj · txj i + txj yj i + tzj i + [∆]i · (mxj · myj ), where
+i
+    
+  
+mxj , myj for all j ∈ [1, m] are held by the honest party Ph and txj , tyj , txj yj , tzj are held by
+HP.
+• Output: If the above verification fails, SA sets the adversary’s message to FMPC as abort. SA
+invokes FMPC with the adversary’s input (⊥ or v) Recall that SA had extracted corrupt Pi ’s input
+during the input stage. If the adversary’s input is not abort, then FMPC gives y as the output, then
+it computes δy = my − y and sends on behalf of HP.
+a
+this corresponds to the case when there is more than one honest party (on behalf of whom the simulator
+is acting) and PKing sends inconsistent information to them.
+
+Figure 13: Simulator S for Πmpc for a malicious adversary corrupting up to n − 1 parties
+among n parties
+
+Indistinguishability. Fig. 13 describes the simulation steps when a malicious adversary
+corrupts up to n − 1 parties among n parties. In this scenario HP and party Ph is honest.
+Consider A be a malicious adversary corrupting up to n − 1 parties (i.e. all parties excluding
+Ph ) among the party set P . For input gates, if Pd is corrupt, then SA does not send any
+messages. Thus, the view is indistinguishable trivially. If Pd is honest then SA sends a
+random value q˜v to A. In the real protocol, Pd sends qv to HP, which is forwarded to all the
+parties. Here qv = mv + r, where mv = v + δv . Since δv is sampled uniformly, therefore qv is
+distributed uniformly. Hence the distribution of qv and q˜v are identical. For a multiplication
+35
+
+gate, if PKing is corrupt, then in the protocol, A receives [mz ]h from Ph and let SA sends the
+same on behalf of Ph . Thus, the simulated view and the real view are identically distributed.
+Let PKing sends mz to SA . In the first two cases, SA sets the message to the functionality as
+abort. Let’s consider PKing has introduced an error ϵi towards an honestP
+Pi ’s mz . Then during
+the verification step, Pi computes [ωz ]i = [tmz ]i − (mz + ϵi ) · [∆]i . Then i∈[1,n] [ωz ]i ̸= 0 with
+a very high probability, since [tmz ]i , [∆]i is unknown to PKing . Thus, a random linear combination of ωz will remain non-zero. Therefore, the real protocol aborts with high probability,
+and in the simulated protocol, SA sets the adversary’s message to FMPC as abort.
+If the mz sent by PKing is correct, that is, the third case, then SA receives the correct value,
+and it follows the protocol steps correctly, therefore the generated view is indistinguishable.
+If PKing is honest, then SA receives shares of mz from all the corrupt parties. If it receives
+an incorrect share, then SA sets the FMPC message as abort, and in the real protocol, the
+verification fails with a very high probability. SA sends mz to all the parties by honestly
+following the protocol steps.
+Next, we analyze the difference between the verification check carried out by the simulator
+SA and the verification check in the real-world protocol. In the verification step, A can
+introduce an error in mzj . However, it can obtain a sharing of the corresponding tag with
+negligible probability
+
+1
+|F|
+
+.
+
+i
+h
+Thus, consider a j ∈ [1, m] such that tmzj − m∗zj · [∆]i ̸= 0, however such that
+i
+
+n
+X
+i=1
+
+
+ρ0 · αi +
+
+X
+
+
+h
+i
+ρj · ( tmzj − m∗zj · [∆]i ) = 0.
+i
+
+j∈[m]
+
+Pn
+This ish possible
+for some choice of ρ. To elaborate, consider ξ0 =
+i=1 αi and ξj =
+i
+Pm
+Pn
+∗
+j=0 ξj ·ρj .
+i=1 ( tmzj −mzj ·[∆]i ) for all j ∈ [1, m], set ξ = (ξ0 , ξ1 , . . . , ξm ). Then Tξ (ρ) =
+i
+
+Tξ is a non-zero linear map, then dim(ker(Tξ )) ≤ m. Therefore, the probability that a ranm
+1
+domly sampled ρ belongs to ker(Tξ ) ≤ |F||F|m+1 = |F|
+.
+SA gets [ω
+all parties Pi corrupted by A. In the real protocol, [ωz ]i ̸= ρ0 · αi +
+h z ]i from
+i
+P
+− m∗zj · [∆]i ). A can introduce an error ϵ in the [ωz ]i term such that
+j∈[m] ρj · ( tmzj
+i
+Pn
+i=1 [ωz ]i + ϵ = 0. In that case, in the real protocol, A cheats successfully. In the simulated
+1
+world, the simulator aborts. However, A can find such an ϵ with probability |F|
+. Therefore,
+3
+A can successfully cheat with probability at most |F| which is negligible. Thus the real world
+view is indistinguishable from the simulated view.
+Simulator SHP
+Semi-Honest Let HP be semi-honest. Thus all the computational parties are honest. Let SHP be
+the simulator. Since HP does not have any input, SHP works as follows on input y where y is the
+output of the functionality.
+• Preprocessing: SHP acts on behalf of the parties in P and receives the values from HP.
+• Input: SHP samples a random value q˜v for an input wire on behalf of an input provider. Then
+it receives the same q˜v from HP.
+• Addition and Multiplication: For addition and multiplication gates, HP does not receive
+
+36
+
+any messages, thus nothing to simulate.
+• Verification: SHP samples a random sharing of zero, [ω̃]i and sends it to HP.
+
+Figure 14: Simulator SHP for Πmpc for a semi-honest HP
+Fig. 14 describes the simulation steps when the HP is semi-honest. In this case, all parties
+in P are honest. Since HP does not have any input to the protocol, the simulated view of
+the preprocessing step of the protocol is identical to the real view of the preprocessing phase.
+For an input gate, SHP samples and sends a randomly sampled q˜v . In the real protocol, HP
+receives qv = mv +r, where r is uniformly sampled. Therefore, qv is also uniformly distributed.
+Thus, the distribution of qv and q˜v are identical. Since HP does not receive any messages for
+addition and multiplication gates, nothing to simulate. In the verification step,
+PSnHP samples
+a random sharing of zero [ω̃]i . In the real protocol, Pi sends
+[ω]
+such
+that
+i=1 [ω]i = 0,
+Pm i  
+since all the parties follow the protocol. Also, [ω]i = ρ0 · αi + j=1 ρj ωzj i , where
+P {αi }i∈[1,n]
+is a random sharing of zero. Therefore [ωi ] is uniformly distributed such that ni=1 [ω]i = 0.
+Therefore, [ω]i and [ω̃]i are identically distributed.
+
+D
+
+Achieving fairness with stateless HP
+
+In this section, we elaborate upon how our protocol could be modified to rely on a stateless
+HP. Recall that the only information we required the HP to store was the mask for output
+wire, say δv . Suppose we tweak our protocol to not use this mask and essentially assume δv = 0
+for output wire by default. Then, it may so happen that the adversary obtains the output
+(as mv = v) but makes the honest parties abort by misbehaving during the verification check.
+This would result in a protocol achieving security with abort (notion where the adversary
+learns the output and subsequently gets to choose whether to deliver the output to honest
+parties or not), which is a weaker notion than fairness.
+The above shows that our efficient protocol can be tweaked to obtain achieving security
+with abort and relying on a stateless HP (instead of stateful). We can now upgrade this
+to fairness by using another call to stateless HP using the technique of [28] (which we refer
+to for details). At a high-level, first, an instance of the MPC protocol with abort is used
+to compute additive shares of the output, rather than the output directly and these shares
+are authenticated (using a digital signature scheme). The output of this MPC instance to a
+party comprises of its additive share of output, along with a signature on the additive share
+and a verification key. The next step involves parties reporting this output (if obtained) via a
+call to the HP. The HP reconstructs the output using the additive shares only if it obtained
+the same verification key from all parties and if all the obtained shares are valid (i.e. the
+signatures verify).
+Intuitively, this approach maintains fairness because (a) if the adversary aborts the MPC
+instance in the first step, then it learns at most n − 1 additive shares of the output, which
+reveals no information about the function output y = f (x1 , . . . , xn ). (b) If the adversary
+misbehaves during the second step of invoking the stateless HP (by either not sending its
+share or sending an incorrect share / verification key), no one gets the output; maintaining
+fairness.
+
+37
+
+E
+
+Building blocks
+
+We design various building blocks required for the considered applications. While these building blocks have been studied in the literature [13, 19, 39, 48], the novelty lies in adapting
+these to the HP-aided setting considered in this work while keeping the efficiency of the constructions at the centre stage. Secure realization of protocols for various primitives such as
+comparison, equality check, and boolean to arithmetic conversion requires a heavy preprocessing, specifically for a large number of parties. We provide efficient construction with a
+very lightweight preprocessing by utilizing the presence of HP. Note that all our constructions follow along the lines of the multiplication protocol described in Sec: 4.3, where all
+communication happens via the HP, and the correctness of the computation is verified before
+output reconstruction via a verification phase. The building blocks considered are as follows.
+For the application of secure auctions, where the goal is to identify the maximum value in
+a set of N secret-shared values, we design secure protocols for comparison and oblivious selection between two secret-shared values. The comparison protocol further relies on other
+primitives such as prefixOR and multi-input multiplication, for which we provide efficient realizations in our considered setting. For the next application of dark pools, we design secure
+solutions for two most popular algorithms that are used in dark pools—continuous double
+auction (CDA) and volume matching (VM). In addition to comparison and oblivious select,
+dark pool algorithms require other building blocks such as equality and bit to arithmetic
+conversion, which are also designed in our work. The equality check protocol further relies
+on (i) k-mult—a primitive that enables the multiplication of k-inputs, and (ii) multi-input
+multiplication—a primitive that enables multiplying 3 and 4 inputs in a single shot at the
+same online cost as that of 2-input multiplication. We also design protocols for (i) and (ii).
+Finally, we also design secure protocols for dot product and shuffle, where the former finds
+widespread use in privacy-preserving machine learning, while the latter is used in various
+graph-based algorithms, anonymous communication, secure sorting, to name a few.
+
+E.1
+
+Multi-input multiplication
+
+Several primitives such as prefixOR, and equality, to name a few, require multiplication of
+several inputs. The standard method to multiply, say k inputs, is to follow the tree-based
+approach. Here, in each of the log2 (k) rounds, every consecutive pair of inputs is multiplied
+using the multiplication protocol, which takes 2 inputs. The online complexity of this approach can be improved if one has access to multiplication protocols which allows multiplying
+more than 2 inputs in a single shot, also referred to as multi-input multiplication [48]. Specifically, we design 3-input and 4-input multiplication protocols that allow multiplying 3 and 4
+inputs, respectively, while having the same online complexity as that of 2-input multiplication. The use of multi-input multiplication allows attaining an improvement of at least 2×
+in the online complexity. Let mult3 be a multiplication gate that takes 3 values say a, b, c
+as inputs and outputs y = a · b · c. Similarly, mult4 takes a, b, c, d as inputs and outputs
+y = a · b · c · d. The protocols to evaluate mult3 and mult4 are discussed next.
+Πmult3 : The protocol takes as input J·K-shares of a, b, c. To generate JyK, where y = a · b · c,
+in the preprocessing phase, HP generates ⟨·⟩-shares of a random mask δy for the output wire.
+
+38
+
+In the online phase, parties need to compute my , which can be written as
+my =y + δy = abc + δy
+=(ma − δa )(mb − δb )(mc − δc ) + δy
+=ma mb mc − ma mb δc − mb mc δa − mc ma δb + ma δb δc + mb δc δa + mc δa δb − δa δb δc + δy
+=ma mb mc − ma mb δc − mb mc δa − mc ma δb + ma δbc + mb δca + mc δab − δabc + δy
+As done in the multiplication protocol Sec: 4, to generate my , the approach is for parties to
+generate ⟨·⟩-shares of my , followed by reconstructing it via the HP. To enable this, in the preprocessing phase, HP generates ⟨·⟩-shares of of δab = δa δb , δbc = δb δc , δca = δc δa , δabc = δa δb δc .
+In the online phase, parties generate ⟨·⟩-shares of my using the ⟨·⟩-shares of δab , δbc , δca , δabc .
+To reconstruct my , parties send their shares to HP. However, to provide privacy against HP,
+as done in the case of 2-input multiplication, parties generate shares of qy which is my masked
+with a random pad where the pad is known to all the parties except HP. Parties reconstruct
+qy via the HP, from which each party obtains my by locally subtracting the pad.
+Note that naively multiplying 3 inputs using the 2-input multiplication would require
+communicating 6 elements in the preprocessing phase, and 4n elements in the online phase
+with 4 rounds of interaction. On the other hand, relying on Πmult3 for the same requires
+communication of 9 elements in the preprocessing and 2n elements in the online phase with
+2 rounds of interaction. In this way, Πmult3 allows attaining an improvement of 2× in the
+online complexity.
+Protocol Πmult3
+Preprocessing:
+• HP locally computes δab = δa · δb , δbc = δb · δc , δca = δa · δc , δabc = δa · δb · δc and σab = ∆ · δab ,
+σbc = ∆ · δbc , σca = ∆ · δca , σabc = ∆ · δabc
+• Parties and HP invoke Π⟨·⟩-Sh (HP, v) for v ∈ {δab , δbc , δca , δabc }.
+• Parties and HP invoke Π⟨·⟩-Sh (HP, Rand) to generate ⟨·⟩-shares of a random δy .
+Online:
+• All parties excluding HP sample a random vector r of length n using their common key kP .
+• P1 computes ⟨qy ⟩1 = ma mb mc + r1 − ma mb ⟨δc ⟩1 − mb mc ⟨δa ⟩1 − mc ma ⟨δb ⟩1 + ma ⟨δbc ⟩1 + mb ⟨δca ⟩1 +
+mc ⟨δab ⟩1 − ⟨δabc ⟩1 + ⟨δy ⟩1 .
+• For all i ̸= 1, Pi computes ⟨qy ⟩i = ri − ma mb ⟨δc ⟩i − mb mc ⟨δa ⟩i − mc ma ⟨δb ⟩i + ma ⟨δbc ⟩i + mb ⟨δca ⟩i +
+mc ⟨δab ⟩i − ⟨δabc ⟩i + ⟨δy ⟩i .
+• For each i ∈ [1, n], Pi sends [qy ]i to HP.
+Pn
+• HP reconstructs and send qy = i=1 [qy ]i to all parties.
+Pn
+• Each Pi locally computes my = qy − i=1 ri .
+• For each i ∈ [1, n], Pi outputs JyKi = (my , ⟨δy ⟩i ).
+
+Figure 15: Secure evaluation of fan-in 3 multiplication gate
+Πmult4 : Similar to Πmult3 , we consider multiplication gates with 4 inputs. In this case too, my
+can be expressed as a combination of the masked values and masks. Here, the preprocessing
+39
+
+phase involves the HP generating ⟨·⟩-shares of {δab , δbc , δca , δad , δbd , δcd , δabc , δacd , δabd ,
+δbcd , δabcd }. In the online phase, parties generate my similarly as described for Πmult3 . This
+protocol requires communicating 23 elements in the preprocessing phase, and 2n elements of
+communication in the online phase with 2 rounds of interaction.
+
+E.2
+
+PrefixOR and PrefixAND
+
+Given an array of k bits {a1 , a2 , . . . , ak }, where each bit is secret-shared, prefixOR outputs
+a sharing of an array of k bits {b1 , b2 , . . . , bk } such that bi = ∨ij=1 aj . Observe that, bi =
+1⊕∧ij=1 (1⊕ai ). Hence, to realize prefixOR it suffices to design a protocol for PrefixAND, that
+takes k bits {c1 , c2 , . . . , ck } as inputs and outputs k bits {d1 , d2 , . . . , dk } such that di = ∧ij=1 ci .
+A naive way of computing prefixAND via 2-input multiplication requires 2k − 2 rounds
+of communication in the online phase. An optimized solution is presented in [38], which
+relies on multi-input multiplication. We rely on the protocol described in [38] to design a
+protocol for prefixAND which allows us to attain a round complexity to 2 log4 k. The resulting
+protocol requires communicating 23 nk log4 k bits in the online phase and 35
+4 k log4 k bits in the
+preprocessing phase. At a high-level, given just 4 bits of input, their prefixAND can be
+obtained in two rounds by computing the 2-input, 3-input and 4-input multiplication. The
+prefixAND of more than four bits can be computed via a tree-based approach by computing
+the 2,3,4-input multiplication with respect to every consecutive group of four bits in each
+level of the tree, and repeating this process at every level to obtain the final result. In this
+way, prefixAND of up to 16 bits can be computed in 4 rounds and up to 64 bits in 6 rounds.
+The protocol steps appear in Fig. 16 and an illustration for k = 16 bits appears in Fig. 17.
+Protocol ΠPrefixAND (a1 , . . . , ak )
+(1)
+
+• For j = 1 to k set aj
+
+= aj
+
+• For l = 1 to log4 k
+◦ For j = 1 to k/4l
+• Set p = 4l ∗ (j − 1),
+q = 4l ∗ (j − 1) + 4l−1 ,
+r = 4l ∗ (j − 1) + 2 ∗ 4l−1 ,
+s = 4l ∗ (j − 1) + 3 ∗ 4l−1
+• for i = 1 to 4l−1
+(l+1)
+
+(l)
+
+• Jap+i KB = Jap+i KB
+(l+1)
+
+(l)
+
+(l)
+
+(l+1)
+
+(l)
+
+(l)
+
+(l)
+
+(l+1)
+
+(l)
+
+(l)
+
+(l)
+
+• Jaq+i KB = Πmult (Jaq KB , Jaq+i KB )
+
+• Jar+i KB = Πmult3 (Jaq KB , Jar KB , Jar+i KB )
+
+(l)
+
+• Jas+i KB = Πmult4 (Jaq KB , Jar KB , Jas KB , Jas+i KB )
+(m)
+
+(m)
+
+Output: (Ja1 KB , . . . , Jak KB ) where m = log4 k.
+
+Figure 16: Computing PrefixAND of k boolean bits
+
+40
+
+b1
+
+b2
+
+b3
+
+b4
+
+b5
+
+b6
+
+b7
+
+b8
+
+b9
+
+b10
+
+b11
+
+b12
+
+b13
+
+b14
+
+b15
+
+b16
+
+a1,4
+
+a1,5
+
+a1,6
+
+a1,7
+
+a1,8
+
+a1,9
+
+a1,10
+
+a1,11
+
+a1,12
+
+a1,13
+
+a1,14
+
+a1,15
+
+a1,16
+
+a1,1
+
+a1,2
+
+a1,3
+
+a1,4
+
+a5,5
+
+a5,6
+
+a5,7
+
+a5,8
+
+a9,9
+
+a9,10
+
+a9,11
+
+a9,12 a13,13 a13,14 a13,15 a13,16
+
+a1
+
+a2
+
+a3
+
+a4
+
+a5
+
+a6
+
+a7
+
+a8
+
+a9
+
+a10
+
+a11
+
+a12
+
+Fan-in 2 Mult Gate
+
+Fan-in 3 Mult Gate
+
+a13
+
+a14
+
+a15
+
+a16
+
+Fan-in 4 Mult Gate
+
+Figure 17: PrefixAND
+
+E.3
+
+k-mult
+
+Let x = {x1 , . . . , xk } be an array of kQvalues. The k-mult primitive takes J·K-shares of x as
+input and outputs J·K-shares of y = ki=1 xi , which is the multiplication of the k elements
+in x. Naively realizing this via the multiplication protocol requires 2 log2 k rounds. We
+design a protocol Πk-mult for k-mult using Πmult4 such that the round complexity reduces to
+2log4 k. For ease of presentation, we consider k to be a power of 4. The protocol proceeds
+in iterations where in each iteration, we invoke Πmult4 on every consecutive set of 4 inputs
+to this iteration. The outputs generated by Πmult4 in this iteration constitute the input to
+the next iteration. In this way, in each iteration, the number of elements to be multiplied
+reduces by a factor of 4. Thus, at the end of log4 k iterations, the desired output is generated.
+Note that invoking Πk-mult requires communication of 23
+3 (k − 1) elements in the preprocessing
+phase. The communication cost in the online phase is 32 n(k − 1) elements, and it requires a
+total 2 log4 k rounds of interaction. the formal protocol steps appear in Fig. 18.
+Protocol Πk-mult (Jx1 K, . . . , Jxk K
+(1)
+
+• Set xj
+
+= xj for all j ∈ [1, k].
+
+• For l = 1 to log4 k
+• For j = 1 to k/4l
+
+41
+
+(l+1)
+
+• Jxj
+
+(l)
+
+(l)
+
+(l)
+
+(l)
+
+K = Πmult4 (Jx4j−3 K, Jx4j−2 K, Jx4j−1 K, Jx4j K).
+(log4 k)
+
+Output: Pi outputs Jx1
+
+Ki .
+
+Figure 18: Computing k-mult of k secret shared values
+
+E.4
+
+Equality check
+
+The equality check protocol takes two secret shared values x and y as inputs and outputs 1 if
+x = y, else 0. Note that, checking x = y reduces to checking z = 0 where z = x − y. Therefore
+ΠEQ (JxK, JyK) = ΠEQZ (Jx − yK). Thus we design a protocol ΠEQZ that takes a secret shared
+value JxK and outputs a boolean shared bit JbKB such that b = 1 if x = 0 and b = 0 if x ̸= 0.
+At a high level, the protocol proceeds as follows. To check if x = 0 where x is J·K-shared,
+the idea is to reconstruct d = x + r where r is a random value not known to all parties,
+excluding HP. Observe that if x = 0, then d = r. Hence, to check if x = 0, parties compute
+ej = dj ⊕ rj , for all j ∈ [0, k − 1], where dj and rj are the jth bits of d and r respectively
+and boolean representation of d and r require k-bit to represent. If x = 0, then ej = 0 and
+k−1
+1 ⊕ ej = 1 for all j ∈ [0, k − 1]. Thus, EQZ(x) = ∧j=0
+(1 ⊕ ej ), which can be computed using
+k-mult on {(1⊕e0 ), . . . , (1⊕ek−1 )} to get the desired output. Note that performing the above
+computation requires shares of r as well as its bits, which can be generated by the HP. In [13],
+parties generate a sharing of r and bits of r, then parties open d = x + r to all the parties.
+However, we optimize it by allowing parties to sample a random value c using kall . Then
+HP generates sharing of r = c + δx as well as bits of r. In the online phase, parties obtain
+d = x + r = c + mx without any interaction. This approach avoids performing reconstruction
+of x + r and saves communication of n elements. The formal protocol steps appear in Fig. 19.
+One instance of ΠEQZ requires communication of 12 elements in the preprocessing phase and
+2n
+3 elements in the online phase. It requires 2 log4 k rounds of interaction in the online phase.
+Protocol ΠEQZ (JxK)
+Preprocessing:
+• HP and all parties sample a random value c using the common key kall .
+• Execute Π⟨·⟩-Sh (HP, r) where r = c + δx .
+• HP sets (rk−1 , . . . , r0 ) = BitDecompose(r).
+• Execute Π⟨·⟩B (HP, rj ), for all j ∈ [0, k − 1].
+• Execute preprocessing phase of Πk-mult (Fig. 18) using (⟨r0 ⟩B , . . . , ⟨rk−1 ⟩B ).
+Online:
+• Parties set d = c + mx .
+• Parties locally set (dk−1 , . . . , d0 ) = BitDecompose(d).
+• Parties set Jej KB = (1 ⊕ dj , ⟨rj ⟩B ) that is, mej = 1 ⊕ dj and δej = rj , for j ∈ {0, . . . , k − 1}.
+
+• Parties and HP execute the online phase of Πk-mult (Je0 KB , . . . , Jek−1 KB ) and get output JbKB .
+
+Figure 19: Equality Test
+
+42
+
+E.5
+
+Bit to arithmetic
+
+Given a boolean shares (J·KB -shares) of a bit b, this protocol generates its arithmetic shares.
+For this, observe that JbKB = (mb , ⟨δb ⟩B ) where b = mb ⊕ δb . If we let (mb )A , (δb )A denote the
+arithmetic equivalent of the bits mb and δb , then the arithmetic equivalent of b is given as
+(b)A = (mb )A +(δb )A −2(mb )A (δb )A . Thus we generate arithmetic shares of (b)A by generating
+arithmetic shares of (mb )A and (δb )A . Since (mb )A is available to all the parties (excluding
+HP), its J·K-shares can be generated as J(mb )A K = ((mb )A , ⟨0⟩) where each component of
+⟨0⟩ is 0. However, δb is shared among the parties. Thus generating J(δb )A K cannot be
+done non-interactively. In the standard (non-HP) setting, generating ⟨·⟩-shares of (δb )A
+from its ⟨·⟩B -shares is expensive. On the other hand, in our setting, HP holds the δb in
+clear, and therefore, it can generate ⟨(δb )A ⟩ in the preprocessing phase. Parties can then
+set J(δb )A K = (0, −⟨(δb )A ⟩). Note that the computation of (b)A also has a term (mb )A (δb )A .
+This requires performing multiplication, for which we rely on Πmult . The formal protocol
+steps appear in Fig. 20. The communication cost of ΠBitA protocol is 2n elements, and it
+requires 2 rounds of interaction in the online phase. Preprocessing phase requires 1 instance
+of Π⟨·⟩-Sh (HP, δb ) and Π⟨·⟩-Sh (HP, Rand). In total, this requires communication of 3 elements
+in the preprocessing phase.
+Protocol ΠBitA (JbKB )
+Preprocessing:
+• Execute Π⟨·⟩-Sh (HP, (δb )A ).
+• Execute Π⟨·⟩-Sh (HP, Rand) for a randomly sampled value δw .
+Online:
+• Each party Pi sets J(mb )A Ki = ((mb )A , ⟨0⟩i ) where ⟨0⟩i = (0, 0) and J(δb )A Ki = (0, −⟨(δb )A ⟩i ).
+
+• Parties excluding HP sample a random vector r.
+
+• For all i ∈ [1, n], Pi sets ⟨qw ⟩i = (mb )A · ⟨(δb )A ⟩i + ⟨δw ⟩i + ri .
+• For all i ∈ [1, n], Pi sends ⟨qw ⟩i to HP.
+• HP sends qw to all the parties.
+• Each party Pi locally obtain mw = qw −
+
+P
+
+i∈[n] ri .
+
+• Pi outputs J(b)A Ki = (m(b)A , ⟨δ(b)A ⟩i ) where m(b)A = (mb )A −2mw and ⟨δ(b)A ⟩i = −⟨(δb )A ⟩i −2⟨δw ⟩i .
+
+Figure 20: Bit to Arithmetic conversion
+
+E.6
+
+Comparison
+
+The comparison protocol takes two secret shared values x and y as inputs and outputs 1 if
+x < y, 0 otherwise. This can be reduced to checking if z < 0 where z = x − y. Thus we design
+a protocol ΠLTZ that takes one secret shared value JxK as input and outputs J1K if x < 0 and
+J0K otherwise.
+In [13], the authors have proposed a comparison protocol, where the Trunc is used as a subprotocol for truncating lower m bits of an input x. Inside this Trunc protocol, (2−m mod p)
+is computed and later multiplied with a secret shared value a , to get another secret shared
+value a′ , where a′ = ⌊ 2am ⌋. But this approach might not give desired output as the inverse of
+43
+
+2m in field is not equivalent to 2−m in decimal. Hence, to design the comparison protocol,
+we adapt the approach of [45] to work with our setting. Informally, the protocol proceeds as
+follows. To check if x < 0, it is sufficient to check if ⌊p/2⌋ ≤ x, where p is the order of the
+underlying field. This is because, the negative numbers always lie in upper half of the field.
+The problem now boils down to determining whether R ≤ x or not, where R = ⌊p/2⌋ is a
+publicly known constant.
+Here the approach is to reconstruct a = x + r and b = a + M, where M = p − R, towards
+all parties where r is a random value not known to any party. From [45], we know that
+LTC(R, x) = LT(a, r) ⊕ LT(b, r) ⊕ LT(b, M), where LTC(R, x) = 1 if and only if R ≤ x and
+LT(a, r) = 1 if and only if a < r. To compute LT(a, r), parties proceed as follows. Observe
+that if s ∈ [0, k − 1] denotes the highest bit position where the bits of a and r differ, then
+LT(a, r) can be written as LT(a, r) = rs . In [45], the authors have used their LTBits(a, r)
+protocol in place of LT(a, r), which actually outputs whether a ≤ r or not by returning as .
+But we observed that, replacing LT(a, r) by LTBits(a, r) may sometimes lead to incorrect
+result for LTC(R, x), e.g., when x = 0 and R > 0, LTC(R, x) outputs 1 instead of 0. To rectify
+the above issue, we return rs as the output of LT(a, r). To compute rs , the approach is to
+compute the XOR of the corresponding bits in a and r, followed by computing a prefixOR of
+the output of the XOR. This results in a vector of bits which comprises of 0s for all j > s and
+1s for all j ≤ s. Elaborately, let yj = aj ⊕ rj for j ∈ [0, k − 1], where aj , rj represent the j th
+′
+, . . . , y0′ )
+bit of a, r respectively. Parties execute prefixOR on (yk−1 , . . . , y0 ) to generate (yk−1
+such that yj′ = 0 for j > s and yj′ = 1 for j ≤ s. To identify the position s where a and r
+′
+′
+. Observe
+first differ, parties generate vj = yj′ ⊕ yj+1
+for j ∈ [0, k − 2] and set vk−1 = yk−1
+′
+′
+that performing this XOR of the consecutive bits in (yk−1 , . . . , y0 ) ensures that only vs = 1
+while vj = 0 for all j ̸= s. Thus, taking a dot product of (vk−1 , . . . , v0 ) with the bits in r,
+i.e., (rk−1 , . . . , r0 ), allows to obtain rs . Following the similar approaches, parties can obtain
+LT(b, r) also. Note that, two dot product operations required for computing LT(a, r) and
+LT(b, r) can be combined to save communication cost. Parties can locally compute the value
+of LT(b, M) as M is publicly known constant. Note that except for a, b, R and M, all the
+other values described above are shared, and hence, the computation proceeds on these shared
+values. The formal protocol steps appear in Fig. 21.
+Protocol ΠLTZ (JxK)
+Preprocessing:
+• HP and all parties sample a random value c using their common key.
+• HP sets r = c + δx and computes (rk−1 , . . . , r0 ) = BitDecompose(r).
+• Execute Π⟨·⟩B (HP, rj ) for all j ∈ [0, k − 1].
+• Parties and HP set ⟨δyj ⟩B = ⟨δzj ⟩B = ⟨rj ⟩B for j ∈ [0, k − 1].
+• Execute preprocessing of PrefixOR on inputs (⟨δyk−1 ⟩B , . . . , ⟨δy0 ⟩B ), (⟨δzk−1 ⟩B , . . . , ⟨δz0 ⟩B ) and
+obtain
+(⟨δy′ k−1 ⟩B , . . . , ⟨δy′ 0 ⟩B ), (⟨δz′ k−1 ⟩B , . . . , ⟨δz′ 0 ⟩B ) respectively.
+• Set ⟨δvj ⟩B = ⟨δy′ j ⟩B ⊕ ⟨δy′ j+1 ⟩B and ⟨δwj ⟩B = ⟨δz′ j ⟩B ⊕ ⟨δz′ j+1 ⟩B for all j ∈ [0, k − 1] where
+⟨δy′ k ⟩B = ⟨δz′ k ⟩B = 0.
+
+44
+
+• Perform preprocessing of ΠDotP on inputs
+((⟨δvk−1 ⟩B , . . . , ⟨δv0 ⟩B , ⟨δwk−1 ⟩B , . . . , ⟨δw0 ⟩B ), (⟨rk−1 ⟩B , . . . , ⟨r0 ⟩B , ⟨rk−1 ⟩B , . . . , ⟨r0 ⟩B ))
+and obtain ⟨δu ⟩B respectively.
+• Perform preprocessing of ΠBitA for the input mask ⟨δu ⟩B .
+
+Online:
+• Parties locally set a = (mx + c) and b = (a + M), where M = p − ⌊ p2 ⌋ = ⌈ p2 ⌉.
+• Parties set (ak−1 , . . . , a0 ) = BitDecompose(a) and (bk−1 , . . . , b0 ) = BitDecompose(b).
+• Parties set myj = aj and mzj = bj for all j ∈ [0, k − 1].
+′
+• (Jyk−1
+KB , . . . , Jy0′ KB ) = ΠPrefixOR (Jyk−1 KB , . . . , Jy0 KB ).
+
+• (Jz′k−1 KB , . . . , Jz′0 KB ) = ΠPrefixOR (Jzk−1 KB , . . . , Jz0 KB ).
+
+′
+• Parties set mvj = myj′ ⊕ myj+1
+and mwj = mz′j ⊕ mz′j+1 for all j ∈ [0, k − 1] where myk′ = mz′k = 0.
+
+• JuKB = ΠDotP ((Jvk−1 KB , . . . , Jv0 KB , Jwk−1 KB , . . . , Jw0 KB ),
+(Jrk−1 KB , . . . , Jr0 KB , Jrk−1 KB , . . . , Jr0 KB )).
+
+• Parties locally compute q, where q = 1 if and only if b < M.
+• Parties and HP perform the online phase of BitA on input (mu ⊕ q, ⟨δu ⟩B ) and output JdK.
+
+Figure 21: Less Than Zero Test
+The communication cost of ΠLTZ is 5 + k3 + 35
+2 log4 k elements in the preprocessing phase and
+2n + 2n
++
+3n
+log
+k
+elements
+in
+the
+online
+phase.
+In the online phase, 2 log4 k + 4 rounds of
+4
+k
+interaction are required.
+
+E.7
+
+Oblivious selection
+
+The oblivious selection protocol, Πsel takes the J·K-shares of the values x0 and x1 along with
+J·KB -shares of a bit b. It gives as output J·K-shares of x1−i if b = i. A naive way of executing
+oblivious selection can be done by securely computing b · x0 + (1 − b) · x1 . However, this
+requires performing 2 secure multiplications in parallel. This can be optimized by computing
+b · (x0 − x1 ) + x1 . This requires performing a single multiplication. Note that since the bit b is
+Boolean shared, the parties first perform ΠBitA to generate JbK followed by the multiplication.
+Below we additionally discuss how the primitive operations of dot product and shuffle
+can be realized securely. While dot product forms a crucial primitive in applications such as
+privacy-preserving machine learning [42, 40, 31, 22], shuffle is also extensively used in various
+applications such as anonymous broadcast [25, 50], oblivious RAM [14, 5], the graphSC
+paradigm [4, 47], to name a few.
+
+E.8
+
+Dot product
+
+Let a and b are two vectors of length N, and let c be the output. Corresponding to every
+component of a and b, a party Pi holds the authenticated sharing of the masks, and HP holds
+the complete masks in the preprocessing phase. HP computes the dot product of the masks
+of a and masks of b. Let δab be the dot product of the masks of a and the masks of b. HP
+generates an authenticated additive sharing of δab . Finally, HP generates an authenticated
+45
+
+additive sharing of a random value δc . In thePonline phase, all parties excluding HP, sample a
+random vector r. P1 computes ⟨qc ⟩1 = r1 + N
+j=1 (maj mbj − maj ⟨δbj ⟩1 − mbj ⟨δaj ⟩1 ) + ⟨δab ⟩1 +
+P
+⟨δc ⟩1 and for all i ̸= 1, Pi computes ⟨qc ⟩i = ri + N
+j=1 (−maj ⟨δbj ⟩i − mbj ⟨δaj ⟩i ) + ⟨δab ⟩i + ⟨δc ⟩i .
+Each Pi sends ⟨qcP
+⟩i to HP. HP reconstructs and sends qc to all. Finally, all parties locally
+obtain mc = qc − ni=1 ri .
+Protocol ΠDotP (JaK, JbK)
+Preprocessing:
+• HP generates ⟨·⟩ of δab where δab =
+
+P
+
+j∈[N] δaj · δbj .
+
+• HP samples δc and generates ⟨·⟩ of δc .
+Online:
+• All parties excluding HP sample a random vector r using their common key.
+PN
+• Party P1 computes ⟨qc ⟩1 = r1 + j=1 (maj mbj − maj ⟨δbj ⟩1 − mbj ⟨δaj ⟩1 ) + ⟨δab ⟩1 + ⟨δc ⟩1 .
+PN
+• For all i ̸= 1, Pi computes ⟨qc ⟩i = ri + j=1 (−maj ⟨δbj ⟩i − mbj ⟨δaj ⟩i + ⟨δab ⟩i + ⟨δc ⟩i .
+• For all i ∈ [1, n], Pi sends ⟨qc ⟩i to HP.
+• HP reconstructs qc and sends it to all.
+P
+• Each party locally obtains mc = qc − i∈[n] ri .
+
+Figure 22: Dot Product
+We emphasize that the communication cost for the dot product is independent of the size of
+the vectors both in the preprocessing and online phases. A dot product requires communication of 3 elements in the preprocessing phase and 2n elements in the online phase. The
+round complexity is 2.
+
+E.9
+
+Shuffle
+
+Let x be a vector of length N. The shuffle functionality generates a vector y such that
+yi = xπ(i) for a random permutation π : ZN → ZN . In the secure shuffle protocol, parties
+start with a secret shared vector x, and at the end of the protocol, parties obtain secret
+sharing of the vector y. Note that the permutation π remains hidden from all the parties.
+Protocol Πshuffle (Jx1 K, . . . , JxN K
+Preprocessing:
+• HP sample a random permutation π : ZN → ZN , and generates Mπ .
+• Execute Π⟨·⟩-Sh (HP, Mπ (i, j)) for i, j ∈ [1, N].
+• for i ∈ [1, N],
+◦ perform preprocessing of ΠDotP where the inputs are
+(⟨Mπ (i, 1)⟩, . . . , ⟨Mπ (i, N)⟩) and (⟨δx1 ⟩, . . . , ⟨δxN ⟩).
+Online:
+• For i ∈ [1, N],
+
+46
+
+◦ Set mMπ (i,j) = 0, for all i, j ∈ [1, N].
+◦ Perform online phase of ΠDotP on inputs
+(JMπ (i, 1)K, . . . , JMπ (i, N)K) and (Jx1 K, . . . , JxN K). Let the output be Jzi K
+
+Output: (Jz1 K, . . . , JzN K).
+
+Figure 23: Secure shuffle for a length N vector
+A permutation π on N length vector can be represented as a matrix Mπ of size N × N. Mπ
+is a binary matrix where each row and each column of Mπ contains exactly one 1, and the
+rest are 0. Further note that, y = π(x) = Mπ x. HP will sample a random permutation π
+and it will generate authenticated sharing of Mπ . HP performs Π⟨·⟩-Sh (HP, Mπ (i, j)). where
+Mπ (i, j) is the jth element in the ith row of the matrix Mπ (i, j). This step is performed in the
+preprocessing phase, and it requires total 2×N2 elements to be communicated. Thus a secure
+shuffle protocol can be executed by performing securely multiplying a matrix multiplication
+with a vector if the matrix and the vector are shared. Multiplication of a matrix and vector
+can be done by performing dot products between the rows of the matrix with the vector.
+The protocol for dot product E.8 is described above in Fig: 22. Therefore the total cost of
+the shuffle protocol is 2N2 + 3N elements in the preprocessing phase and 2nN elements in the
+online. The online round complexity is 2.
+Our construction is similar to a construction presented in [43]. However, the generation
+of the permutation matrix in [43] is substantially expensive than our construction due the
+presence of HP.
+
+E.10
+
+Complexity analysis
+
+Multiplication with 3 and 4 inputs. The protocol Πmult3 (Fig. 15) has preprocessing cost
+9 elements, it requires 4 instances of Π⟨·⟩-Sh (HP, v) and 1 instance of Π⟨·⟩-Sh (HP, Rand). The
+online communication is 2n elements and 2 rounds. The protocol Πmult4 has preprocessing cost
+23 elements this is due to 11 instances of Π⟨·⟩-Sh (HP, v) and 1 instance of Π⟨·⟩-Sh (HP, Rand).
+The online communication is 2n elements and 2 rounds.
+PrefixOR and PrefixAND. The protocol ΠPrefixAND (Fig. 16) requires to evaluate a
+boolean circuit which is of depth log4 k, which has k/4 mult, k/4 mult3 and k/4 mult4 in
+every level. In total, it has preprocessing cost 35
+4 log4 k elements and online communication
+3n
+log
+k
+elements
+and
+2
+log
+k
+rounds.
+4
+4
+2
+Multiplication of k bits. The protocol Πk-mult (Fig. 18) requires to evaluate a circuit
+which has 4level mult4 gates in every level where level varies from 1 to log4 k. Therefore, it has
+2n
+preprocessing cost 23
+3 elements and online communication 3 elements and 2 log4 k rounds.
+Equality check. The protocol ΠEQZ (Fig. 19) has preprocessing cost 12 elements and online
+communication 2n
+3 elements and 2 log4 k rounds. This follows directly from the multiplication
+of k bits.
+Bit to arithmetic conversion. The protocol ΠBitA (Fig. 20) has preprocessing cost 3
+elements and online communication 2n elements and 2 rounds.
+47
+
+Comparison. The protocol ΠLTZ (Fig. 21) has preprocessing cost 5 + k3 + 35
+2 log4 k elements
+and online communication 2n + 2n
++
+3n
+log
+k
+elements
+and
+2
+log
+k
++
+4
+rounds.
+This follows
+4
+4
+k
+directly from the prefixOR.
+Oblivious selection. The Oblivious selection protocol has preprocessing cost 6 elements
+and online communication 4n elements and 4 rounds.
+
+48
+
+
