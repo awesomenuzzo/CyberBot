@@ -1,0 +1,1811 @@
+The Core of the Participatory Budgeting Problem
+Brandon Fain∗
+
+Ashish Goel†
+
+Kamesh Munagala‡
+
+arXiv:1610.03474v2 [cs.GT] 14 Oct 2016
+
+Abstract
+In participatory budgeting, communities collectively decide on the allocation of public tax dollars
+for local public projects. In this work, we consider the question of fairly aggregating the preferences
+of community members to determine an allocation of funds to projects. This problem is different from
+standard fair resource allocation because of public goods: The allocated goods benefit all users simultaneously. Fairness is crucial in participatory decision making, since generating equitable outcomes is
+an important goal of these processes. We argue that the classic game theoretic notion of core captures
+fairness in the setting. To compute the core, we first develop a novel characterization of a public goods
+market equilibrium called the Lindahl equilibrium, which is always a core solution. We then provide
+the first (to our knowledge) polynomial time algorithm for computing such an equilibrium for a broad
+set of utility functions; our algorithm also generalizes (in a non-trivial way) the well-known concept of
+proportional fairness. We use our theoretical insights to perform experiments on real participatory budgeting voting data. We empirically show that the core can be efficiently computed for utility functions
+that naturally model our practical setting, and examine the relation of the core with the familiar welfare
+objective. Finally, we address concerns of incentives and mechanism design by developing a randomized approximately dominant-strategy truthful mechanism building on the exponential mechanism from
+differential privacy.
+
+1
+
+Introduction
+
+Transparency and citizen involvement are fundamental goals for a healthy democracy. Participatory Budgeting (PB) [5, 25] is a process by which a municipal organization (eg. a city or a district) puts a small
+amount of its budget to direct vote by its residents. PB is growing in popularity, with over 30 such elections conducted in 2015. Implementing participatory budgeting requires careful consideration of how to
+aggregate the preferences of community members into an actionable project funding plan. In this work, we
+model participatory budgeting as a fair resource allocation problem. We note that this problem is different
+from standard fair resource allocation because of public goods: The allocated goods benefit all users simultaneously. We model this problem as a central body fairly allocating public goods according to preferences
+reported by the community members (or users), subject to a budget constraint. It is important to note that in
+participatory democracy, equitable and fair outcomes are an important systemic goal.
+Model of Fairness: In a participatory budgeting setting, there are k projects (or items) and n voters (or
+agents) who participate. Unlike in a private good economy, it is usually the case that k  n. There is
+∗
+Department of Computer Science, Duke University, 308 Research Drive, Durham, NC 27708. btfain@cs.duke.edu.
+Supported by NSF grants CCF-1637397 and IIS-1447554.
+†
+Supported by the Army Research Office Grant No. 116388, the Office of Naval Research Grant No. 11904718, by NSF
+grant CCF-1637418, and by the Stanford Cyber Initiative. Author’s Address: Management Science and Engineering Department,
+Stanford University, Stanford CA 94305. Email: ashishg@stanford.edu
+‡
+Department of Computer Science, Duke University, Durham NC 27708-0129. kamesh@cs.duke.edu. Supported by NSF
+grants CCF-1408784, CCF-1637397, and IIS-1447554.
+
+1
+
+k
+an overall budget
+Pk B available for funding projects. An allocation is a k-dimensional vector x ∈ R with
+x ≥ 0 and j=1 xj ≤ B. The quantity xj denotes the funding for project j. We assume voters report a
+cardinal utility function. We denote the utility of an agent i given an allocation x as Ui (x), and we assume
+this function is continuous, non-decreasing, and concave.
+In this model, we study fair allocations. In classical economic theory, a fair allocation is one that
+is Pareto-efficient and envy-free [30]. An allocation x is Pareto-efficient (or Pareto) if there is no other
+feasible allocation y such that Ui (x) ≤ Ui (y) for all voters i, with a strict inequality for at least one voter.
+This captures the notion that the allocation is not doing a disservice by under-allocating to all agents. In
+the context of private goods, envy-freeness means that no agent prefers the allocation of another agent.
+However, a different notion is needed for public goods, since the allocation is shared among all agents. In
+this paper, the concept of fairness with which we work is the core. This notion is borrowed from cooperative
+game theory and was first phrased in game theoretic terms in [29]. It has been studied extensively even in
+public goods settings [9, 22]. Below, we define the core and an approximate notion of the core.
+
+Definition 1.1. An allocation x is a core solution if there is no subset S of agents who, given a budget of
+(|S|/n)B, could compute an allocation y where every user in S receives strictly more utility in y than x,
+i.e., ∀i ∈ S, Ui (y) > Ui (x).
+Definition 1.2. For α > 1, an allocation x lies in the α-approximate multiplicative (resp. additive) core
+if for any subset S of agents, there is no allocation y using a budget of of (|S|/n)B, s.t. Ui (y) > αUi (x)
+(resp. Ui (y) > Ui (x) + α) for all i ∈ S.
+Note that when S = {1, 2, . . . , n}, the above constraints encode a weak version of Pareto-Efficiency.
+Further, when S is a singleton voter, the core captures Sharing Incentive, meaning that the voter gets at
+least as much utility as she would have obtained with budget B/n dedicated to just her. In general, the
+core captures a group sharing incentive: No community of users suffers envy with respect to its share of the
+overall budget.
+Some Clarifying Examples: We briefly consider some examples to clarify the concept of the core and
+compare it with other definitions of
+For simplicity in these examples, assume the utility function
+Pfairness.
+k
+of the agents is linear, so Ui (x) = j=1 uij xj . Also, assume that there is a unit size budget and all projects
+are of unit size.
+Figure 1: Core Examples
+(a) Tyranny of the Majority
+
+Agent i
+
+ui,1
+
+(b) Account for Sharing
+
+ui,2
+
+Agent i
+
+ui,1
+
+ui,2
+
+ui,3
+
+1
+2
+..
+.
+
+3/5
+3/5
+..
+.
+
+0
+0
+..
+.
+
+2/5
+2/5
+..
+.
+
+d(n/2)e
+d(n/2)e + 1
+..
+.
+
+3/5
+0
+..
+.
+
+0
+3/5
+..
+.
+
+2/5
+2/5
+..
+.
+
+n
+
+0
+
+3/5
+
+2/5
+
+1
+2
+..
+.
+
+1
+1
+..
+.
+
+0
+0
+..
+.
+
+d(n/2)e + 1
+d(n/2)e + 2
+..
+.
+
+1
+0
+..
+.
+
+0
+1
+..
+.
+
+n
+
+0
+
+1
+
+(c) Fairness and Proportionality
+
+Agent i
+
+ui,1
+
+ui,2
+
+1
+2
+..
+.
+
+1
+1
+..
+.
+
+0
+0
+..
+.
+
+n−1
+n
+
+1
+0
+
+0
+1
+
+First note that the core will produce a very different outcome from simply aggregating “yes/no” votes
+of voters for different projects, and funding the projects in decreasing order of votes. If we run such a
+procedure on the example in Figure 1(a), the majority has one more vote than the minority, yet the majority
+2
+
+is exclusively privileged. Figure 1(b) demonstrates that the naive fair allocation to allow every agent to
+determine 1/n of the overall allocation is not Pareto-efficient; such a scheme would fund items 1 and 2 with
+half of the budget each even though all agents would be better off if some of the budget were spent on item
+3. In Figure 1(c), we contrast a core solution with max-min fairness. An allocation is max-min fair if the
+utility of the agent with the least utility is maximized. In our example, this corresponds to funding each of
+the two items with half of the budget. While this is Pareto-efficient, it favors one voter at the expense of all
+the others. The core solution for the same example is to fund proportionally: Items are funded in proportion
+to the number of voters preferring them.
+High-level goals: At a high level, we explore three related questions in Sections 2, 3, and 4 respectively:
+• Can we efficiently compute core allocations for reasonably general utility functions?
+• What do these allocations look like for data generated by real participatory budgeting instances under
+utility functions motivated by that data?
+• For simple utility functions, can we develop a truthful mechanism for computing core allocations
+without payments?
+We positively answer the first and third question using techniques from optimization and differential
+privacy to develop the algorithmic understanding of the Lindahl equilibrium, a market based notion we will
+define shortly. For the second question, we use our theoretical results to develop principled heuristics that
+we validate using data from the Stanford Participatory Budgeting Project [24]. Before proceeding however,
+we turn to consider utility functions more precisely.
+
+1.1
+
+Utility Functions
+
+We consider utility functions generalizing the linear utility functions used in previous examples. These
+utility functions, which we term S CALAR S EPARABLE, have the form
+X
+Ui (x) =
+uij fj (xj )
+j
+
+P
+for every agent i where {fj } are smooth, non-decreasing, and concave, and ui ≥ 0. By j we always mean
+the sum over the k projects. S CALAR S EPARABLE utilities are fairly general and well-motivated. First, this
+concept encompasses linear utilities and several other canonical utility functions (see below). Secondly, if
+voters express scalar valued preferences (such as up/down approval voting), S CALAR S EPARABLE utilities
+provide a natural way of converting these votes into cardinal utility functions. In fact, as we discuss below,
+we will do precisely this when handling real data. We consider two subclasses that we term N ON - SATIATING
+and S ATURATING utilities respectively. Each arises naturally in settings related to participatory budgeting.
+Non-satiating Functions: For our main computational result in Section 2, we consider a subclass of utility
+functions that we term N ON - SATIATING.
+Definition 1.3. A differentiable, strictly increasing, concave function f is N ON -S ATIATING if xfj0 (x) is
+monotonically increasing and equal to 0 when x = 0.
+This is effectively a condition that the functions grow at least as fast as ln x. Several utility functions used
+for modeling substitutes and complements fall in this class. For instance, constant elasticity of substitution
+
+3
+
+(CES) utility functions where
+1
+
+
+Ui (x) = 
+
+ρ
+
+X
+
+uij xρj 
+
+for ρ ∈ (0, 1]
+
+j
+
+can be monotonically transformed into N ON - SATIATING utilities1 . CES functions are also homogeneous of
+degree 1, meaning that Ui (αx) = αUi (x) for any scalar α ≥ 0. The special case when ρ = 1 captures
+linear utilities. The case when ρ → 0 captures C OBB -D OUGLAS utilities which can be written as
+Y αij
+Ui (x) =
+xj
+j
+
+P
+
+where j αij = 1 and αij > 0. We consider homogeneous functions of degree 1 in Section 4 to design a
+randomized approximately truthful mechanism.
+Saturating Functions: Note that these utilities implicitly assume projects are divisible. Fractional allocations make sense in their own right in several scenarios: Budget allocations between goals such as defense
+and education at a state or national level are typically fractional, and so are allocations to improve utilities
+such as libraries, parks, gyms, roads, etc. However, in the settings for which we have real data, the projects
+are indivisible and have a monetary cost sj , so that we have the additional constraint xj ∈ {0, sj } on the
+allocations. We describe such data from the Stanford Participatory Budgeting Platform [24] in greater detail
+in Section 3. We therefore need utility functions that model budgets in individual projects. These utility
+functions must also be simple to account for the limited information elicited in practice. For example, in the
+voting data that we use in our experiments, each voter receives an upper bound on how many projects she
+can select, and the ballot cast by a voter is simply the subset of projects she selects. A related voting scheme
+implemented in practice, called Knapsack Voting [11], has similar elicitation properties. For modeling these
+two considerations, we consider S ATURATING utilities.
+Definition 1.4. A utility function is in the S ATURATING model if it has the form
+X
+Ui (x) =
+uij min (xj /sj , 1)
+j
+
+For converting our voting data into a S ATURATING utility, we set sj to be the budget of project j, and set
+uij to 1 if agent i votes for project j and 0 otherwise. Note that if xj = sj , then the utility of any agent who
+voted for this item is 1. This implies the total utility of an agent is the number (or total fraction) of items that
+he voted for that are present in the final allocation. Clearly, S ATURATING utilities do not satisfy Def. 1.3.
+However, we will connect N ON - SATIATING and S ATURATING utilities by developing an approximation
+algorithm and heuristic for computing core allocations in the saturating model using results developed for
+the N ON - SATIATING model.
+
+1.2
+
+Computing Core Solutions via the Lindahl Equilibrium
+
+In a fairly general public goods setting, there is a market based notion of fairness due to Lindahl [18] and
+Samuelson [28] termed the Lindahl equilibrium, which is based on setting different prices for the public
+goods for different agents. The market on which the Lindahl equilibrium is defined is a mixed market of
+public and private goods. We present a definition below that is specialized to just a public goods market
+relevant for participatory budgeting.
+1
+
+Note that the core remains unchanged if utilities undergo a monotone transform.
+
+4
+
+k
+
+Definition 1.5. In a public goods market with budget B, per-voter prices p1 , p2 , ..., pn each in R+ and
+k
+allocation x ∈ R+ constitute a Lindahl equilibrium if the following two conditions hold:
+1. For every agent i, the utility Ui (yi ) is maximized subject to pi · yi ≤ B/n when yi = x; and
+P
+2. The profit defined as ( i pi ) · z − kzk1 , subject to z ≥ 0 is maximized when z = x.
+The price vector for every agent is traditionally interpreted as a tax. However, unlike in private goods
+markets, in our case these prices (or taxes) are purely hypothetical; we are only interested in the allocation
+that results at equilibrium (in fact, we eliminate the prices from our characterization of the equilibrium).
+Under innocuous conditions for the mixed public and private goods market, Foley proved that the Lindahl
+equilibrium exists and lies in the core [9]. This remains true in our specialized instance of the problem;
+the omitted proof is a trivial adaption from [9]. Thus, computing a Lindahl equilibrium is sufficient for the
+purpose of computing a core allocation. However, Foley only proves existence of the equilibrium via a fixed
+point argument that does not lend itself to efficient computation.
+
+1.3
+
+Truthfulness and Mechanisms
+
+In addition to investigating the computational complexity of the core, we also investigate dominant strategy
+truthfulness. We study asymptotic approximate truthfulness [19]. For any agent i, reporting the true utility
+function Ui (x) maximizes the expected utility of agent i, subject to all agents i0 6= i reporting true utility
+functions Ui0 (x) and agent i knowing these. Our notion is asymptotic in the sense that we assume n  k,
+which is reasonable in practice. It will also be approximately truthful in the following sense.
+Definition 1.6. For δ > 0, a (randomized) allocation mechanism is δ− approximately dominant-strategy
+truthful if any agent’s expected utility increases by at most an additive value of δ by misreporting, even
+when she knows the utilities of the other agents.
+Though it is easy to deduce from previous work that the core always exists for participatory budgeting,
+it is also reasonably well-known that a core outcome is easy to manipulate. This is not especially surprising;
+truthfulness has long been considered a serious problem in economics for the allocation of public goods
+[13, 22]. In particular, the core outcome suffers from the classic economic free rider problem: Many agents
+benefit from one common good and knowing that, another agent who also benefits from that item falsely
+reports that she gets no utility from that common item and instead gets high utility only from her own
+uniquely preferred items.
+Consider the example in Figure 2(a) below showing
+P utilities for n agents and 2 items. Again, for simplicity assume utilities are linear, so that Ui (x) = j uij xj , and assume the budget and all projects are of
+unit size. Suppose agent 1 knows that every other agent wants the first item, which agent 1 also wants but
+likes less than the second item. Then there is incentive for agent 1 to lie and report her utility for item 1 as
+0 and her utility for item 2 as 1, in which case she still benefits from a large allocation of the shared item,
+but benefits slightly more from the addition of more of her uniquely preferred item in the core solution.
+However, one may quickly point out that the additional amount of utility agent 1 receives by lying goes to
+0 for a large value of n. This begs the question of whether the core outcome is truthful in the large market
+limit.
+Unfortunately, it is also well-known that this does not happen for public goods. In Figure 2(b), many
+agents are indifferent between two items and two agents each prefer one of the two. Because all but the first
+two agents are indifferent, the core solution will be entirely based on the reported benefits from the first two
+agents regardless of the total number of agents. Thus, the incentive to misreport does not necessarily vanish
+as n becomes large.
+
+5
+
+Figure 2: Core Outcomes are Easy to Manipulate
+(a) Free Rider
+
+(b) Large Market
+
+Agent i
+
+ui,1
+
+ui,2
+
+Agent i
+
+ui,1
+
+ui,2
+
+1
+2
+..
+.
+
+1/3
+1
+..
+.
+
+2/3
+0
+..
+.
+
+n
+
+1
+
+0
+
+1
+2
+3
+..
+.
+
+1/3
+2/3
+1/2
+..
+.
+
+2/3
+1/3
+1/2
+..
+.
+
+n
+
+1/2
+
+1/2
+
+In these examples, the misreporting agent needs to very precisely know the preferences of the other
+agents. Indeed, this is necessary: Computing the core of public goods with no private goods (e.g., money
+transfers) satisfies the property of strategy-proof in the large [2], meaning that if agents know a distribution
+from which the preferences of other agents are drawn, then the market is truthful in expectation in the limit
+as the number of agents grows large. However, in this paper, we study the stronger notion of dominant
+strategy truthfulness.
+
+1.4
+
+Our Results
+
+In Section 2, we present a simple characterization of the Lindahl equilibrium in terms of the allocation
+variables and a means of efficient computation for N ON - SATIATING utilities. Together, this results in an
+efficient algorithm for computing the core exactly for N ON - SATIATING utilities via convex programming.
+As far as we are aware, this is the first non-trivial computational result for the Lindahl equilibrium.
+As a consequence of our characterization, if the utility functions are homogeneous of degree 1 and
+concave (or any monotone transform thereof), thenPthe proportionally fair allocation, the extentsion of
+the Nash Bargaining solution [23]) that maximizes i log Ui (x), computes the Lindahl equilibrium. This
+mirrors similar results for computing a Fisher equilibrium in private good markets [14]. In addition, we show
+that for homogeneous functions, quadratic voting [17] can be used to elicit the gradient of the proportional
+fairness objective, pointing to practical implementations in the field. For more general utility functions, our
+potential function can be viewed as a regularized version of the proportional fairness objective written on
+a non-linear transform of the utility function – a result that is new to the best of our knowledge. We also
+note that the class of N ON - SATIATING utilities includes many functions that are not monotone transforms
+of homogeneous functions of degree 1, and for some of these functions, computing a Fisher equilibrium is
+intractable [32].
+In Section 3, we consider the question of computing core solutions for real world data sets from the Stanford Participatory Budgeting Platform [24] that we model using S ATURATING utility functions as discussed
+in Section 1.1. We present an approximation algorithm as well as a heuristic implementation inspired by our
+characterization. On real data, we find that this heuristic efficiently compute the exact core. Surprisingly,
+the resulting outcomes match the welfare optimal solutions on the same utility functions, which shows that
+simple approval voting schemes produce fair outcomes in the field.
+In Section 4, we address incentive concerns. Truthfulness has long been considered a serious problem
+for the allocation of public goods [13, 22]. We study asymptotic approximate truthfulness [19]. For any
+agent i, reporting the true utility function Ui (x) maximizes the expected utility of agent i, subject to all
+agents i0 6= i reporting true utility functions and agent i knowing these. Our notion is asymptotic in the
+sense that n  k, which is reasonable in practice. We show that when agents’ utilities are linear (and more
+
+6
+
+generally, homogeneous of degree 1), there is an efficient randomized mechanism that implements an approximate core solution as a dominant strategy for large n. We use the Exponential Mechanism [21] from
+differential privacy to achieve this. The application of the Exponential Mechanism is not straightforward
+since the proportional fairness objective (that computes the Lindahl equilibrium) is not separable when
+used as a scoring function; the allocation variables are common to all agents. Furthermore, this objective
+varies widely when one agent misreports utility. We define a scoring function directly based on the gradient
+condition of proportional fairness to circumvent this hurdle.
+
+1.5
+
+Related Work
+
+The general literature characterizing private good market equilibrium and computation is extensive [15, 31,
+32, 14]; however, there is relatively little literature giving computational results for public good economies.
+As discussed above, the proportional fairness algorithm, which has been extensively studied in private good
+markets [23, 14], need not find solutions in the core for S CALAR S EPARABLE utilities, and we can view
+our computational results as providing a non-trivial generalization of the proportional fairness concept to
+Lindahl equilibria.
+In previous work [16], a subset of authors studied randomized allocation of shared resources in a
+database system, and used a first principles proof to show that proportional fairness finds a core solution;
+this corresponds to the linear utility setting. As mentioned above, out computational results for S CALAR
+S EPARABLE utilities are far more general and are based on characterizing the Lindahl equilibrium. In participatory budgeting, neither linear utility functions nor randomized allocations are realistic assumptions.
+Our work is related to designing truthful mechanisms for combinatorial public projects [8]. However,
+these works focused on the social welfare objective and utilized payments as does the well known VCG
+mechanism [33, 6], which is impractical for the application of participatory budgeting. It is well-known
+that proportional fairness is not implementable in a truthful mechanism for private goods. A strong negative
+result was shown recently: No strictly truthful mechanism can achieve more than a 1/2-approximation to
+the proportionally fair solution [7]. Though these as well as public good markets are truthful in the Bayesian
+sense in the large market limit [2, 4, 1], we seek dominant strategy truthful mechanisms, which are nontrivial to design for public good markets even in the large market limit. Finally, truthful allocation of private
+goods without money is classically referred to as cake cutting, on which there is extensive literature [26];
+but, there is scant work on allocating public goods truthfully without money. The problem of truthful
+allocation of public goods without payments is considered in the context of the facility location problem
+in [27]; however, the setting is unrelated to ours and the authors are concerned with the social welfare or the
+total dis-utility, not the core.
+
+1.6
+
+Roadmap
+
+In Section 2, we present a characterization of the Lindahl equilibrium and means of efficient computation
+for N ON - SATIATING utilities. Using this, we present an approximation algorithm for S ATURATING utilities
+in Section 3, along with a heuristic implementation and evaluation on real-world data sets. We present the
+asymptotically truthful mechanism for linear utilities in Section 4.
+
+2
+
+Non-Satiating Utilities: Characterization and Computation
+
+Recall that in the participatory budgeting problem, there are k items (or projects) and n agents (or voters).
+It is typically the case that k  n. We will denote a generic voter by i and a generic itemP
+by j. There is
+k
+an overall budget of B. An allocation is a k-dimensional vector x ∈ R with x ≥ 0 and kj=1 xj ≤ B.
+
+7
+
+We consider
+P scalar separable utility, where the utility of an agent i given an allocation x is denoted as
+Ui (x) = j uij fj (xj ), where {fj } are smooth, non-decreasing, and concave, and ui ≥ 0.
+
+2.1
+
+Characterization
+
+Recall that in order to compute a core allocation it is sufficient to compute a Lindahl equilibrium (Definition 1.5). To do this, our first result is to develop a characterization of the Lindahl equilibrium that eliminates
+the price variables.
+Theorem 2.1. An allocation x ≥ 0 corresponds to a Lindahl equilibrium if and only if
+
+X
+uij fj0 (xj )
+n
+P
+≤
+0 (x )
+B
+u
+x
+f
+m im m m m
+
+(1)
+
+i
+
+for all items j, where this inequality is tight when xj > 0.
+Proof. We prove the statement for more general utility functions, {Ui (x)}. Recall the definition of Lindahl
+equilibrium from Definition 1.5: Condition (1) implies that there is a dual variable λi for every agent such
+that
+∂
+∀j
+Ui (x) ≤ λi pij
+(2)
+∂xj
+P
+with the inequality being tight if xj > 0. Condition (1) in Definition 1.5 also implies that j pij xj = B/n
+for all i. Multiplying Equation (2) by xj , noting that the inequality is tight when xj > 0, and summing,
+∀i,
+
+X
+j
+
+xj
+
+X
+∂
+Ui (x) =
+λi pij xj = λi (B/n)
+∂xj
+j
+
+Rearranging
+∂
+nX
+xj
+Ui (x)
+(3)
+B
+∂xj
+j
+P
+Similarly, Condition (2) in Definition 1.5 implies that ∀xj , i pij ≤ 1 where the inequality is tight
+when xj > 0. Substituting into Inequality (2) and summing, we have:
+∀i,
+
+λi =
+
+∀xj ,
+
+X ∂x∂ j Ui (x)
+λi
+
+i
+
+≤1
+
+(4)
+
+with the inequality being tight when xj > 0. Using Equation (3) to eliminate λi in Inequality (4), we finally
+obtain
+∂
+X
+n
+∂xj Ui (x)
+∀xj ,
+≤
+P
+∂
+B
+m xm ∂xm Ui (x)
+i
+with the inequality being tight when xj > 0. Taking the appropriate partial derivatives in the SCALAR
+SEPARABLE utility model yields the theorem statement.
+
+2.2
+
+Efficient Computation
+
+We now present our main computational result that builds on the characterization above to give (to the best
+of our knowledge) the first polynomial time method for computing the Lindahl equilibrium. We need the
+non-satiation assumption on the functions {fj } given in Def. 1.3.
+8
+
+P
+Theorem 2.2. When Ui (x) =
+j uij fj (xj ) where {fj } satisfy Def. 1.3, the Lindahl equilibrium (and
+therefore a core solution) can be computed as the solution to a convex program.
+Proof. Theorem 2.1 gives the characterization of the Lindahl equilibrium as
+
+X
+uij fj0 (xj )
+n
+P
+≤
+0
+B
+m uim xm fm (xm )
+i
+
+for all items j, with the inequality tight if xj > 0.
+Define zj = xj fj0 (xj ). Note that xj = 0 iff zj = 0. Since fj satisfies non-satiation, this function is
+continuous and monotonically increasing, and hence invertible. Let hj be this inverse such that hj (zj ) = xj .
+Let rj (zj ) = hj (zj )/zj = 1/fj0 (xj ). The Lindahl equilibrium characterization therefore simplifies to:
+
+X
+uij
+n
+P
+≤ rj (zj )
+B
+m uim zm
+i
+
+with the inequality being tight when zj > 0. Let Rj (zj ) be the indefinite integral of rj (with respect to zj ).
+Define the following potential function
+
+
+nX
+X
+X
+Φ(z) =
+log 
+uij zj  −
+Rj (zj )
+(5)
+B
+i
+
+j
+
+j
+
+We claim that Φ(z) is concave in z. The first term in the summation is trivially concave. Also, since
+fj0 (xj ) is a decreasing function, 1/fj0 (xj ) is increasing in xj . Since rj (zj ) = 1/fj0 (xj ), this is increasing in
+xj and hence in zj . This implies Rj (zj ) is convex, showing the second term in the summation is concave as
+well. It is easy to check that the optimality conditions of maximizing Φ(z) subject to z ≥ 0 are exactly the
+conditions for the Lindahl equilibrium. This shows that the Lindahl equilibrium corresponds to the solution
+to the convex program maximizing Φ(z).
+Using Theorem A.1 in Appendix A, an approximately optimal solution to the convex program gives an
+approximate core solution, which implies polynomial time computation for the convex program. We note
+that the non-satiation condition essentially implies that fj (xj ) should grow faster than ln xj . In combination
+with the assumption that fj (xj ) is concave (i.e., that it grows no faster than linear in xj ), this leaves us with
+a broad class of concave functions for which the Lindahl equilibrium and hence the core can be efficiently
+computed.
+
+2.3
+
+Connection to Proportional Fairness
+
+The following is now a simple corollary of Theorem 2.2.
+P
+Corollary 2.3. If Ui (x) is linear, i.e., Ui (x) = j uij xj , or more generally, if it is homogeneous
+Pof degree 1,
+then the Lindahl equilibrium coincides with the proportionally fair allocation that maximizes i log Ui (x)
+subject to kxk1 ≤ B and x ≥ 0.
+The proof for the linear case is direct, and that for homogeneous functions uses a standard change of
+variables [15] and is omitted. As mentioned in Section 1.1,
+Q anαinteresting
+Pspecial case of homogeneous
+functions concerns Cobb-Douglas utilities, where Ui (x) = j xj ij where j αij = 1 and αij > 0. In this
+case, if a single agent could choose the whole allocation, the optimal choice would be xj = αij B. Suppose
+every agent i reveals these optimal allocations for themselves
+for every item j; call this xij . Then it is easy
+P
+to check that the Lindahl equilibrium sets xj = n1 i xij , which is simply the average of the individual
+monetary allocations.
+9
+
+Elicitation via Quadratic
+P Voting. For homogeneous functions, consider the proportional fairness program that maximizes i log Ui (x) subject to kxk1 ≤ B and x ≥ 0. Let
+F (x) =
+
+1X
+1
+log Ui (x) − kxk1
+n
+B
+i
+
+It is easy to show that the proportional fairness program coincides with maximizing F . It is also easy to
+show that for such functions,
+∂
+∂F (x)
+1X
+1
+∂xj Ui (x)
+=
+−
+P
+∂
+∂xj
+n
+B
+m xm ∂xm Ui (x)
+i
+
+Suppose users i are drawn from some large population. Then one way to maximize F is to perform
+stochastic gradient descent. Suppose the current point is xt . We sample a user i at random, and for x = xt ,
+estimate the quantity:
+∂
+1
+∂xj Ui (x)
+−
+P
+∂
+B
+m xm ∂x Ui (x)
+m
+
+This will be an unbiased estimator of the gradient of F at xt .
+o
+n
+Note now that the above expression only needs an estimate of the relative magnitudes of ∂x∂m Ui (x)
+at xt . In other words, it only needs an estimate of the direction of the gradient of Ui (x) at x = xt . This
+in turn can be estimated by presenting user i with an `2 -ball of radius  around xt and asking the user to
+maximize her utility, Ui (x). In other words, the user solves the problem:
+Maximize Ui (x) s.t. ||x − xt ||2 ≤ 
+As  → 0, simple calculus shows that the quantity x − xt is in the direction of the gradient of Ui (xt ). This
+is termed quadratic voting [17], and gives a way to elicit enough information from individual voters in order
+to perform stochastic gradient descent and compute the proportionally fair allocation.
+Beyond Proportional Fairness. When the utility functions are not homogeneous, it is not clear how to
+express the potential function in Equation
+(5) as running proportional fairness on a transformed space of
+P
+α
+allocations. For instance, if Ui (x) = j uij xj j ,
+
+Φ(x) =
+
+X
+i
+
+log 
+
+
+X
+
+α
+
+αj uij xj j  −
+
+j
+
+nX
+αj xj
+B
+j
+
+This involves a non-linear transform of the utility function and a regularization term, which proportional
+fairness on any transformed input space does not capture. We also observe that running proportional fairness
+directly can be far away from the core. Consider an instance where agents are partitioned into groups Gj
+α
+where all agents in a group have non-zero utility for only item j, with utility function uij fj (xj ) = xj j for
+some αj ∈ (0, 1). Since all groups have disjoint preferences, the
+allocates xj in proportion to
+ core
+ solution
+P
+P
+αj
+|Gj |. However, proportional fairness maximizes j |Gj | log xj
+= j αj |Gj | log xj , which allocates
+xj in proportion to αj |Gj |.
+
+10
+
+3
+
+Saturating Utilities: Approximation and Experiments
+
+We now move to the question of modeling and analyzing real participatory budgeting data. We use data
+from seven different elections that used the Stanford Participatory Budgeting Platform (SPBP). This platform (http://pbstanford.org) [12, 10] has been used by over 25 PB elections for digital voting.
+This platform incorporates multiple voting mechanisms including K-approval, knapsack, ranking, and comparisons.
+Voters are presented with a ballot containing descriptions of the candidate public projects with associated
+budgets. They are also presented with an overall budget. They can vote for at most a certain number of these
+projects, typically 4 or 5 (this voting method is called K-approval). Note that the projects chosen by a voter
+can exceed the total budget. The data set is therefore a 0/1 matrix on projects and voters, where a 1 denotes
+a vote by the voter for the project. The number of voters, n, ranges between 200 and 3000 in our datasets,
+and the number of items k is at most 30. A typical example is presented in Figure 5.
+For modeling such data, we need utility functions that respect the budget constraints of individual
+projects. It is natural to use the S ATURATING utility model (see Section 1.1), where the utility of user i
+is
+X
+Ui (x) =
+uij min (xj /sj , 1)
+j
+
+where sj is the budget of project j, and uij is 1 if i votes for j and 0 otherwise. Therefore, the utility
+for i if j is chosen in the final allocation is uij ∈ {0, 1}. Clearly, this function does not satisfy Def. 1.3.
+Nevertheless, we develop an approximation to the core that can be efficiently computed using a N ON SATIATING relaxation of the utility model. Furthermore, we can show an even stronger result empirically:
+We can efficiently compute the exact core solutions under this utility model on our real-world data sets.
+We conclude this section with some observations on the relationship between welfare maximizing and core
+allocations in the saturating model.
+
+3.1
+
+Efficiently Approximating the Core
+
+Recall the definition of approximation from Def. 1.2.
+Theorem 3.1. Given a collection of SATURATING utility functions, let s = minj sj . Then, for any  > 0,
+
+an α-approximate multiplicative core
+ can be efficiently computed, where α = (1/) (B/s) + 1 − 1/. For
+B
+ = log(B/s), we have a O log s approximation to the core.
+Proof. Create the modified utility function gj (xj ) for item j as:
+(
+(xj /sj )
+xj ≤ sj
+gj (xj ) =
+
+[(1/) (xj /sj ) + 1 − 1/] xj > sj
+so that Ũi (x) =
+
+P
+
+j uij gj (xj ). Clearly, gj is concave. To see that gj satisfies Def. 1.3, observe that.
+
+xj gj0 (xj ) =
+
+(
+(xj /sj )
+(xj /sj )
+
+xj ≤ sj
+xj > sj
+
+From this, it is easy to see that xj gj0 (xj ) is increasing and equal to 0 when xj = 0, so Def. 1.3 applies. By
+Theorem 2.2, we can efficiently compute a core solution. Let s = minj sj . Then, for any agent i and item j,
+the maximum utility that this modified function would compute is uij [(1/) (B/s) + 1 − 1/], whereas the
+true benefit would be uij , where xj ≥ sj . This gives an approximation factor of α = (1/) (B/s) + 1 − 1/
+in the utility functions. This easily implies the same approximation factor for the core.
+11
+
+10
+1
+
+Error
+
+0.1
+0.01
+Cambridge2015
+0.001
+
+Cambridge
+Boston
+
+0.0001
+
+0.000001
+
+1
+11
+21
+31
+41
+51
+61
+71
+81
+91
+101
+111
+121
+131
+141
+
+0.00001
+
+Itera)on
+
+Figure 3: Plot of error  in Lindahl conditions as a function of number of iterations.
+
+3.2
+
+Heuristically Computing the Exact Core
+
+In our experiments, we show that an exact core solution can indeed be computed. This crucially uses the
+characterization in Theorem 2.1. Let xj ∈ [0, sj ] denote the current allocation to item j, and let yj = fj0 (xj ).
+The following complementarity condition relates xj and yj :
+∀j, yj ≤
+
+1
+sj
+
+xj < sj ⇒ yj =
+
+and
+
+1
+sj
+
+The Lindahl equilibrium condition in Theorem 2.1 can be written as:
+∀j,
+
+u y
+BX
+P ij j
+≤1
+n
+m uim xm ym
+i
+
+with equality when xj > 0. Given x−j and y−j , we perform binary search on xj , yj to satisfy the above
+non-linear equation subject to complementarity on xj , yj . We repeat this process, at each step choosing that
+item j with the largest additive violation in the above inequality. We iterate until the Lindahl conditions
+for all items are satisfied to accuracy . (e.g.,  = 1/n). By Theorem A.1 in Appendix A, if this process
+converges, the result is an -approximate additive core solution.
+One issue is that these dynamics are not theoretically guaranteed to converge. Even empirically, there
+are instances where we observe cycling. To address this issue, we perturb the vote matrix by small additive
+noise, so that uij ← uij + Uniform (0, α), where α is a small constant like 1/k 2 . We empirically observe
+that the process now converges. In Figure 3, we show this behavior for three datasets with at least 2000
+voters and 10 items each. The convergence is comparable for all seven of our data sets; only three are shown
+for the sake of readability.
+Observation 1. Despite lacking a theoretical guarantee of convergence for S ATURATING utilities, we are
+able to consistently compute near-exact core solutions for our data sets using binary search on the complementarity conditions.
+
+3.3
+
+Comparing the Core with W ELFARE
+
+Given that we can compute the core exactly, we investigate its structure on our datasets. We define the
+following vote aggregation schemes that we will use for comparison. The final allocation needs to be
+integral; we use heuristic methods to convert fractional allocations to integer ones. In the schemes below,
+the items are sorted in a certain order. Once sorted, for computing integer allocations, the schemes consider
+items in this order and add the item if its budget is less than the remaining total budget, stopping when all
+items are exhausted. For item j, let nj denote the number of votes received. Recall that these votes come
+12
+
+Figure 4: Similarity Scores for C ORE vs W ELFARE.
+from simple approval voting and that sj is the budget (size) of the item. We can define fractional allocations
+similarly. Importantly, both aggregation schemes use the same utility model.
+• C ORE: Compute a fractional core allocation as described in Section 3.2. Let xj denote the fractional
+x
+allocation of item j. Sort the items in descending of order sjj , which is the fraction to which item j is
+funded in the fractional allocation.
+n
+
+• W ELFARE: Sort the items in descending order of sjj . This is the allocation that maximizes total
+(fractional) utility in the S ATURATING utility model from Equation 1.4.
+Results. We compare the outcomes of these algorithms for data sets from seven different real world instances of participatory budgeting. We consider two measures of the similarities of outcomes: the Jaccard
+index and Budget similarity. The Jaccard index for two integral allocations is the ratio of the size of their
+intersection
+to the size of their union. The Budget similarity for two fractional allocations x and z is defined
+P
+j min(xj ,zj )
+
+. Here, x is the actual monetary amount allocated to the project in the fractional allocation.
+B
+Our composite results are shown in Figure 4. In Figure 5, we show the results for Boston in detail as
+an example in which there are 10 projects, an overall budget of $1,000,000 and over 2,000 voting agents.
+Note that the integer allocations found by C ORE and W ELFARE are identical; in fact the C ORE allocation is
+largely integral.
+
+as
+
+Project
+Wicked Free Wifi 2.0
+Water Bottle Refill Stations at Parks
+Hubway Extensions
+Bowdoin St. Roadway Resurfacing
+Bike Lane Installation
+Track at Walker Park
+BCYF HP Dance Studio Renovation
+BLA Gym Renovations
+Ringer Park Renovation
+Green Renovation for BCYF Pino
+
+Budget
+$119,000
+$260,000
+$101,600
+$100,000
+$200,000
+$240,000
+$286,000
+$475,000
+$280,000
+$250,000
+
+Votes
+2,054
+1,794
+737
+611
+771
+672
+759
+1044
+546
+452
+
+C ORE
+1.00
+1.00
+1.00
+1.00
+0.74
+0.33
+0.31
+0.20
+0.02
+0.01
+
+W ELFARE
+1.00
+1.00
+1.00
+1.00
+1.00
+0.91
+0.00
+0.00
+0.00
+0.00
+
+Figure 5: Aggregation results for Boston. The Budget column lists the project’s budget in dollars. The
+final two columns list the allocation of the project as a fraction of its budget, so that an integral allocation
+corresponds to 1.
+
+13
+
+Observation 2. C ORE and W ELFARE compute the same integer allocations on almost all of our data
+sets, showing W ELFARE produces fair allocations in practice. Furthermore, since the fractional allocation
+produced by W ELFARE is an integer allocation except for one item, the high Budget similarity between
+W ELFARE and C ORE implies that the fractional core produces almost integer allocations.
+The above observation that the C ORE empirically coincides with W ELFARE is quite surprising. It is
+easy to construct examples where the core allocation will be very different from welfare maximization. This
+is particularly pronounced when there is a significant minority of voters who have orthogonal preferences
+from the majority. Therefore, one possible explanation for our observation is that users might have approximately independent random preferences over the projects. In Appendix B, we explore this possibility more
+formally.
+
+4
+
+Homogeneous Utilities: Mechanism Design
+
+In this section, we develop a randomized mechanism that finds an approximately core solution with high
+probability while ensuring approximate dominant-strategy truthfulness for all agents. In the spirit of [19],
+we assume the large market limit so that n  k; in particular, we assume k = o(n1/2 ). We construct our
+mechanism for the special case of homogeneous utility functions
+Pk of degree one. For simplicity, we present
+the mechanism for linear utility functions where Ui (x) = j=1 uij xj , noting that it easily generalizes to
+degree one homogeneous functions. The values of uij are reported by the agents. Without loss of generality,
+these are normalized so that kui k1 = 1. Also without loss of generality, let B be normalized to 1. Recall
+P from Corollary 2.3 that for linear utility functions, the proportional fairness algorithm that maximizes
+i log Ui (x) subject to kxk1 ≤ 1 and x ≥ 0 computes the Lindahl equilibrium.
+We will design additive approximations to the core (see Def. 1.2) that achieve approximate truthfulness
+in an additive sense (see Def. 1.6). We use the Exponential Mechanism [21] to achieve approximate truthfulness. We will formally define the mechanism in Section 4.2. At a high level, this mechanism is a general
+framework for implementing approximately truthful mechanisms for multi-agent optimization problems.
+It arises from techniques in differential privacy where the goal is to minimize the sensitivity of database
+queries to the information of any given agent in the database. This is accomplished by adding random noise
+to query responses, i.e., drawing the response from some distribution. For our application, this corresponds
+to drawing an allocation from a distribution rather than directly as the solution to an optimization problem;
+that distribution should be such that an individual agent is very unlikely to change their expected utility by
+misreporting their preferences. The distribution is weighted exponentially according to some measure of
+quality; in our case the quality measure will correspond to approximating the core. However, the application of the Exponential Mechanism is not straightforward since the proportional fairness objective (that
+computes the Lindahl equilibrium) is not separable when used as a scoring function; the allocation variables
+are common to all agents. Furthermore, this objective varies widely when one agent misreports utility. We
+therefore need to define the scoring function carefully.
+
+4.1
+
+The Scoring Function and its Approximation
+
+Fix a constant γ ∈ (0, 1) to be chosen later. We first define the convex set of feasible allocations as P :=
+{x : x ≥ n−γ , kxk1 ≤ 1}. Note that all such allocations are restricted to allocating at least n−γ to each
+project. Since the utility vector of any agent is normalized so kui k1 = 1, this implies that every agent gets
+a baseline utility of at least n−γ , a fact we use frequently. We define the following scoring function, which
+
+14
+
+is based on the gradient optimality condition of Proportional Fairness:
+q(x) := n − n
+
+−γ
+
+X Ui (y)
+
+max
+y∈P
+
+i
+
+!
+
+Ui (x)
+
+We will approximately maximize this
+scoring function.
+Aside from scaling for technical reasons, the
+P
+
+Ui (y)
+idea is to minimize the quantity maxy∈P
+i Ui (x) . This corresponds to finding points from the allocation
+space from which there is no direction that is preferable to many agents receiving little utility from the
+current point. This ties naturally to the concept of a fair solution and can be seen as an interpretation of the
+gradient optimality condition of the proportional fairness program.
+The trade off in defining the scoring function is between reducing the sensitivity of the function to the
+report of an individual agent and thus improving the approximation to truthfulness, and having just enough
+sensitivity so that the mechanism defined in terms of the scoring function provides a good approximation to
+the core. Recall the α-approximate additive core (definition 1.2).
+P
+
+(k−1)n−γ
+Ui (y)
+Theorem 4.1. If maxy∈P
+i Ui (x) = n then the allocation x is a 1−kn−γ -approximate additive core
+solution.
+P
+
+Ui (y)
+(k−1)n−γ
+Proof. Suppose by contradiction that maxy∈P
+i Ui (x) = n, but x is not a 1−kn−γ -approximate core
+solution. Then there is a subset S of agents who want to deviate to some allocation z where kzk1 ≤ |S|
+n and
+n(1−kn−γ )
+(k−1)n−γ
+0
+−γ
+for every agent i in S, Ui (z) > Ui (x) + 1−kn−γ . Define the allocation z :=
+z + n 1. Clearly
+|S|
+0
+P
+)
+0
+z0 ∈ P, so by assumption we have that i UUii(z
+(x) ≤ n. Substituting for z gives:
+
+X ui ·
+i
+
+Thus, solving for
+
+
+
+n(1−kn−γ )
+z + n−γ 1
+|S|
+
+≤n
+
+Ui (x)
+
+ui ·z
+i Ui (x) and simplifying:
+
+P
+
+X ui · z
+i
+
+|S|
+≤
+Ui (x)
+n (1 − kn−γ )
+
+n−
+
+X n−γ
+i
+
+Ui (x)
+
+!
+≤
+
+1 − n−γ
+|S|
+1 − kn−γ
+
+However, recall that since S is a deviating coalition from the approximate core, it should be that Ui (z) >
+−γ
+−γ
+(z)
+Ui (x)+ (k−1)n
+for all agents i ∈ S. This implies that for all i ∈ S, it should be that UUii(x)
+.
+> 1+ (k−1)n
+1−kn−γ
+1−kn−γ
+P Ui (z)
+−γ
+1−n
+Thus, we can bound the sum over i as i Ui (x) > 1−kn
+−γ |S|. This is a contradiction, completing the
+proof.
+Using essentially the same argument, the following corollary follows easily.
+P
+
+Ui (y)
+(k−1)n−γ +αn−1
+Corollary 4.2. If maxy∈P
+-approximate
+i Ui (x) = n + α then the allocation x is an
+1−kn−γ
+additive core solution.
+We now bound the sensitivity of q(x) with respect to the report of one agent, as well as its range.
+Lemma 4.3. q(x) ≥ 0 and maxx∈P q(x) = n − n1−γ . Further, if ∆q is the largest possible difference
+in the scoring function between two sets of input differing only on the report of a single agent i0 , (i.e., the
+sensitivity of q), then ∆q = 1.
+15
+
+Proof. To see the first part, note that Ui (x) ≥ n−γ for all x ∈ P. Therefore,
+!
+X 1
+X Ui (y)
+−γ
+≥ n − n−γ
+q(x) = n − n max
+=0
+y∈P
+Ui (x)
+n−γ
+i
+
+i
+
+By the optimality condition of the Proportional Fairness convex program,
+!
+X Ui (y)
+min max
+=n
+x∈P y∈P
+Ui (x)
+i
+
+Therefore, maxx∈P q(x) = n − n1−γ . Similarly, when agent i0 misreports:
+
+
+!! 
+X Ui (y)
+X
+0
+U
+(y)
+U
+(y)
+i
+i
+
+n − n−γ max
+− n − n−γ max 
+∆q =
++
+y∈P
+y∈P
+Ui (x)
+Ui0 (x)
+U
+(x)
+i
+i
+i6=i0
+
+
+
+
+Ui0 (y)
+≤ n−γ max
+−1 ≤1
+y∈P
+Ui0 (x)
+The first inequality follows because we can assume w.l.o.g. that if the maximizing y changed for the
+misreported data, it yields a score no worse than the score of the original y on the misreported data, since
+that original y could have been chosen.
+
+4.2
+
+Exponential Mechanism
+
+We now plug the above scoring function into the Exponential mechanism from [21]. We use  > 0 as the
+privacy approximation parameter, and thus as a parameter for the approximation of truthfulness.
+Definition 4.4. Define µ to be a uniform probability distribution over all feasible allocations x ∈ P. For a
+given set of utilities, let the mechanism ζq be given by the rule:
+ζq := choose x with probability proportional to eq(x) µ(x)
+The following lemma follows by using the sensitivity bound from Lemma 4.3 in Theorem 6 from [21].
+
+Lemma 4.5. ζq is e2 − 1 -approximately truthful.
+The primary result of this section demonstrates that ζq can still find an approximate core solution while
+providing approximate truthfulness.
+√
+
+Theorem 4.6. If k is o( n) and 1 > (n−kkn
+2 ) ln n then ζq can be used to choose an allocation x that is an
+
+
+ln n
+O k√
+-approximate additive core solution w.p. 1 − n1 .
+n
+Proof. Let t = k+1
+ ln n. Lemma 7 in [21] states that
+"
+!
+#
+X Ui (y)
+e−t
+−γ
+Pr n − n max
+≤ OP T − 2t ≤
+y∈P
+Ui (x)
+µ(St )
+
+(6)
+
+i
+
+where OP T is the maximum value of q(x) for feasible allocations x and St = {x : q(x) > OP T − t}.
+By Lemma 4.3, we have OP T = n(1 − n−γ ), but we need to bound µ(St ), the probability that x drawn
+uniformly at random from P is in St . We will show that µ(St ) ≥ n−k . Let x∗ ∈ P be the allocation such
+16
+
+that q(x∗ ) = OP T . Since kxk1 = 1, there is an item j 0 with x∗j 0 ≥ 1/k. Let δ = 1/n. Define the set Sδ so
+that
+)
+(
+x∗j ≤ xj ≤ x∗j + δ
+j 6= j 0
+Sδ = x : ∗
+xj 0 − k 2 δx∗j 0 ≤ xj 0 ≤ x∗j 0 − k 2 δx∗j 0 + δ j = j 0
+It is not hard to see that since x∗j 0 ≥ 1/k, all x ∈ Sδ are feasible. Furthermore, because there is a “width” of
+1/n in possible choice of xj for all j, µ(Sδ ) ≥ n−k . Thus, to complete the argument that µ(St ) ≥ n−k , we
+just need to show that Sδ ⊆ St . In our case,
+(
+)
+X Ui (y)
+k+1
+St = x : max
+<n+
+ln n
+y∈P
+Ui (x)
+
+i
+
+Since 1 > (n−kkn
+2 ) ln n , substituting shows that an allocation x is surely in St if the same sum is less
+2
+
+n
+than n−k
+2 . By construction, in the worst case for any agent i and allocation x ∈ Sδ (namely, if uij 0 = 1),
+2
+
+∗
+Ui (x) ≥ n−k
+n Ui (x ). Therefore, for all x ∈ Sδ
+
+max
+y∈P
+
+X Ui (y)
+i
+
+Ui (x)
+
+≤
+
+X Ui (y)
+n
+n2
+max
+=
+n − k 2 y∈P
+Ui (x∗ )
+n − k2
+i
+
+Thus, we have that Sδ ⊆ St and therefore µ(St ) ≥ n−k . Substituting into equation 6 and simplifying
+yields
+"
+#
+!
+X Ui (y)
+1
+k+1 γ
+Pr max
+n ln n ≤
+>n+2
+y∈P
+Ui (x)
+
+n
+i
+
+−γ
+
+−1 γ−1
+
+n
+ln n
+By applying Corollary 4.2, we get that x chosen according to ζq is a (k−1)n +2(k+1)
+1−kn−γ
+√
+1
+approximate core solution with probability 1 − n .Plugging in γ = 1/2 and using the fact that k is o( n)
+
+gives that x chosen according to ζq is an O
+
+k√
+ln n
+ n
+
+-approximate core solution with probability 1 − n1 .
+
+Finally, we show that ζq can be sampled in polynomial time [20] with small additive error in truthfulness.
+Claim 4.7. The Hit-and-run method can be used to sample according to ζq in polynomial time.
+Proof. As argued in [20], it is sufficient to show that eq(x) µ(x) is log-concave. The support of the sampling
+is clearly convex as it is just the feasible non negative orthant (feasibility defined by a hyperplane). We need
+to show that the function is log-concave in the input x.
+
+
+ln eq(x) µ(x) = q(x) + ln (µ(x))
+Since µ is only uniform, this is just an affine transformation of q(x), therefore we need only show that
+q(x) is concave. Recall the definition of q(x):
+!
+X Ui (y)
+−γ
+q(x) := n − n max
+y∈P
+Ui (x)
+i
+
+Each individual utility function Ui is concave, since it is a linear function (ui · x). Thus, U (x)−1
+is convex because it is the composition of the convex and non-increasing scalar function 1/x with the
+concave multivariate (but scalar valued) Ui (x) [3].
+PThe sum
+ is still convex, as a linear combination of
+Ui (y)
+−γ
+convex functions. Then q(x) = n − n maxy∈P
+i Ui (x) is concave in x.
+17
+
+5
+
+Conclusion
+
+In this paper, we have initiated the computational study of the Lindahl equilibrium in order to address fair
+resource allocation in the context of participatory budgeting. Our key conceptual contribution is expressing
+the Lindahl equilibrium (and hence the core) purely in terms of the common allocation variables. In a sense,
+this is a mirror image of the role common prices play in private good markets. This allows us to efficiently
+compute core allocations as the solution to a convex program. We also used our characterization to provide
+an adaptation of the exponential mechanism from differential privacy guaranteeing approximate truthfulness
+while computing approximate core allocations. We studied the results that such core allocations produce on
+real data and saw that they are similar to welfare allocations under the saturating utility model. We note that
+this is surprising as it is not obvious that core allocations should be similar to welfare allocations under any
+utility model.
+Our work is just the first step towards understanding participatory budgeting specifically and the fair
+allocation of public goods more generally. We do not yet understand the computational complexity for more
+general utility functions. Is computing the Lindahl equilibrium for public goods computationally hard or
+is there a polynomial time algorithm even without the non-satiating assumption? Our experimental results
+leave open intriguing questions about modeling of real voting data. In particular, is there a more formal
+explanation of why welfare appears fair in practice? Also, is there a different way to elicit more information
+from voters for a more precise modeling of their utility than just approval voting?
+Acknowledgement. We thank Anilesh Krishnaswamy for useful discussions, and the Stanford Crowdsourced Democracy Team for the use of their data.
+
+18
+
+References
+[1] E. M. Azevedo and E. B. Budish. Strategy-proofness in the large. Chicago Booth Research Paper,
+(13-35), 2013.
+[2] Eduardo M. Azevedo and Eric Budish. Strategyproofness in the large as a desideratum for market
+design. In Proceedings of the 13th ACM Conference on Electronic Commerce, EC ’12, pages 55–55,
+New York, NY, USA, 2012. ACM.
+[3] Stephen Boyd and Lieven Vandenberghe. Convex Optimization. Cambridge University Press, New
+York, NY, USA, 2004.
+[4] E. Budish. The combinatorial assignment problem: Approximate competitive equilibrium from equal
+incomes. J. Political Economy, 119(6):1061 – 1103, 2011.
+[5] Yves Cabannes. Participatory budgeting: a significant contribution to participatory democracy. Environment and Urbanization, 16(1):27–46, 2004.
+[6] Edward H. Clarke. Multipart pricing of public goods. Public Choice, 11:pp. 17–33, 1971.
+[7] R. Cole, V. Gkatzelis, and G. Goel. Mechanism design for fair division: Allocating divisible items
+without payments. In Proceedings of the Fourteenth ACM Conference on Electronic Commerce, EC
+’13, pages 251–268, 2013.
+[8] S. Dughmi. A truthful randomized mechanism for combinatorial public projects via convex optimization. CoRR, abs/1103.0041, 2011.
+[9] Duncan K. Foley. Lindahl’s solution and the core of an economy with public goods. Econometrica,
+38(1):pp. 66–72, 1970.
+[10] Ashish Goel, Anilesh K Krishnaswamy, and Sukolsak Sakshuwong. Budget aggregation via knapsack
+voting: Welfare-maximization and strategy-proofness. Collective Intelligence, 2016.
+[11] Ashish Goel, Anilesh K Krishnaswamy, Sukolsak Sakshuwong, and Tanja Aitamurto. Knapsack voting. Conference on Collective Intelligence, 2015.
+[12] Ashish Goel, Anilesh K Krishnaswamy, Sukolsak Sakshuwong, and Tanja Aitamurto. Knapsack voting. Collective Intelligence, 2015.
+[13] T. Groves and J. Ledyard. Optimal allocation of public goods: A solution to the ”free rider” problem.
+Econometrica, 45(4):pp. 783–809, 1977.
+[14] K. Jain and V. V. Vazirani. Eisenberg-gale markets: Algorithms and structural properties. In Proc.
+ACM Symp. Theory of Computing, STOC ’07, pages 364–373, 2007.
+[15] K. Jain, V. V. Vazirani, and Y. Ye. Market equilibria for homothetic, quasi-concave utilities and
+economies of scale in production. In Proc. ACM-SIAM Symp. Discrete Algorithms, SODA ’05, pages
+63–71, 2005.
+[16] M. Kunjir, B. Fain, K. Munagala, and S. Babu. ROBUS: Fair Cache Allocation for Multi-tenant Dataparallel Workloads. ArXiv e-prints, April 2015.
+[17] Steven P Lalley and E Glen Weyl. Quadratic voting. Available at SSRN 2003531, 2015.
+
+19
+
+[18] E. Lindahl. Just taxation: A positive solution. In R. A. Musgrave and A. T. Peacock, editors, Classics
+in the Theory of Public Finance. Palgrave Macmillan UK, 1958.
+[19] Qingmin Liu and Marek Pycia. Ordinal efficiency, fairness, and incentives in large markets, 2012.
+[20] L. Lovász and S. Vempala. The geometry of logconcave functions and sampling algorithms. Random
+Struct. Algorithms, 30(3):307–358, May 2007.
+[21] F. McSherry and K. Talwar. Mechanism design via differential privacy. In Annual IEEE Symposium
+on Foundations of Computer Science (FOCS), 2007.
+[22] T. J Muench. The core and the lindahl equilibrium of an economy with a public good: an example.
+Journal of Economic Theory, 4(2):241 – 255, 1972.
+[23] J. F. Nash. The bargaining problem. Econometrica, 18(2):pp. 155–162, 1950.
+[24] PB-Stanford. Stanford participatory budgeting platform. Website, 2015.
+[25] PBP.
+Where has it worked?
+- the participatory budgeting project.
+http://
+www.participatorybudgeting.org/about-participatory-budgeting/
+where-has-it-worked/, 2016.
+[26] A. D. Procaccia. Cake cutting: Not just child’s play. Commun. ACM, 56(7):78–87, July 2013.
+[27] A. D. Procaccia and M. Tennenholtz. Approximate mechanism design without money. In Proc. 10th
+ACM EC, EC ’09, pages 177–186, 2009.
+[28] P. A. Samuelson. The pure theory of public expenditure. The Review of Economics and Statistics,
+36(4):387–389, 1954.
+[29] H. E. Scarf. The core of an n person game. Econometrica, 35(1):pp. 50–69, 1967.
+[30] H. R. Varian. Two problems in the theory of fairness. Journal of Public Economics, 5(3-4):249–260,
+1976.
+[31] V. V. Vazirani. Nash bargaining via flexible budget markets. In Proc. 4th Intl. Conf. Algorithmic
+Aspects in Information and Management, AAIM ’08, pages 2–2, 2008.
+[32] V. V. Vazirani and M. Yannakakis. Market equilibrium under separable, piecewise-linear, concave
+utilities. J. ACM, 58(3):10:1–10:25, June 2011.
+[33] W. Vickrey. Counterspeculation, auctions, and competitive sealed tenders. The Journal of Finance,
+16(1):pp. 8–37, 1961.
+
+Appendix
+A
+
+Approximate Lindahl Equilibrium
+
+We prove that an additive approximation to the Lindahl equilibrium conditions implies an additively approximate core solution.
+
+20
+
+Theorem A.1. For any  > 0, suppose there is an allocation x such that for all items j, xj > 0 implies
+!
+∂
+BX
+∂xj Ui (x)
+−1 ≤
+P
+∂
+n
+m xm ∂xm Ui (x)
+i
+and xj = 0 implies
+BX
+n
+i
+
+!
+∂
+∂xj Ui (x)
+≤1+
+P
+∂
+m xm ∂xm Ui (x)
+
+then x is an approximate core solution in the following sense:
+P
+1.
+j xj ≤ B/(1 − ), and
+2. For any subset S of agents, there is no allocation y of size
+all i ∈ S.
+
+
+
+
+
+|S|
+n −
+
+B such that Ui (y) > Ui (x) for
+
+Proof. The first part is straightforward. Define the following vector of prices:
+!
+∂
+B
+∂xj Ui (x)
+pij =
+P
+∂
+n
+m xm ∂xm Ui (x)
+P
+∂
+∂
+For this price vector, j pij xj = B
+n . This price vector also satisfies ∂xj Ui (x)pim = ∂xm Ui (x)pij for all
+P
+P
+B
+j 6= m. This implies the allocation x maximizes Ui (z) subject
+j ≤ n . Let
+i pij = 1 + αj .
+Pto j pij zP
+We have αj ≤  for all j. Consider the profit function P (z) = i pi · z − j (1 + αj )zj . This function is
+identically 0 for all z.
+
+
+Now, suppose by contradiction that there exists S and allocation y of size |S|
+−
+
+B such that Ui (y) >
+n
+P
+B
+Ui (x) for all i ∈ S. This implies j pij yj > n for all i ∈ S. Summing,
+X
+
+pi · y −
+
+i∈S
+
+Note now that
+
+P
+
+j α j yj ≤ 
+
+X
+X
+|S|
+B>0 ⇒
+pi · y −
+yj > B
+n
+i∈S
+
+j
+
+P
+
+j yj ≤ B. This implies
+
+X
+i∈S
+
+pi · y −
+
+X
+(1 + αj )yj > 0
+j
+
+This is a contradiction, since P (y) = 0.
+
+B
+
+Core under Independent Preferences
+
+Recall the intuition from Section 3 that one possible explanation for the similarity between core and welfare outcomes is that users might have approximately independent random preferences over the projects.
+Consider a random model in which there are infinitely many agents and there is a value pj ∈ [0, 1] associated with every project, all of which have unit cost. Each agent votes for project j with probability pj ,
+and these draws are independent across the projects. Every project also has a utility uj associated with it so
+that the utility of an agent is the sum over the projects for whichPthe agent votes of their uj . The allocation
+maximizing W ELFARE is then just the set S ∗ = argmaxS:|S|≤B j∈S pj uj .
+For the theorem below, we consider a (1 + )- approximate integral core, where there is no subset of
+agents of size a · B who can deviate and choose a · B items integrally so that all agents improve their utility
+by at least a factor of (1 + ). For subset
+agent
+P S, let U (S) be the random variable denoting utility than an
+∗
+derives from S. Note that E[U (S)] = j∈S uj pj , and W ELFARE generates expected utility E[U (S )].
+21
+
+Theorem B.1. Under the random users model, if E[U (S ∗ )] > 1
+integral core solution.
+
+p
+B ln (B) then S ∗ is a (1+)-approximate
+
+Proof. Suppose by contradiction that S ∗ is not a 1 +  approximate core solution. Then there must exist
+some α fraction of the agents who want to deviate to another allocation: call this set of items S, where
+|S| ≤ αB. Then it must be that the probability of an agent preferring S is at least α. Also, they must prefer
+it even subject to a 1 +  multiplicative penalty, that is, U (S) > (1 + )U (S ∗ ).
+Let S = (1 + )U (S ∗ ) − U (S). S is the sum of at least B random variables, and it’s expectation is at
+least E[U (S ∗ )] since E[U (S)] ≤ E[U (S ∗ )]. We apply Hoeffding’s inequality to get:
+∗
+
+2
+
+Pr[S < 0] ≤ e−2(E[U (S )]) /B
+p
+However, recall that E[U (S ∗ )] > 1 B ln (B) by assumption, so P r[S < 0] ≤ 1/B 2 . So, the probability
+of an agent preferring S is no more than 1/B 2 . But note that α must be at least 1/B in order for S to be
+nonempty. This is a contradiction, and S ∗ is a (1 + )- approximate integral core solution.
+
+Water.Bottle.Refill.Stations.at.Parks
+
+Wicked.Free.Wifi.2.0
+
+Ringer.Park.Renovation
+
+Bike.Lane.Installation
+
+Bowdoin.St..Roadway.Resurfacing
+
+Hubway.Extensions
+
+Track.at.Walker.Park
+
+BLA.Gym.Renovations
+
+BCYF.Hyde.Park.Dance.Studio.Renovation
+
+Green.Renovation.for.BCYF.Pino
+
+Height
+
+0.0
+
+0.2
+
+0.4
+
+This leads us to empirically test the independent preference hypothesis on our data sets. For each pair
+of items j and j 0 , we perform a χ2 -test of independence between the preference vectors for these items.
+Since preferences are binary, this test has two degrees of freedom. This produces a p-value; we mark the
+items as correlated if the p-value is less than 0.1, and mark them as independent otherwise. We set the
+distance between two projects to 0 if they are correlated and 1 if they are independent, and run average
+linkage clustering on the resulting distance matrix. The results for the Boston data is presented in Figure 6;
+other data sets produce similar results. We observe that there are large groups of projects all of which are
+correlated with each other, as one might expect. This shows that the independent preference model is not
+the complete explanation for why C ORE coincides
+with W ELFARE on our data sets.
+Cluster Dendrogram
+
+Figure 6: Average linkage clustering dendrogram for items in the Boston data. A height of 0 denotes
+correlation and 1 denotes independence.
+
+distmatrix
+hclust (*, "average")
+
+22
+
+

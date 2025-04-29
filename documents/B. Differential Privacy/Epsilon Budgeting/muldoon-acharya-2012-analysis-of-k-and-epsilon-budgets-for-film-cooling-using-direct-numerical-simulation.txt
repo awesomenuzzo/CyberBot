@@ -1,0 +1,1878 @@
+AIAA JOURNAL
+Vol. 44, No. 12, December 2006
+
+Analysis of k–" Budgets for Film Cooling Using
+Direct Numerical Simulation
+Frank Muldoon∗ and Sumanta Acharya†
+Louisiana State University, Baton Rouge, Louisiana 70803
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+DOI: 10.2514/1.20597
+Results of a direct numerical simulation of a ﬁlm cooling jet are used to evaluate the terms in the standard k–"
+turbulence model. From the direct numerical simulation data all terms and correlations appearing in the exact k–"
+equations are reconstructed and compared with the models for these terms used in the standard k–" turbulence
+model. Unlike a channel ﬂow, the turbulent diffusion terms that contain ﬂuctuations of pressure are found to be
+signiﬁcant and to have a different distribution from the turbulent diffusion terms involving only velocity ﬂuctuations.
+Using an eddy viscosity derived from minimizing the error in representing the direct numerical simulation data by
+the Boussinesq gradient approximation, it is shown that the Boussinesq gradient approximation as used in the
+standard k–" turbulence model is a reasonable model for the various terms in the exact k–" equations. However, the
+expression for the eddy viscosity of the standard k–" turbulence model (C k2 ="Re) is shown to be greatly in error.
+Using the direct numerical simulation data, two new damping functions are presented that greatly reduce the error in
+the eddy viscosity in the standard k–" turbulence model.
+
+the crossﬂow and underpredicts the jet spreading rate [1]. It is well
+known [2] to have difﬁculties in predicting ﬂows with adverse
+pressure gradients as occurs in the recirculation region behind a ﬁlm
+cooling jet. Despite these difﬁculties, the standard k–" model has
+been widely applied to ﬁlm cooling ﬂows as in [1,3,4]. Difﬁculties in
+predicting ﬁlm cooling effectiveness at higher blowing ratios were
+reported by He et al. [4], and attributed to the failure of the turbulence
+model to correctly predict jet penetration. In a combined
+experimental and computational work, Ajersch et al. [3] found an
+overprediction of the streamwise and vertical velocity. They also
+reported signiﬁcantly larger extrema for a Reynolds turbulent shear
+stress in the computations as compared to the experiments. An
+overprediction of the turbulent kinetic energy was seen in Hoda and
+Acharya [1]. An underprediction of lateral ﬁlm cooling effectiveness
+(in comparison to experimental data) was found by Berhe and
+Patankar [5] and attributed to the underprediction of the lateral
+spreading of the jet. Greater jet penetration and a correspondingly
+reduced lateral spreading of the jet was found in Berhe and Patankar
+[6]. In a computational and experimental study, Harrington et al. [7]
+found a signiﬁcant overprediction of jet penetration and a signiﬁcant
+underprediction of jet lateral spreading. Using the standard k–"
+model Radomsky and Thole [8] found a large overprediction of the
+turbulent kinetic energy and one of the Reynolds turbulent shear
+stresses for ﬂow in a turbine vane passage. In a series of papers on
+ﬁlm cooling ﬂows, Medic and Durbin [9,10] obtained signiﬁcant
+improvements in prediction of turbulent kinetic energy and heat
+transfer coefﬁcients by the use of limiters in the standard k–" model.
+There are very few studies in the literature concerning direct
+numerical simulation (DNS) or large eddy simulation (LES) of ﬁlm
+cooling ﬂows. An unsteady simulation of a circular jet in crossﬂow
+was performed by Hahn and Choi [11] on a 705  161  129 grid
+using second-order central difference schemes. The Reynolds
+number was 1750 and the blowing ratio was 0.5. The delivery tube
+was not modeled in their work, which solved the incompressible
+Navier–Stokes equations but not the energy equation. Muldoon and
+Acharya [12] used higher-order ﬁnite difference schemes in an
+unsteady simulation to study a normally injected ﬁlm cooling jet
+which included the ﬂow development in the delivery tube. This work
+presented the unsteady interactions of the upstream crossﬂow and
+horseshoe vortex system with ﬂow development in the delivery tube,
+and showed that this unsteady interaction resulted in a periodic
+pulsing of the jet at a Strouhal number of 0.44. An LES of a ﬁlm
+cooling jet was done in a series of papers [13–15] which investigated
+the inﬂuence of various parameters on the ﬂow physics of square or
+rectangular coolant jets issuing normally into the crossﬂow, similar
+
+Nomenclature
+fdns
+
+k
+p
+Pr
+Re
+Si;j
+
+=
+=
+=
+=
+=
+=
+
+s
+U0
+u
+ui
+v
+w
+"
+1=Re
+
+=
+=
+=
+=
+=
+=
+=
+=
+
+damping function deﬁned by DNS
+1 0 0
+u u , turbulent kinetic energy
+2 i i
+pressure
+Prandtl number
+Reynolds number
+1
+@u i =@xj  @u j =@xj , time-averaged strain rate
+2
+tensor
+passive scalar
+maximum inlet crossﬂow velocity
+ﬁrst component of velocity vector (i.e., u1 )
+ith component of velocity vector
+second component of velocity vector (i.e., u2 )
+third component of velocity vector (i.e., u3 )
+u0i;k u0i;k
+eddy viscosity
+
+I. Introduction
+
+T
+
+HE efﬁciency of turbine engines improves as the operating
+temperature of the working ﬂuid in the turbine increases. Higher
+ﬂuid temperatures in turbines leads to turbine blade failure as a result
+of exceeding temperature limits for the turbine blade material. A
+common means of cooling turbine blades is ﬁlm cooling, where the
+goal is to protect the blade surface from the hot crossﬂow by a ﬁlm of
+cooler ﬂuid injected through holes in the blade surface. These ﬁlm
+cooling holes must be designed in such a way that the coolant jet
+covers and remains near the blade surface and does not excessively
+penetrate into the crossﬂow. The ﬁlm cooling jets consume a
+signiﬁcant amount of process air and therefore an important design
+goal is to maximize the cooling and minimize the mass ﬂow through
+the jets. For these reasons it is important to have accurate models for
+the ﬂow and associated heat transfer when designing turbine blades.
+The most commonly used turbulence model (the standard k–"
+model) is well known to have difﬁculty in ﬁlm cooling applications.
+This model typically overpredicts the distance the jet penetrates into
+Received 8 December 2005; revision received 18 April 2006; accepted for
+publication 2 May 2006. Copyright © 2006 by the American Institute of
+Aeronautics and Astronautics, Inc. All rights reserved. Copies of this paper
+may be made for personal or internal use, on condition that the copier pay the
+$10.00 per-copy fee to the Copyright Clearance Center, Inc., 222 Rosewood
+Drive, Danvers, MA 01923; include the code $10.00 in correspondence with
+the CCC.
+∗
+Center for Computation and Technology
+†
+Department of Mechanical Engineering
+3010
+
+3011
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+MULDOON AND ACHARYA
+
+to the experimental setup of Ajersch et al. [3]. Whereas the reported
+DNS/LES studies have shown improvements in predictive
+capabilities vs Reynolds-averaged Navier–Stokes studies, due to
+the computational expense of DNS/LES, Reynolds-averaged
+Navier–Stokes methods are the predominant industrial design tool
+for ﬁlm cooling ﬂows. Therefore, it is important to improve the
+turbulence models used in Reynolds-averaged Navier–Stokes
+solutions to improve their predictive capabilities for ﬁlm cooling
+ﬂows.
+Using DNS data, the terms in the k–" equations have been
+examined for a channel ﬂow problem in which mean gradients exist
+only in one dimension [16]. These one-dimensional data have been
+examined and used to improve the k–" turbulence model [17].
+However, for the three-dimensional ﬁlm cooling conﬁguration of
+interest here, the authors are not aware of previous work where the
+k–" equations were examined with the aid of DNS, and model
+improvements proposed.
+The purpose of the present work is to show how the terms in the
+commonly used standard k–" model behave for the basic jet-incrossﬂow conﬁguration with jet parameters representative of ﬁlm
+cooling. This is done by computing (using DNS) the terms in the
+exact k and " equations and the standard k–" model. The modeled
+terms are then compared with the terms they model in the exact k and
+" equations. This comparison shows what parts of the exact k and "
+equations are signiﬁcant, along with how well the standard models
+for the various terms perform for this type of ﬂow. This study should
+provide guidance for turbulence modelers in developing turbulence
+models that are designed for ﬁlm cooling jets in crossﬂow. In
+addition, a new wall damping function for the eddy viscosity suitable
+for ﬁlm cooling ﬂows is presented.
+It should be noted that for ﬂows in which DNS data have been used
+to analyze the terms in the exact k–" equations, such as a fully
+developed channel ﬂow in which mean gradients exist in only one
+dimension, presentation of the results is greatly simpliﬁed as all
+terms are one-dimensional. For the ﬂow examined in the present
+work, mean gradients exist in all three dimensions which greatly
+complicates the analysis and presentation of the terms in the k–"
+equations. The use of line plots, although offering a direct
+quantitative comparison, can be misleading as they only offer a view
+in one dimension from a speciﬁc point in the other two dimensions of
+a ﬂow which changes greatly in all three dimensions. To clearly
+present the three-dimensional aspect of the ﬂow, the authors have
+made extensive use of three-dimensional contour plots. Whereas this
+makes more difﬁcult quantitative comparisons, it greatly aids the
+comparison of three-dimensional distributions.
+
+Calculations are done on a staggered mesh where the discrete
+pressure and passive scalar are located at the main grid points and the
+velocity components are staggered in their respective directions. A
+sixth-order central difference convective scheme with a monotonic
+limiter is used along with fourth-order interpolation for the velocity
+in the convective terms, e.g., for v in v@u=@y, etc. A fourth-order
+central difference scheme is used for the diffusive terms. The
+pressure gradient and the continuity equation are represented by
+second-order centered schemes. A third-order accurate explicit time
+integration scheme is used to integrate the convective and diffusive
+terms in time; the pressure gradient is treated fully implicitly. The
+equation for the transport of the passive scalar is represented using
+the same order and type of schemes used for the momentum
+equations. Equations (1) and (2) are solved using the colored
+symmetric coupled Gauss Seidel (SCGS) method. The accuracy of
+all ﬁnite difference stencils is maintained near nonperiodic
+boundaries by shifting toward the boundary the point at which the
+stencil is evaluated. Further details of the ﬁnite difference schemes
+and the computer code used in the present work can be found in
+Muldoon [18].
+
+III. Turbulence Modeling
+Any unsteady quantity ut can be decomposed into the following
+ where u indicates the time-averaged or
+two parts, ut  u0 t  u,
+mean part and u0 t the ﬂuctuating part. Throughout this paper the
+
+prime (u0 ) indicates ﬂuctuating quantities whereas the overbar (u)
+indicates time-averaged quantities. The Reynolds-averaged Navier–
+Stokes equations [Eqs. (4) and (5)] are obtained by time averaging
+the Navier–Stokes equations [Eqs. (1) and (2)].
+
+u j
+
+@u i
+0
+@xi
+
+(4)
+
+@u i  @u0i u0j 
+@p
+1 @2 u i
+
+
+
+@xj
+@xi Re @xj @xj
+@xj
+
+(5)
+
+The goal of turbulence modeling is to derive an expression for u0i u0j
+and u0j s0 . The Boussinesq gradient approximation Eq. (6), which
+requires a deﬁnition for the eddy viscosity, is used in the standard k–"
+model and most other two-equation turbulence models to represent
+the turbulent Reynolds stresses (u0i u0j ) which appear in the Reynoldsaveraged Navier–Stokes equations [Eqs. (4) and (5)].
+ u0i u0j 
+
+II. Governing Equations and Discretization
+In the present work, the nonconservative form of the unsteady
+incompressible three-dimensional Navier–Stokes equations
+[Eqs. (1) and (2)] is used to model the ﬂow, along with an equation
+describing the evolution of a passive scalar [Eq. (3)].
+@ui
+0
+@xi
+
+(1)
+
+@u
+@p
+1 @2 ui
+@ui
+
+ uj i  
+@xi Re @xj @xj
+@xj
+@t
+
+(2)
+
+@s
+1
+@2 s
+@s
+ uj
+
+@xj RePr @xj @xj
+@t
+
+(3)
+
+Equations (1–3), are solved in nondimensional form, in which the
+properties of the ﬂuid and the passive scalar are described by the
+Reynolds number and the Prandtl number. These equations are
+solved without the use of a model for turbulence, i.e., a DNS is
+performed. Solutions are obtained on parallel computer systems
+using the computer program Tetra [18] which has been written using
+Fortran 95 and MPI for use on high performance parallel computers.
+
+1
+2
+2S  k
+Re i;j 3 i;j
+
+(6)
+
+In the standard k–" model, the eddy viscosity is deﬁned as
+C k2 ="Re. Equations for k and " can be derived without any
+assumptions or simpliﬁcations from the Navier–Stokes equations,
+details of which can be found in [2]. As a result of the nonlinearity of
+the Navier–Stokes equations, these equations for k and " contain
+numerous high-order correlations, which must be modeled. The
+present work compares the exact equations for k and " in which these
+correlations are determined using DNS with the model for these
+correlations given by the standard k–" model of Launder and
+Spalding [19]. When comparing the model for the correlations with
+the correlations obtained from DNS, all quantities in the model (i.e.,
+k, ", and u i ) are obtained from the same DNS. This allows a direct
+evaluation of the quality of the model. The DNS is used as a
+numerical experiment as it is extremely difﬁcult or impossible to
+obtain some of the complicated correlations in the k–" equations
+from experimental measurements; therefore this is the only feasible
+method with which these correlations can be obtained.
+A. k–" Equations
+1. Exact and Modeled Equations for k
+
+The exact k equation is given by Eq. (7). Note that Eqs. (7) and (9)
+use the comma notation to indicate differentiation (i.e., uk;m 
+
+3012
+
+MULDOON AND ACHARYA
+
+@uk =@xm and u0i;km  @u0i =@xk @xm ).
+
+
+
+@k
+@u
+1
+@ 1 @k 1 0 0 0
+@k
+ u j
+"
+ u0i u0j i 
+ uuu
+@xj
+@xj Re @xj 2 i i j
+@xj Re
+@t
+
+ p0 u0j
+
+(7)
+
+The modeled k equation is given by Eq. (8) [19].
+
+
+@k
+k2
+1
+@ 1 @k
+@k
+ u j
+"
+ 2C Si;j Si;j Re 
+@xj
+Re
+@xj Re @xj
+"
+@t
+
+2
+C k =" @k
+
+Re
+@xj
+k
+
+(8)
+
+The values of the various constants appearing in Eq. (8) are
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+C  0:09
+
+k  1
+
+The terms of Eqs. (7) and (8) are commonly referred to by the
+following names, which reﬂect their predominant effect on k (the
+terms that are modeled are indicated):
+Convective transport of k  @k=@t  u j @k=@xj 
+[model
+of
+Production
+of
+k  2C k2 ="Si;j Si;j Re
+0 0
+ui uj @u i =@xi ]
+Dissipation of k  1=Re"
+Molecular diffusion of k  @=@xj 1=Re@k=@xj 
+Turbulent diffusion of k  @=@xj fC k2 ="=k @k=@xj Reg
+[model of @=@xj  12 u0i u0i u0j  p0 u0j ]
+2.
+
+Exact and Modeled Equations for "
+
+The exact " equation is given by Eq. (9).
+@"
+@"
+@u
+@2 u i
+ u j
+ 2u0i;k u0j;k  u0k;i u0k;j  i  2u0k u0i;j
+@t
+@xj
+@xj
+@xk @xj
+
+1
+@ @" 1
+0
+0
+0
+0
+0
+
+ u0j u0i;m u0i;m
+ 2ui;k ui;m uk;m  2ui;km ui;km
+Re @xj @xj Re
+
+(9)
+ 2p0;m u0j;m
+
+2
+
+@"
+@"
+"
+ u j
+ 2C"1 C kSi;j Si;j Re  C"2
+@t
+@xj
+kRe
+
+
+@ 1 @" C Re k2 @"
+
+
+@xj Re @xj
+" " @xj
+
+C  0:09
+
+Eddy Viscosity
+
+which results in:
+(10)
+
+The values of the various constants appearing in Eq. (10) are
+C"2  1:92
+
+IV.
+
+As the eddy viscosity appears frequently in numerous terms in
+two-equation turbulence models including the standard k–" model, it
+is examined in detail in the present work. The eddy viscosity can be
+computed from Eq. (6) using the results of a DNS to calculate u0i u0j ,
+Si;j , and k. It is desired to obtain the value for 1=Re from Eq. (6),
+which will minimize the error in representing u0i u0j by the righthand side of Eq. (6). This is done by minimizing the square of the
+error with respect to 1=Re . Advantage is not taken of the symmetry
+of u0i u0j in deﬁning the error in Eq. (6). The rationale for this is that in
+the Reynolds-averaged Navier–Stokes equations, the off-diagonal
+terms appear twice as often as the diagonal. Therefore it is natural to
+preserve this ratio in minimizing the error associated with
+representing u0i u0j by the Boussinesq gradient approximation
+[Eq. (6)].
+2
+3 X
+3 
+X
+1
+2
+error 
+2Si;j  ki;j  u0i u0j
+Re
+3
+j1 i1
+
+
+3 X
+3
+X
+@error
+1
+2
+2
+2Si;j  ki;j  u0i u0j 2Si;j
+0
+@1=Re 
+Re
+3
+j1 ii
+
+The modeled " equation is given by Eq. (11) [19].
+
+C"1  1:44
+
+main grid is chosen for the grid on which Eqs. (7) and (9) are
+evaluated, this requires that the velocities be interpolated from their
+respective grids onto the main grid. Once this is done the terms in
+Eqs. (7) and (9) may be computed. The interpolation and
+differentiation operators used for the terms in Eqs. (7) and (9) are
+sixth-order accurate. They are derived independently of the operators
+used in discretizing Eqs. (1–3). As Eqs. (7) and (9) are derived from
+Eqs. (1) and (2) and then discretized on a different grid with operators
+different from those used in Eqs. (1) and (2), the residual of Eqs. (7)
+and (9) relative to the terms of Eqs. (7) and (9) will likely not be of the
+same order as the residual of Eqs. (1) and (2) is relative to the terms of
+Eqs. (1) and (2). The alternative would be to derive discretized
+versions of Eqs. (7) and (9) directly from the discretized versions of
+Eqs. (1) and (2). This would ensure that the residuals of Eqs. (7) and
+(9) will be of the same order relative to the terms in the equations as is
+the case for Eqs. (1) and (2); however, this is impractical due to the
+complexity of the correlations and the high-order discretization
+stencils used to discretize Eqs. (1) and (2). Details concerning the
+discretization of the exact k and " equations on inﬂow boundaries can
+be found in Muldoon [18].
+
+"  1:3
+
+The terms of Eqs. (9) and (10) are commonly referred to by the
+following names, which reﬂect their predominant effect on " (the
+terms that are modeled are indicated):
+Convective transport of "  @"=@t  u j @"=@xj 
+Production of "  2C"1 C kSi;j Si;j Re [models 2u0i;k u0j;k 
+0
+uk;i u0k;j @u i =@xj   2u0k u0i;j @2 u i =@xk @xj ]
+Destruction of "  C"2 "2 =kRe [models 2u0i;k u0i;m u0k;m 
+2u0i;km u0i;km 1=Re]
+Molecular diffusion of "  @=@xj @"=@xj 1=Re
+Turbulent diffusion "  @=@xj C Re=" k2 ="@"=@xj 
+[models @=@xj u0j u0i;m u0i;m  2p0;m u0j;m ]
+The terms in Eq. (7) and particularly Eq. (9) are extremely
+complicated with some containing mixed derivatives. As Eqs. (1)
+and (2) are solved on a staggered grid on which all three velocity
+components are deﬁned on different grids from each other and from
+the main grid where pressure and the scalar are deﬁned, it is necessary
+to specify a grid on which to evaluate Eqs. (7) and (9). Because the
+
+1
+
+Re
+
+P3
+
+j1
+
+P3 2
+3 ki;j Si;j  u0i u0j Si;j 
+Pii
+P3
+3
+ii 2Si;j Si;j
+j1
+
+(11)
+
+Note that as the expression for the error is a quadratic polynomial
+in 1=Re , there is a guaranteed global minimum which occurs at the
+value of 1=Re given by Eq. (11). It should be noted that this
+approach for minimizing the error is different from the traditional
+approaches adopted so far where, due to the one nonhomogeneous
+dimension in the idealized problems considered, only one
+component of u0i u0j and Si;j is important. For more complex threedimensional ﬂows with no homogeneous dimensions, the
+aforementioned minimization process appears to be the most logical
+approach for computing 1=Re .
+
+V.
+
+Problem Description
+
+The modeled ﬂow is similar to that of Kaszeta [20]. In this
+experimental work, an inclined jet with a delivery tube and plenum
+was examined. As the goal is to obtain DNS data for a representative
+ﬁlm cooling geometry, we decided not to model the plenum and
+delivery tube in the DNS. This decision is a result of the stringent
+spatial and temporal resolution requirements of DNS. It has been
+
+3013
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+MULDOON AND ACHARYA
+
+uy 
+
+8
+<
+:
+
+ 1=7
+y
+2
+
+U0
+
+0
+
+y
+
+2
+
+y>2
+
+U0
+
+9
+=
+;
+
+At the jet exit, the time-averaged results obtained from the
+simulation including the plenum and delivery tube are used as the
+boundary condition for all three components of the velocity. This
+time-averaged velocity should be symmetric about the z-axis.
+However, due to the ﬁnite time-averaging period, the proﬁle is not
+exactly symmetric. Symmetry is therefore enforced by averaging the
+proﬁle around the z-axis. The Reynolds number based on the average
+velocity through the jet (Ujet ) and jet diameter is 3068; the Prandtl
+number is 0.707. The average blowing ratio, deﬁned as the ratio
+Ujet =U0 is 0.24 whereas the blowing ratio based on the maximum jet
+exit velocity is 0.53. The passive scalar is set to zero at y  0 within
+the jet exit; if outside the jet exit at y  0 the gradient of the passive
+scalar is set to zero. No-slip boundary conditions are applied at y  0
+outside of the jet exit. A symmetry boundary condition is applied at
+y  Lfreestream , a convective boundary condition at x  Ldown , and a
+periodic boundary condition in the z-direction.
+Three grids, with dimensions of 286  80  70, 574  161  142,
+and 1150  323  286 are used. The grids are obtained by doubling
+the number of points in each dimension of the next coarsest grid,
+while keeping the grid stretching parameters the same. The time steps
+used on the grids are 0.008, 0.004, and 0.002, respectively. This
+results in maximum CFL numbers of 0:2 in the x-direction, 0:1 in
+the y-direction, and 0:08 in the z-direction. The results shown in the
+present work are obtained on the 1150  323  286 grid, with the
+other grids being used to verify grid independence.
+
+crossflow boundary condition
+
+periodic
+boundaries
+
+symmetry
+boundary
+
+Lz
+Y
+
+X
+
+outflow
+boundary
+Lfreestream
+
+Z
+
+Lup
+
+jet exit boundary condition
+
+Ldown
+
+no slip wall boundary
+
+Fig. 1 Inclined jet in crossﬂow with prescribed exit conditions 3-D
+schematic.
+
+-2
+
+5/3 slope
+
+5/3 slope
+
+E uu
+
+10
+
+10
+
+-3
+
+10
+
+x= 4.0270, y=.1034, 286x80x70 grid
+x= 4.0037, y=.0955, 574x161x142 grid
+x= 4.0024, y=.0975,1150x323x286 grid
+
+-4
+
+10
+
+0
+
+10
+
+1
+
+k
+
+10
+
+-4
+
+x= 4.0270, y=.1034, 286x80x70 grid
+x= 4.0037, y=.0955, 574x161x142 grid
+x= 4.0024, y=.0975,1150x323x286 grid
+2
+
+5/3 slope
+
+10
+
+-3
+
+E vv
+
+10
+
+10
+
+10
+10
+
+-2
+
+10
+
+-3
+
+10
+
+-4
+
+0
+
+10
+
+1
+
+k
+
+10
+
+2
+
+5/3 slope
+
+-2
+
+10
+
+-3
+
+10
+
+-4
+
+E vv
+
+E uu
+
+decided that it is better to use the available resolution in the region of
+most interest (over the blade surface) where accurate data are needed
+for use in improving turbulence models. The inclusion of the plenum
+and delivery tube will undoubtedly result in changes, but these
+changes are not expected to result in differences in the important
+physics of the ﬂow. However, to model the effect of the delivery tube
+and plenum as closely as possible, the boundary condition at the jet
+exit is speciﬁed as the mean velocity obtained from a simulation that
+includes a plenum and delivery tube. Thus a preliminary simulation
+is done including the plenum and delivery tube with a jet inclination
+angle of 35 deg from the crossﬂow. From this simulation a mean jet
+exit velocity boundary condition is extracted and used in a second set
+of simulations in which all grid points are in the jet-crossﬂow region.
+All results presented in this work are computed from this second set
+of simulations.
+A schematic of the ﬂow domain along with boundary conditions
+and dimensions is given in Fig. 1. The origin of the coordinate system
+is deﬁned to be the center of the jet at the blade surface. In Fig. 1
+Lup  3:6d, Ldown  14d, Lfreestream  4:5d, Lz  3d. All quantities
+are nondimensionalized by the jet diameter d and the maximum inlet
+crossﬂow velocity U0 . At the crossﬂow inlet boundary at x  Lup ,
+the v- and w-components of velocity are set to zero whereas the
+following proﬁle is used for the u-velocity.
+
+x= 7.9775, y=.3859, 286x80x70 grid
+x= 8.0078, y=.4020, 574x161x142 grid
+x= 7.9950, y=.4019,1150x323x286 grid
+
+10
+
+0
+
+Fig. 2
+
+10
+
+1
+
+k
+
+10
+
+x= 7.9775, y=.3859, 286x80x70 grid
+x= 8.0078, y=.4020, 574x161x142 grid
+x= 4.0024, y=.0975,1150x323x286 grid
+2
+
+10
+
+0
+
+10
+
+1
+
+k
+
+10
+
+2
+
+One-dimensional spatial energy spectrum in z-direction.
+
+VI. Validation
+A.
+
+Energy Spectra
+
+Figure 2 shows one-dimensional spatial energy spectrums in the zdirection of the x- and y-components of velocity. This spectra is
+obtained by interpolating the velocity on the uneven spatial grid onto
+an even grid which is deﬁned by the smallest grid spacing in the
+uneven grid and then transforming into discrete wave number space.
+Regions in which the slope of the spectra matches the 5=3 slope
+predicted by the turbulence theory of Kolmogoroff [21] can be seen.
+Close agreement can be seen between the results obtained on the
+574  161  142 grid and on the 1150  323  286 grid. The good
+agreement with the results from the coarser grids may be due to the
+use of a monotonic convection scheme, which adds viscosity in
+regions where the gradients are large to prevent overshoots and
+undershoots. As a result, on an unresolved grid, the scheme behaves
+as a LES model in which the model for the unresolved scales is the
+added viscosity. This effect has been termed monotonic-integrated
+large eddy simulation (MILES) by Oran and Boris [22].
+
+B.
+
+Convergence of Statistics
+
+In the present work all statistics are computed as a running
+average. The numerous terms that must be computed as a running
+average to reconstitute the correlations appearing in the exact k and "
+equations [Eqs. (7) and (9)] are given in Muldoon [18]. Statistics are
+averaged over 567,822 time steps on the 1150  323  286 grid after
+an initialization period of 64,000 time steps to allow the ﬂow to
+become statistically fully developed and eliminate the effect of the
+initial conditions. The sampling rate is one, i.e., the solution at every
+time step is used in determining the statistics. With a time step of
+0.002, this corresponds to the ﬂow traveling 1136d and 128d at U0 ,
+respectively. These time-averaging periods are met or exceeded on
+the coarser grids.
+Figure 3 shows statistics on the three grids; the small difference
+between the two ﬁnest grids is evidence of essentially grid
+independent results. Note that for this geometry and boundary
+conditions, in particular, the time invariance of the boundary
+conditions, the Reynolds stress u0 w0 is theoretically zero at the jet
+centerline (Muldoon [18]) and its value serves as an indicator of the
+quality of the time-averaging period and sampling rate. As it is an
+order of magnitude less than the other (nonzero) Reynolds stress
+components this suggests that the time-averaging period and
+sampling rate are sufﬁcient.
+Because Eqs. (7) and (9) are not derived from discretized versions
+of Eqs. (1) and (2), the residuals of Eqs. (7) and (9) are not expected to
+be of the same order relative to the terms in Eqs. (7) and (9) as the
+residuals of Eqs. (1) and (2) are relative to the terms in Eqs. (1) and
+(2). However, the residuals of Eqs. (7) and (9) should decrease with
+the order of spatial accuracy of the method used to compute them if
+
+3014
+
+MULDOON AND ACHARYA
+0
+
+1
+.008
+
+.8
+
+-.001
+
+k
+
+U
+
+u′v′
+
+.006
+
+.6
+
+.2
+0
+0
+
+-.002
+
+.004
+
+.4
+
+.002
+
+287x81x70
+575x162x142
+1151x324x286
+
+.5
+
+1
+
+0
+0
+
+1.5
+
+-.003
+.5
+
+y
+
+1
+
+1
+
+1.5
+
+0
+
+.0002
+
+0
+
+.6
+
+.005
+
+-.0002
+1
+
+1.5
+
+y
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+Fig. 3
+
+0
+
+.015
+.01
+
+-.0001
+
+.5
+
+Fig. 5
+
+Instantaneous contours of scalar.
+
+.02
+
+s1′s1′
+
+u′w′
+
+S1
+.7
+
+1.5
+
+.025
+
+1E-04
+.8
+
+1
+
+y
+
+.9
+
+.5
+0
+
+.5
+
+y
+
+.5
+
+1
+
+1.5
+
+y
+
+0
+0
+
+.5
+
+1
+
+1.5
+
+y
+
+Statistics on different grids, x  13d, z  0.
+
+the time-averaged ﬂowﬁeld is examined, as discussed later (Fig. 7).
+The CVP entrains ﬂuid from the crossﬂow into the jet, promoting
+mixing of the jet with the crossﬂow. As a result of vortex induction,
+the CVP causes the jet to lift away from the surface, which is
+undesirable for ﬁlm cooling. The horseshoe vortex forms upstream
+of the jet, wraps around the jet, and reorients itself in the streamwise
+direction (Fig. 5). This vortex is actually a number of vortices (see
+Fig. 7) and remains close to the blade surface. Its role is to entrain
+coolant ﬂuid from the jet and thereby cool the blade surface along its
+trajectory as seen in Fig. 5. Shear layer vortices form at the boundary
+between the jet and the crossﬂow (Fig. 5). These vortices begin small
+but grow into large scale structures by 3d–4d downstream of the jet
+center. Behind the jet a region of low pressure and velocity is formed.
+In this region a recirculation pattern emerges that entrains ﬂuid into
+the jet. Wake vortices are not seen in this ﬂow, likely due to the low
+blowing ratio and small jet inclination angle which result in a jet close
+to the blade surface.
+
+VIII.
+A.
+
+Fig. 4
+
+All terms in the exact " equation [Eq. (9)] at x  8d, z  0.
+
+the temporal averaging period and sampling rate is sufﬁcient.
+Assuming that the residual is dominated by the lowest order
+truncation error terms, the order of convergence in the residual as the
+grid spacing is reduced can be computed. Using the L1 norm of the
+residual the order of convergence in the residual of Eq. (7) is found to
+be 1.45 using the 286  80  70 and 574  161  142 grids and 2.43
+using the 574  161  142 and 1150  323  286 grids. As the
+overall order of convergence of the numerical method is given by the
+lowest order schemes used, which is second-order for both the
+continuity equation and the pressure gradient; this shows that this
+order of convergence is maintained in computing the terms in the k
+equation. Using this same norm, the order of convergence in the
+residual of Eq. (9) is 0.38 and 0.17, respectively. It is known to be
+difﬁcult to compute a balanced " equation [23]; this is likely due to
+the large number of extremely complicated terms involving highorder correlations in this equation. Nevertheless, the residual,
+whereas not decaying at the rate expected from the spatial accuracy
+of the numerical scheme, is bounded by other terms in Eq. (7).
+Figure 4 shows the residual to be bounded by 2u0i;k u0i;m u0k;m (one of
+the terms comprising the production of ") and 2u0i;km u0i;km 1=Re
+(one of the terms comprising the destruction of ").
+
+VII.
+
+Budgets
+
+First- and Second-Order Statistics
+
+The mean scalar is shown in various planes in Fig. 6c. Note that the
+maximum and minimum shown on ﬁgures in this work apply to the
+surfaces shown in the ﬁgures and not the entire ﬁeld. The signature of
+the horseshoe vortex on the blade surface shows up distinctly in this
+ﬁgure. The horseshoe vortex entrains a small amount of ﬂuid from
+the leading edge of the jet, and transports it downstream as the vortex
+wraps around the jet and orients itself in the streamwise direction.
+The effect of the horseshoe vortex in keeping the velocity magnitude
+small near the blade surface is evident in Fig. 6b, which shows a
+crossﬂow region between the horseshoe vortex and the CVP near the
+
+Flow Physics
+
+Jets in crossﬂow contain a number of distinct ﬂow structures [24].
+These structures are a counterrotating vortex pair (CVP) of kidneyshaped vortices, a horseshoe vortex, shear layer vortices, and upright
+wake vortices. As the jet is deﬂected by the crossﬂow it splits into the
+CVP. Whereas it is difﬁcult to distinguish the CVP in an
+instantaneous image of the ﬂowﬁeld (Fig. 5), it can be clearly seen if
+
+Fig. 6 Three-dimensional view of time-averaged pressure, velocity
+magnitude, and scalar.
+
+3015
+
+MULDOON AND ACHARYA
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+Fig. 7 Time-averaged velocity vectors and contours of scalar ﬁeld in
+y–z plane at x  8d.
+
+Fig. 9
+
+Three-dimensional view of u0 v0 , v0 w0 , v0 w0 .
+
+Fig. 10 Three-dimensional view of k, s0 s0 .
+
+Fig. 8 Three-dimensional view of u0 u0 , v0 v0 , w0 w0 .
+
+blade surface in which the velocity magnitude is large. A stagnation
+region in front of the jet, where the horseshoe vortex forms, and a
+low-pressure region behind the jet can be seen in the mean pressure
+ﬁeld in Fig. 6a. A region behind the jet at x 2d, in which the value
+of the scalar on the blade surface is higher than further downstream,
+can be seen in Fig. 6c. This likely is a result of the recirculation
+pattern in this region in which crossﬂow ﬂuid is entrained into the jet
+wake. The CVP and the horseshoe vortex can be seen in Fig. 7, in
+which for clarity every eighth vector in each direction and half of the
+domain in the (symmetric) z-direction is shown. The horseshoe
+vortex consists of two vortices with opposite rotation, whereas the
+CVP is seen to form two vortices with the same sense of rotation.
+The normal Reynolds stresses are shown in Fig. 8. The u0 u0
+component is larger than the other components and has its highest
+values in the shear layer where large velocity gradients exist. The u0 u0
+component also dominates the horseshoe vortex, growing
+signiﬁcantly in strength as the horseshoe vortex convects in the
+downstream direction. It starts to form a peak near the wall at
+x 10d. The smallest component is v0 v0 , which spreads towards the
+wall as the downstream distance increases. A spike in the w0 w0
+component exists in the recirculation region behind the jet at x 2d
+where the crossﬂow collides in the z-direction after wrapping around
+the jet.
+The shear stress components of the Reynolds stress tensor are
+shown in Fig. 9. The strong anisotropy of the ﬂow ﬁeld can be seen in
+
+this ﬁgure. In particular the v0 w0 component experiences a sign
+change that occurs near the boundary between the jet and the
+crossﬂow and appears clearly in the y–z plane at x 5d in Fig. 9c.
+Figure 10 shows that the scalar ﬂuctuations are highest in the shear
+layer and reach a maximum at x 5d. The scalar ﬂuctuations are
+small in the horseshoe vortex. The turbulent kinetic energy has a
+different behavior, reaching a maximum further downstream at
+roughly x 7:5d and is signiﬁcant in the horseshoe vortex. It can be
+seen that turbulent kinetic energy in the recirculation region is small
+except for a peak at x 2d, which is due to the contribution of w0 w0 .
+B.
+
+Eddy Viscosity
+
+Overprediction of the eddy viscosity by the model [C k2 ="Re]
+can be seen quite clearly in Fig. 11c. The eddy viscosity obtained
+from DNS [using Eq. (11)] is actually negative in certain regions,
+which is not permitted by the model [C k2 ="Re], in which the eddy
+viscosity is always positive. The eddy viscosity obtained from
+Eq. (11) enables some modeled terms (as discussed later) to be
+represented accurately, a factor which perhaps should be considered
+in the design of turbulence models, which traditionally assume that
+the eddy viscosity is positive. It can be clearly seen that the modeled
+eddy viscosity overpredicts the values obtained from the DNS and
+Eq. (11). Therefore calculations done with the traditional eddy
+viscosity expression are likely to overpredict jet spreading and
+turbulence levels. Using the wall normal turbulent ﬂuctuations in the
+expression for the eddy viscosity [C 32 v0 v0 k="Re] can be seen
+(Fig. 11b) to result in a better model for the eddy viscosity,
+
+3016
+
+MULDOON AND ACHARYA
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+Fig. 11 Eddy viscosity computed using Eq. (11) and modeled eddy
+viscosity.
+
+Fig. 13 Three-dimensional view of production and dissipation terms in
+exact k equation [Eq. (7)].
+
+particularly near the wall where the overprediction of the eddy
+viscosity is greatly reduced relative to the C k2 ="Re model.
+C.
+
+Exact k Equation
+
+Figure 12 shows the various terms in the exact k equation, Eq. (7).
+For this ﬂow it can be seen that all terms are signiﬁcant, with the
+exception of molecular diffusion of k, which is only important in a
+very small region very close to the wall. Dissipation appears to be less
+signiﬁcant in the CVP, whereas production appears to be more
+signiﬁcant there. The dissipation term approximates a negative
+mirror of the production term in Figs. 12 and 13, with the exception of
+the wall where the production is zero while dissipation is large. At the
+wall dissipation is balanced by the diffusion terms @=@x2 
+1=Re@k=@x2   12 u0i u0i u02  p0 u02 , which are the only nonzero
+terms at the wall. Convective transport of k is signiﬁcant, particularly
+in the CVP, unlike a developed channel ﬂow for which it is
+theoretically zero. Figures 12e and 12f show the two parts of the
+turbulent diffusion term, the sum of which are modeled as a diffusion
+process. Very different distributions are seen between these two
+terms, which suggests that modeling them as a single diffusion
+process is inappropriate. This is also seen in Fig. 14 where these
+terms are of comparable magnitude, whereas for a channel ﬂow the
+term involving ﬂuctuations in pressure is much smaller. This
+suggests that models that have been tuned and work well for a
+channel ﬂow will experience difﬁculties for a ﬁlm cooling ﬂow. A
+rapid change in @=@xj  12 u0i u0i u0j  (in which the sign changes) can
+be seen at the top of the jet. This change in sign will be predicted by
+the gradient of k (see Fig. 10b), which is used when this term, along
+with @=@xj p0 u0j , is modeled as proportional to the diffusion of
+k. However, this same change in sign does not occur in
+@=@xj p0 u0j , which suggests again that this part of the term is not
+modeled well by being made proportional to the diffusion of k.
+
+Fig. 12 All terms of exact k equation [Eq. (7)], y–z plane at x  5d.
+
+Fig. 14 Three-dimensional view of turbulent diffusion terms in exact k
+equation [Eq. (7)].
+
+D.
+
+Exact " Equation
+
+Figure 15 shows the various terms in the exact " equation, Eq. (9).
+As for the exact k equation, all terms are signiﬁcant with the
+exception of molecular diffusion of ". Production and destruction are
+approximately negative mirror images of each other near the wall,
+but away from the wall destruction is positive within the jet.
+Production is large near the wall, within the horseshoe vortices and
+within the jet with the exception of a region within the jet where it is
+small. Convective transport reaches a maximum in the horseshoe
+vortex and a minimum near the wall in between the CVP and the
+horseshoe vortex. It is a signiﬁcant term, unlike a channel ﬂow where
+it is theoretically zero. Molecular diffusion of " is insigniﬁcant except
+very close to the wall. Figures 15e and 15f show the two parts of the
+turbulent diffusion term, the sum of which are modeled as a diffusion
+process. Very different distributions are seen between these two
+
+Fig. 15 All terms of exact " equation [Eq. (9)], y–z plane at 5d.
+
+MULDOON AND ACHARYA
+
+3017
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+Fig. 16 Three-dimensional view of turbulent diffusion terms in exact "
+equation [Eq. (9)].
+
+terms, suggesting that modeling them as a single diffusion process is
+inappropriate. Both parts of the turbulent diffusion of " term are
+shown in Fig. 16 along the streamwise midplane and three lateral
+planes. The term involving pressure has extrema nearly two orders of
+magnitude greater than the other term; however, these extrema are
+concentrated near the front edge of the jet on the wall (discussed
+later). In the rest of the ﬂow, the terms are similar in magnitude. This
+is unlike a channel ﬂow for which the term involving ﬂuctuations in
+pressure is much smaller. However, they have different distributions,
+with the term @=@xj u0j u0i;m u0i;m  changing sign twice in the
+vertical direction, whereas @=@xj 2p0;m u0j;m  changes sign once.
+Note that this difference between the term involving pressure and the
+term that does not is also seen in the exact k equation.
+In Fig. 17a the destruction term is positive in a large region in the
+jet away from the wall. The production term (see Fig. 17b) is large in
+the recirculation region and is negative at the wall immediately
+behind the jet. The extrema in production are concentrated near the
+front edge of the jet on the wall and are discussed later.
+E.
+
+Modeled k Equation
+
+A comparison of the DNS computed production term
+[u0i u0j @u i =@xj ] with two models, 2C k2 ="ReSi;j Si;j and
+2Re1
+ Si;j Si;j , is given in Fig. 18. Note that the only difference
+between the two models in Fig. 18 is the eddy viscosity, which is
+deﬁned to be C k2 ="Re (standard k–" model) or Re1
+ [as obtained
+from Eq. (11)]. As Eq. (11) ﬁnds an eddy viscosity such that it
+minimizes the error in the approximation of the Reynolds stresses
+using Eq. (6), it should provide a better approximation of the
+production term than the standard k–" model, which uses
+
+Fig. 18 Production term from exact k equation [Eq. (7)] vs models.
+
+C k2 ="Re to represent the eddy viscosity. The only part of the
+production term that is modeled is u0i u0j , and as this is modeled using
+the Boussinesq gradient approximation, the use of the eddy viscosity
+found from Eq. (6) results in the best possible model for u0i u0j when
+using the Boussinesq gradient approximation. As the errors in the
+modeled production term are strictly the result of errors in
+representing the Reynolds stresses, this provides a good measure of
+the ability of the minimization procedure [Eq. (11)] in combination
+with the Boussinesq gradient approximation, to represent the
+Reynolds stresses. It can be seen that using the eddy viscosity
+computed from Eq. (11) results in almost identically the same value
+as the DNS computed production term [u0i u0j @u i =@xj ]. In
+contrast, using C k2 ="Re for the eddy viscosity results in an order
+of magnitude overprediction of the production term, particularly near
+the blade surface and in the jet region. Nevertheless, the qualitative
+behavior of the production term is predicted reasonably well using
+C k2 ="Re. Note that the eddy viscosity computed from Eq. (11)
+(see Fig. 11) is negative in certain regions, which allows the modeled
+term 2Re1
+ Si;j Si;j to be negative in certain regions, as is the DNS
+computed production term [u0i u0j @u i =@xj ].
+The turbulent diffusion terms [@=@xj  12 u0i u0i u0j  p0 u0j ] in the
+exact k equation are lumped together and modeled as a single
+diffusion process in the standard k–" model. Figure 19 compares the
+DNS computed value of turbulent diffusion [@=@xj 
+ 12 u0i u0i u0j  p0 u0j ] with two models, @=@xj fC k2 ="Re=k 
+@k=@xj g and @=@xj Re1
+ =k @k=@xj , the ﬁrst of which uses
+C k2 ="Re, the second Re1
+ [as obtained from Eq. (11)], as the
+eddy viscosity. The model using an eddy viscosity of C k2 ="Re
+undershoots the DNS computed value by an order of magnitude. If
+2
+Re1
+ is used in place of C k ="Re, the result is much better. These
+results demonstrate that the problem with the modeling of this term is
+with the choice of the eddy viscosity expression. Therefore this term
+can be modeled well as a diffusion process, if the eddy viscosity is
+chosen appropriately. The residual (i.e., the imbalance) of all the
+modeled terms in the modeled k equation (Fig. 20) illustrates the
+large errors in the standard k–" model. These errors are particularly
+large on the wall.
+F.
+
+Fig. 17 Three-dimensional view of production and destruction terms
+in exact " equation [Eq. (9)].
+
+Modeled " Equation
+
+Figure 21 compares the production term of the exact " equation
+[Eq. (9)] with two models, 2C"1 C kSi;j Si;j Re and
+2C"1 "k1 Re1
+ Si;j Si;j , used to represent it. As previously, the only
+difference between these two models is that, for the eddy viscosity,
+
+3018
+
+MULDOON AND ACHARYA
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+Fig. 22 Production and turbulent diffusion in exact " equation [Eq. (9)]
+in x–z plane on the wall.
+
+Fig. 19 Turbulent diffusion term from exact k equation [Eq. (7)] vs
+models.
+
+Fig. 20 Three-dimensional view of residual of modeled k equation
+[Eq. (8)].
+
+the ﬁrst uses C k2 ="Re whereas the second uses Re1
+ [as obtained
+from Eq. (11)]. In Fig. 21, it appears that both models fail to predict
+the large negative values of the production term, based on the
+maximum and minimum values reported in the ﬁgures. However,
+these large negative values only appear on the wall at certain
+locations at the front edge of the jet, where the production term of the
+exact " equation has large maxima and minima (see Fig. 22a). In the
+jet region, it can be seen that the model using C k2 ="Re as the eddy
+
+Fig. 21 Three-dimensional view of production term from exact "
+equation [Eq. (9)] vs modeled term.
+
+viscosity greatly overpredicts the production term. The model using
+Re1
+ [as obtained from Eq. (11)] results in values much closer to that
+computed from the exact " equation, although it also overpredicts the
+production in the jet region. Note that both of the models predict a
+zero value for production on the wall, whereas there is no reason why
+the actual term in the exact " equation will be zero (see Fig. 21a). For
+the standard k–" model (2C"1 C kSi;j Si;j Re) this zero value on the
+wall is a result of k being zero on the wall. For the model using Re1
+
+for the eddy viscosity, it is more complicated due to the term
+k1 Re1
+ , which results in 0=0 on the wall. In the present work, this
+has been deﬁned to be zero. The production term is modeled as a
+positive term in the standard k–" model; however, on the wall in the
+recirculation region behind the jet, it assumes large negative values.
+Note that negative values are allowed in the model that uses Re1
+ , as
+Re1
+ may be negative and indeed is so in part of the recirculation
+region.
+As the destruction term in the exact " equation is believed to be
+primarily negative, the standard k–" model represents this term by an
+expression [C"2 "2 =kRe] that is always less than or equal to zero.
+Figure 23 shows that this term, as computed from the exact "
+equation, has very large negative values next to and on the wall, but
+that it is positive (although small) in the jet region away from the
+wall. The model underpredicts the destruction term in the
+recirculation region behind the jet. The destruction term, as
+computed from both the exact " equation and the model, shows
+signiﬁcant negative values within the horseshoe vortex at x 5d,
+although only in the model does this persist downstream. Note that as
+a result of division by k the model is ill-behaved in parts of the ﬂow,
+such as the freestream where k approaches zero, near the wall where k
+also approaches zero, and at the wall where k is zero.
+Figure 24 compares the turbulent diffusion term of the exact "
+equation with two models, @=@xj C Re=" k2 ="@"=@xj  and
+@=@xj Re1
+ =" @"=@xj , used to represent it. Again, the only
+difference between these two models is that, for the eddy viscosity,
+the ﬁrst uses C k2 ="Re whereas the second uses Re1
+ [as obtained
+from Eq. (11)]. As is the case for the production term of the exact "
+equation, the maximum and minimum values of the turbulent
+diffusion term from the exact " equation occur on the wall at certain
+locations at the front edge of the jet (see Fig. 22b). In the jet region,
+the model using C k2 ="Re as the eddy viscosity greatly under- and
+overpredicts turbulent diffusion, whereas the model using Re1
+ is a
+signiﬁcant improvement. This overprediction by the model using
+C k2 ="Re is also seen in the horseshoe vortex system. However,
+
+Fig. 23 Three-dimensional view of destruction term from exact "
+equation [Eq. (9)] vs model.
+
+3019
+
+MULDOON AND ACHARYA
+
+.6
+
+.6
+
+fDNS
+µ
+
+1
+.8
+
+fDNS
+µ
+
+1
+.8
+
+.2
+
+.2
+
+.4
+
+.4
+
+0
+0
+
+.1
+
+a)
+Fig. 25
+
+y
+
+.2
+
+.3
+
+0
+0
+
+50
+
+y+ 100
+
+150
+
+b)
+Damping function at z  0 at different x locations.
+
+.6
+
+x=8d
+x=10d
+x=13d
+
+.5
+
+fDNS
+µ
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+.4
+
+.3
+
+Fig. 24 Turbulent diffusion term from exact " equation [Eq. (9)] vs
+models.
+
+both models qualitatively predict the behavior of this term correctly,
+as both predict a positive region at the outer edge of the jet, a negative
+region inside this, and another positive region inside the negative
+region.
+G.
+
+Damping Function
+
+A serious problem with the standard k–" model is that it
+overpredicts the eddy viscosity (see Fig. 11). This error can be
+reduced by the use of what is termed a damping function, designed to
+reduce or damp the eddy viscosity. The damping function (fdns ) used
+in the present work is intended for use as in Eq. (12).
+ u0i u0j  fdns C
+
+k2
+2
+Re2Si;j  ki;j
+3
+"
+
+(12)
+
+Equating Eq. (6) with Eq. (12) yields a deﬁnition of the damping
+function [Eq. (13)] where all terms on the right-hand side are
+determined from DNS data.
+fdns 
+
+Re1
+
+C k2 ="Re
+
+(13)
+
+From the DNS data fdns is deﬁned at every discrete point in the
+spatial domain. For practical use, however, it must be a simple
+expression of variables available in turbulence models. There are
+various damping functions in the literature [17]; generally, if
+designed using DNS data, they have been obtained from simple ﬂows
+such as ﬂow in a channel or a boundary layer in which two directions
+are homogeneous. The damping function is commonly
+made a
+p
+function of a nondimensional distance [y  y =@u=@y]
+from the wall. The damping function proposed by Rodi and Mansour
+[17] was obtained by ﬁtting a function dependent on y to DNS data
+for a channel ﬂow. However, the use of this nondimensional distance
+to construct a damping function for a highly three-dimensional ﬂow,
+with no homogeneous directions, is problematic. Figure 25 shows
+that plotting fdns vs y does not collapse well, whereas it does so if
+plotted against y. The reason for this is that, unlike in a channel ﬂow,
+the wall shear is not a constant but instead varies across the wall in
+both directions; indeed there are places, such as in the recirculation
+region behind the jet, where the wall shearpmay
+be zero. This
+
+ makes it
+impossible to parameterize with y  y =@u=@y.
+The damping function does correlate well with the wall normal
+turbulent ﬂuctuations normalized by the turbulent kinetic energy
+
+.2
+
+.1
+
+0
+
+0
+
+.1
+
+.2
+
+.3
+
+v′v′/k
+
+.4
+
+Fig. 26 Damping function as a function of v0 v0 =k at z  0d at different
+x locations.
+
+v0 v0 =k. The behavior of the damping function is that it increases
+approximately linearly in y in the wall normal direction from zero at
+the wall to 12 in the freestream. Plotting the damping function vs
+v0 v0 =k shows a linear relationship in a certain region. However, the
+damping function is not a unique one to one function of v0 v0 =k, so
+starting from zero at the wall or zero in the freestream there are two
+possible directions to take. The ﬁrst, which quickly leads to a peak in
+the damping function, is the same peak that occurs in the freestream;
+therefore, this branch is the one starting in the freestream. The second
+(which increases approximately linearly from zero and asymptotes to
+1
+) is the one starting at the wall and shown in Fig. 26. From this
+2
+behavior a simple equation can be written which approximates the
+dependence of the damping function on the wall normal turbulent
+ﬂuctuations [Eq. (14)].
+9
+8
+ 0 0  < 0:5 v0 v0
+=
+v0 v0
+v
+v
+for
+0
+0:375
+k
+ 0:375 k
+(14)
+fdns
+0
+0
+: 0:5
+k
+for v v > 0:375 ;
+k
+
+The purpose of this equation is to damp the eddy viscosity near the
+wall using the wall normal turbulent ﬂuctuations (which are very
+sensitive to the presence of a wall) as a measure of the distance from
+the wall. This idea is not new; the v2 f–k" model of Durbin [25,26] is
+based on this observation. Figure 27 shows the improvement
+obtained from the new damping function as the overprediction of the
+eddy viscosity is greatly reduced whereas the correct qualitative
+behavior of the eddy viscosity is maintained.
+Whereas the wall normal turbulent ﬂuctuations correlate well with
+the damping function, they are not available in a two-equation
+turbulent model such as the k–" model. Therefore Eq. (14) cannot be
+used with such turbulence models. A damping function for twoequation turbulent models
+p must be based on the variables available in
+such models. If = k is used as a characteristic length (based on
+the equilibrium assumption), a different nondimensional distance
+(y
+k ) from the wall can be deﬁned which correlates well with the
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+3020
+
+MULDOON AND ACHARYA
+
+Fig. 27 a) Eddy viscosity computed from Eq. (11), b) modeled eddy
+viscosity with new damping function Eq. (14), c) modeled eddy viscosity.
+
+Fig. 29 a) Eddy viscosity computed from Eq. (11), b) modeled eddy
+viscosity with new damping function Eq. (15), c) modeled eddy viscosity.
+
+.6
+
+.5
+
+.4
+
+DNS
+
+fµ , x=10d
+fµDNS, x=13d
++
+fµ(yk)
+
+.3
+
+.2
+
+.1
+
+0
+
+0
+
+100
+
+200
+
+300
+
+400
+
+y+k 500
+
+600
+
+700
+
+800
+
+900
+
+Fig. 28 Damping function at z  0d, 0  y  0:9.
+
+damping function. With the nondimensionalization
+used in the
+p
+present work, this results in y
+k  y kRe. When the damping
+function is plotted (Fig. 28) against y
+k , similar behavior is found as
+when plotted against v0 v0 =k. Equation (15) gives a simple expression
+which captures the behavior of the damping function as a function of
+y
+k well (see Fig. 28).
+ 0:5 
+
+yk for 0 y
+170
+dns 
+k
+170
+(15)
+f yk  
+0:5
+for y
+k > 170
+Figure 29 shows the result of using Eq. (15); it is similar to the
+improvement obtained from the damping function based on v0 v0 =k
+[Eq. (14)] but may be used with two-equation turbulence models.
+
+IX.
+
+Conclusions
+
+Using direct numerical simulation, all terms in the exact k and "
+equations have been computed and compared with the standard k–"
+model for a ﬁlm cooling jet ﬂow. The effect of the grid spacing on the
+results using three different grids has been studied and along with the
+spatial energy spectrum shows that the important turbulent scales
+have been resolved. The residuals of the exact k and " equations
+decrease as the grid spacing decreases, indicating that the terms in
+these equations have been properly computed.
+
+Unlike a channel ﬂow, the terms in the exact k and " equations that
+contain correlations involving pressure have been shown to be
+signiﬁcant for a ﬁlm cooling jet. In addition, the correlations
+involving pressure have been shown to behave differently than the
+correlations involving just the velocity, contrary to what is typically
+assumed. This is of interest as turbulence models commonly model
+these two terms as a single diffusion process.
+The eddy viscosity concept has been tested extensively by
+comparing the terms in the exact k and " equations computed from
+DNS to the standard k and " models for the terms and also to the same
+standard k and " models using an eddy viscosity obtained from DNS.
+The greatest weakness in the standard k–" model has been shown to
+be the choice of the eddy viscosity. If the eddy viscosity is chosen by
+a method that applies a minimization procedure to the DNS data, the
+various models for the terms in the exact k and " equations represent
+the terms relatively well. Therefore the challenge is to improve the
+model for the eddy viscosity. A step is made in this direction by two
+proposed new damping functions. The ﬁrst damping function is
+based on the wall normal turbulent ﬂuctuations and is shown to
+greatly reduce the overprediction of the eddy viscosity in the
+standard k–" model. However, this damping function based on the
+wall normal turbulent ﬂuctuations cannot be used with two-equation
+turbulence models such as the standard k–" model. To alleviate this
+problem, a second new damping function is proposed which can be
+used by two-equation turbulence models. This damping function is
+based on a nondimensional distance from the wall and is shown to
+greatly improve the computation of the eddy viscosity in the standard
+k–" model.
+
+Acknowledgments
+This work was supported by the Ofﬁce of Naval Research and the
+Center for Computation and Technology at Louisiana State
+University. The simulations were run on workstations at the Center
+for Computation and Technology at Louisiana State University, the
+Linux Xeon cluster SuperMike and Helix at Louisiana State
+University, the IBM machine Casper at Louisiana State University,
+and an IBM SP4 at the Arctic Region Supercomputing Center.
+
+References
+[1] Hoda, A., and Acharya, S., “Predictions of a Film Coolant Jet in
+Crossﬂow With Different Turbulence Models,” Journal of
+Turbomachinery, Vol. 122, No. 3, 2000, pp. 558–569.
+
+Downloaded by Columbia University on April 28, 2025 | http://arc.aiaa.org | DOI: 10.2514/1.20597
+
+MULDOON AND ACHARYA
+
+[2] Wilcox, D., Turbulence Modeling for CFD, Birmingham Press, Inc.,
+San Diego, CA, 1993.
+[3] Ajersch, P., Zhou, J.-M., Ketler, S., Salcudean, M., and Gartshore, I. S.,
+“Multiple Jets in a Crossﬂow: Detailed Measurements and Numerical
+Simulations,” ASME Paper 95-GT-9, 1995.
+[4] He, P., Salcudean, M., and Gartshore, I. S., “Computations of Film
+Cooling for the Leading Edge Region of a Turbine Blade Model,”
+ASME Paper 95-GT-20, 1995.
+[5] Berhe, M. K., and Patankar, S. V., “A Numerical Study of DiscreteHole Film Cooling,” ASME Paper 96-WA/HT-8, 1996.
+[6] Berhe, M. K., and Patankar, S. V., “Computation of Discrete-Hole Film
+Cooling: A Hydrodynamic Study,” ASME Paper 97-GT-80, 1997.
+[7] Harrington, M. K., McWaters, M. A., Bogard, D. G., Lemmon, C. A.,
+and Thole, K. A., “Full-Coverage Film Cooling with Short Normal
+Injection Holes,” ASME Paper 2001-GT-0130, 2001.
+[8] Radomsky, R. W., and Thole, K. A., “Measurements and Predictions of
+a Highly Turbulent Flowﬁeld in a Turbine Vane Passage,” Journal of
+Fluids Engineering, Vol. 122, No. 1, 2000, pp. 666–676.
+[9] Medic, G., and Durbin, P., “Toward Improved Prediction of Heat
+Transfer on Turbine Blades,” Journal of Turbomachinery, Vol. 124,
+No. 2, 2002, pp. 187–192.
+[10] Medic, G., and Durbin, P., “Toward Improved Film Cooling
+Prediction,” Journal of Turbomachinery, Vol. 124, No. 2, 2002,
+pp. 193–199.
+[11] Hahn, S., and Choi, H., “Unsteady Simulation of Jets in Crossﬂow,”
+Journal of Computational Physics, Vol. 134, No. 2, 1997, pp. 342–356.
+[12] Muldoon, F., and Acharya, S., “Numerical Investigation of the
+Dynamical Behavior of a Row of Square Jets in Crossﬂow over a
+Surface,” ASME Paper 98-GT-019, 1999.
+[13] Tyagi, M., and Acharya, S., “Large Eddy Simulations of Rectangular
+Jets in Crossﬂow: Effect of Hole Aspect Ratio,” Recent Advances in
+DNS and LES, Second AFSOR Conference on DNS/LES, edited by D.
+Knigh and L. Sakell, Springer–Verlag, New York, 1999, pp. 431–442.
+[14] Tyagi, M., and Acharya, S., “Large Eddy Simulations of Jets in
+Crossﬂow: 2, Effect of Freestream Turbulence Length Scale Effects,”
+Journal of Energy, Heat and Mass Transfer, Vol. 25, No. 1, 2003,
+pp. 95–116.
+[15] Tyagi, M., and Acharya, S., “Large Eddy Simulations of Jets in
+Crossﬂow: Freestream Turbulence Intensity Effects,” ASME-FEDSM
+
+3021
+
+Paper 99-7799, 1999.
+[16] Mansour, N. N., Kim, J., and Moin, P., “Reynolds Stress and
+Dissipation-Rate Budgets in a Turbulent Channel Flow,” Journal of
+Fluid Mechanics, Vol. 194, No. 2, 1988, pp. 15–44.
+[17] Rodi, W., and Mansour, N. N., “Low Reynolds Number k–e Modeling
+with the Aid of Direct Simulation Data,” Journal of Fluid Mechanics,
+Vol. 250, May 1993, pp. 509–529.
+[18] Muldoon, F., “Numerical Methods for the Unsteady Incompressible
+Navier-Stokes Equations and Their Application to the Direct Numerical
+Simulation of Turbulent Flows,” Ph.D. Thesis, Louisiana State Univ.,
+Baton Rouge, LA, 2004.
+[19] Launder, B. E., and Spalding, D. B., “The Numerical Computation of
+Turbulent Flows,” Computer Methods in Applied Mechanics and
+Engineering, Vol. 3, 1974, pp. 269–275.
+[20] Kaszeta, R. W., “Measurements in Film Cooling Flows with Lateral
+Injection,” M.S. Thesis, Univ. of Minnesota, 1998.
+[21] Kolmogoroff, A. N., “The Local Structure of Turbulence in
+Incompressible Viscous Fluid for Very Large Reynolds Number,”
+Comptes Rendus de l’Academie des Sciences de l’URSS / Doklady
+Akademii Nauk SSSR, Vol. 30, 1941, pp. 301–305.
+[22] Oran, E. S., and Boris, J. P., Numerical Simulation of Reactive Flow,
+Press Syndicate of the University of Cambridge, Cambridge, England,
+U.K., 2001.
+[23] Voke, P. R., Yang, Z., and Gao, S., “Extracting Reynolds-Stress and
+Dissipation Budgets from Finite Volume Simulations of Turbulence,”
+International Journal of Computational Fluid Dynamics, Vol. 8, 1997,
+pp. 115–128.
+[24] Fric, T. F., and Roshko, A., “Vortical Structure in the Wake of a
+Transverse Jet,” Journal of Fluid Mechanics, Vol. 279, Nov. 1994,
+pp. 1–47.
+[25] Durbin, P. A., “Near-Wall Turbulence Closure Modeling Without
+’Damping Functions’,” Theoretical and Computational Fluid
+Dynamics, Vol. 3, No. 1, 1991, pp. 1–13.
+[26] Durbin, P. A., “Separated Flow Computations with the K-e-Vv Model,”
+AIAA Journal, Vol. 33, No. 4, 1995, pp. 659–664.
+
+P. Givi
+Associate Editor
+
+

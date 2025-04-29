@@ -1,0 +1,1500 @@
+Differential Privacy: An Economic Method for Choosing Epsilon
+Justin Hsu
+
+Marco Gaboardi
+
+arXiv:1402.3329v1 [cs.DB] 13 Feb 2014
+
+Arjun Narayan
+
+Andreas Haeberlen
+
+Benjamin C. Pierce
+
+Sanjeev Khanna
+
+Aaron Roth
+
+February 17, 2014
+Abstract
+Differential privacy is becoming a gold standard for privacy research; it offers a guaranteed bound
+on loss of privacy due to release of query results, even under worst-case assumptions. The theory of
+differential privacy is an active research area, and there are now differentially private algorithms for a
+wide range of interesting problems.
+However, the question of when differential privacy works in practice has received relatively little
+attention. In particular, there is still no rigorous method for choosing the key parameter ε , which controls
+the crucial tradeoff between the strength of the privacy guarantee and the accuracy of the published
+results.
+In this paper, we examine the role that these parameters play in concrete applications, identifying
+the key questions that must be addressed when choosing specific values. This choice requires balancing
+the interests of two different parties: the data analyst and the prospective participant, who must decide
+whether to allow their data to be included in the analysis. We propose a simple model that expresses this
+balance as formulas over a handful of parameters, and we use our model to choose ε on a series of simple
+statistical studies. We also explore a surprising insight: in some circumstances, a differentially private
+study can be more accurate than a non-private study for the same cost, under our model. Finally, we
+discuss the simplifying assumptions in our model and outline a research agenda for possible refinements.
+
+1 Introduction
+Protecting privacy is hard: experience has repeatedly shown that when owners of sensitive datasets release
+derived data, they often reveal more information than intended. Even careful efforts to protect privacy often
+prove inadequate—a notable example is the Netflix prize competition, which released movie ratings from
+subscribers. Although the data was carefully anonymized, Narayanan and Shmatikov were later able to
+“de-anonymize” some of the private records [35].
+Privacy breaches often occur when the owner of the dataset uses an incorrect threat model—e.g., they
+make wrong assumptions about the knowledge available to attackers. In the case of Netflix, Narayanan and
+Shmatikov had access to auxiliary data in the form of a public, unanonymized data set (from IMDB) that
+contained similar ratings. Such errors are difficult to prevent, since this requires reasoning about all the
+information that could be (or become) available to an attacker.
+One way through this dilemma is to make sure that every computation on sensitive data satisfies differential privacy [16]. This gives a very strong guarantee: if an individual’s data is used in a differentially
+private computation, the probability of any given result changes by at most a factor of eε , where ε is a parameter controlling the tradeoff between privacy and accuracy. Differential privacy impresses by the long
+list of assumptions it does not require: it is not necessary to know what information an attacker has, whether
+attackers are colluding, or what the attackers are looking for.
+1
+
+But there is one question that users of differential privacy cannot avoid: how to choose the privacy
+parameter ε . It is the central parameter controlling strength of the privacy guarantee, and hence the number
+of queries that can be answered privately as well as the achievable accuracy. But ε is also a rather abstract
+quantity, and it is not clear how to choose an appropriate value in a given situation. This is evident in the
+literature [32, 7, 30, 24, 5, 31, 6, 28, 38, 8, 2, 41, 43, 27, 9, 12, 40, etc.], where algorithms have been
+evaluated with ε ranging from as little as 0.01 to as much as 7, often with no explanation or justification. A
+similar concern applies to a second parameter δ in (ε , δ )-differential privacy, a standard generalization of
+differential privacy [15].
+In this paper, we take a step towards a more principled approach by examining the impact of ε and δ on
+the different actors in a differentially private study: the data analyst, and the prospective participants who
+contribute private data. We propose a simple model that can be used to calculate a range of acceptable values
+of ε and δ , based on a few parameters of the study. Our model assumes that the participants are rational and
+will choose to contribute their data if their expected benefits (i.e., monetary compensation) from the study
+outweigh the risks (i.e., the bad events that may befall them as a result of their private data being exposed).
+To demonstrate our model, we use it to choose ε in a series of case studies. We start by presenting the
+different parameters of our model, in the simplest situation where the analyst is interested in the result of
+only one query. Then, we consider a more realistic setting where the analyst wants to answer thousands of
+queries. Next, we show how our model can incorporate constraints specific to a particular study. Finally,
+we apply our model to a more accurate study under (ε , δ )-differential privacy. Throughout these examples,
+we vary the input parameters to our model through four scenarios—a clinical study of smokers, a study of
+educational data, a study of movie ratings, and a social network study—and show how the conclusions of
+our model change.
+We also find that—somewhat counterintuitively—a study with strong differential privacy guarantees can
+sometimes be cheaper or (given a fixed budget) more accurate than an equivalent study without any privacy
+protections: while a differentially private study requires considerably more participants to account for the
+additional noise, it substantially reduces the risks of each participant and thus lowers the compensation that
+rational participants should demand.
+Our model provides a principled way to choose reasonable values for ε and δ based on parameters with
+more immediate connections to the real world. For many applications of differential privacy, this level of
+guidance may already be useful. However, like any model, ours relies on some simplifying assumptions;
+for instance, we assume that participants fear some specific bad events when participating in the study, and
+that they can estimate their expected cost from these events even when they do not participate in the study.
+Some applications may require a more detailed model, and we consider possible refinements.
+Our main contributions are: (1) a principled approach to choosing the privacy parameter ε for differentially private data analysis (Section 4); and (2) three case studies: a simple one-query study, a more
+sophisticated study answering many queries (Section 5), and a study with external constraints (Section 7.3);
+and (3) an extension of our model to (ε , δ )-differential privacy (Section 8). As an application of our model,
+we consider when a differentially private study can be cheaper than a non-private study (Section 6). We
+discuss possible extensions of our model in Section 9, and review related work in Section 10. Finally, we
+conclude in Section 11.
+
+2 Background: Differential privacy
+Before describing our model, let us briefly review the core definitions of ε -differential privacy. (We defer
+the generalization of (ε , δ )-differential privacy to Section 8.)
+2
+
+Differential privacy [16] is a quantitative notion of privacy that bounds how much a single individual’s
+private data can contribute to a public output. The standard setting involves a database of private information
+and a mechanism that calculates an output given the database. More formally, a database D is a multiset of
+records belonging to some data universe X , where a record corresponds to one individual’s private data.
+We say that two databases are neighbors if they are the same size and identical except for a single record.1 A
+mechanism M is a randomized function that takes the database as input and outputs an element of the range
+R.
+Definition 1 ([16]). Given ε ≥ 0, a mechanism M is ε -differentially private if, for any two neighboring
+databases D and D′ and for any subset S ⊆ R of outputs,
+Pr[M(D) ∈ S] ≤ eε · Pr[M(D′ ) ∈ S].
+
+(1)
+
+Note that S in this definition is any subset of the mechanism’s range. In particular, when S is a singleton
+set {s}, the definition states that the probability of outputting s on a database D is at most eε times the
+probability of outputting s on any neighboring database D′ .
+For an intuitive reading of Definition 1, let x be an individual in database D, and let D′ contain the same
+data as D except with x’s data replaced by default data. Then, the differential privacy guarantee states that
+the probability of any output of mechanism M is within an eε multiplicative factor whether or not x’s private
+data is included in the input. Hence, the parameter ε controls how much the distribution of outputs can
+depend on data from the individual x.
+The definition also implies a lower bound: swapping D and D′ yields eε · Pr[M(D) ∈ S] ≥ Pr[M(D′ ) ∈ S],
+or
+(2)
+Pr[M(D) ∈ S] ≥ e−ε · Pr[M(D′ ) ∈ S].
+That is, the probability of an output in S on a database D is at least e−ε times the probability of an output in
+S on a neighboring database D′ .2
+
+2.1 The Laplace and exponential mechanisms
+The canonical example of a differentially private mechanism is the Laplace mechanism.
+Theorem 2 ([16]). Suppose ε , c > 0. A function g that maps databases to real numbers is c-sensitive if
+|g(D) − g(D′ )| ≤ c for all neighboring D, D′ . For such a function, the Laplace mechanism is defined by
+Lc,ε (D) = g(D) + ν ,
+where ν is drawn from the Laplace distribution Lap(c/ε ), that is, with probability density function
+
+
+−ε |ν |
+ε
+F(ν ) = exp
+.
+2c
+c
+This mechanism is ε -differentially private.
+1 The standard definition of differential privacy [16] is slightly different: it says that neighboring databases are identical, except
+one has an additional record. We use our modified definition since we will assume the database size is public, in which case
+neighboring databases have the same size.
+2 For example, if Pr[M(D) ∈ S] = 0 for some D and S, then Pr[M(D′ ) ∈ S] = 0 for all databases D′ —if some outputs are
+impossible on one input database, they must be impossible on all inputs.
+
+3
+
+Pr
+
+c
+
+f (·)
+Figure 1: Probability distributions of the Laplace mechanism for a c-sensitive function on two neighboring
+databases.
+The scale c/ε of the Laplace distribution controls its spread: the distribution is wider for more sensitive
+functions (larger c) or stronger privacy guarantees (smaller ε ), giving a higher probability of adding more
+noise.
+For example, suppose that we have a database D of medical information and we wish to compute the proportion of smokers in a differentially private way. If the database has N records, define
+g(D) = #(smokers in D)/N. Notice that, on any two neighboring databases, this proportion changes by
+at most 1/N, since the numerator changes by at most 1 if a single record is altered. Thus, L(D) = g(D) + ν ,
+where ν ∼ Lap(1/N ε ) is an ε -differentially private mechanism.
+
+2.2 Key benefits
+A key benefit of differential privacy lies in its worst-case assumptions. As discussed above, it is difficult to
+reason about what auxiliary information might be available to the adversary. Differential privacy avoids this
+problem by making no assumptions about the adversary’s knowledge. Even knowing all but one record of the
+database does not help the adversary learn the last record: the output of a differentially private mechanism
+has approximately the same distribution no matter what that record contains. (Of course, in typical scenarios,
+the adversary has far less information than this, but making this worst-case assumption avoids losing sleep
+wondering exactly what the adversary knows or can deduce.)
+A second convenient feature of differential privacy is its flexible framework—the statistical guarantees
+provided by differential privacy hold regardless of the particular form of the records, the space of possible
+outputs, and the way in which the mechanism operates internally. Furthermore, these guarantees are preserved under arbitrary post-processing: given a differentially private mechanism M and a function f on the
+outputs, the composition f ◦ M is differentially private. Hence, outputs of a differentially private mechanism
+can be further transformed at no additional risk to privacy.
+A third useful property of differential privacy is compositionality—the privacy guarantee degrades gracefully when composing private mechanisms together. For example, running k ε -differentially private mechanisms (in series or in parallel) will yield a kε -private mechanism [18]. This allows straightforward construction of more complex algorithms out of simpler primitives, while preserving privacy.
+Now, let us take a closer look at the central parameter in the definition: ε .
+
+3 Interpreting ε
+A natural interpretation of differential privacy is in terms of bad events. For concreteness, let the mechanism
+be a scientific study, and suppose the individual has a choice to contribute data.3 Let U be the space of all
+3 In some situations, it is not natural to think of the individual as having a choice in participating. For instance, when an individual visits a website, the server can record information from this event—the individual may not even notice that her information
+
+4
+
+real-world events, and suppose E ⊆ U is a set of events such that, if the output of the mechanism is fixed,
+an individual’s participation has no effect on the probabilities of events in E (we will make this more precise
+below).4 Note that probabilities of events in E may still depend on the output of the mechanism. Roughly,
+E can be thought of as the set of privacy violation events.
+To connect the outputs of the mechanism to the real-world events in E , we imagine two runs of the
+mechanism: one with x’s real data and one with dummy data,5 holding the other records fixed in both runs.
+Let x p be the event “x participates,” xnp be the event “x does not participate,” and R be the output of the
+mechanism (a random variable). For any event e ∈ E , the probability of event e if x participates in the study
+is
+Pr[e | x p ] = ∑ Pr[e | x p , R = r] · Pr[R = r | x p ].
+r∈R
+
+We say that events cannot observe x’s participation if all the differences between the two trials are due to
+differences in the output: if the output is the same in both trials, the probability of events in E should be the
+same. That is, the first probability under the summation is the same assuming event x p or xnp .
+By differential privacy (Equation (1)), the second probability is bounded by eε times the probability of
+output r if x does not participate:
+
+∑ Pr[e | x p, R = r] · Pr[R = r | x p ] = ∑ Pr[e | xnp , R = r] · Pr[R = r | x p]
+
+r∈R
+
+r∈R
+ε
+
+≤ e · ∑ Pr[e | xnp , R = r] · Pr[R = r | xnp ] = eε · Pr[e | xnp ],
+r∈R
+
+where the first equality is from our assumption that events in E cannot observe x’s participation. In particular,
+if e is a bad event in E , the probability of e increases by at most a factor eε when the individual participates
+compared to when the individual does not participate. Hence, the interpretation of privacy in terms of
+bad events: under differential privacy, events in E will not increase much in probability if an individual
+participates or not.6
+We stress an important non-benefit: differential privacy does not protect a participant from ever coming
+to harm. Indeed, it is hard to see how anything can—what if the event was already going to happen, even
+if the participant had declined to participate in the study? Instead, the guarantee states that harmful events
+do not become much more likely if an individual participates. For example, a differentially private medical
+study cannot promise that participants will continue to pay the same amount for health insurance. Rather,
+participating in the study increases the risk of a rise in premiums by at most a small factor, compared with
+declining to participate.
+Since differential privacy bounds the multiplicative change in probabilities, the probability of a likely
+event may change significantly in absolute terms. Thus, the differential privacy guarantee is stronger for
+events that are very unlikely to happen if the individual does not participate. This is arguably true of most
+unpleasant events concerning private data: for instance, the probability that an individual’s genome is released if they do not participate in a genetic study is typically low.
+is being aggregated. However, the standard setting for differential privacy assumes that the individual can freely decide whether or
+not to participate, so this is a good place to begin; section 7.3 discusses an alternative situation.
+4 Events that do not satisfy this technical condition may not be protected by differential privacy; further details about this issue
+can be found in Appendix A.
+5 This can be thought of as a default record, or even random data.
+6 By a similar calculation applying Equation (2), we have Pr[e | x ] ≥ e−ε Pr[e | x ]. In particular, if e is a beneficial event in E ,
+p
+np
+this bound means that e will not become much less likely if the individual decides to participate.
+
+5
+
+3.1 Introducing cost
+Of course, not all bad events are equally harmful. To model this fact, we can assign a cost to each event.
+Specifically, suppose the potential participant has a non-negative event cost function fE on the space of
+events E . Let R again be the output of mechanism M, and define the associated output cost function f on
+the space of outputs R by
+f (r) = Ee∈E [ fE (e) | R = r].
+Note that
+Ee∈E [ fE (e) | x p ] = Er∈R [ f (r) | x p ],
+and similarly with xnp instead of x p , so bounds on the expected value of f carry over to bounds on the
+expected value of fE . Thus, the individual need not reason about the set of outputs R and the output cost
+function f directly; they can reason just about costs of real-world events, represented by fE .7
+Using the differential privacy guarantee, we can bound the expected cost of participating in the study:8
+e−ε E [ f (r) | xnp ] ≤ E [ f (r) | x p ] ≤ eε E [ f (r) | xnp ]
+r∈R
+
+r∈R
+
+(3)
+
+r∈R
+
+In other words, the expected cost of x participating in a study is within an eε factor of the expected cost of
+declining.
+Note that E and the cost function f have a large impact on the expected cost: for instance, if E contains
+bad events that will not actually be affected by the output of the mechanism, such as the event that an asteroid
+impact destroys civilization, the participant’s perceived increase in expected cost may be prohibitively (and
+unjustifiably) large.
+In general, the question of what events a differentially private study may be responsible for (i.e., what
+events should be in E ) is not a purely technical question, and could conceivably be handled by the legal
+system—just as laws describe who is liable for bad events, perhaps laws could also describe which events a
+private mechanism is liable for. Accordingly, our model does not specify precisely which events to put in E ,
+as long as they do not depend directly on the individual’s participation. For our examples, we will consider
+events that clearly can result from running a private mechanism.
+
+3.2 The challenge of setting ε
+So far, we have considered what ε means for the participant: higher values of ε lead to increases in expected
+cost. As we will soon see, there is another important consideration: ε controls how much noise is needed to
+protect privacy, so it has a direct impact on accuracy.
+This is the central tension—abstractly, ε is a knob that trades off between privacy and utility. However,
+most prior work (we discuss some exceptions in Section 10) focuses on how the knob works rather than how
+it should be set. High-level discussions about setting ε tend to offer fairly generic guidance, for example
+7 This is important, since reasoning precisely about how outputs of a mechanism influence events in the real world can be very
+
+difficult.
+8 For one direction,
+E [ f (r) | x p ] = ∑ Pr[R = r | x p ] · f (r)
+
+r∈R
+
+r∈R
+
+≤
+
+E [ f (r) | xnp ].
+∑ eε Pr[R = r | xnp ] · f (r) = eε · r∈R
+
+r∈R
+
+Note that the inequality requires f (r) ≥ 0. The other direction is similar, appealing to Equation (2).
+
+6
+
+reasoning that a 10% increase in the probability of a bad event that is already very improbable is a minor
+concern, so 0.1 is a sensible value for ε . On the other hand, experimental evaluations of differential privacy,
+where a concrete choice of ε is required, often just pick a value (ranging from 0.01 [40] to 7 [31]) with little
+justification.
+In a sense, the difficulty of choosing ε is a hidden consequence of a key strength of differential privacy:
+its extreme simplicity. That is, ε is difficult to think about precisely because it rolls up into a single parameter a fairly complex scenario involving at least two parties with opposing interests (the analyst and the
+participants), as well as considerations like compensating individuals for their risk.
+Our goal in this paper is to unpack this complexity and offer a more ramified model with more intuitive
+parameters.
+
+4 A two-party model
+We propose a simple model for choosing ε , involving two rational parties: a data analyst and an individual
+considering whether to participate in the analyst’s study.
+
+4.1 The analyst’s view
+The analyst’s goal is to conduct a study by running a private mechanism, in order to learn (and publish)
+some useful facts. The analyst’s main concern is the accuracy AM of the mechanism’s result, with respect to
+some benchmark.
+One natural benchmark is the “true answer” for the non-differentially-private version of the study, which
+we call the sample statistic. Compared to this standard, the error in a private study is due entirely to noise
+added to preserve privacy. This error is determined partly by ε , but also can depend on N, the number of
+records in the analyst’s database: if a larger number of records leads to less privacy loss to any individual,
+less noise is needed to protect privacy.9
+Another possible benchmark is the true answer on the entire population, which we call the population
+statistic. This is the natural benchmark when we want to infer properties of the population, given only a
+random sample of individual data (here, the database). For this benchmark, an additional source of error is
+sampling error: the degree to which the sample is not perfectly representative of the population. This error
+tends to decrease as N increases: larger samples (databases) are more representative. This error is not due
+to differential privacy and so is independent of ε .
+Since these errors typically decrease as N increases, the analyst might like to conduct huge studies,
+were it not for a second constraint: budget. Each individual in the study needs to be compensated for their
+participation, so the analyst can only afford studies of limited size. This gives us the ingredients for a model
+for the analyst.
+Definition 3. The analyst runs a private mechanism M parameterized by ε and N. The mechanism comes
+with a real-valued accuracy function AM (ε , N), where smaller values of AM (ε , N) correspond to more accurate results. (We will omit the subscript when the mechanism is clear.) The analyst wants a target accuracy
+α , and so requires that AM (ε , N) ≤ α . Finally, the analyst has a budget B to spend on the study.
+9 For example, if the Laplace mechanism is used to release an average value, the sensitivity of the underlying function depends
+on N: as N increases, the sensitivity decreases, so less noise is needed to achieve a given level of privacy.
+
+7
+
+Depending on what the analyst is trying to learn, he may be able to tolerate a lower or higher total
+error.10 In general, the analyst may have a utility function that quantifies how bad a specific amount of error
+is. Though our model can be extended to handle this situation, for simplicity we assume that the analyst
+cannot tolerate inaccuracy beyond the target level and is equally happy with any inaccuracy within this level.
+
+4.2 The individual’s view
+We next consider the individuals who might want to contribute their information to a database in exchange
+for payment. Study participants may want compensation for various reasons; for example, they may want
+a flat compensation just for their time. Even though our model can be extended to handle per-participant
+costs, for simplicity we do not consider this cost. Instead, we focus on the compensation most relevant to
+privacy: participants may face personal harm if their data is revealed, so they are willing to join the study
+only if they are adequately compensated for the risk they take. A simple way to model the individual’s risk
+is via a cost function f , as described in Section 2.
+We suppose the individual is offered a choice between participating in a study and declining, but the
+study will always take place. Our model does not say whether to run the study or not—are the study’s
+potential discoveries worth the potential (non-privacy-related) harm to individuals?11 Instead, we assume
+that some authority has decided that the study will take place, and the individual only gets to decide whether
+to participate or not. Thus, the individual participates only if they are compensated for their marginal
+increase in expected cost.
+From the interpretation of differential privacy in terms of bad events (Section 3), an individual’s expected cost should increase by at most an eε if she decides to participate in a study. There is one detail we
+need to attend to: our previous calculation of the marginal increase in cost depends on the probability of
+each possible output of the mechanism. This probability should be interpreted as taken over not only the
+randomness in the mechanism, but also over the uncertainty of an individual about the rest of the database.
+To make this point clearer, we separate these two sources of randomness in the calculation of the
+marginal increase in cost for a specific individual x. Let D be the set of all possible databases containing x’s record, and let E be x’s expected cost if she decides not to participate. Unpacking,
+E = E[ f (M(D))] =
+
+∑
+
+Pr[D = D∗ , s = M(D)] · f (s)
+
+s∈R,D∗ ∈D
+
+= ∑ Pr[D = D∗ ] · ∑ Pr[s = M(D) | D = D∗ ] · f (s),
+D∗ ∈D
+
+s∈R
+
+where Pr[D = D∗ ] encodes an individual’s belief about the contents of the entire database, and by extension
+an individual’s belief about the output of the mechanism run on the entire database. E represents an upper
+bound on the individuals’ beliefs about how much the study will cost them if they do not participate in
+the study. For example, a study might discover that people in a certain town are likely to have cancer—
+this knowledge could harm all the residents of the town, not just the participants. Similarly, if C is the
+individual’s expected cost if they do participate and y is any record in D (representing a default or dummy
+M (ε , N) is
+how far the private estimate p(v) is from v, i.e., AM (ε , N) = |p(v) − v|. Then, values of ε , N such that AM (ε , N) ≥ 1 do not promise
+useful accuracy—p(v) may give no information about v.
+11 Indeed, the difference in harm between running a study and not running the study may be very large: for instance, running a
+study may discover that smoking causes lung cancer, increasing costs for all smokers.
+10 For an extreme case, suppose the analyst wants to learn a target value v in the interval (0, 1) (say, a fraction), and A
+
+8
+
+record),
+C = E[ f (M(D ∪ x \ y))]
+=
+
+∑
+
+Pr[D = D∗ , s = M(D ∪ x \ y)] · f (s)
+
+s∈R,D∗ ∈D
+
+= ∑ Pr[D = D∗ ] · ∑ Pr[s = M(D ∪ x \ y) | D = D∗ ] · f (s).
+D∗ ∈D
+
+s∈R
+
+But the inner summation is the individual’s expected cost when the rest of the database is known to be D∗ .
+By Equation (3), we bound the increase of cost C if x participates (for any y):
+
+∑ Pr[s = M(D ∪ x \ y) | D = D∗] · f (s) ≤ eε ∑ Pr[s = M(D) | D = D∗] · f (s).
+
+s∈R
+
+s∈R
+
+Repacking the expressions for E and C, we get C ≤ eε E. Hence the individual’s marginal cost of participation C − E satisfies C − E ≤ eε E − E = (eε − 1)E.
+Now, we are ready to define a model for the individual.
+Definition 4. The individuals are offered a chance to participate in a study with a set level of ε for some
+payment. Each individual considers a space of real-world events that, conditioned on the output of the study
+and the database size, are independent of their participation.
+Each individual also has a non-negative cost function on this space, which gives rise to a non-negative
+cost function f on the space of outputs of the mechanism, and base cost E[ f (R)], where R is the random
+output of the mechanism without the individual’s data. Let E be an upper bound on the individual’s base
+costs. The individual participates only if they are compensated for the worst-case increase in their expected
+cost by participating: (eε − 1)E.
+Note the requirement on the space of bad events: we condition on the output of the mechanism, as well as
+the size of the database. Intuitively, this is because the size of the database is usually published. While such
+information may sometimes be private,12 it is hard to imagine conducting a study without anyone knowing
+how many people are in it—for one thing, the size controls the budget for a study. By this conditioning, we
+require that an adversary cannot infer an individual’s participation even if he knows both the database size
+and the output of the mechanism.
+
+4.3 Combining the two views
+To integrate the two views, we assume that the analyst directly compensates the participants. Suppose the
+analyst has total budget B; since N individuals need to be paid (eε − 1)E each, we have the following budget
+constraint:13
+(eε − 1)EN ≤ B
+
+(4)
+
+This constraint, combined with the analyst’s accuracy constraint AM (ε , N) ≤ α , determines the feasible
+values of N and ε . In general, there may not be any feasible values: in this case, the mechanism cannot
+12 In the worst case, an adversary may know the exact count of individuals with some disease to within 1, in which case publishing
+
+the number of individuals with the disease could violate an individual’s privacy.
+13 Since we do not consider compensating participants for their time (though our model can be extended to cover this case), the
+“budget” should be thought of as the cost needed to cover privacy-related harm, part of a potentially larger budget needed to conduct
+the study.
+
+9
+
+meet the requirements of the study. On the other hand, there may be multiple feasible values. These trade
+off between the analyst’s priorities and the individual’s priorities: larger values of ε and smaller values of N
+make the study smaller14 and more accurate, while smaller values of ε and larger values of N give a stronger
+guarantee to the individuals. In any case, feasible values of N and ε will give a study that is under budget,
+achieves the target accuracy, and compensates each individual adequately for their risk.
+Note that the payments depend on the particular study only through the E parameter—different studies
+require different data, which may lead to different base costs—and the ε parameter, which controls the
+privacy guarantee; other internal details about the study do not play a role in this model. By using differential
+privacy as an abstraction, the model automatically covers differentially private mechanisms in many settings:
+offline, interactive, distributed, centralized, and more. Further, the model can be applied whether the analyst
+has benevolent intentions (like conducting a study) or malicious ones (like violating someone’s privacy).
+Since differential privacy does not make this distinction, neither does our model.
+
+4.4 Deriving the cost E
+While the expected cost of not participating in a study may seem like a simple idea, there is more to it than
+meets the eye. For instance, the cost may depend on what the individuals believe about the outcome of the
+study, as well as what bad events individuals are worried about. The cost could even depend on prior private
+studies an individual has participated in—the more studies, the higher the base cost.
+Since individuals have potentially different beliefs about this cost, the analyst must be sure to offer
+enough payment to cover each individual’s expected cost. Otherwise, there could be sampling bias: individuals with high cost could decline to participate in the study. While the analyst would like to offer each
+individual just enough compensation to incentivize them to participate, this amount may depend on private
+data. Thus, we model the analyst as paying each individual the same amount, based on some maximum cost
+E.
+Even if this maximum expected cost is difficult to perfectly calculate in practice, it can be estimated
+in various ways: reasoning about specific bad events and their costs, conducting surveys, etc. While there
+has been work on using auctions to discover costs related to privacy [20, 29, 3, 13, 39], estimating this cost
+in a principled way is an area of current research. Therefore, we will not pick a single value of E for our
+examples; rather, we show how different values of E affect our conclusions by considering estimates for a
+few scenarios.
+Remark 5. Our goal in the following sections is to demonstrate how our model works in a simple setting; as
+such, we will consider studies with very primitive statistical analyses. As a result, the number of participants
+(and costs) required to achieve a given level of accuracy may be unrealistically high. There is a vast
+literature on sophisticated study design; more advanced methods (such as those underlying real medical
+studies) can achieve better accuracy for far less resources.
+
+5 A simple study
+In this section, we will show how to apply our model to a simple study that answers some queries about the
+database.
+14 In reality, the cost of the study also scales according to the size. It is not difficult to incorporate this into our model, but for
+
+simplicity we leave it out. Also, there may be a hard cap on the possible size of the study; we consider this situation in Section 7.3.
+
+10
+
+5.1 A basic example: estimating the mean
+Suppose we are the analyst, and we want to run a study estimating the proportion of individuals in the
+general population with some property P; we say this target proportion µ is the population mean. We also
+have a measure of accuracy A(ε , N) (which we define below), a target accuracy level α and a fixed budget
+provided by the funding agency.
+First, we specify our study. For any given N and ε , we will recruit N subjects to form a private database
+DN . We model the participants as being chosen independently and uniformly at random, and we consider
+the database DN as a random variable. (We sometimes call the database the sample.) We then calculate the
+proportion of participants with property P (the sample mean)—call it g(DN ). Since g is a 1/N-sensitive function, we release it using the ε -private Laplace mechanism by adding noise ν (ε , N) drawn from Lap(1/N ε )
+to g(DN ).
+Now, we can specify the accuracy function A(ε , N) of this study. In general, there are several choices
+of what A can measure. In this example, we will fix the desired error T and let A be the probability of
+exceeding this error. Here, we consider the deviation from the true population mean µ as our error. We say
+the mechanism fails if it exceeds the error guarantee T , so A is the failure probability. Thus, we define
+A(ε , N) := Pr[ |g(DN ) + ν (ε , N) − µ | ≥ T ].
+There are two sources of error for our mechanism: from the sample mean deviating from the population
+mean (|g(DN ) − µ |), and from the Laplace noise added to protect privacy (|ν (ε , N)|). Let us bound the first
+source of error.
+Theorem 6 (Chernoff Bound). Suppose {Xi } is a set of N independent, identically distributed 0/1 random
+variables with mean µ and sample mean Y = N1 ∑ Xi . For T ∈ [0, 1],
+
+−NT 2
+Pr[ |Y − µ | ≥ T ] ≤ 2 exp
+.
+3µ
+
+
+Assuming that our sample DN is drawn independently from the population, we can model each individual
+as a random variable Xi which is 1 with probability µ , and 0 otherwise. Then, the Chernoff bound is a bound
+on the probability of the sample mean g(DN ) deviating from the true proportion µ that we are interested
+in. Note that the sample must be free of sampling bias for this to hold—inferring population statistics from
+a non-representative sample will skew the estimates. This is why we must compensate participants so that
+they are incentivized to participate, regardless of their private data.
+Similarly, we use the following result to bound the second source of error, from adding Laplace noise.
+Theorem 7 (Tail bound on Laplace distribution). Let ν be drawn from Lap(ρ ). Then,
+
+
+T
+Pr[ |ν | ≥ T ] ≤ exp −
+.
+ρ
+Now, since the total error of the mechanism is the difference between the sample mean and the population mean plus the Laplace noise, if the output of the Laplace mechanism deviates from the population
+mean by at least T , then either the sample mean deviates by at least T /2, or the Laplace noise added is of
+magnitude at least T /2. Therefore, we can bound the failure probability A(ε , N) by
+Pr[ |g(DN ) − µ | ≥ T /2] + Pr[ |ν | ≥ T /2].
+11
+
+Consider the first term. Since µ ≤ 1, the Chernoff bound gives
+Pr[ |g(DN ) − µ | ≥ T /2] ≤ 2e−NT /12µ ≤ 2e−NT /12 .
+2
+
+2
+
+The tail bound on the Laplace distribution gives
+T Nε
+Pr[ |ν (ε , N)| ≥ T /2] ≤ exp −
+2
+
+
+
+
+,
+
+since we added noise with scale ρ = 1/ε N. Therefore, given a target accuracy α , the accuracy constraint is
+
+
+
+
+NT 2
+T Nε
+(5)
+A(ε , N) := 2 exp −
++ exp −
+≤ α.
+12
+2
+For the budget side of the problem, we need to compensate each individual by (eε − 1)E, according to our
+individual model. If our budget is B, the budget constraint is Equation (4):
+(eε − 1)EN ≤ B.
+Our goal is to find ε and N that satisfy this budget constraint, as well as the accuracy constraint Equation (5). While it is possible to use a numerical solver to find a solution, here we derive a closed-form
+solution. Eliminating ε and N from these constraints is difficult, so we find a sufficient condition on feasibility instead. First, for large enough ε , the sampling error dominates the error introduced by the Laplace
+noise. That is, for ε ≥ T /6,
+
+
+
+
+NT 2
+T Nε
+≤ exp −
+,
+exp −
+2
+12
+so it suffices to satisfy this system instead:
+
+−NT 2
+≤ α
+3 exp
+12
+(eε − 1)EN ≤ B.
+
+
+(6)
+
+Figure 2 gives a pictorial representation of the constraints in Equation (6). For a fixed accuracy α , the
+blue curve (marked α ) contains values of ε , N that achieve error α . The blue shaded region (above the α
+curve) shows points that are feasible for that accuracy—there, ε , N give accuracy better than α . The red
+curve (marked B) and red shaded region (below the B curve) show the same thing for a fixed budget B.
+The intersection of the two regions (the purple area) contains values of ε , N that satisfy both the accuracy
+constraint, and the budget constraint. Figure 3 shows the equality curves for Equation (6) at different fixed
+values of α and B.
+Solving the constraints for N, we need
+N ≥
+
+12 3
+ln .
+T2 α
+
+Taking equality gives the loosest condition on ε , when the second constraint becomes
+!
+BT 2
+ε ≤ ln 1 +
+.
+12E ln α3
+12
+
+(7)
+
+ε
+B
+
+α
+N
+Figure 2: Feasible ε , N, for accuracy α and budget B.
+
+ε
+B2
+B1
+
+α1
+α2
+N
+Figure 3: Constant accuracy curves for α1 < α2 , constant budget curves for B1 < B2
+Thus, combining with the lower bound on ε , if we have
+T
+BT 2
+≤ ε ≤ ln 1 +
+6
+12E ln α3
+
+!
+
+,
+
+(8)
+
+then the study can be done at accuracy α , budget B. Since we have assumed ε ≥ T /6, this condition is
+sufficient but not necessary for feasibility. That is, to deem a study infeasible, we need to check that the
+original accuracy constraint (Equation (5)) and budget constraint (Equation (4)) have no solution.
+For a concrete instance, suppose we want to estimate the true proportion with ±0.05 accuracy (5%
+additive error), so we take T = 0.05. We want this accuracy except with at most α = 0.05 probability, so
+that we are 95% confident of our result. If Equation (8) holds, then we can set ε = T /6 = 0.0083 and N at
+equality in Equation (7), for N ≈ 20000.
+For the budget constraint, let the budget be B = 3.0 × 104 . If we now solve Equation (8) for the base
+cost E, we find that the study is feasible for E ≤ E f eas ≈ 182. This condition also implies a bound on an
+individual’s cost increase, which we have seen is (eε − 1)E. To decide whether a study is feasible, let us
+now now estimate the cost E and compare it to E f eas in various scenarios.
+
+5.2 Analyzing the costs scenarios
+We consider participant costs for four cost scenarios, which will serve as our running examples throughout
+the paper.
+13
+
+Smoking habits. The data comes from smokers who fear their health insurance company will find out that
+they smoke and raise their premiums. The average health insurance premium difference between smokers
+and nonsmokers is $1,274 [33]. Thus, some participants fear a price increase of $1,274.15 Since we pay the
+same amount to everyone, smoker or not, we base our estimate of the base cost on the smokers’ concerns.
+To estimate the base cost E, we first estimate the probability that the insurance company concludes that an
+individual smokes, even if they do not participate in the study. This is not impossible: perhaps people see
+her smoking outside.
+So, suppose the participants think there is a moderate, 20% chance that the insurance company concludes
+that they are smokers, even if they do not participate.16 Thus, we can estimate the base cost by E = 0.20 ·
+1274 = 254.8—this is the cost the participants expect, even if they do not participate. Since this is far
+more than E f eas ≈ 182, the study may not be feasible. To check, we plug the exact accuracy constraint
+(Equation (5)) and budget constraint (Equation (4)) into a numeric solver, which reports that the system has
+no solution for ε , N. Thus, we conclude that the study not feasible.
+Perhaps this is not so surprising: since smoking is often done in public, it may not be considered truly
+private information—indeed, the probability of the bad event if the individual did not participate was already
+fairly large (we estimated 20%). For more typical privacy scenarios, this may not be the case.
+Educational data. The data consists of students’ educational records, including courses taken and grades.
+Suppose individuals fear their record of classes and grades are published, perhaps causing them to be fired
+and forced to switch to a job with lower pay. The mean starting salary of college graduates in the United
+States is $45,000 [1]; let us suppose that they face a pay cut of 30% ($12,500) if their records become public.
+If the individual does not participate in the study, it is still possible that an employer uncovers this data:
+perhaps someone steals the records and publishes them, or maybe the outcome of the study (without the
+individual) can be combined with public information to infer an individual’s grades. However, complete
+disclosure seems like a low probability event; let us suppose the chance is one in a thousand (0.001). Then,
+we can estimate the base cost by E = 0.01 · 12500 = 12.5. Since this is less than E f eas , the study is feasible.
+Movie ratings data. The data consists of movie ratings; suppose individuals fear their private movie ratings
+are published, much like the case of the Netflix challenge [35]. Again, while an exact monetary amount
+of harm is not obvious, we can consider the monetary cost of this disclosure, legally speaking. The Video
+Privacy Protection Act of 199817 is an American law stating that punitive damages for releasing video rental
+records should be at least $2,500.
+If the individual does not participate in the study, it is possible that their movie ratings are still
+published—perhaps their internet service provider is monitoring their activities, or someone guesses their
+movies. Again, disclosure seems like a low probability event; let us suppose the chance is one in ten thousand (0.00001). Then, we can estimate the base cost by E = 0.0001 · 2500 = 0.25. Since this is less than
+E f eas , the study is feasible.
+Social networks. Many social networks allow anonymous personas. Suppose individuals fear their true
+identity will be revealed from studies on the social network structure, much like deanonymization attacks
+against anonymous Twitter accounts [36]. The exact monetary amount harm of disclosure is not clear, but
+the dangers can be serious: consider dissidents operating anonymous accounts. Suppose we estimate the
+cost of disclosure to be very high, say $100,000.
+15 Note that it would not make sense to include the participant’s current health insurance cost as part of the bad event—
+participating in a study will not make it more likely that participants need to pay for health insurance (presumably, they are already
+paying for it). Rather, participating in a study may lead to a payment increase, which is the bad event.
+16 Nonsmokers would expect much lower cost, but not zero: there is always a chance that the insurance company wrongly labels
+them a smoker.
+17 This law was enacted after Supreme Court nominee Robert Bork’s video store rental records were written up in a newspaper.
+
+14
+
+If the individual’s information is not included in the social network data, it is unlikely that their identity
+is revealed—perhaps there is a physical privacy breach. If the individual takes strong precautions to guard
+their privacy, then disclosure seems like a very low probability event if they do not participate in this study.
+Let us suppose the chance is one in a hundred thousand (0.00001). Then, we can estimate the base cost by
+E = 0.00001 · 100000 = 1. This is less than E f eas , so the study is feasible.
+
+5.3 A more realistic example: answering many queries
+When working out the simple study above, we needed to derive the accuracy totally from scratch. Moreover,
+the mechanism is not very powerful—it can answer only a single query! In this section, we address these
+issues by considering a more sophisticated algorithm from the privacy literature: the multiplicative weights
+exponential mechanism (MWEM) [21, 22]. As part of our analysis, we will show how to directly plug
+established accuracy results for MWEM into our model.
+MWEM is a mechanism that can answer a large number of counting queries: queries of the form “What
+fraction of the records in the database satisfy property P?” For example, suppose that the space of records is
+bit strings of length d, i.e. X = {0, 1}d . Each individual’s bit string can be thought of as a list of attributes:
+the first bit might encode the gender, the second bit might encode the smoking status, the third bit might
+encode whether the age is above 50 or not, etc. Then, queries like “What fraction of subjects are male,
+smokers and above 50?”, or “What proportion of subjects are female nonsmokers?” are counting queries.
+To use our model, we will need an accuracy bound for MWEM [22]: For a data universe X , set
+of queries C and N records, the ε -private MWEM answers all queries in C within additive error T with
+probability at least 1 − β , where
+ 1/3
+
+
+|X |
+128 ln |X | ln 32|Cβ|ln
+T2
+ .
+T =
+εN
+We again define the accuracy function A(ε , N) to be the probability β of exceeding error T on any query.
+Solving,
+
+
+ε NT 3
+32|C | ln |X |
+A(ε , N) := β =
+exp −
+,
+T2
+128 ln |X |
+
+Like the previous example, we want to satisfy the constraints A(ε , N) ≤ α and (eε − 1)EN ≤ B.
+For a concrete example, suppose we want X = {0, 1}8 so |X | = 28 and accuracy T = 0.2 for 20%
+error, with bad accuracy at most 5% of the time, so α = 0.05. Further, we want to answer 10000 queries, so
+|C | = 10000.
+We can now carry out cost estimates; suppose that the budget is B = 2.0 × 106 . Looking at the movie
+ratings scenario when E = 0.25, the constraints are satisfiable: take N = 8.7 × 105 , ε = 2.3, compensating
+each individual (eε − 1)E = 2.2.
+For the social network scenario where E = 1, the constraints are also satisfiable: take N = 1.3 × 106 ,
+ε = 1.5, compensating each individual (eε − 1)E = 3.5. The calculations are similar for the other cost
+scenarios; since those examples have higher base cost E, the required budget will be higher.
+
+6 The true cost of privacy
+Now that we have a method for estimating the cost of a private study, we can compare this cost to that of an
+equivalent non-private study. Again, we consider only costs arising from compensation for harm to privacy.
+15
+
+Differential privacy requires additional noise to protect privacy, and requires a larger sample to achieve
+the same accuracy. Hence, one would expect private studies to be more expensive than equivalent nonprivate studies. While this is true if individuals are paid the same in both cases, differential privacy also has
+an advantage: it can bound the harm to individuals, whereas—as deanonymization attacks have shown—it
+is difficult for non-private studies to make any guarantees about privacy.
+When an individual participates in a non-private study, it is very possible that their information can
+be completely recovered from published results. Thus, to calculate the cost for the non-private study, we
+consider a hypothetical world where non-private study participants are compensated in proportion to their
+worst-case cost W , i.e., their cost for having their data published in the clear.18
+It would be unreasonable for the non-private study to pay each individual their full worst-case cost:
+even in the most poorly designed non-private study, it is hard to imagine every individual having their data
+published in the clear. More likely, attackers may be able to recover some fraction of the data; for instance,
+if attackers are analyzing correlations with public datasets, the public datasets may contain information for
+only a portion of all the study participants. Thus, we suppose a non-private study might expose up to a φ
+fraction of the participants, and the non-private study compensates each participant with a φ fraction of their
+worst-case cost, i.e., φ W .
+Consider the mean-estimation study from Section 5. For the non-private study with N ′ individuals, we
+directly release the sample mean g(D) = N1′ ∑ Xi .19 Thus, we do not have to bound the error from Laplace
+noise—all the error is due to the sample mean deviating from the population mean.
+First, we calculate the sample size N ′ a non-private study needs in order to achieve the same level of
+accuracy as the private study. This will determine the minimum budget that is needed for the non-private
+study. We use the following bound.
+Theorem 8 (Chernoff Lower Bound). Suppose {Xi } are N independent, identically distributed 0/1 random
+variables with mean µ ≤ 1/4 and sample mean Y = N1 ∑ Xi . For T ∈ [0, 1],
+
+
+1
+−2NT 2
+Pr[ |Y − µ | ≥ T ] ≥ exp
+.
+2
+µ
+Intuitively, the standard Chernoff bound says that the probability of the sample mean deviating from the
+population mean is at most some value, but this bound might be very loose: the true probability of deviation
+could be much lower. The lower bound theorem says that the probability of deviation is also at least some
+value. This will allow us to lower bound the number of individuals needed to achieve a desired accuracy.
+We can then give conditions under which the private study is cheaper than the public study.
+Theorem 9. Given a target error T ≥ 0 and target accuracy α > 0, the private mean estimation study will
+be cheaper than the non-private mean estimation study exposing a fraction φ of participants if the following
+(sufficient, but not necessary) condition holds:
+!
+φ W ln 21α
+T
+≤ ln 1 +
+(9)
+6
+96E ln α3
+18 Note the difference between W and E: the former measures the harm to the individual of revealing private data, while the
+
+latter measures the harm to the individual from running the study, even without the individual’s participation. Naturally, W is much
+higher than E—the expected harm from having private data directly published is usually greater than the expected harm of not even
+contributing private information.
+While E may include costs for the bad event “an adversary guesses my data and publishes it in the clear,” which would lead to
+cost W , this cost should be weighted by the (very low) probability of disclosure if the individual does not even contribute their data.
+19 Remark 5 holds here as well: more sophisticated statistical experiments can achieve accuracy for less resources, while we use
+a simple analysis. However, we do so for both the private and non-private studies, so comparing the relative costs is fair.
+
+16
+
+The non-private study needs at least N ′ individuals, where
+N′ ≥
+
+1
+1
+ln
+.
+8T 2 2α
+
+(10)
+
+Proof. First, we derive a lower bound on the sample size N ′ that is necessary for the non-private study to
+have low error. Since we want the deviation probability to be at most α for all µ , in particular the sample
+size must be large enough guarantee this error for µ = 1/4. Theorem 8 gives
+′
+
+2
+
+α ≥ Pr[ |Y − µ | ≥ T ] ≥ e−8N T /2,
+which is equivalent to
+N′ ≥
+
+1
+1
+ln
+,
+8T 2 2α
+
+as desired.
+φW
+1
+Thus, the minimum budget for the non-private study is at least B′ = φ N ′W = 8T
+2 ln 2α , so by Equation (8), the private study will be cheaper than the non-private study if
+!
+φ W ln 21α
+T
+.
+≤ ln 1 +
+6
+96E ln α3
+Recall that since Equation (8) is a sufficient but not necessary condition on the private study being
+feasible, if the above equation does not hold, we cannot conclude that the private study is necessarily more
+expensive than the public one from Theorem 9.
+For our example calculations below, we take φ = 1/500 = 0.002.20 Now that we have a sufficient
+condition for when the private study is cheaper than the public study, let us turn back to our four cost
+scenarios. From Section 5, recall we wanted to estimate the mean of a population to accuracy T = 0.05,
+with failure probability at most α = 0.05.
+Smoking habits. Recall that we estimated the base cost E to be 254.8. The worst case cost is at least the
+rise in health insurance premium, so we let W = 1274. Plugging in these numbers, Equation (9) does not
+hold. So, the private study is not necessarily cheaper.
+Educational data. Recall that we estimated the base cost E to be 12.5. The worst case cost is at least the
+loss in salary: $12,500; we take this to be W . Plugging these numbers into Equation (9), we find that the
+private study is cheaper.
+Movie ratings. Recall that we estimated the base cost E to be 0.25, and we estimated the worst case
+disclosure cost to be at least the damages awarded under the Video Privacy Protection Act. So we let
+W = 2500. Plugging these numbers into Equation (9), we find that the private study is cheaper.
+Social networks. Recall that we estimated the base cost E to be 1. The worst case cost is at least the cost of
+discovery: $100,000; we let this be W . Plugging these numbers into Equation (9), we find that the private
+study is cheaper.
+Let us compare the size and costs of the two studies, just for the movie ratings scenario. By Equation (10), the non-private study needs N ′ ≥ 115. As expected, the non-private study needs fewer people to
+20 Precise measurements of the success rate of real deanonymization attacks are hard to come by, for at least two reasons: first,
+
+published deanonymization attacks aim to prove a concept, rather than violate as many people’s privacy as possible. Second, published deanonymization attacks generally do not have the luxury of knowing the original data, so they are necessarily conservative
+in reporting success rates. Adversarial attacks on privacy need not satisfy these constraints.
+
+17
+
+achieve the same accuracy compared to the private study (N = 20000), since no noise is added. However,
+the total cost for non-private study would be B′ = φ W N = 0.002 · 2500 · 115 ≈ 575. The equivalent private
+study, with E = 0.25, ε = 0.0083, N = 20000 costs (eε − 1) · EN ≈ 40.
+If both private and non-private studies have the same budget, the private study can buy more participants
+to further improve its accuracy. Thus, this private study is more accurate and cheaper (and more private!)
+than the non-private version.
+
+7 Extending the model
+So far, we have considered just two constraints on ε and N: expected cost to the individuals (expressed as a
+budget constraint), and accuracy for the analyst. Other constraints may be needed to model finer details—we
+will refer to these additional constraints as side conditions. In this section, we first consider generic upper
+and lower bounds on ε —these follow from the definition of differential privacy. Then, we present a case
+study incorporating side conditions.
+
+7.1 Upper bounds on ε
+While the definition of differential privacy is formally valid for any value of ε [17], values that are too large
+or too small give weak guarantees. For large values of ε , the upper bound on the probability Pr[M(D) ∈ S]
+can rise above one and thus become meaningless: for instance, if ε = 20, Equation (1) imposes no constraint
+on the mechanism’s output distribution unless Pr[M(D′ ) ∈ S] ≤ e−20 .21
+To demonstrate this problem, we describe an ε -private mechanism for large ε which is not intuitively
+private. Consider a mechanism M with range R equal to data universe X , and consider a targeted individual
+J. When J is in the database, the mechanism publishes their private record with probability p∗ > 1/|X |,
+otherwise it releases a record at random.
+We first show that this mechanism is ε -differentially private, for a very large ε . Let j be J’s record, and
+let
+1
+1 − p∗
+<
+p=
+|X | − 1 |X |
+be the probability of releasing a record s 6= j when J is in the database. Consider two databases D ∪ i and
+D ∪ j, where i is any record. For M to be ε -differentially private, it suffices that
+e−ε Pr[M(D ∪ i) = j] ≤ Pr[M(D ∪ j) = j] ≤ eε Pr[M(D ∪ i) = j]
+e−ε Pr[M(D ∪ i) = s] ≤ Pr[M(D ∪ j) = s] ≤ eε Pr[M(D ∪ i) = s],
+21 Even though the upper bound may not guarantee anything, differential privacy still gives some guarantee. For instance, suppose
+ε = 20 and Pr[M(D′ ) ∈ S] = 1/2 > e−20 . The upper bound gives
+
+Pr[M(D) ∈ S] ≤ e20 · 1/2 ≈ 109 ,
+which is useless. However, consider the outputs S̄ = R \ S: we know that Pr[M(D′ ) ∈ S̄] = 1/2, so by Equation (2),
+Pr[M(D) ∈ S̄] ≥ e−20 · 1/2 ≈ 10−9 ,
+which is a nontrivial bound. In particular, it implies that
+Pr[M(D) ∈ S] = 1 − Pr[M(D) ∈ S̄] . 1 − 10−9 .
+
+18
+
+for all s 6= j. Rewriting, this means
+e−ε
+
+1
+1
+≤ p∗ ≤ eε
+|X |
+|X |
+
+and
+
+e−ε
+
+1
+1
+≤ p ≤ eε
+.
+|X |
+|X |
+
+By assumption, the left inequality in the first constraint and the right inequality in the second constraint
+hold. Thus, if
+ε ≥ ln(p∗ |X |),
+(11)
+the first constraint is satisfied. Since the probabilities over all outputs sums to one, we also know p∗ +
+(|X | − 1)p = 1. So,
+
+
+
+
+|X | − 1
+1
+≥ ln
+(12)
+ε ≥ ln
+p|X |
+|X |(1 − p∗ )
+suffices to satisfy the second constraint.
+Therefore, M is ε -differentially private if ε satisfies these equations. For instance, suppose |X | = 106 ,
+and p∗ = 0.99. M almost always publishes J’s record (probability 0.99) if J is in the database, but it is still
+ε -differentially private if ε ≥ 14.
+Clearly, a process that always publishes a targeted individual’s data if they are in the database and never
+publishes their data if they are not in the database is blatantly non-private. This ε -private mechanism does
+nearly the same thing: with probability p∗ = 0.99, it publishes J’s record with probability at least p∗ = 0.99
+if J is in the database, and with probability 1/|X | = 10−6 if J is not. Evidently, values of ε large enough to
+satisfy both Equations (11) and (12) do not give a very useful privacy guarantee.
+
+7.2 Lower bounds on ε
+While choosing ε too large will compromise the privacy guarantee, choosing ε too small will ruin
+accuracy—the mechanism must behave too similarly for databases that are very different. For example,
+let D, D′ be arbitrary databases of size N, and let 0 < ε ≤ N1 . Since the two databases have the same size, we
+can change D to D′ by changing at most N rows. Call the sequence of intermediate neighboring databases
+D1 , · · · , DN−1 . By differential privacy,
+Pr[M(D) ∈ S] ≤ eε Pr[M(D1 ) ∈ S]
+Pr[M(D1 ) ∈ S] ≤ eε Pr[M(D2 ) ∈ S]
+···
+Pr[M(DN−1 ) ∈ S] ≤ eε Pr[M(D′ ) ∈ S].
+Combining, Pr[M(D) ∈ S] ≤ eN ε Pr[M(D′ ) ∈ S]. Similarly, we can use Equation (2) to show Pr[M(D) ∈ S] ≥
+e−N ε Pr[M(D′ ) ∈ S]. But we have taken ε ≤ 1/N, so the exponents are at most 1 and at least −1. So, the
+probability of every event is fixed up to a multiplicative factor of at most e, whether the input is D or D′ .
+(Differential privacy with ε = 1 guarantees this for neighboring databases, but here D and D′ may differ in
+many—or all!—rows.) Such an algorithm is probably useless: its output distribution depends only weakly
+on its input.22
+22 For an extreme case, a 0-private mechanism has the same probability of releasing s whether the database is D or D′ . Since this
+
+holds for all pairs of neighboring inputs, a 0-private mechanism is useless—it behaves independently of its input.
+
+19
+
+7.3 Case Study: Educational statistics
+Putting everything together, we now work through an example with these added constraints on ε , together
+with a limit on the study size. We consider the same mean estimation study from Section 5, except now with
+side constraints.
+Concretely, suppose that we are in the educational data scenario, where each student’s record contains
+class year (4 possible values), grade point average (rounded to the nearest letter grade, so 5 possible values),
+years declared in the major (4 possible values), and order of courses in the major (100 possible combinations). The total space of possible values is |X | = 4 · 5 · 4 · 100 = 8000.
+We now add in our side conditions. First, suppose that we have data for N = 1000 students, spanning
+several years. It may not be simple to expand the study size—perhaps this data for all the students, or
+perhaps we only have access to recent data. the only way to collect more data is to graduate more students.
+We also want the upper and lower bounds on ε discussed above to hold.
+For the accuracy, recall from Section 5 that if T is the desired additive error and α is the probability we
+do not achieve this accuracy, the accuracy constraint is
+
+
+
+
+T Nε
+NT 2
++ exp −
+≤ α.
+2 exp −
+12
+2
+In this example it is not very natural to think of a total budget for compensation, since all the data is assumed
+to have been already collected.23 Instead, we know the privacy harm for any individual is at most (eε − 1)·E,
+and we will bound the maximum allowed privacy harm per student. Suppose it is B0 = 10, giving the
+constraint
+(eε − 1) · E ≤ B0 .
+To capture the side conditions, we add a few more constraints. For the population, we require N ≤ 1000.
+For the upper bound on ε , we do not want Equations (11) and (12) to both hold, so we add a constraint
+
+
+
+|X | − 1
+ε ≤ max ln(0.1 · |X |), ln
+.
+|X |(1 − 0.1)
+For the lower bound on ε , we add the constraint ε ≥ 1/N.
+Putting it all together, with base cost E = 12.5, record space size |X | = 8000 and allowed harm per
+student B0 = 10, and target error T = α = 0.05, the feasibility of this study is equivalent to the following
+system of constraints.
+2 exp (−0.0002 · N) + exp (−0.025N ε ) ≤ 0.05,
+
+(eε − 1) · 12.5 ≤ 10,
+
+N ≤ 1000,
+
+1/N ≤ ε ≤ max(ln(800), ln (1.11))
+Note that we are requiring the same accuracy as in our original study in Section 5, and in fact the original
+study without the side constraints is feasible. However, a numeric solver shows that these constraints are not
+feasible, so this study is not feasible in this setting.24
+23 While our model assumes individuals have a choice to participate, it can be seen to apply even when individuals do not; for
+
+details, see Appendix B.
+24 To be precise, we have shown that this particular mechanism (i.e., the Laplace mechanism) is not feasible—there may be other,
+more clever mechanisms that feasibly compute what we want. We are not aware of any such mechanisms, but we also cannot rule
+it out.
+
+20
+
+8 What about δ ?
+In this section, we extend our model to an important generalization of ε -differential privacy, known as
+(ε , δ )-differential privacy.
+Definition 10 ([15]). Given ε , δ ≥ 0, a mechanism M is (ε , δ )-differentially private if for any two neighboring database D, D′ , and for any subset S ⊆ R of outputs,
+Pr[M(D) ∈ S] ≤ eε · Pr[M(D′ ) ∈ S] + δ .
+Intuitively, this definition allows a δ probability of failure where the mechanism may violate privacy.
+For instance, suppose that s is an output that reveals user x’s data. For a database D′ that does not contain
+user x’s information, suppose Pr[M(D′ ) ∈ S] = 0. Under ε -differential privacy, M can never output s on any
+database. However, under (ε , δ )-differential privacy, M may output s with probability up to δ , when fed
+any neighboring database D. In particular if D = D′ ∪ x \ y, Pr[M(D) ∈ S] may be up to δ : even though M
+never outputs x’s records on databases without x, M can output x’s record when she is in the database with
+probability δ .
+
+8.1 Modeling δ
+By considering “blatantly non-private” mechanisms that nevertheless satisfy (ε , δ )-privacy, we can upper
+bound δ . For example, for a database with N records and for δ = 1/N, the mechanism that randomly
+outputs a record from the database is (0, δ )-private. This mechanism is intuitively non-private, so we require
+δ ≪ 1/N for a more reasonable guarantee.
+For a more principled method of picking this parameter, we can model the costs associated with different
+levels of δ . The first step is to bound the increase in expected cost for participating in an (ε , δ )-private
+mechanism. We assume a bound W on an individual’s cost if their data is publicly revealed, since with
+probability δ the mechanism may do just that. Then, we can bound an individual’s increase in expected cost
+when participating in an (ε , δ )-private study.
+Proposition 11. Let M be an (ε , δ )-private mechanism with range R, and let f be a non-negative cost
+function over R. Let W = maxs∈R f (s). Then, for neighboring databases D, D′ ,
+E[ f (M(D))] ≤ eε E[ f (M(D′ ))] + δ W.
+Proof. Let R = {si }. For each output si ,
+Pr[M(D) = si ] = eε Pr[M(D′ ) = si ] + δi,
+where δi may be negative. Partition R = S+ ∪ S− , where S+ contains the outputs si with δi ≥ 0, and S−
+contains the remainder. Now, from the definition of (ε , δ )-privacy, each δi is upper bounded by δ , but we
+will show that not all δi can be δ . Now,
+Pr[M(D) ∈ S+ ] = ∑ Pr[M(D) = si ]
+si ∈S+
+
+= ∑ eε Pr[M(D′ ) = si ] + δi
+si ∈S+
+ε
+
+= e Pr[M(D′ ) ∈ S+ ] + ∑ δi .
+si ∈S+
+
+21
+
+But from the definition of (ε , δ )-privacy applied to the set S+ , the left hand side is at most eε Pr[M(D′ ) ∈
+S+ ] + δ . Hence,
+∑ δi ≤ δ .
+si ∈S+
+
+Now we can conclude:
+E[ f (M(D))] = ∑ Pr[M(D) = si ] · f (si )
+si ∈R
+
+≤
+
+∑ eε Pr[M(D′) = si ] · f (si ) + δi · f (si )
+
+si ∈R
+ε
+
+≤ e E[ f (M(D′ ))] + ∑ δi · f (s+
+i )
++
+s+
+i ∈S
+
+≤ eε E[ f (M(D′ ))] + δ W,
+as desired.
+We can now incorporate the δ parameter into our model.
+Definition 12 ((ε , δ )-private analyst model). An (ε , δ )-private analyst is an analyst with accuracy AM a
+function of ε , N, δ .
+Definition 13 ((ε , δ )-private individual model). An (ε , δ )-private individual is an individual with a worstcase cost W , which measures the cost of publicly revealing the individual’s private information. The individual wants to be compensated for her worst-case marginal cost of participating under these assumptions:
+eε E + δ W − E = (eε − 1)E + δ W .
+Since (ε , δ )-privacy is weaker than pure ε -privacy, why is it a useful notion of privacy? It turns out
+that in many cases, (ε , δ )-private algorithms are more accurate than their pure privacy counterparts; let us
+consider such an example.
+
+8.2 Revisiting MWEM
+In Section 5, we analyzed the cost of MWEM. We will now revisit that example with an (ε , δ )-private
+version of MWEM. The setting remains the same: we wish to answer a large number of counting queries
+with good accuracy, while preserving privacy.
+The main difference is the accuracy guarantee, due to Hardt and Rothblum [22]. Suppose the space
+of records is X and we want to answer queries C to accuracy T with probability at least 1 − β . The
+(ε , δ )-private MWEM has accuracy
+
+
+|X |
+8(ln |X | ln(1/δ ))1/4 ln1/2 32|Cβ|ln
+2
+T
+T=
+.
+N 1/2 ε 1/2
+We define our accuracy measure A(ε , N) to be the failure probability β . Solving, this means
+
+
+ε NT 2
+32|C | ln |X |
+A(ε , N) := β =
+.
+exp
+−
+T2
+8(ln |X | ln(1/δ ))1/2
+If α is the target accuracy, we need A(ε , N) ≤ α .
+22
+
+For the budget constraint, we need (eε − 1)EN + δ W N ≤ B. Suppose we are in the social network
+scenario we described in Section 5, with the same budget B = 2.0 × 106 we used for the (ε , 0)-private
+MWEM algorithm. We use our running estimate of the base cost for this scenario, E = 1, and the worst-case
+cost, W = 106 . For the other parameters, suppose the records are bit strings with 15 attributes (versus 8
+before): X = {0, 1}15 and |X | = 215 . We want to answer |C | = 200000 queries (versus 10000 before), to
+5% error (versus 20% before), so T = 0.05, with probability at least 95% (α = 0.05, same as before).
+Plugging in the numbers, we find that the accuracy and budget constraints can both be satisfied, for
+ε = 0.9, δ = 10−8 , and N = 9.1 × 105 . Each individual is compensated (eε − 1)E + δ W = 1.46, for a total
+cost of 1.9 × 106 ≤ B. Thus, the (ε , δ )-private version of MWEM answers more queries, over a larger space
+of records, to better accuracy, than the (ε , 0)-version we previously considered.
+
+9 Discussion
+9.1 Is all this complexity necessary?
+Compared to earlier threat models from the differential privacy literature, our model may seem overly complex: the original definition from Dwork et al. [16] had only one parameter (ε ), while our model involves
+a number of different parameters (α , AM (ε , N), B, and E). So, at first glance, the original model seems
+preferable. However, we argue that this complexity is present in the real world: the individuals really do
+have to consider the possible consequences of participating in the study, the researchers really do require a
+certain accuracy, etc. The original definition blends these considerations into a single, abstract number ε .
+Our model is more detailed, makes the choices explicit, and forces the user to think quantitatively about how
+a private study would affect real events.
+
+9.2 Possible refinements
+The key challenge in designing any model is to balance complexity and accuracy. Our model is intended to
+produce reasonable suggestions for ε in most situations while keeping only the essential parameters. Below,
+we review some areas where our model could be refined or generalized.
+Estimating the base cost. Our model does not describe how to estimate the base cost for individuals. There
+is no totally rigorous way to derive the base cost: this quantity depends on how individuals perceive their
+privacy loss, and how individuals think about uncertain events. These are both active areas of research—
+for instance, research in psychology has identified a number of cognitive biases when people reason about
+uncertain events [23]. Thus, if the consequences of participation are uncertain, the individuals might underor overestimate their expected cost.25 More research is needed to incorporate these (and other) aspects of
+human behavior into our model.
+Another refinement would be to model individuals heterogeneously, with different base costs and desired
+compensations. For instance, an individual who has participated in many studies may be at greater risk than
+an individual who has never participated in any studies. However, care must be taken to avoid sampling bias
+when varying the level of compensation.
+Empirical attacks on privacy. Our model assumes that all ε -private studies could potentially increase the
+probability of bad events by a factor of eε . It is not clear whether (a) this is true for private algorithms
+considered in the literature, and (b) whether this can be effectively and practically exploited. The field of
+differential privacy (and our model) could benefit from empirical attacks on private algorithms, to shed light
+25 In some experiments, people give up their private data for as little as a dollar [4].
+
+23
+
+Authors
+McSherry-Mahajan [32]
+Chaudhuri-Monteleoni [7]
+Machanavajjhala et al. [30]
+Korolova et al. [24]
+Bhaskar et al. [5]
+Machanvajjhala et al. [31]
+Bonomi et al. [6]
+Li et al. [28]
+Ny-Pappas [38]
+Chaudhuri et al. [8]
+Narayan-Haeberlen. [34]
+Chen et al. [10]
+Acs-Castelluccia [2]
+Uhler et al. [41]
+Xiao et al. [43]
+Li-Miklau. [27]
+Chen et al. [9]
+Cormode et al. [12]
+Chaudhuri et al. [40]
+
+Value(s) of ε
+0.1—10
+0.1
+<7
+ln 2, ln 5, ln 10
+1.4
+0.5—3
+0.01—10
+0.1—1
+ln 3
+0.1—2
+0.69
+1.0 − 5.0
+1
+0.1—0.4
+0.05—1
+0.1—2.5
+0.5—1.5
+0.1—1
+0.01—0.5
+
+Application
+Network Trace Analysis
+Logistic Regression
+Census Data
+Click Counts
+Frequent Items
+Recommendation System
+Record Linkage
+Frequent Items
+Kalman Filtering
+Principal Component Analysis
+Distributed Database Joins
+Queries over Distributed Clients
+Smart Electric Meters
+Genome Data
+Histograms
+Linear Queries
+Trajectory Data
+Location Data
+Empirical Risk Minimization
+
+Table 1: Values of ε in the literature
+on how harm actually depends on ε , much like parameters in cryptography are chosen to defend against
+known attacks.
+Collusion. Our model assumes the study will happen regardless of a single individual’s choice. However,
+this may not be realistic if individuals collude: in an extreme case, all individuals could collectively opt out,
+perhaps making a study impossible to run. While widespread collusion could be problematic, assumptions
+about the size of limited coalitions could be incorporated into our model.
+Large ε . As ε increases, our model predicts that the individual’s marginal expected harm increases endlessly. This is unreasonable—there should be a maximum cost for participating in a study, perhaps the worst
+case cost W . The cost curve could be refined for very small and very large values of ε .
+Modeling the cost of non-private studies. Our comparison of the cost of private and non-private studies
+uses a very crude (and not very realistic) model of the cost of non-private studies. More research into how
+much individuals want to be compensated for their private data would give a better estimate of the true
+tradeoff between private and non-private studies.
+
+10 Related work
+There is by now a vast literature on differential privacy, which we do not attempt to survey. We direct the
+interested reader to an excellent survey by Dwork [14].
+The question of how to set ε has been present since the introduction of differential privacy. Indeed, in
+early work on differential privacy, Dwork [14] indicates that the value of ε , in economic terms or otherwise,
+is a “social question.” Since then, few works have taken an in-depth look at this question. Works applying
+
+24
+
+differential privacy have used a variety of choices for ε , mostly ranging from 0.01–10 (see Table 1), with
+little or no convincing justification.
+The most detailed discussion of ε we are aware of is due to Lee and Clifton [25]. They consider what
+ε means for a hypothetical adversary, who is trying to discover whether an individual has participated in a
+database or not. The core idea is to model the adversary as a Bayesian agent, maintaining a belief about
+whether the individual is in the database or not. After observing the output of a private mechanism, he updates his belief depending on whether the outcome was more or less likely if the individual had participated.
+As Lee and Clifton show, ε controls how much an adversary’s belief can change, so it is possible to
+derive a bound on ε in order for the adversary’s belief to remain below a given threshold. We share the
+goal of Lee and Clifton of deriving a bound for ε , and we improve on their work. First, the “bad event”
+they consider is the adversary discovering an individual’s participation in a study. However, by itself, this
+knowledge might be relatively harmless—indeed, a goal of differential privacy is to consider harm beyond
+reidentification.
+Second, and more seriously, the adversary’s Bayesian updates (as functions of the private output of the
+mechanism) are themselves differentially private: the distribution over his posterior beliefs conditioned on
+the output of the mechanism is nearly unchanged regardless of a particular agent’s participation. In other
+words, an individual’s participation (or not) will usually lead to the same update by the adversary. Therefore,
+it is not clear why an individual should be concerned about the adversary’s potential belief updates when
+thinking about participating in the study.
+Related to our paper, there are several papers investigating (and each proposing different models for)
+how rational agents should evaluate their costs for differential privacy [42, 20, 37, 11, 29]. We adopt the
+simplest and most conservative of these approaches, advocated by Nissim, et al. [37], and assume that agents
+costs are upper bounded by a linear function of ε .
+Alternatively, privacy (quantified by ε ) can be thought of as a fungible commodity, with the price discovered by a market. Li, et al. [26] consider how to set arbitrage-free prices for queries. Another line of
+papers [20, 19, 29, 3, 13, 39] consider how to discover the value of ε via an auction, when ε is set to be the
+largest value that the data analyst can afford.
+
+11 Conclusion
+We have proposed a simple economic model that enables users of differential privacy to choose the key
+parameters ε and δ in a principled way, based on quantities that can be estimated in practice. To the best
+of our knowledge, this is the first comprehensive model of its kind. We have applied our model in two case
+studies, and we have used it to explore the surprising observation that a private study can be cheaper than a
+non-private study with the same accuracy. We have discussed ways in which our model could be refined, but
+even in its current form the model provides useful guidance for practical applications of differential privacy.
+
+References
+[1] NACE Salary survey, Jan. 2013.
+[2] G. Ács and C. Castelluccia. Dream: Differentially private smart metering. CoRR, abs/1201.2531,
+2012.
+[3] C. Aperjis and B. Huberman. A market for unbiased private data: Paying individuals according to their
+privacy attitudes. 2012.
+25
+
+[4] A. R. Beresford, D. Kübler, and S. Preibusch. Unwillingness to pay for privacy: A field experiment.
+Economics Letters, 2012.
+[5] R. Bhaskar, S. Laxman, A. Smith, and A. Thakurta. Discovering frequent patterns in sensitive data. In
+Proc. KDD, pages 503–512, 2010.
+[6] L. Bonomi, L. Xiong, R. Chen, and B. C. M. Fung. Privacy preserving record linkage via grams
+projections. CoRR, abs/1208.2773, 2012.
+[7] K. Chaudhuri and C. Monteleoni. Privacy-preserving logistic regression. In Proc. NIPS, pages 289–
+296, 2008.
+[8] K. Chaudhuri, A. D. Sarwate, and K. Sinha. Near-optimal algorithms for differentially-private principal
+components. CoRR, abs/1207.2812, 2012.
+[9] R. Chen, B. C. M. Fung, and B. C. Desai. Differentially private trajectory data publication. CoRR,
+abs/1112.2020, 2011.
+[10] R. Chen, A. Reznichenko, P. Francis, and J. Gehrke. Towards statistical queries over distributed private
+user data. In Proc. NSDI, NSDI’12, pages 13–13, Berkeley, CA, USA, 2012. USENIX Association.
+[11] Y. Chen, S. Chong, I. A. Kash, T. Moran, and S. Vadhan. Truthful mechanisms for agents that value
+privacy. In Proc. EC, pages 215–232. ACM, 2013.
+[12] G. Cormode, M. Procopiuc, E. Shen, D. Srivastava, and T. Yu. Differentially private spatial decompositions. CoRR, abs/1103.5170, 2011.
+[13] P. Dandekar, N. Fawaz, and S. Ioannidis. Privacy auctions for recommender systems. In Proc. WINE,
+pages 309–322, 2012.
+[14] C. Dwork. Differential privacy: A survey of results. In Proc. TAMC, Apr. 2008.
+[15] C. Dwork, K. Kenthapadi, F. McSherry, I. Mironov, and M. Naor. Our data, ourselves: Privacy via
+distributed noise generation. Proc. EUROCRYPT, 2006.
+[16] C. Dwork, F. McSherry, K. Nissim, and A. Smith. Calibrating noise to sensitivity in private data
+analysis. In Proc. TCC, Mar. 2006.
+[17] C. Dwork, F. McSherry, K. Nissim, and A. Smith. Differential privacy – a primer for the perplexed. In
+Conf. of European Statisticians, Joint UNECE/Eurostat work session on statistical data confidentiality,
+2011.
+[18] C. Dwork, G. N. Rothblum, and S. P. Vadhan. Boosting and differential privacy. In Proc. FOCS, 2010.
+[19] L. K. Fleischer and Y.-H. Lyu. Approximately optimal auctions for selling privacy when costs are
+correlated with data. In Proc. EC, New York, NY, USA, 2012. ACM.
+[20] A. Ghosh and A. Roth. Selling privacy at auction. In Proc. EC, pages 199–208. ACM, 2011.
+[21] M. Hardt, K. Ligett, and F. McSherry. A simple and practical algorithm for differentially private data
+release. In Proc. NIPS, pages 2348–2356, 2012.
+
+26
+
+[22] M. Hardt and G. N. Rothblum. A multiplicative weights mechanism for privacy-preserving data analysis. In Proc. FOCS, pages 61–70. IEEE, 2010.
+[23] D. Kahneman, P. Slovic, and A. Tversky. Judgment under uncertainty: Heuristics and biases. Cambridge University Press, 1982.
+[24] A. Korolova, K. Kenthapadi, N. Mishra, and A. Ntoulas. Releasing search queries and clicks privately.
+In Proc. WWW, pages 171–180, 2009.
+[25] J. Lee and C. Clifton. How much is enough? choosing ε for differential privacy. In Proc. ISC, ISC’11,
+2011.
+[26] C. Li, D. Y. Li, G. Miklau, and D. Suciu. A theory of pricing private data. In Proc. ICDT, pages 33–44,
+2013.
+[27] C. Li and G. Miklau. An adaptive mechanism for accurate query answering under differential privacy.
+CoRR, abs/1202.3807, 2012.
+[28] N. Li, W. H. Qardaji, D. Su, and J. Cao. Privbasis: Frequent itemset mining with differential privacy.
+CoRR, abs/1208.0093, 2012.
+[29] K. Ligett and A. Roth. Take it or leave it: Running a survey when privacy comes at a cost. In Proc.
+WINE, pages 378–391, 2012.
+[30] A. Machanavajjhala, D. Kifer, J. M. Abowd, J. Gehrke, and L. Vilhuber. Privacy: Theory meets
+practice on the map. In Proc. ICDE, pages 277–286, 2008.
+[31] A. Machanavajjhala, A. Korolova, and A. D. Sarma. Personalized social recommendations - accurate
+or private? PVLDB, 4(7):440–450, 2011.
+[32] F. McSherry and R. Mahajan. Differentially-private network trace analysis. In Proc. SIGCOMM, pages
+123–134, 2010.
+[33] J. Moriarty, M. Branda, K. Olsen, N. Shah, B. Borah, A. Wagie, J. Egginton, and J. Naessens. The
+effects of incremental costs of smoking and obesity on health care costs among adults: A 7-year
+longitudinal study. Journal of Occupational and Environmental Medicine, 54(3):286, 2012.
+[34] A. Narayan and A. Haeberlen. DJoin: differentially private join queries over distributed databases. In
+Proc. OSDI, Oct. 2012.
+[35] A. Narayanan and V. Shmatikov. Robust de-anonymization of large sparse datasets. In Proc. S&P.
+IEEE, May 2008.
+[36] A. Narayanan and V. Shmatikov. De-anonymizing social networks. In IEEE Symposium on Security
+and Privacy (S&P), Oakland, California, pages 173–187, 2009.
+[37] K. Nissim, C. Orlandi, and R. Smorodinsky. Privacy-aware mechanism design. In Proc. EC. ACM,
+2012.
+[38] J. L. Ny and G. J. Pappas. Differentially private kalman filtering. CoRR, abs/1207.4592, 2012.
+[39] A. Roth and G. Schoenebeck. Conducting truthful surveys, cheaply. In Proc. EC. ACM, 2012.
+27
+
+[40] A. D. Sarwate, K. Chaudhuri, and C. Monteleoni. Differentially private support vector machines.
+CoRR, abs/0912.0071, 2009.
+[41] C. Uhler, A. B. Slavkovic, and S. E. Fienberg. Privacy-preserving data sharing for genome-wide
+association studies. CoRR, abs/1205.0739, 2012.
+[42] D. Xiao. Is privacy compatible with truthfulness? In Proc. ITCS, pages 67–86, 2013.
+[43] Y. Xiao, L. Xiong, L. Fan, and S. Goryczka. Dpcube: Differentially private histogram release through
+multidimensional partitioning. CoRR, abs/1202.5358, 2012.
+
+A
+
+Protected and unprotected events
+
+In this section, we take a closer look at how to define the space of events in our model (Section 3).
+As alluded to before, not all events are protected by differential privacy—the probability of some events
+may become a lot more likely if an individual participates. In particular, events that can observe an individual’s participation are not protected under differential privacy—this is why we have defined E to exclude
+these events. For a trivial example, the event “John Doe contributes data to the study” is very likely if John
+Doe participates, and very unlikely if John Doe does not participate.
+However, not all cases are so obvious. Consider the following scenario: an adversary believes that a
+differentially private study is conducted on either a population of cancer patients, or a control group of
+healthy patients. The adversary does not know which is the case, but the adversary knows that John Doe is
+part of the study.
+Now, suppose the study provider releases a noisy, private count of the number of cancer patients in the
+study. For this answer to be remotely useful, it must distinguish between the case where all the participants
+have cancer and the case where none of the participates do. Hence, the adversary will be reasonably certain
+about whether the participants in the database have cancer, and about whether John Doe has cancer. This
+seems to violate differential privacy: by participating in the study, John Doe has revealed private information
+about himself that would otherwise be secret. Where did we go wrong?
+The key subtlety is whether the adversary can observe John Doe’s participation. Suppose that the released (noisy) count of cancer patients is n, and suppose the bad event John Doe is worried about is “the
+adversary thinks that John Doe has cancer.” In order for this event to be protected by differential privacy, it
+must happen with the same probability whether John Doe participates or not, whenever the noisy count is n.
+If the adversary can truly observe John Doe’s participation, i.e., he can tell if John Doe actually participates or not, then clearly this is not the case—if John Doe participates, the adversary will believe that he
+probably has cancer, and if John Doe does not participate, the adversary will not believe this.
+On the other hand, if the adversary merely believes (but could be mistaken) that John Doe participated,
+the bad event is protected by differential privacy—if John Doe participates and the adversary discovers that
+he has cancer, the adversary would still think he has cancer even if he had not participated.
+This example also illustrates a fine point about the notion of privacy implicit in differential privacy:
+while an informal notion of privacy concerns an adversary correctly learning an individual’s secret data,
+differential privacy deals instead with the end result of privacy breaches. If John Doe does not participate
+but the adversary thinks he has cancer, John Doe should not be happy just because the adversary did not learn
+his private data—his insurance premiums might still increase. In this sense, differential privacy guarantees
+that he is harmed nearly the same, whether he elects to participate or not.
+
+28
+
+B The individual’s participation decision
+In many situations, the data has already been collected, and the individuals may not have a meaningful
+choice to participate or not in the study—they may have already moved on, and it might be difficult to track
+them down to compensate them. However, our model assumes the individual has a real choice about whether
+to participate or not.
+To get around this problem, we could imagine running a thought experiment to calculate how much we
+would have had to pay each student to incentivize them to participate if they really had a choice. Since in
+this thought experiment participants have a choice, our model applies. If the required compensation is small,
+then the expected harm to any student is not very high, and we can run the study.
+However, there is yet another problem. Recall that our model assumes the study will be run, and compensates individuals for their marginal increase in expected harm when participating. In general, the increase
+in cost for participating in a study compared to not running the study at all can be high.26 Since our study
+will not be run if the harm to the individuals is high, should the individuals demand more compensation
+(i.e., is their privacy harm higher than predicted by our model)?
+The answer turns out to be no. We first estimate the costs, and then decide whether or not to run
+the study. If we do, we ask individuals if they want to participate in exchange for compensation (in our
+thought experiment). The point is that when the individuals are given the (hypothetical) choice, we have
+already decided that the study will happen. Thus, they should be compensated for their marginal harm in
+participating, and no more.
+
+26 This corresponds to applying the private mechanism to two databases: the real one, and an empty one (representing the case
+
+where the study is not run). These databases are far apart, so the potential increase in harm could be large.
+
+29
+
+
