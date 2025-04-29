@@ -1,0 +1,3142 @@
+2023 IEEE 8th European Symposium on Security and Privacy (EuroS&P)
+
+2023 IEEE 8th European Symposium on Security and Privacy (EuroS&P) | 978-1-6654-6512-0/23/$31.00 ©2023 IEEE | DOI: 10.1109/EuroSP57164.2023.00027
+
+smartFHE: Privacy-Preserving Smart Contracts from
+Fully Homomorphic Encryption
+Ravital Solomon
+
+Rick Weber
+
+Ghada Almashaqbeh
+
+Sunscreen, USA
+ravital@sunscreen.tech
+
+Sunscreen, USA
+rick@sunscreen.tech
+
+University of Connecticut, USA
+ghada@uconn.edu
+
+no privacy for the user as transaction records are fully
+public on the blockchain [14]; thus, several initiatives
+emerged to bring privacy to currency transfer [62], [65].
+
+Abstract—Despite the great potential and ﬂexibility of smart
+contract-enabled blockchains, building privacy-preserving
+applications using these platforms remains an open question.
+Existing solutions fall short since they ask end users to coordinate and perform the computation off-chain themselves.
+While such an approach reduces the burden of the miners
+of the system, it largely limits the ability of lightweight users
+to enjoy privacy since performing the actual computation on
+their own and attesting to its correctness is expensive even
+with state-of-the-art proof systems.
+To address this limitation, we propose smartFHE, a
+framework to support private smart contracts using fully
+homomorphic encryption (FHE). To the best of our knowledge, smartFHE is the ﬁrst to use FHE in the blockchain
+model; moreover, it is the ﬁrst to support arbitrary privacypreserving applications for lightweight users under the
+same computation-on-demand model pioneered by Ethereum. smartFHE does not overload the user since miners are
+instead responsible for performing the private computation.
+This is achieved by employing FHE so miners can compute
+over encrypted data and account balances. Users are only responsible for proving well-formedness of their private inputs
+using efﬁcient zero-knowledge proof systems (ZKPs). We
+formulate a notion for a privacy-preserving smart contract
+(PPSC) scheme and show a concrete instantiation of our
+smartFHE framework. We address challenges resulting from
+using FHE in the blockchain setting—including concurrency
+and dealing with leveled schemes. We also show how to
+choose suitable FHE and ZKP schemes to instantiate our
+framework, since naively choosing these will lead to poor
+performance in practice. We formally prove correctness and
+security of our construction. Finally, we conduct experiments
+to evaluate its efﬁciency, including comparisons with a stateof-the-art scheme and testing several private smart contract
+applications. We have open-sourced our (highly optimized)
+ZKP library, which could be of independent interest.
+
+Smart contracts and privacy. In parallel, a very different
+question about Bitcoin’s functionality was asked. Could
+Bitcoin be extended to support arbitrary user-deﬁned applications? The answer was yes but with major changes
+to its UTXO-based design. Thus, Ethereum was born,
+deﬁning an account-based model and a Turing-complete
+scripting language that permit users to deploy arbitrary
+programs called smart contracts [70]. Although Ethereum
+offers a highly expressive functionality, it provides no
+privacy out of the box.
+Over the last few years, several attempts have been
+made to support private computation for a single user’s
+inputs over a blockchain. Some constructions built upon
+the paradigm used for private currency transfer—operating
+directly on additively homomorphic encryptions with zero
+knowledge proofs (ZKPs) to prove that inputs satisfy
+certain conditions [22]. Unfortunately, additive homomorphisms enable only a limited set of applications with
+input/output (I/O) privacy. Other constructions ofﬂoad all
+work to the end user to do ofﬂine (or off-chain) [19],
+[68]. Users perform the intended computations on plaintext data, encrypt inputs and outputs, and create a ZKP
+certifying correctness of computation with respect to these
+encryptions. Blockchain miners only verify correctness of
+the ZKP. This is referred to as the ZKP-based approach
+as it relies on the power of ZKPs to perform computations
+with I/O privacy [8].
+The ZKP-based approach is not suited to lightweight
+users [8]. This is due to the fact that generating a proof
+to certify computation correctness, for even simple computations, is incredibly time and memory intensive even
+with state-of-the-art constructions. For example, using
+the highly optimized implementation of Zexe [19] with
+a non-universal proof system [44], the user needs over
+50 s to generate the proof showing correctness of offchain computation on 2 inputs. Furthermore, even if a
+very efﬁcient ZKP system is used, operating on private
+inputs coming from different users (alternatively known
+as operating on foreign data [67]) requires these users
+to use a privacy-preserving function evaluation protocol
+(e.g. multiparty computation [52]). This in turn requires
+interaction and coordination between the users, along with
+performing a distributed protocol to generate the computation correctness proof (perhaps embedded inside the
+private computation ofﬂine protocol).
+
+Index Terms—Blockchain model, private smart contracts,
+fully homomorphic encryption, zero knowledge proofs
+
+1. Introduction
+Cryptocurrency can be traced back to (at least) 1983
+when Chaum ﬁrst proposed the concept of electronic cash
+using blind signatures [25]. Extending Chaum’s design,
+Bitcoin [60] removed the need for a trusted party and
+introduced the notion of a public distributed ledger called
+blockchain through which users could exchange currency
+directly with one another. Unfortunately, Bitcoin provides
+© 2023, Ravital Solomon. Under license to IEEE.
+DOI 10.1109/EuroSP57164.2023.00027
+
+309
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+Both industry and academia have become increasingly
+focused on supporting lightweight users in the blockchain
+setting. Reducing the user workload while computing over
+her private inputs has led to considering fully homomorphic encryption (FHE) based approaches. Despite general
+belief that FHE is quite inefﬁcient, FHE has been used
+to successfully support lightweight clients attempting to
+retrieve relevant transactions [54], [57] (the latter, Spiral [57], is deployed in practice [6]). Extending this line
+of work, we ask if FHE might be used to support private
+computation in the blockchain model for lightweight users.
+We focus on building a privacy-preserving version of
+Ethereum’s computing-on-demand model.
+
+other private smart contract constructions.
+smartFHE framework. We propose smartFHE, a framework to support smart contracts with I/O privacy along
+with payments that hide the users’ balances and transfer
+amount via FHE and ZKPs. smartFHE preserves privacy
+under the same decentralization, availability, and work
+model of general-purpose (public) smart-contract systems.
+smartFHE does not overload end users as miners are
+responsible for executing the required computations. To
+allow for operations on encrypted account states, we introduce a locking mechanism (reminiscent of a mutex) to
+solve resulting concurrency issues. It also protects against
+front-running and replay attacks.
+smartFHE is highly ﬂexible with respect to functionality. First, it offers two modes of operation—public and
+private—that users can switch between. Private accounts
+and their data are stored encrypted on the blockchain and
+users supplement any additional encrypted inputs with
+proper ZKPs attesting to well-formedness. FHE allows
+miners to operate directly on these private inputs, produce
+private outputs, and update the blockchain state accordingly. Second, our framework is modular since it is not
+bound to particular FHE and ZKP schemes, allowing
+us to exploit future improvements in these areas. Third,
+our framework and its security notions establish rigorous
+foundations based on which other FHE ﬂavors can be used
+to support private smart contracts, such as multi-party and
+multi-key FHE [15], [58], [59].
+smartFHE is highly versatile with respect to
+applications as it supports operation on foreign values.
+Our instantiation of smartFHE allows us to realize private
+payments and arbitrary computations over a single user’s
+inputs, e.g. automated market makers (AMMs) that
+protect users against front-running attacks. Furthermore,
+with additional smart contract logic, it can even realize
+some important applications operating on multi-user
+inputs such as statistical data analysis for ﬁnancial
+purposes (details can be found in Appendix B).
+
+1.1. Our Contributions
+We propose smartFHE, a framework for building smart
+contracts that supports lightweight users. Operating directly on encrypted values has proven invaluable across
+numerous applications [24], [33]. Using FHE, users could
+supply encrypted inputs along with a simple ZKP showing
+their well-formedness and that certain relations on the
+plaintexts are satisﬁed. Miners check the proofs and perform the requested computations directly on the encrypted
+inputs. No need for users to provide complex ZKPs attesting to the correctness of the entire computation.
+Combining FHE with blockchain represents a harmonious union. Blockchain addresses the pain point of
+verifying correctness of homomorphic computation. In
+FHE, the evaluation party is different from the (encrypted)
+input owner and there is no immediate way for the input
+owner to validate correctness of the computation (without
+repeating the entire computation). Although solutions exist
+for this problem, the added cost can be prohibitive [39].
+A blockchain offers a simpler solution through consensus;
+the assumption that the majority of the mining power
+is honest provides guarantees with regards to correctness [50]. Moreover, a blockchain solves another problem
+for computation outsourcing—namely, the need for an
+always-available evaluation party. Miners perform paid
+computations for users (as in Ethereum) which could be
+the FHE computations needed in private smart contracts.
+We take a foundational approach to realizing smart
+contracts with I/O privacy employing FHE and ZKPs. To
+the best of our knowledge, smartFHE is the ﬁrst to use
+FHE in the blockchain model; it is moreover the ﬁrst
+to support lightweight users in preserving input/output
+privacy across arbitrary decentralized applications.
+Although combining FHE with ZKPs to support private
+computation appears natural, in the context of large
+scale distributed systems like blockchain, this solution
+introduces several challenges (including efﬁciency and
+concurrency) that we address in our framework. We
+elaborate on our contributions in what follows.
+
+smartFHE instantiation. We provide an instantiation of
+our framework and formally prove its correctness and
+security based on our PPSC deﬁnition. Working with
+FHE in the blockchain setting is non-trivial if we require
+efﬁciency. Selection of an FHE scheme must be done
+carefully with consideration of the need for exact computation, fast integer arithmetic, and high levels of precision.
+Additionally, we encounter concurrency issues and must
+get around bootstrapping as the best suited FHE schemes
+for the blockchain setting do not offer fast bootstrapping.1
+The most obvious path forward to proving the latticebased relations of FHE is via lattice-based ZKPs. However, state-of-the-art lattice-based ZKPs [16], [17] tend
+to be hundreds of kilobytes to single digit megabytes
+in size and are not nearly as space efﬁcient as recently
+proposed elliptic curve-based ZKPs [23], [28]. To address
+this challenge, we utilize a recent elliptic-curve based
+ZKP system [34] that allows for proving certain latticebased relations. As [34] proves relations with respect to a
+Pedersen commitment, we can employ another elliptic-
+
+A notion for privacy-preserving smart contracts. We
+deﬁne a notion for privacy-preserving smart contracts
+(PPSCs) capturing the support of arbitrary computation
+with I/O privacy. Furthermore, we extend existing
+deﬁnitions of correctness and security [22], [65], in
+terms of privacy/ledger indistinguishability and overdraft
+safety/balance, to provide formal guarantees for a PPSC
+scheme. We believe that our PPSC deﬁnition is of
+independent interest as it is general enough to be used in
+
+1. Bootstrapping is needed to move from a leveled FHE scheme that
+can perform only a certain number of homomorphic computations to an
+FHE scheme that can perform an unlimited number of homomorphic
+computations on encrypted data [20].
+
+310
+
+2
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+curve based ZKP—Bulletproofs [23]—to prove further
+relations over private inputs quite efﬁciently.
+To demonstrate feasibility, we evaluate the performance of our instantiation to show how our approach
+indeed supports lightweight users. In terms of private
+payments, smartFHE allows a user to issue payments at a
+rate that is 1.16x−7.79x (depending on parameter choice)
+faster than Veri-zexe, a state-of-the-art scheme. We conduct experiments testing our instantiation in supporting
+private smart contracts for statistical data analysis and
+automated market makers (AMMs). Transaction generation time for these applications is smaller than that of
+Veri-zexe across the board. Our implementation includes
+developing the ﬁrst library for short discrete log proofs.
+Unfortunately, veriﬁcation time in our system is quite
+large but can be improved upon signiﬁcantly with further
+work into a GPU-accelerated version of short discrete
+log proofs targeting OpenCL (our implementation targets
+Apple Metal). We open source our library, which may be
+of independent interest as it advances the current state-ofthe-art on privacy-preserving computing.
+
+address concurrency issues related to operating on private
+(encrypted) accounts. Nonetheless, we view the compiler idea as compatible with the smartFHE framework;
+a compiler could be used to help implement automatic
+conversion of smart contract code into public or private
+format based on the types of accounts used in the code.
+Zexe [19] takes privacy further by also supporting
+function privacy (i.e. hiding the computation itself). Following the ZKP-based approach outlined previously, Zexe
+operates in the UTXO-based model which restricts the
+supported functionality to extending Zerocash [65] scripts
+used to spend currency. Thus, it does not truly support
+private smart contracts. Furthermore, Zexe uses a nonuniversal ZKP system [43], [44], meaning that a new setup
+is needed for each new computation circuit.3 Zexe will
+scale poorly if the ZKP is used to attest to changes in the
+contract state. Kachina [49] seeks to solve this problem
+by introducing state oracles to reduce the ledger state size
+involved in a ZKP, in addition to introducing a formal
+model for private smart contracts. Nonetheless, it still
+follows the ZKP-based approach; thus, it is not suitable
+for lightweight users.
+Combining FHE with blockchain applications has recently been investigated thanks to optimized implementations of FHE schemes. Oblivious message retrieval [54]
+allows a client to retrieve all private transactions relevant
+to her. By utilizing FHE, this can be done in an efﬁcient
+way; miners will produce a concise response (without
+knowing the client address or which transactions are of
+interest) so the client can detect and then retrieve these
+transactions privately. Spiral [57] utilizes FHE to build a
+highly efﬁcient single-server private information retrieval
+(PIR) protocol. This allows a client, interacting with a
+trustless server holding a private database, to retrieve
+private records without revealing the access pattern.4
+While the space has explored other paradigms such as
+private (enterprise or permissioned) blockchains, where
+privacy is controlled based on which parties are permitted
+to join certain application or view certain blockchain logs,
+our work focuses on cryptographic approaches to preserve
+privacy in permissionless blockchains. Another paradigm
+is utilizing differential privacy, which in general adds
+noise to the user data so that the privacy loss is bounded
+by some factor [31], [46]. A major challenge here is
+the privacy-accuracy tradeoff—more noise implies higher
+privacy level but less accurate results when operating on
+the data. This limits the kind of applications this approach
+can support, e.g., it cannot be used for private accounts
+that require exact computation over their balances.
+
+1.2. Related Work
+Several works have explored privacy in the context of
+blockchain. We focus on those peer-reviewed works that
+provide I/O privacy for arbitrary computation (rather than
+customized solutions for speciﬁc use cases).
+Hawk [50] is one of the ﬁrst works to construct a
+private smart contract scheme using ZKPs. Hawk requires a semi-trusted manager—trusted with protecting
+the privacy of the users’ inputs but not for correctness of
+computation. Ekiden [26] replaces a semi-trusted manager
+with trusted hardware, while Arbitrum [48] relies on a full
+quorum of trusted parties. Subsequent works avoid such
+(semi-)trusted parties or hardware. Among them, several
+works [10], [11], [13] (including Appendix G in [50])
+improve on Hawk by implementing the manager functionality using a multiparty computation protocol with various
+efﬁciency optimizations. While Zether [22] targets trustless smart contract privacy for Ethereum, its reliance on
+additively homomorphic encryption restricts functionality
+to private currency transfer and a limited class of private
+smart contracts. Although Zether supports anonymity, this
+feature cannot be implemented on Ethereum as the cost
+exceeds the gas limit per block [22].
+Zkay [68] and its extension ZeeStar [67] (which targets operation on foreign data) suggest that supporting
+privacy for smart contracts requires knowledge of advanced cryptographic primitives that the average developer
+may not possess. They develop a compiler that takes as
+input a public smart contract and produces a functionalityequivalent one that can operate on private inputs. Zkay
+follows the ZKP-based approach described earlier, so it
+overloads end users and requires off-chain coordination to
+handle multi-user inputs [8]. Zeestar, on the other hand,
+supports only additive homomorphisms, and it implements
+a non-universal ZKP system [43] that requires a new setup
+for each computation or application.2 Both works do not
+
+2. Deﬁning a PPSC Scheme
+In this section, we deﬁne a notion for a privacypreserving smart contract (PPSC) scheme and formulate
+its correctness and security.
+Notation. We use λ to represent the security
+parameter, and pp to denote the system’s public
+3. Veri-zexe [72] addresses this problem by replacing the nonuniversal ZKP system that Zexe uses with a universal one, namely
+Plonk [41], allowing for one setup in the system.
+4. PESCA [32] proposes using threshold FHE to support private smart
+contract state and computation with the secret key shared among the
+committee handling the consensus. However, it introduces high level
+ideas rather than a detailed protocol design and analysis.
+
+2. Both Zeestar and Zether rely on ElGamal encryption. Thus, both
+support only short plaintexts (i.e. of length up to 32 bits), meaning
+that account balances and transferred values cannot exceed this limit.
+smartFHE, as it relies on FHE, does not have this limitation and can
+operate on longer plaintext values, e.g. 64 bits.
+
+311
+
+3
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+Compute: Takes as inputs pp, a circuit C representing the code to be executed, and circuit inputs
+x1 , . . . , x n :
+– If x1 , . . . , xn are public, then apply C as is on
+these inputs.
+– If x1 , . . . , xn are private, transform C into a
+functionality-equivalent circuit C  operating on
+private inputs and producing private outputs,6 then
+apply C  to x1 , ..., xn .
+Output 1 if computation is successful, and 0 otherwise.7
+• UpdateState: Takes as inputs pp, current ledger state
+L, and a list of pending operations Ops = {opi }.8
+Changes induced by all operations are reﬂected at
+the end of a block except:
+– txshield or txprivtransf are processed at the end of the
+epoch (i.e. in the last block of the epoch).
+– Incoming transactions to a locked account will not
+be processed until the next epoch after which the
+account is unlocked.
+At the end of a block, UpdateState outputs an updated ledger state L .
+
+parameters. To refer to parameter x inside pp, we write
+pp.x. The public and secret keys of an account are
+denoted pk and sk, respectively, with the account owner
+in superscript and the account type (public or private) in
+subscript. Lastly, PPT is probabilistic polynomial time,
+negl is negligible function, and MAX is the maximum
+balance value supported in the system.
+
+•
+
+PPSC deﬁnition. We envision a PPSC scheme applied
+on top of a public smart contract-enabled cryptocurrency
+(such as Ethereum). It can be viewed as the extensions needed to support privacy-preserving execution of
+smart contracts and payments on an account-based ledger.
+Hence, a PPSC scheme inherits all the public functionality
+and data structures found in the underlying public system.
+This includes the append-only ledger L that stores states
+for accounts (e.g. their balances and contract code if
+applicable). Users have access to this ledger at any time.
+Processing transactions and performing computations (the
+code portions of smart contracts) change the state of the
+ledger. Thus, issuing any transaction or implementing any
+code relies on the latest ledger state reﬂected by the most
+recent mined block. The system operates in blocks and
+epochs (an epoch is k consecutive blocks).
+Our deﬁnition below captures the new modules needed
+to support private transactions and smart contract execution with private inputs and outputs.
+
+Now, we deﬁne notions for correctness and security
+of a PPSC scheme, which are inspired by [22], [65]. We
+make the appropriate changes to take into account our
+different account types, transaction types, private computation (rather just private payments as in these prior works)
+and algorithms listed in the PPSC deﬁnition.
+
+Deﬁnition 1 (PPSC Scheme). A PPSC scheme Π is
+a tuple of PPT algorithms (Setup, CreateAccount,
+CreateTransaction,
+VerifyTransaction,
+Compute,
+UpdateState) deﬁned as follows:
+• Setup: Takes as input a security parameter λ and
+outputs system public parameters pp.
+• CreateAccount: Takes as inputs pp and a privacy
+mode (0 for public and 1 for private). It generates
+a key pair (sk, pk) and an address addr (derived
+from pk),5 and it initializes the account state, balance
+Bal[pk] = 0 and locking entry Lk[pk] = ⊥ (⊥ means
+the account is initially unlocked). CreateAccount
+outputs the key pair, address, and state.
+• CreateTransaction: Takes as inputs pp and transaction related information. Outputs a transaction tx of
+one of the following types:
+– txshield : Transfers currency from a public account
+to a private one. Currency amount is public.
+– txdeshield : Transfers currency from a private account to a public one. Currency amount is public.
+– txprivtransf : Transfers currency between private
+accounts. Currency amount is private.
+– txlock : Locks a private account to some other
+account, thereby preventing the locked account
+balance from being altered until unlocked.
+– txunlock : Unlocks a private account, returning
+control back to its owner. Only the account to
+which the private account was locked can issue
+this transaction.
+• VerifyTransaction: Takes as inputs pp, transaction tx,
+and the transaction’s syntax/semantics for the types
+mentioned above. Outputs 1 if tx is valid based on
+these syntax/semantics; 0, otherwise.
+
+2.1. Correctness
+Intuitively, the correctness of a PPSC scheme requires
+that if we start with a valid ledger state and apply an
+arbitrary sequence of operations, the resulting state is also
+valid. Correctness with respect to public state variables
+is derived from the correctness of the underlying public
+system. It can be easily veriﬁed by inspecting the ledger
+since public accounts and all operations performed on
+them are stored in the clear. On the other hand, private
+accounts store secret values. Although a smart contract’s
+code is public, it is translated into privacy-preserving
+operations before operating on private accounts so it produces private outputs. Thus, proving correctness requires
+validating these private operations.
+We deﬁne an incorrectness game INCGame between
+a challenger C and a ledger sampler S . At a high level,
+after performing the setup phase by C , S samples a valid
+initial ledger L, a public account accpub (representing
+the reference point) and a private account accpriv such
+that their initial balances are identical, and an operation
+transcript Ops that cover all basic operations in the system.
+Ops will be applied separately to accpub (as is) and accpriv
+(with an equivalent private version of Ops denoted as
+Ops ) starting with L in each case. Here Ops corresponds
+to the same functionality of Ops—produces identical state
+6. So for any public input x and its private version x , we have
+C(x) = C  (x ).
+7. Note that in practice a compute request is packaged as a transaction
+containing the target smart contract address, the name of a function inside
+this contract (the one that C represents), and the inputs.
+8. Note that opi can be a transaction txi or a computation
+Compute(pp, Ci , {xi,1 , . . . , xi,n }) as described above.
+
+5. This address will have a postﬁx indicating if it is for a private or
+public account.
+
+312
+
+4
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+to
+txdeshield ← Deshield(skfrom
+If
+priv , pkpub , val).
+from
+Lk[pkfrom
+]
+=
+⊥
+,
+then
+decrement
+Bal[pk
+priv
+priv ] by
+val and increment Bal[pkto
+]
+by
+val
+.
+pub
+• txlock ← Lock(sk, addr). If Lk[pk] = ⊥ then set
+Lk[pk] = addr (pk is the public key tied to sk).
+• txunlock ← Unlock(pk). If Lk[pk] = txunlock .addr,
+then set Lk[pk] = ⊥ (txunlock .addr is the account
+address that issued txunlock ).
+• Compute(pp, C, {x1 , . . . , xn }). Updates depend on
+the code that C represents. These may include altering storage variables related to the smart contract
+code and/or account balances.
+
+changes—but it deals with private inputs/outputs instead
+of public ones (e.g., txtransf is replaced with txprivtransf and
+C is transformed into C  mentioned before).
+Applying Ops and Ops will produce two updated
+ledger states: L1 (when working on accpub ) and L2 (when
+working on accpriv ). At the end of the game, the balances
+of both accounts will be revealed (this requires a deshield
+transaction for accpriv ). S wins the INCGame game if it
+can produce a scenario in which the balance of accpriv is
+not equal to the balance of accpub .9
+
+•
+
+Deﬁnition 2 (Correctness of PPSC Scheme). A PPSC
+scheme Π = (Setup, CreateAccount, CreateTransaction,
+VerifyTransaction, Compute, UpdateState) is correct if
+no PPT ledger sampler S can win the INCGame game
+with non-negligible probability. That is, for every PPT S
+and sufﬁciently large λ, we have:
+
+INCGame Game Deﬁnition. The probabilistic experiment INCGame takes as inputs a PPSC scheme Π and a
+security parameter λ. It deﬁnes an interaction between a
+challenger C and a ledger sampler S as follows:
+1) C runs System.Setup(1λ ) and sends the public parameters pp to S .
+2) S sends back a ledger L, two accounts accpub and
+accpriv , and an operation transcript Ops.
+3) C veriﬁes the validity of Ops (cf. Deﬁnition 3), that
+the two accounts have properly-initialized states that
+are recorded on the ledger. If any of these checks
+fail, C aborts and outputs 0.
+4) C applies Ops to accpub with ledger state L and
+produces an updated ledger state L1 . Then, it applies
+the private version of Ops (Ops mentioned earlier)
+to accpriv with the same initial ledger state L and
+produces an updated ledger state L2 . Ledger state
+evolution rules are per Deﬁnition 4.
+5) C deshields the balance of accpriv on L2 , denoted as
+b . Let b be the balance of accpub based on L1 . If
+b = b , C outputs 1 (meaning that S won the game),
+otherwise, it outputs 0.
+The advantage of S in wining the INCGame game is
+deﬁned as the probability that C outputs 1.
+
+
+AdvINCGame
+< negl(λ)
+,S
+
+where AdvINCGame
+:= Pr[INCGame(Π, S, 1λ ) = 1] is
+Π,S
+S ’s advantage of winning the incorrectness game, and
+the probability is taken over all randomness of C and S .
+We now deﬁne the speciﬁcations of a valid Ops and
+the ledger state evolution needed to deﬁne the INCGame
+game referenced above.
+Deﬁnition 3 (Speciﬁcations of a valid Ops). Let Ops =
+{opi } be a list of operations sampled by S . We say that
+Ops is valid if it satisﬁes the following:
+• All account addresses, keys, and states are generated
+using CreateAccount.
+• Each opi is either a transaction deﬁned in a PPSC
+scheme (cf. Deﬁnition 1), a public transaction as deﬁned in the underlying public smart contract-enabled
+system, or a Compute operation with some arbitrary
+circuit C and a set of inputs {xi }.
+• If an operation opi is issued in epoch i, then the
+ledger state used to produce opi (if needed) is the
+one produced by the last block of epoch i − 1.
+
+2.2. Security
+A PPSC scheme is secure if it satisﬁes two properties—overdraft safety and ledger indistinguishability—as
+captured by the following deﬁnition.
+
+The last condition implies that an operation issued in
+an epoch will be processed in the same epoch, which reﬂects the assumption on processing delays in our system.
+A ledger state is composed of two tables, Bal and
+Lk, that store the balance amount and lock state for each
+account. These tables are indexed using the public keys
+of the accounts. Let the initial ledger state sampled by
+S be L0 . Bal and Lk will be initially set to 0 and ⊥,
+respectively, for all accounts (including those for accpub
+and accpriv sampled by S ).
+
+Deﬁnition 5 (Security of a PPSC Scheme). A PPSC
+scheme Π = (Setup, CreateAccount, CreateTransaction,
+VerifyTransaction, Compute, UpdateState) is secure if
+it satisﬁes overdraft safety (cf. Deﬁnition 6) and ledger
+indistinguishability (cf. Deﬁnition 8).
+We deﬁne the security games that capture overdraft
+safety and ledger indistinguishability. Let A be the adversary; C , the challenger; and OPPSC , the oracle for a
+PPSC scheme. All parties receive the security parameter
+λ as input and are given oracle access to OPPSC . OPPSC
+maintains the public parameters pp, the system state, and
+all public keys generated in the system PK (the latter is
+generated by C at A’s request). Since these belong to C ,
+A does not have the corresponding secret keys for them.
+Any time a query requires a secret key belonging to C as
+input, we allow A to specify the corresponding public key
+in PK. OPPSC supports the following query types:
+λ
+• (setup, 1 ): Takes the security parameter λ as input
+and sets up the system accordingly. This includes creating the ledger and the public parameters needed by
+
+Deﬁnition 4 (Ledger state evolution). Let Li−1 be the
+current ledger state and opi be the next operation to be
+processed to produce the ith ledger state Li . The updates
+resulting from processing opi are deﬁned as follows:
+from
+to
+to
+• txshield ← Shield(skpub , pkpriv , val). If Lk[pkpriv ] = ⊥
+and val + Bal[pkto
+]
+<
+MAX
+,
+then
+increment
+priv
+Bal[pkto
+priv ] by val.
+from
+to
+• txprivtransf ← PrivTransfer(skpriv , pkpriv , val).
+If
+to
+from
+Lk[pkpriv ] = ⊥ and Lk[pkpriv ] = ⊥, then decrement
+to
+Bal[pkfrom
+priv ] by val and increment Bal[pkpriv ] by val.
+9. Without loss of generality, to simplify the notions, we focus on the
+balance value when dealing with states.
+
+313
+
+5
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+all parties/cryptographic building blocks. This query
+can be called only once by C .
+• (request, op, aux): Allows A to request executing any
+of the user algorithms deﬁned in Deﬁnition 1 (represented by op) with certain inputs and any account
+address of A’s choice (represented by the auxiliary
+input aux) through C :
+– For CreateAccount, A will receive only the account address and its public key.
+– For Compute, only computations supported by the
+PPSC system will be performed.
+– Any transaction from a locked account will be
+rejected.
+• (insert, op): Allows A to insert its own well-formed
+transaction or computation request. These (and anything via request) will be held in pending state (or
+pending operations denoted as Ops) until processed.
+• (execute, op): Allows A to ask OPPSC to process an
+arbitrary subset of pending operations op ⊂ Ops and
+update the ledger state.
+• (corrupt, pk): Allows A to corrupt an account with
+public key pk, meaning that A will get the corresponding secret key sk. This command can be
+invoked at anytime and as many times as A wishes.
+
+state beyond what can be inferred from what is publicly
+revealed. We deﬁne a LINDGame to capture this. It is
+very similar to OSGame except that at some point in
+the game, A will send two publicly consistent operations
+(a transaction or a compute request) instead of one. C
+will randomly choose one of these operations to execute.
+A wins the game if it manages to correctly guess which
+operation was chosen.
+We ﬁrst deﬁne the notion of public consistency of two
+operations, which is needed to rule out trivial wins of A
+in the LINDGame game.
+Deﬁnition 7 (Public Consistency). Two operations are
+publicly consistent if:
+• They refer to the same user algorithm, or computation, with the same public keys and addresses.
+• For currency transfer between private accounts, only
+one of the sender or recipient can be corrupt, not
+both. If either is corrupt, then the transfer amount
+must be the same.
+• Lock must be associated with the same account and
+address for the locker and lockee.
+• Unlock must be associated with the same account.
+• Same balance value returned when querying an account’s balance.
+• For private computation requests, the computation in
+both must be the same and behave similarly on the
+supplemented inputs, with private output variables
+that are not owned by A.10
+
+OSGame game. Overdraft safety ensures that a PPSC
+scheme Π does not allow A to spend more currency than
+it owns. To capture this, we deﬁne an OSGame game.
+A wins the game and, hence, breaks overdraft safety if it
+manages to spend currency of a value larger than what it
+rightfully owns. OSGame proceeds as follows:
+1) (setup, 1λ )
+2) AOPPSC (1λ )
+3) At the end, C queries the ledger state through OPPSC
+and outputs 1 (meaning that A won the game) if:
+
+Accordingly, the LINDGame proceeds as follows:
+$
+
+1) b ←
+− {0, 1}
+2) (setup, 1λ )
+3) (op0 , aux0 , op1 , aux1 ) ← AOPPSC (1λ )
+4) If op0 and op1 are publicly consistent, then
+(execute, opb , auxb )
+5) A accesses the updated ledger state through OPPSC
+6) A outputs b , if b = b then return 1 (meaning that
+A won), otherwise, return 0.
+
+valA→PK + valInsert > valPK→A + valdeposit
+
+such that:
+valA→PK is the total value of payments conﬁrmed
+from A to users with addresses in PK (this results
+from A asking honest parties represented by C to
+create transactions for it).
+• valInsert is the total value of payments placed by A
+on the ledger.
+• valPK→A is the total value of payments conﬁrmed
+from users with addresses in PK to A.
+• valdeposit is the initial amount of currency in accounts owned by A.
+Otherwise, C outputs 0.
+•
+
+Deﬁnition 8 (Ledger Indistinguishability). A PPSC
+scheme Π supports ledger indistinguishability if no PPT
+adversary A can win the LINDGame game with nonnegligible probability. That is, for every PPT A and
+sufﬁciently large λ, we have:
+1
+
+AdvLINDGame
+< + negl(λ)
+,A
+2
+
+where AdvLINDGame
+:= Pr[LINDGame(Π, A, 1λ ) = 1] is
+,A
+A’s advantage of winning LINDGame, and the probability is taken over all randomness of C and A.
+
+Deﬁnition 6 (Overdraft Safety). A PPSC scheme Π provides overdraft safety if no PPT adversary A can win the
+OSGame game with non-negligible probability. That is,
+for every PPT A and sufﬁciently large λ, we have:
+
+3. Background and Challenges
+In this section, we provide a brief background of the
+cryptographic primitives employed in smartFHE, along
+with a brief overview of Ethereum as our framework
+builds upon its ideas.
+
+
+AdvOSGame
+< negl(λ)
+,A
+
+where AdvOSGame
+:= Pr[OSGame(Π, A, 1λ ) = 1] is A’s
+,A
+advantage of winning the overdraft safety game, and the
+probability is taken over all randomness of C and A.
+
+Overview of Ethereum. Ethereum [70] is a smart
+contract-enabled cryptocurrency that allows users to perform simple currency transfers in its native currency,
+
+LINDGame game. Ledger indistinguishability ensures
+that the ledger produced by a PPSC scheme Π does
+not reveal additional information about private account
+
+10. Public computations are always trivial—they must have same
+input values, making op0 and op1 identical.
+
+314
+
+6
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+Ether, as well as deploy complex applications via the creation of user-deﬁned smart contracts. To this end, Ethereum introduces a Turing-complete language and maintains
+a virtual machine to execute contracts written in this
+language. Ethereum relies on an account-based model
+rather than the UTXO model like Bitcoin [60]. Thus, it
+introduces a more advanced notion of ledger state, which
+includes the state of all accounts in the system.
+Ethereum provides two types of accounts: externally
+owned accounts (EOAs) that are controlled by users and
+contract accounts that are controlled by their contract
+code. The state of an EOA mainly consists of a balance,
+whereas that of a contract account also includes contract
+code and its storage. Both account types can invoke functions from a smart contract’s code. However, only an EOA
+can initiate a transaction or deploy a smart contract.
+Miners execute the code in any smart contract upon
+request (i.e. when invoked). To prevent DoS attacks,
+each operation has some associated cost in terms of
+gas. Additionally, Ethereum’s blockchain has a gas limit
+which constrains the number of operations that can be
+executed in a single block.
+
+to represent account balances and transfer amounts.
+TFHE and its variants generally struggle to support more
+than 20 bits of precision [53]; in practice, bootstrapping
+with even around 20 bits of precision can take a few
+seconds, making boolean schemes practically inefﬁcient
+for the blockchain setting. Floating point arithmetic, on
+the other hand, will provide only approximate values
+and, thus, is a poor choice for smartFHE since we need
+precise balance and transfer amounts. While any of the
+computation paradigms may be used in the smartFHE
+protocol, each one presents a unique set of tradeoffs that
+system designers must account for.
+Zero Knowledge Proofs. A zero knowledge proof
+(ZKP) system allows a prover to convince a veriﬁer
+that it knows a witness w for some statement x without
+revealing anything about the witness itself beyond what
+can be inferred by x on its own. A ZKP system consists
+of 3 algorithms: Setup for generating public parameters,
+Prove for producing a proof π proving correctness of x
+given w, and Verify for verifying if a proof π is valid for
+statement x. A secure ZKP system must satisfy certain
+properties with respect to soundness, completeness, and
+zero knowledge. Informally, soundness guarantees a
+prover cannot convince a veriﬁer of false statements;
+completeness guarantees that any honestly generated
+proof will be accepted by the veriﬁer; zero knowledge
+guarantees that the proof of a statement does not reveal
+anything about the witness.
+
+Fully Homomorphic Encryption. A fully homomorphic
+encryption (FHE) scheme consists of 3 efﬁcient
+algorithms: KeyGen for generating public/private keys
+and public parameters needed in the scheme, Encrypt
+for encrypting a message m to produce a ciphertext
+ct, and Decrypt for decrypting a ciphertext ct to return
+the plaintext message m. Moreover, an FHE scheme
+supports addition and multiplication on ciphertexts,
+thereby allowing for arbitrary computation on encrypted
+data. If ct1 is a ciphertext of m1 and ct2 is a ciphertext
+of m2 , then ct1 + ct2 = ct3 is a ciphertext of m1 + m2 .
+Also, ct1 · ct2 = ct3 is a ciphertext of m1 · m2 . All known
+FHE constructions rely on lattice-based cryptography so
+provide post-quantum security guarantees. Correctness
+of FHE means that decryption produces the original
+plaintext that was encrypted, and that homomorphic
+addition and multiplication produce ciphertexts for valid
+results. For security, we require the conventional semantic
+security (against CPA attackers).
+
+Challenges in combining ZKPs with FHE. As mentioned before, all known FHE schemes are lattice-based.
+Hence, a naive instanitation of our framework may also
+require the use of a lattice-based ZKP system. Indeed this
+provides full post-quantum security for private accounts
+but harms efﬁciency in terms of storage overhead. Latticebased ZKPs, although quite fast, tend to result in proofs
+that are hundreds of kilobytes to single digit megabytes
+in size [55], [61], making them challenging to work with
+in the blockchain model. An elliptic curve or hash-based
+proof system likely offers space savings but at the cost of
+longer proof generation times.
+
+4. smartFHE Framework
+
+Challenges in working with FHE. FHE schemes model
+computation in one of three paradigms—as boolean, exact
+arithmetic, or ﬂoating point arithmetic [45]. Arithmeticbased schemes (such as BFV [36], BGV [21], CKKS [27])
+are almost always used in the leveled format, meaning that
+only a certain number of operations can be performed
+on encrypted data. Ciphertexts produced directly from
+encryption are “fresh.” A noise budget is associated with
+each fresh ciphertext and over the course of computations
+on this ciphertext is depleted. Once this budget reaches 0,
+the ciphertext can no longer be decrypted successfully.
+Although bootstrapping can used to support truly
+arbitrary computation on encrypted data, it tends to be
+very slow for arithmetic-based schemes, often taking
+a few minutes [69]. Binary schemes offer very fast
+bootstrapping so can (at face value) support truly
+arbitrary computation. When using binary schemes (like
+TFHE [29] or Concrete [30]), bootstrapping is used to
+realize each operation [69]. For the blockchain setting, we
+anticipate users needing to perform 32 bit computation
+
+In this section, we present the design of smartFHE, a
+PPSC framework that uses FHE in the blockchain model.
+We begin by outlining the cryptographic building blocks
+employed, then we describe the smart contract-enabled
+cryptocurrency architecture that we target, followed by
+technical details of our framework. In presenting the
+framework, we address challenges that result from working with FHE in the blockchain setting, such as dealing
+with leveled FHE schemes and concurrency.
+
+4.1. Architecture
+Our framework can be viewed as extending a public
+smart contract-enabled cryptocurrency to support privacy.
+We require an account-based model, a Turing-complete
+scripting language, and a virtual machine with a cost (i.e.
+miners’ fees) associated with each smart contract operation. Thus, we consider an Ethereum-like architecture.
+smartFHE supports four services: public payments,
+public smart contracts, private payments, and private
+315
+
+7
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+smart contracts. The default operation is the public
+mode—meaning that everything will be logged in the
+clear on the blockchain and smart contract code will
+operate on public inputs/outputs. These are handled in
+the same manner as in Ethereum. On the other hand,
+if the smart contract (or a payment transaction) operates
+on private accounts, then the private mode will be used
+instead. The required operations will be converted into
+their equivalent privacy-preserving format and will produce private outputs (for simplicity, we refer to these as
+private smart contracts). smartFHE extends the standard
+transaction set of Ethereum with new types of transactions
+and cryptographic capabilities to permit operations on
+private accounts and user inputs.
+Similar to Ethereum, smartFHE has two types of accounts: contract owned and externally (or user) owned.
+However, we further subdivide externally owned accounts
+into two types: public and private. Private accounts will
+be used to initiate private transactions and participate
+in private smart contracts. In our scheme, each account
+(public or private) will maintain its own nonce which must
+be signed and incremented as part of any transaction this
+account issues. This approach ensures that valid transactions cannot be replayed and zero-knowledge proofs
+cannot be maliciously imported into new transactions.
+smartFHE operation proceeds in rounds (a round is
+the time needed to mine a block on the blockchain) and
+epochs (where an epoch is y contiguous rounds for some
+integer y that is selected during the system setup phase).
+The latter is needed to handle concurrency issues related
+to operating on private accounts, as will be shown later.
+If desired, epochs can be eliminated entirely (which we
+discuss towards the end of this section).
+
+Ethereum’s network protocol to support privacy. Full
+technical details can be found in Section 5).11
+(1) Public operations via public accounts. To create a
+public account, the user calls Pub.CreateAccount(pp) to
+generate the account key pair (pkpub , skpub ). The public
+key deﬁnes the user’s account address while the secret
+key allows her to sign all transactions issued by this
+account. Each public account also has an unencrypted
+balance and a nonce ctr[pkpub ] associated with it.
+smartFHE handles public operations (both payments and
+smart contracts) in the same manner as Ethereum. The
+to
+algorithm Transfer(skfrom
+pub , pkpub , amnt) allows a user to
+send amnt currency from one public account to another.
+The syntax for invoking functions in a smart contract is
+deﬁned by the contract creator. As in Ethereum, invoking
+a function is done by issuing a transaction that contains
+all inputs this function needs.
+(2) Private payments via private accounts. Having a
+private account allows its owner to initiate transactions
+that hide transfer values and/or users’ balances.
+To create a private account, the user calls
+Priv.CreateAccount(pp) to generate the FHE account
+key pair (pkpriv , skpriv ) (which is used to encrypt
+her inputs) along with a signature scheme key pair
+(sigpkpriv , sigskpriv ) to sign outgoing transactions. A
+private account has an encrypted balance (with respect
+to pkpriv ) and a nonce ctr[pkpriv ] associated with it. Users
+can initiate the following private transaction types:
+from
+to
+• txshield ← Shield(skpub , pkpriv , amnt): Transfers a
+given amount of currency from a public account
+to a private one. Thus, the transaction contains the
+public keys of the sender’s public account and the
+recipient’s private account, and the (unencrypted)
+transfer amount. No ZKP is needed to prove that the
+sender owns the right transfer amount. The sender
+uses a public account and can be veriﬁed by simply
+tracking the account’s public state on the blockchain.
+from
+to
+• txprivtransf ← PrivTransfer(skpriv , pkpriv , amnt):
+Transfers some undisclosed (encrypted) amount of
+currency from one private account to another private
+account. This transaction requires a ZKP that the
+sender owns the transferred currency, that the same
+amount has been added to the recipient’s account as
+has been deducted from the sender’s account, that
+the transfer amount is positive, and that the sender’s
+remaining balance is non-negative.
+from
+to
+• txdeshield ← Deshield(skpriv , pkpub , amnt): Transfers
+a given amount of currency from a private account
+to a public one. This transaction needs a ZKP to
+prove that the sender’s account has a balance equals
+to at least the transfer value.
+
+4.2. The smartFHE Protocol
+Our framework is composed of three components:
+a setup phase to deploy the system, a network protocol deﬁning all extensions required to support private
+payments/smart contracts, and mechanisms for handling
+concurrency issues (resulting from operating on private
+accounts) and dealing with leveled FHE schemes.
+4.2.1. Setup. This includes setup related to the system,
+user, and smart contracts. System setup involves launching
+the PPSC system—which starts with deploying miners,
+creating the genesis block of its blockchain, and generating all public parameters pp needed by the cryptographic
+primitives (such as FHE and ZKP) that we employ in the
+system. The public parameters will be known to everyone
+and could either be published in the genesis block or
+announced and maintained off-chain. Once system setup is
+complete, users can now join and create their own public
+and/or private accounts. Smart contract setup is dependent
+on the creator of its code. This code will specify the
+sorts of (private or public) inputs the contract functions
+will accept, along with the operations to be performed on
+these inputs. Once the creator deploys the contract on the
+blockchain, users can invoke its functionality and pass in
+their inputs to be operated on.
+
+Note that txshield and txdeshield reveal some information
+about the private account (i.e. sender/recipient has a balance larger than or equal to the released value) since the
+transaction amount is public.
+(3) Private smart contracts. Users can write smart contracts with code operating on their private data and private
+11. Users must sign all transactions they issue and miners must verify
+these signatures before accepting any of these transactions. We omit
+repeating this fact and the corresponding syntax in this section.
+
+4.2.2. Network Protocol Syntax. In what follows, we
+informally present the syntax that smartFHE adds to
+316
+
+8
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+to
+account tied to pkfrom
+priv to the account tied to addr
+(the latter can even be the same account itself).
+Finally, it outputs txlock = (addrto , σlock ) where
+σlock = Priv.Sign(sigskpriv ,
+(addrto , ctr[pkpriv ])).
+from
+Note that funds sent to pkpriv will not be rolled over
+onto the account balance until it is unlocked.
+• txunlock ← Unlock(pkpriv ): First, checks the account
+tied to pkpriv is locked. If so, it unlocks the private
+account corresponding to pkpriv if and only if the
+address addr that called Unlock is the same one
+returned by CheckLock(pkpriv ).
+• CheckLock(pkpriv ): Checks if the account tied pkpriv
+is currently locked. If locked, returns the address of
+the account it is locked to. Otherwise, returns ⊥.
+As an optimization of smartFHE’s design, epochs can
+be eliminated entirely using the above locking mechanism.12 When issuing a deshield or private transfer transaction, Alice will lock her account to itself. However,
+the network protocol would need to be modiﬁed—so that
+once the ZKP is veriﬁed and the transaction is processed,
+Alice’s account will automatically be unlocked.13
+
+account balances. This code will be translated to an arithmetic or boolean circuit depending on the type of FHE
+scheme used. Since the code may operate on encrypted
+values, users participating in the contract need to provide ZKPs showing that their initial ciphertexts are wellformed and satisfy certain conditions (dependent on the
+application). Miners (of which a majority are trusted for
+correctness and availability in the blockchain model) will
+check these ZKPs, perform the requested homomorphic
+computations directly on the ciphertexts, and update the
+blockchain state accordingly.
+A smart contract will have functions that users can
+invoke to operate on their inputs. When these inputs are
+private, operations within a function will be translated in
+terms of the following homomorphic computations:
+• c3 = Priv.HomAdd(pkpriv , c1 , c2 ): Adds ciphertexts
+c1 and c2 (which are encrypted with respect to pkpriv )
+together to produce the sum c3 of the two ciphertexts.
+•
+
+c3 = Priv.HomMult(pkpriv , c1 , c2 ): Multiplies two ciphertexts c1 and c2 (which are encrypted with respect
+to pkpriv ) together to obtain the product c3 .
+
+4.2.4. Handling Leveled Schemes. Arithmetic-based
+FHE schemes are almost always used in the leveled format. It is highly unlikely that a user would know a priori
+how many transactions she anticipates receiving or how
+many smart contracts she will interact with. Even with
+careful selection of FHE scheme parameters, it is entirely
+possible that a user may run out of noise budget and eventually be unable to decrypt her private account balance. In
+practice, users must track the noise associated with their
+private account balance to ensure they do not run out of
+noise budget. Upon reaching some pre-determined noise
+threshold, bootstrapping could be used. Below, we present
+an alternative technique to reset the noise budget that is
+likely to offer better concrete efﬁciency than bootstrapping
+due to advancements in ZKP constructions.
+
+• b , π ← Priv.RefreshBal(skpriv , b): Takes in encrypted account balance b to produce freshly encrypted account balance b . User decrypts her private
+account balance b to get plaintext value bal and then
+freshly encrypts bal to produce b . User will need to
+provide a ZKP to show that the underlying plaintext
+of b is equal to the one encrypted in b.14
+
+• CheckPriv.RefreshBal(b , π): Updates the user private account balance (whose account corresponds to
+pkpriv ) from b to b if the proof π is valid.
+
+4.2.3. Handling Concurrency. Operating on private
+states (such as encrypted account balances) introduces
+concurrency issues. In particular, changes in an account
+state can invalidate all pending ZKPs tied to this account,
+thus invalidating all private transactions that rely on
+these ZKPs. Such a situation can be exploited to perform
+front-running attacks; Bob can front-run Alice by issuing
+a transfer transaction that changes Alice’s account
+state and, if this transfer is processed before Alice’s
+pending transactions, her transactions will be rejected.
+We introduce two complementary techniques to address
+front-running: (1) automatic balance rollovers for private
+transactions and (2) a private account locking mechanism
+for private smart contracts.
+Automatic Rollovers. Using this technique, which is
+similar to the one in [22], all incoming transfers to a
+private account are held in a pending state until an epoch
+is complete. smartFHE will roll over these pending funds
+to private account’s balance automatically at the end of
+the epoch (unlike [22] which requires users to trigger
+the rollover). To guarantee that deshielding and private
+transfer transactions will be processed by the end of the
+same epoch, private account users are advised to submit
+such transactions at the beginning of an epoch. The
+length of an epoch must be chosen carefully to ensure
+that a transaction submitted at the start of an epoch is
+processed before the epoch ends. The sender should view
+the transaction amount as being deducted from his own
+account balance immediately (to avoid double spending).
+
+5. Our Instantiation
+We now present the full syntax and technical details
+of our instantiation of the smartFHE framework. We ﬁrst
+provide additional notation needed in this section and
+then an overview of the cryptographic constructions used
+to instantiate the building blocks smartFHE needs.
+
+Private Account Locking. To address multi-epoch concurrency, smartFHE enables private accounts to be locked
+to other accounts (via txlock ) of any type. The locking
+mechanism allows a user to put her account on hold for
+as long as needed—preventing any state changes to her
+private balance while her own private transactions are still
+pending. The lockee will issue a txunlock transaction to
+resume acceptance of new state updates, thereby returning
+complete control of the locked account to the locker.
+from
+to
+from
+• txlock ← Lock(skpriv , addr ): Checks that skpriv is
+not already locked, and if not, it locks the private
+
+12. By this we mean setting the epoch length to be equal to one block.
+13. Note that we would still keep the Lock, Unlock procedures to
+handle front-running issues in private smart contracts (to transfer ownership of the user account and keep away incoming transactions for an
+unknown amount of time).
+14. For ﬂoating point or certain binary-based FHE schemes, the
+relation will be less than or equal. This is due to precision loss in
+homomorphic computations under these paradigms.
+
+317
+
+9
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+Additional notation. We use Zp to represent Z/pZ, the
+arrow notation for column vectors (e.g., v ), and capital
+letters for matrices. For polynomials, we use boldface
+notation (e.g., v), boldface with arrow notation for a
+vector of polynomials (e.g. v), and boldface capital letter
+for a matrix of polynomials.
+
+Setup(1λ ): Takes as inputs the security parameter λ.
+Outputs the system public parameters pp, including:
+λ
+• pp.BFV ← BFV.Setup(1 )
+λ
+• pp.NIZKlogproofs ← NIZKlogproofs .Setup(1 )
+λ
+• pp.NIZKbulletproofs ← NIZKbulletproofs .Setup(1 )
+λ
+• pp.sigpriv ← PrivSig.Setup(1 ), setup for signature scheme used for private accounts.
+λ
+• pp.sigpub ← PubSig.Setup(1 ), setup for signature scheme used for public accounts.
+Initializes:
+• acc, account table.
+• pendOps, pending operations table to keep track
+of pending transactions and computations.
+• lastRollOver, table of the last epoch at which a
+private account’s balance was rolled over.
+• lock, lock table keeping track of which address
+a private account is locked to.
+• counter, counter table keeping track of the counters associated with accounts.
+Also outputs:
+• MAX, maximum currency amount the system
+can support. (We require MAX << q , where q is
+the modulus of the ring Rq , to prevent possible
+overﬂow for balance/transfer amounts.)
+• E, epoch length.
+
+Cryptographic primitives. For FHE, we use the leveled
+BFV scheme [36]. The BFV scheme models computation
+as arithmetic circuits and supports exact arithmetic. In
+BFV, the message, ciphertext, and the secret key are
+vectors over the quotient ring R = Zq (x)/(f (x)) (where
+f (x) = xd + 1 and d is a power of 2) whereas the
+public key takes the form of a matrix over R. We have
+chosen to use this scheme as it offers incredibly fast
+integer arithmetic (crucial for private transactions) and
+easily supports 64-bit computation.
+Importantly, BFV relies on the hardness of RingLWE [56], so we can use the short discrete log proofs
+construction [34]. This proof system is elliptic curve based
+and allows us to fairly efﬁciently prove knowledge of a
+short vector s such that As = t for public A and t
+over the polynomial ring Zq [X]/(g(x)), where g(x) is
+a monic, irreducible polynomial of degree d in Z[X].
+Such a relation will allow users to attest to the wellformedness of FHE ciphertexts (which are the users’
+encrypted inputs). In practice, using this proof system,
+we obtain proofs on the order of single to double digit
+kilobytes and reasonable proving/veriﬁcation times. As
+part of the short discrete log proof construction, we obtain
+a Pedersen commitment which can then easily be re-used
+for Bulletproofs [23] which may be needed for private
+computations. Bulletproofs allows us to prove arbitrary
+properties of the user’s private account balance or private
+inputs in a fairly efﬁcient manner.
+For digital signatures, we use the (lattice-based) Falcon scheme [40] when issuing transactions from private
+accounts (for post-quantum protection), and ECDSA [47]
+when the issuers are public accounts (to be compatible
+with existing smart contract-enabled blockchains as in
+Ethereum). If post-quantum security is not a concern, one
+can use ECDSA for both (so long as different keys are
+used for private and public accounts) Additional details on
+all the previous primitives are provided in Appendix A.
+
+Figure 1: System setup.
+2) Pub.ReadBalance(pkpub ): Returns the (plaintext)
+balance balance belonging to the public account
+pkpub . If no such account exists, returns ⊥.
+3) Pub.Sign(skpub , m): Produces a signature σpub on
+message m with secret key skpub .
+4) Pub.VerifySig(m, σpub , pkpub ): Veriﬁes a signature
+σpub on message m using pkpub .
+Private Account Related. A private account owner maintains key pair (pkpriv , skpriv ), an encrypted balance (with
+respect to pkpriv ), and a nonce ctr[pkpriv ]. As indicated
+earlier, the Falcon or ECDSA signature scheme is used to
+sign outgoing txdeshield and txprivtransf transactions.
+1) Priv.CreateAccount(pp): This algorithm creates a
+private account. It outputs the account key pair
+(pkpriv , skpriv ), which are the keys for the BFV
+scheme, along with the keys for the Falcon signature
+scheme or ECDSA (sigpkpriv , sigskpriv ). The public
+key pkpub consists of matrix A and auxiliary information τ for key switching; the secret key is skpriv = s.
+
+5.1. Syntax
+We now deﬁne the syntax used in our instantiation.
+Note that all algorithms take as additional inputs the
+public parameters pp and the system state sth for the
+current block height h (but we omit listing it explicitly).
+
+2) Priv.Encrypt(pp, pkpriv , m): Calls BFV.Encrypt on
+message m, and outputs ciphertext c.
+
+Setup Related. This is the setup for the entire system,
+which involves choosing the public parameters of all
+cryptographic building blocks and the initial state of the
+ledger (details are in Figure 1).
+
+3) Priv.Decrypt(pp, skpriv ,c): Decrypts a ciphertext c encrypted under pkpriv by running
+BFV.Decrypt(pp, s,c).
+
+Public Account Related. A public account owner maintains a key pair (pkpub , skpub ) to sign outgoing txtransf and
+txshield transactions (ECDSA is used here as in Ethereum),
+an unencrypted balance balance, and a nonce ctr[pkpub ].
+1) Pub.CreateAccount(pp): This algorithm creates a
+public account and outputs its key pair (pkpub , skpub ).
+
+4) Priv.ReadBalance(skpriv ): Returns the unencrypted
+balance balance belonging to a private account pkpriv .
+If no such account exists, returns ⊥.
+5) Priv.Sign(sigskpriv , m): Produces a signature σpriv on
+message m using Falcon or ECDSA schemes.
+
+318
+
+10
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+6) Priv.VerifySig(m, σpriv , sigpkpriv ): Veriﬁes if the signature σpriv on message m is valid using sigpkpriv .
+
+1) Compute the binary expansion of the integer.
+2) Use the bits as coefﬁcients to create the polynomial
+g(x). Negative integers can be represented via the
+use of 0 and −1 as coefﬁcients.
+3) To get back the integer from a polynomial, simply
+evaluate the polynomial g(x) at x = 2.
+Thus, the modulus q must be chosen to be large
+enough so that there is no overﬂow. Finally, the newly
+obtained polynomial (that represents some integer
+amount) is passed into Priv.Encrypt to obtain an
+encryption that hides this amount.
+
+7) CheckLock(pkpriv ): Checks if the account corresponding to pkpriv is currently locked. If locked,
+returns the address of the account it is locked to.
+Otherwise, returns ⊥.
+Transaction Related. Users can engage in six types of
+transactions using their key pairs. We have omitted shield,
+deshield, and private transfer from here as they are discussed in detail in Section 5.2.
+to
+1) Transfer(skfrom
+pub , pkpub , amnt): Used to send currency
+from one public account to another public account.
+It outputs txtransf .
+
+Shielding Transaction. A sender with public account
+from
+from
+(pkfrom
+pub , skpub ) and unencrypted balance balance
+wishes to send some currency amnt to a private account
+to
+
+(pkto
+priv , skpriv ) with encrypted balance b . To do so, the
+sender issues a shielding transaction txshield containing the
+following information:
+to
+• Receiver’s public key: pkpriv
+• Transfer amount (in plaintext): amnt
+• Transfer amount encrypted under the receiver’s public key: c
+• Randomness used for encrypting transfer amount: r
+The sender signs the transaction along with his nonce
+from
+ctr[pkfrom
+pub ], producing signature σpub . He then broadcasts the transaction txshield to the miners. The miners
+check that the following conditions are met (perform
+VerifyShield(txshield )) in order to accept this transaction:
+• Valid signature from sender
+• Receiver’s public key exists/is valid
+• Ciphertexts are well-formed
+• Transfer amount is positive: amnt ∈ [0, MAX]
+• Encrypted
+transfer amount matches plaintext
+amount
+with
+published
+randomness:
+?
+
+Priv.Encrypt(pp, pkto
+,
+amnt;
+r)
+=
+c
+priv
+• Sender’s
+remaining balance is non-negative:
+balancefrom − amnt ∈ [0, MAX]
+If all conditions are satisﬁed, miners update the
+sender’s account balance to balancefrom − amnt and the
+receiver’s balance to b + c (i.e. by calling
+  c)).
+Priv.HomAdd(pkto
+priv , b ,
+
+2) VerifyTransfer(txtransf ): Veriﬁes if all the conditions
+for txtransf have been satisﬁed. If yes, it outputs 1.
+Otherwise, it outputs 0.
+to
+3) Lock(skfrom
+priv , addr ): First, checks that the account
+corresponding to skfrom
+priv is not already locked by
+calling CheckLock(pkfrom
+priv ). If not, locks it to the
+account corresponding to addrto (the latter can
+even be the same account itself). Finally, outputs
+txlock = (addrto , σlock ) where
+
+σlock = Priv.Sign(sigskpriv , (addrto , ctr[pkfrom
+priv ]))
+
+Note that funds sent to pkfrom
+priv will not be rolled over
+onto the account balance until it is unlocked.
+4) Unlock(pkpriv ): First, checks that the account
+corresponding to pkpriv is locked by calling
+CheckLock(pkpriv ). If so, unlocks this account if and
+only if the address addr that called Unlock is the
+same one returned by CheckLock. Outputs txunlock .
+Private Smart Contract Related. Operations on inputs
+belonging to a private account will be translated into
+homomorphic computations, with the corresponding smart
+contract code translated to an arithmetic circuit.
+1) Priv.HomAdd(pkpriv ,c1 ,c2 ): Runs BFV.HomAdd on
+the ciphertexts c1 and c2 (which are encrypted under
+pkpriv ) to produce the sum c3 = c1 + c2 mod q .
+2) Priv.HomMult(pkpriv ,c1 ,c2 ): Runs BFV.HomMult
+on the ciphertexts c1 = (c1,0 , c1,1 ),c2 = (c2,0 , c2,1 )
+(which are encrypted under pkpriv ) to obtain the
+product c3 after performing the appropriate rounding
+operation on (c1,0 ·c2,0 , c1,0 ·c2,1 +c1,1 ·c2,0 , c1,1 ·c2,1 ).
+We call Priv.Refresh on c3 and output the result.
+
+Deshielding Transaction. A sender with private account
+from
+
+(pkfrom
+priv , skpriv ) and encrypted balance b wishes to send
+some currency amnt to the receiver who has public acto
+to
+count (pkto
+pub , skpub ) and unencrypted balance balance .
+The sender will issue a deshielding transaction txdeshield
+containing the following information:
+to
+• Receiver’s public key: pkpub
+• Transfer amount (in plaintext): amnt
+• amnt encrypted under sender’s public key: 
+c
+• Randomness used for encrypting transfer amount: r
+• Sender’s remaining encrypted balance 
+b and proof
+πdeshield that this balance is non-negative (i.e.
+∗
+
+Priv.Decrypt(pp, skfrom
+priv , b ) = balance ∈ [0, MAX])
+The proof πdeshield is produced using discrete log
+proofs. The sender signs the transaction along with his
+from
+nonce ctr[pkfrom
+priv ], producing signature σpriv . He then
+broadcasts txdeshield to the miners. For the transaction to
+be valid, and hence VerifyDeshield(txdeshield ) = 1, miners
+check that the following conditions are met:
+• Valid signature from sender
+
+3) Priv.Refresh(c, τ ): Runs BFV.Refresh on the ciphertext c (encrypted under pkpriv ) using auxiliary information τ associated with private account pkpriv to
+facilitate key switching.
+
+5.2. Instantiating the Payment Mechanism
+We discuss our payment scheme in detail; namely, we
+show how users perform the shield, deshield and private
+transfer transactions using our instantiation.
+Representing Balances and Transfers. Let R =
+Zq (x)/(f (x)). We use the Integer Encoder technique
+(from SEAL [66]) to represent integer value currency
+amounts for private accounts as follows:
+319
+
+11
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+non-negative; this proof is identical to the one in txdeshield
+as discussed earlier.
+If the transaction is accepted, miners update the
+sender’s encrypted balance to b − c and the receiver’s
+encrypted balance to b + c .
+
+Sender’s account is not currently locked
+Receiver’s public key exists/is valid
+• Transfer amount is positive: amnt ∈ [0, MAX]
+• Encrypted
+transfer amount matches plaintext
+amount
+with
+published
+randomness:
+?
+
+Priv.Encrypt(pp, pkfrom
+,
+amnt;
+r)
+=
+c
+priv
+• Sender’s remaining balance is correctly computed:
+? 
+b =
+b − c
+• Proof πdeshield is valid
+If the transaction is valid, miners update the sender’s
+encrypted balance to b = b − c and the receiver’s
+balance to balanceto + amnt.
+•
+•
+
+5.3. Instantiating Private Computation
+The exact computation to be performed is based on the
+content of a smart contract that a user deploys. Requesting
+a computation to be executed (over public or private
+inputs) is done by sending transactions containing calls to
+the functions deﬁned in such a smart contract. The code
+of a function is represented by a circuit C that Compute
+takes as input. It is up to the contract creator to select
+the computation and specify which conditions must be
+satisﬁed by the user-provided encrypted inputs xj .
+Based on the instantiation of smartFHE, computation
+is limited to what can be presented by the selected FHE
+scheme—binary or arithmetic circuits depending on the
+type of scheme chosen. The user provides her encrypted
+inputs (encrypted with respect to her FHE public key
+pkpriv ) and the necessary ZKPs πi showing that her inputs
+satisfy the relevant conditions. Similar to private payments
+discussed in the previous section, this is done via short
+discrete log proofs and bulletproofs in which we can reuse the Pedersen commitment created as part of short
+discrete log proofs for the Bulletproofs commitment. If
+the proof is accepted, the requested computation is then
+performed directly on the encrypted inputs, and the ledger
+state will be updated accordingly. As discussed earlier in
+the Introduction, miners do not need to provide correctness
+proofs to verify that C has been performed correctly over
+the user inputs, i.e. ledger state updates are valid. This is
+enforced by the security assumption that the majority of
+the underlying mining power is honest. Thus, only state
+changes resulted from valid computation will be accepted.
+Depending on the computation being performed (if
+a reciprocal action must happen on a different user’s
+account), the user may also need to encrypt certain inputs
+with respect to the reciprocal account’s public key and
+show that the two encryptions indeed contain the same
+plaintext value; this proof is similar in ﬂavor to what was
+presented as a private transfer transaction (i.e. txprivtransf ).
+
+Private Transfer Transaction. A sender with private
+from
+
+account (pkfrom
+priv , skpriv ) and encrypted balance b wishes
+to send some amnt of currency to a recipient who is using
+to
+
+a private account (pkto
+priv , skpriv ) with encrypted balance b .
+Thus, this sender will issue a private transaction txprivtransf
+containing the following information:
+to
+• Receiver’s public key: pkpriv
+• Transfer amount encrypted under sender’s public key:
+c = Priv.Encrypt(pp, pkfrom
+priv , amnt; r)
+• Transfer amount encrypted under receiver’s public
+key: c = Priv.Encrypt(pp, pkto
+priv , amnt; r)
+• Proof that 
+c and c encrypt same transfer amount
+amnt with same randomness r and that this transfer
+amount is in [0, MAX] 15
+• Proof that sender’s remaining (encrypted) balance 
+b∗
+b∗ ) =
+is non-negative (i.e. Priv.Decrypt(pp, skfrom
+,
+priv
+balance∗ ∈ [0, MAX])
+The sender signs the transaction along with his
+from
+nonce ctr[pkfrom
+priv ], producing signature σpriv . He then
+broadcasts the transaction txprivtransf to the miners.
+In order to accept this transaction, the miners run
+VerifyPrivTransfer(txprivtransf ) which checks that the following conditions are satisﬁed:
+• Sender’s account is not currently locked
+• Valid signature from sender
+• Receiver’s public key exists/is valid
+• Sender’s remaining encrypted balance is correctly
+?
+computed: b∗ = b − c
+• All proofs are valid
+To prove that the two encryptions are to the same
+positive transfer amount, we set up the following matrixvector equation. Let the sender’s public key be represented
+
+by matrix A; the receiver’s public key, by matrix B. Let m
+contain the transfer amount amnt and randomness. Then
+we can form the equation:
+ 
+ 
+c
+A
+ =
+(1)
+·m
+c
+B
+This equation veriﬁes that c and c do in fact encrypt
+the same amount amnt under the sender’s public key A
+and the receiver’s public key B, respectively. Thus, we
+ satisﬁes the above equation and
+will need to show that m
+that amnt represented in it is non-negative. This can be
+done using [34] We will also have another proof that the
+∗
+sender’s remaining balance Priv.Decrypt(pp, skfrom
+priv , b ) is
+
+5.4. Security
+Our instantiation realizes a correct and secure PPSC
+scheme based on the notions introduced in Section 2. In
+Appendix C, we prove the following theorem:
+Theorem 1. Our smartFHE instantiation realizes a correct (cf. Deﬁnition 2) and secure (cf. Deﬁnition 5) PPSC
+scheme (cf. Deﬁnition 1).
+We note that smartFHE is applied on top of a (secure) public smart contract-enabled blockchain. We do not
+change the consensus, liveness, availability, or the public
+payment/smart contract operation of the underlying system; these invariants are preserved. Thus, proving security
+entails proving that smartFHE satisﬁes the additional privacy properties it offers (outlined in Deﬁnition 1), which
+is detailed in Appendix C.
+
+15. The scheme is still secure with randomness re-use here (to encrypt the transfer amount under the sender and receiver’s keys) via the
+generalized Leftover Hash Lemma [35].
+
+320
+
+12
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE 1: Setup times (one time cost)
+
+6. Performance Evaluation
+
+Performed
+by
+User
+System
+
+We evaluate the computational and storage cost of
+our instantiation, highlighting how our work supports
+lightweight users. Speciﬁcally, we provide the cost of
+private transactions in our system as well as three different
+representative applications. We compare our work to the
+state-of-the-art Veri-zexe [72], which builds upon and
+improves Zexe. In evaluating our system, we provide the
+ﬁrst implementation of short discrete log proofs and open
+source our library. We describe our methodology, discuss
+the obtained results, and address potential extensions to
+further improve execution time and storage costs.
+
+Operation
+
+d = 1024
+
+d = 2048
+
+d = 4096
+
+KeyGen
+ZKP setup
+
+0.216 ms
+0.8 s
+
+0.375 ms
+2.06 s
+
+36.5 ms
+5.7 s
+
+performed. Effectively choosing FHE scheme parameters
+is a difﬁcult task with many tradeoffs to consider and
+beyond the scope of this work [69]. In deploying our
+system, we suggest d = 1024 if private transactions
+are the main focus. For deploying more complex smart
+contract applications, d should be set to 2048 or 4096.
+Private transactions. We evaluate the cost of the main
+transactions in our system, focusing on the added cost
+from privacy. As shown in Table 2, shield and deshield
+transactions are fairly lightweight with regards to generation time and size.17 The situation is different for private
+transfer due to the proofs incorporated. Miner cost is
+particularly high as our experiments were run on a laptop.
+While our system targets lightweight users, we emphasize
+that miners are not lightweight and require much more
+heavy duty machines to efﬁciently verify transactions.18
+Veri-zexe’s performance is given in Table 4. Working
+in the UTXO model presents a scalability issue when
+trying to spend coins distributed among several UTXOs.
+To elaborate, a user must prove that she owns all these
+(private) inputs, thus increasing the generation cost as
+the table shows19 —a problem that does not exist in the
+account-based model we adopt. Our scheme exhibits
+superior performance in terms of user execution time
+even compared to 2x2 transactions using Veri-zexe. The
+difference is more stark when setting d = 2048 or lower.
+
+6.1. Methodology
+For the BFV scheme [36], we use Microsoft’s SEAL
+library [66] to prototype the various FHE computations
+needed as this library provides a highly optimized implementation. For Bulletproofs, we use Dalek [3] for 32-bit
+range proofs as it is one of the fastest implementations of
+Bulletproofs. For short discrete log proofs, we provide the
+ﬁrst implementation (a library with 4102 LOC) with Apple
+Metal GPU-accelerated code; we signiﬁcantly improve
+upon the authors’ performance estimates in [34] by speeding up scalar multiplication and scalar inversion. In our library, we use Curve25519 for compatibility with the Dalek
+Bulletproofs library. We believe our library is of independent interest as this proof system provides reasonable
+time/space tradeoffs for proving well-formedness of FHE
+ciphertexts; thus, we have open-sourced our work for the
+community. For digital signatures, we use ECDSA with
+curve secp256k1 (as used by Ethereum) from OpenSSL.
+We conducted our experiments on an Apple M2 Max with
+64GB RAM, chosen to represent a lightweight user.
+We benchmark our work against the state-of-the-art
+Veri-zexe [72] which improves upon Zexe by removing per-application trusted setup and signiﬁcantly cutting
+down on memory usage but at the cost of increasing
+transaction size by an order of magnitude. As Zexe was
+the most performant system implementing the ZKP-based
+approach, comparing our system against its successor
+Veri-zexe seems most appropriate.16 Both Zexe and Verizexe work in the UTXO model so costs are given based on
+the number of inputs and outputs as per the methodology
+used in their own evaluations.
+
+Private smart contract applications. Next, we consider
+three applications offering I/O privacy implemented as
+private smart contracts. Brieﬂy, they are (full details can
+be found in Appendix B):
+A1. Automated market maker (AMM): a special form
+of decentralized exchange for trading cryptocurrency.
+Adding privacy to AMMs protects users against front
+running attacks. An AMM trades tokens in pairs, say
+token A and B, with reserve values denoted as totalA and
+totalB . A user submits a order to swap an (encrypted)
+amount amntA of token A. The AMM contract computes the (encrypted) amount amntB of token B this
+order will receive (using the constant product formula):
+amntB = totalB − totalA · totalB /(totalA + amntA )
+A2. Financial standing of DAO members: a DAO
+(decentralized autonomous organization) contract wants to
+decide if the ﬁnancial standing of a set of members (5
+in our experiment) permits spinning out a new business
+proposal. Members submit their (encrypted) fund amounts
+and the DAO computes the mean/variance of these funds.
+
+6.2. Results
+Setup costs for the system and per user are fairly
+negligible as observed in Table 1. We evaluate the cost
+of private transactions and three private smart contract
+applications ranging from DeFi to statistical computations.
+Before discussing the results, we note that one of the most
+important parameters to set is the polynomial modulus
+degree d for the BFV scheme as it has the largest
+impact on short discrete log proof performance, which
+dominates both transaction generation and veriﬁcation
+time. Additionally, setting d smaller limits the number
+of sequential homomorphic multiplications that can be
+
+17. As a further optimization, we are able to perform shield and
+deshield transactions using ciphertext-plaintext operations in the BFV
+scheme. Thus, the user does not need to encrypt the transfer amount.
+18. We benchmarked the SDLP veriﬁer algorithm on an M2 Max with
+30 GPU cores, each of which runs 32 threads in a wavefront. Since scalar
+multiplication is ALU bound, we expect a validator using e.g. a Nvidia
+RTX 4090 with 16384 shader cores to conservatively yield a 10-15x
+performance improvement.
+19. The slowdown is non-linear; interested readers can check [72] for
+detailed justiﬁcation of this trend.
+
+16. Zexe’s code (the one used in their paper [19]) is no longer
+maintained. For this reason, Veri-zexe chose to benchmark their work
+against snarkVM testnet-2 (created by the company Aleo [1]) which
+instantiates the same model as Zexe.
+
+321
+
+13
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+TABLE 2: Private transaction costs for smartFHE’s
+instantiation—user side.
+d = 1024
+d = 2048
+d = 4096
+
+Operation
+Shield(txshield )
+Deshield(txdeshield )
+PrivTransfer(txprivtransf )
+Shield(txshield )
+Deshield(txdeshield )
+PrivTransfer(txprivtransf )
+Shield(txshield )
+Deshield(txdeshield )
+PrivTransfer(txprivtransf )
+
+Time (s)
+0.0002
+1.89
+3.57
+0.0002
+3.58
+10.7
+0.0002
+11.17
+23.89
+
+TABLE 4: Base private transaction costs for Veri-zexe.
+no. of inputs ×
+no. of outputs
+2×2
+3×3
+4×4
+8×8
+
+Size (KB)
+0.101
+2.47
+20.03
+0.101
+2.53
+64.76
+0.101
+2.66
+180.1
+
+d = 1024
+d = 2048
+d = 4096
+
+Miner veriﬁcation time (ms)
+13.21
+13.14
+13.15
+13.15
+
+Size (KB)
+4.82
+4.88
+4.95
+5.2
+
+TABLE 5: Private smart contract application costs.
+Application
+
+Per user generation time
+(s)
+6.4
+
+AMM
+(d = 2048)
+AMM
+20.88
+(d = 4096)
+Mean/variance 20.89
+(d = 4096)
+Chi-squared
+23.89
+(d = 4096)
+
+TABLE 3: Private transaction costs for smartFHE’s
+instantiation—miner side.
+Operation
+VerifyShield
+VerifyDeshield
+VerifyPrivTransfer
+VerifyShield
+VerifyDeshield
+VerifyPrivTransfer
+VerifyShield
+VerifyDeshield
+VerifyPrivTransfer
+
+User generation time (s)
+27.82
+54.9
+59
+121
+
+Time (s)
+0.00017
+0.92
+1.95
+0.00017
+1.92
+6.37
+0.00017
+6.42
+14.77
+
+Miner veriﬁcation/computing
+time (s)
+3.58
+
+Size (KB)
+per user
+
+12.64
+
+91.4
+
+62.9
+
+91.45
+
+44.39
+
+26.95
+
+33.53
+
+cations, we observe that the additional cost is dominated
+by verifying more short discrete log proofs rather than the
+FHE computation or bulletproof veriﬁcation. For example,
+for the mean/variance applications, miner veriﬁcation time
+is 63.15 s, 126.19 s, and 189.23 s for 5, 10, and 15 users
+participating in that application, respectively (where the
+short discrete log proof veriﬁcation cost in these scenarios
+is 62.9 s, 125.8 s, and 188.7 s, respectively).
+As such, an important area to focus on is a GPUaccelerated implementation of this proof system for
+OpenCL so we can target a variety of architectures and
+provide signiﬁcantly improved performance for miners
+(who certainly would not be using an Apple laptop).
+Performance could be further improved by speeding up
+multi-scalar multiplication. These are among our future
+work directions.
+Storage is a large concern in the blockchain setting.
+To get around having large transactions and private smart
+contract state, a potential solution is to employ a decentralized ﬁle storage system like IPFS [5]. Retrieving cached
+content takes less than a second on average [4]. To prevent
+data from being discarded in IPFS, it must be “pinned.”
+Storage is tamper resistant as any changes to the data
+changes the content identiﬁer. Rather than storing the FHE
+ciphertexts directly on chain, a content identiﬁer may be
+stored in its place which allows users or miners to then
+retrieve the relevant ciphertext.
+
+A3. Insurance premium: a decentralized health insurance company relies on the chi-squared test over genetic
+data to decide premiums. The data is hosted by a group
+of hospitals (set to 3 hospitals holding data for 98 patients
+in our experiment). Hospitals submit the private quantities
+needed to compute the test. The contract aggregates the
+submissions and facilitates the test computation.
+The ﬁrst and second applications require the user to
+provide a single encryption, generate a short discrete log
+proof for two ciphertexts, and a bulletproof. The third
+application requires each party to provide three encryptions, a short discrete log proof, and a bulletproof. Miners
+check the proofs and then perform the homomorphic
+computation (the AMM calculation, mean/variance calculation, or chi-squared calculation, respectively). For these
+applications, we focus on the core computation related
+to smartFHE (that involve FHE, ZKP, and signatures) to
+quantify the overhead of our scheme. The full description
+of the applications (as found in Appendix B) include
+additional details that are implementation dependent, e.g.
+the users share the secret key of the FHE computation,
+decrypt the result locally (decryption time is 0.087 ms,
+0.173 ms, 0.7 ms for d = 1024, 2048, 4096, respectively),
+or notify the smart contract that an encrypted result is
+within a given range or open the result (if the developer
+chooses to do that, the costs of these operations are
+basically that of our private transactions reported earlier).
+The cost of our applications is shown in Table 5.
+Regardless of application, user execution time is superior
+to Veri-zexe on even two inputs and two outputs;
+furthermore, it is unclear if an AMM can be implemented
+in the UTXO model used by Veri-zexe or Zexe.
+
+7. Conclusion
+In this paper, we deﬁned a notion for a PPSC scheme
+and introduced smartFHE as a modular framework realizing this notion. smartFHE is the ﬁrst system to investigate
+the utility of FHE in supporting private computing in the
+blockchain model and the ﬁrst to support private smart
+contracts for lightweight users. In comparison to a stateof-the-art solution relying on the ZKP-based approach
+(where users do the computation off-chain and submit
+ZKPs attesting to correctness), our experiments show that
+our work offers superior performance for the user. Such
+results demonstrate the potential viability of FHE-based
+solutions to private decentralized applications.
+
+Scalability. We brieﬂy discuss issues that impact scalability of the system. Increasing the number of users (or
+clients) does not impact the per-user cost since each of
+them is concerned with only her own inputs. The miners,
+on the other hand, have to process more information as the
+number of users increases. From our benchmarked appli322
+
+14
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+References
+[1]
+
+[23] Benedikt Bünz, Jonathan Bootle, Dan Boneh, Andrew Poelstra,
+Pieter Wuille, and Greg Maxwell. Bulletproofs: Short proofs for
+conﬁdential transactions and more. In 2018 IEEE Symposium on
+Security and Privacy (SP), pages 315–334. IEEE, 2018.
+
+Aleo. https://www.aleo.org/.
+
+[2]
+
+Curve amm. https://curve.ﬁ/#/ethereum/swap.
+
+[3]
+
+Dalek library. https://github.com/dalek-cryptography/bulletproofs.
+
+[4]
+
+Gaining visibility in ipfs systems.
+ipfs-measurements/.
+
+[5]
+
+Ipfs. https://docs.ipfs.tech/concepts/what-is-ipfs/.
+
+[6]
+
+Spiral. https://btc.usespiral.com/.
+
+[7]
+
+Uniswap protocol. https://uniswap.org/.
+
+[8]
+
+Ghada Almashaqbeh and Ravital Solomon.
+Sok: Privacypreserving computing in the blockchain era. In 2022 IEEE 7th
+European Symposium on Security and Privacy (EuroS&P), pages
+124–139. IEEE, 2022.
+
+[9]
+
+Thomas Attema, Vadim Lyubashevsky, and Gregor Seiler. Practical
+product proofs for lattice commitments. IACR Cryptol. ePrint
+Arch., 2020:517, 2020.
+
+[24] David Cash, Joseph Jaeger, Stanislaw Jarecki, Charanjit S Jutla,
+Hugo Krawczyk, Marcel-Catalin Rosu, and Michael Steiner. Dynamic searchable encryption in very-large databases: data structures and implementation. In NDSS, volume 14, pages 23–26.
+Citeseer, 2014.
+
+https://blog.cloudﬂare.com/
+
+[25] David Chaum. Blind signatures for untraceable payments. In
+Advances in cryptology, pages 199–203. Springer, 1983.
+[26] Raymond Cheng, Fan Zhang, Jernej Kos, Warren He, Nicholas
+Hynes, Noah Johnson, Ari Juels, Andrew Miller, and Dawn Song.
+Ekiden: A platform for conﬁdentiality-preserving, trustworthy, and
+performant smart contracts. In 2019 IEEE European Symposium
+on Security and Privacy (EuroS&P), pages 185–200. IEEE, 2019.
+[27] Jung Hee Cheon, Andrey Kim, Miran Kim, and Yongsoo Song.
+Homomorphic encryption for arithmetic of approximate numbers.
+In International conference on the theory and application of cryptology and information security, pages 409–437. Springer, 2017.
+
+[10] Aritra Banerjee, Michael Clear, and Hitesh Tewari. zkhawk:
+Practical private smart contracts from mpc-based hawk. In 2021 3rd
+Conference on Blockchain Research & Applications for Innovative
+Networks and Services (BRAINS), pages 245–248. IEEE, 2021.
+
+[28] Alessandro Chiesa, Yuncong Hu, Mary Maller, Pratyush Mishra,
+Noah Vesely, and Nicholas Ward. Marlin: Preprocessing zksnarks
+with universal and updatable srs. In Annual International Conference on the Theory and Applications of Cryptographic Techniques,
+pages 738–768. Springer, Cham, 2020.
+
+[11] Aritra Banerjee and Hitesh Tewari. Multiverse of hawkness: A
+universally-composable mpc-based hawk variant. Cryptography,
+6(3):39, 2022.
+
+[29] Ilaria Chillotti, Nicolas Gama, Mariya Georgieva, and Malika
+Izabachène. Tfhe: fast fully homomorphic encryption over the
+torus. Journal of Cryptology, 33(1):34–91, 2020.
+
+[12] Massimo Bartoletti, James Hsin-yu Chiang, and Alberto Lluch Lafuente. Maximizing extractable value from automated market
+makers. In Financial Cryptography and Data Security: 26th
+International Conference, FC 2022, Grenada, May 2–6, 2022,
+Revised Selected Papers, pages 3–19. Springer, 2022.
+
+[30] Ilaria Chillotti, Marc Joye, and Pascal Paillier. Programmable
+bootstrapping enables efﬁcient homomorphic inference of deep
+neural networks. In International Symposium on Cyber Security
+Cryptography and Machine Learning, pages 1–19. Springer, 2021.
+
+[13] Carsten Baum, James Hsin-yu Chiang, Bernardo David, and
+Tore Kasper Frederiksen. Eagle: Efﬁcient privacy preserving smart
+contracts. Cryptology ePrint Archive, 2022.
+
+[31] Tarun Chitra, Guillermo Angeris, and Alex Evans. Differential
+privacy in constant function market makers. In Financial Cryptography and Data Security: 26th International Conference, FC
+2022, Grenada, May 2–6, 2022, Revised Selected Papers, pages
+149–178. Springer, 2022.
+
+[14] Alex Biryukov and Sergei Tikhomirov. Deanonymization and
+linkability of cryptocurrency transactions based on network analysis. In 2019 IEEE European Symposium on Security and Privacy
+(EuroS&P), pages 172–184. IEEE, 2019.
+
+[32] Wei Dai. Pesca: A privacy-enhancing smart-contract architecture.
+Cryptology ePrint Archive, 2022.
+
+[15] Dan Boneh, Rosario Gennaro, Steven Goldfeder, Aayush Jain,
+Sam Kim, Peter MR Rasmussen, and Amit Sahai. Threshold
+cryptosystems from threshold fully homomorphic encryption. In
+Advances in Cryptology–CRYPTO 2018: 38th Annual International
+Cryptology Conference, Santa Barbara, CA, USA, August 19–23,
+2018, Proceedings, Part I 38, pages 565–596. Springer, 2018.
+
+[33] Roshan Dathathri, Olli Saarikivi, Hao Chen, Kim Laine, Kristin
+Lauter, Saeed Maleki, Madanlal Musuvathi, and Todd Mytkowicz. Chet: an optimizing compiler for fully-homomorphic neuralnetwork inferencing. In Proceedings of the 40th ACM SIGPLAN
+Conference on Programming Language Design and Implementation, pages 142–156, 2019.
+
+[16] Jonathan Bootle, Vadim Lyubashevsky, Ngoc Khanh Nguyen, and
+Gregor Seiler. A non-pcp approach to succinct quantum-safe zeroknowledge. In Annual International Cryptology Conference, pages
+441–469. Springer, 2020.
+
+[34] Rafael del Pino, Vadim Lyubashevsky, and Gregor Seiler. Short
+discrete log proofs for fhe and ring-lwe ciphertexts. In IACR
+International Workshop on Public Key Cryptography, pages 344–
+373. Springer, 2019.
+
+[17] Jonathan Bootle, Vadim Lyubashevsky, and Gregor Seiler. Algebraic techniques for short (er) exact lattice-based zero-knowledge
+proofs. In Annual International Cryptology Conference, pages
+176–202. Springer, 2019.
+
+[35] Yevgeniy Dodis, Rafail Ostrovsky, Leonid Reyzin, and Adam
+Smith. Fuzzy extractors: How to generate strong keys from
+biometrics and other noisy data. SIAM journal on computing,
+38(1):97–139, 2008.
+
+[18] Jonathan Bootle, Vadim Lyubashevsky, and Gregor Seiler. Algebraic techniques for short (er) exact lattice-based zero-knowledge
+proofs. In Annual International Cryptology Conference, pages
+176–202. Springer, 2019.
+
+[36] Junfeng Fan and Frederik Vercauteren. Somewhat practical fully
+homomorphic encryption. Cryptology ePrint Archive, 2012.
+
+[19] Sean Bowe, Alessandro Chiesa, Matthew Green, Ian Miers,
+Pratyush Mishra, and Howard Wu. Zexe: Enabling decentralized
+private computation. In 2020 IEEE Symposium on Security and
+Privacy (SP), pages 820–837, 2018.
+
+[37] Prastudy Fauzi, Sarah Meiklejohn, Rebekah Mercer, and Claudio
+Orlandi. Quisquis: A new design for anonymous cryptocurrencies.
+In International Conference on the Theory and Application of
+Cryptology and Information Security, pages 649–678. Springer,
+2019.
+
+[20] Zvika Brakerski. Fundamentals of fully homomorphic encryptiona survey. In Electron. Colloquium Comput. Complex., volume 25,
+page 125, 2018.
+[21] Zvika Brakerski, Craig Gentry, and Vinod Vaikuntanathan. Fully
+homomorphic encryption without bootstrapping. Cryptology ePrint
+Archive, Report 2011/277, 2011. https://eprint.iacr.org/2011/277.
+
+[38] Amos Fiat and Adi Shamir. How to prove yourself: Practical
+solutions to identiﬁcation and signature problems. In Conference
+on the theory and application of cryptographic techniques, pages
+186–194. Springer, 1986.
+
+[22] Benedikt Bünz, Shashank Agrawal, Mahdi Zamani, and Dan
+Boneh. Zether: Towards privacy in a smart contract world. In
+International Conference on Financial Cryptography and Data
+Security, pages 423–443. Springer, 2020.
+
+[39] Dario Fiore, Rosario Gennaro, and Valerio Pastro. Efﬁciently
+veriﬁable computation on encrypted data. In Proceedings of the
+2014 ACM SIGSAC Conference on Computer and Communications
+Security, pages 844–855, 2014.
+
+323
+
+15
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+[58] Christian Mouchet, Juan Troncoso-Pastoriza, Jean-Philippe
+Bossuat, and Jean-Pierre Hubaux.
+Multiparty homomorphic
+encryption from ring-learning-with-errors.
+Proceedings on
+Privacy Enhancing Technologies, 2021(CONF):291–311, 2021.
+
+[40] Pierre-Alain Fouque, Jeffrey Hoffstein, Paul Kirchner, Vadim
+Lyubashevsky, Thomas Pornin, Thomas Prest, Thomas Ricosset,
+Gregor Seiler, William Whyte, and Zhenfei Zhang. Falcon: Fastfourier lattice-based compact signatures over ntru. Submission
+to the NIST’s post-quantum cryptography standardization process,
+2018.
+
+[59] Pratyay Mukherjee and Daniel Wichs. Two round multiparty computation via multi-key fhe. In Annual International Conference on
+the Theory and Applications of Cryptographic Techniques, pages
+735–763. Springer, 2016.
+
+[41] Ariel Gabizon, Zachary J Williamson, and Oana Ciobotaru. Plonk:
+Permutations over lagrange-bases for oecumenical noninteractive
+arguments of knowledge. Cryptology ePrint Archive, 2019.
+
+[60] Satoshi Nakamoto. Bitcoin: A peer-to-peer electronic cash system.
+Technical report, 2019.
+
+[42] Priscilla E Greenwood and Michael S Nikulin. A guide to chisquared testing, volume 280. John Wiley & Sons, 1996.
+
+[61] Ngoc Khanh Nguyen and Gregor Seiler. Practical sublinear proofs
+for r1cs from lattices. In Annual International Cryptology Conference, pages 133–162. Springer, 2022.
+
+[43] Jens Groth. On the size of pairing-based non-interactive arguments.
+In Annual international conference on the theory and applications
+of cryptographic techniques, pages 305–326. Springer, 2016.
+
+[62] Shen Noether. Ring signature conﬁdential transactions for monero.
+IACR Cryptol. ePrint Arch., 2015:1098, 2015.
+
+[44] Jens Groth and Mary Maller. Snarky signatures: Minimal signatures of knowledge from simulation-extractable snarks. In Annual
+International Cryptology Conference, pages 581–612. Springer,
+2017.
+
+[63] Andreas Park. The conceptual ﬂaws of constant product automated
+market making. Available at SSRN 3805750, 2021.
+[64] Rafael Pass, Lior Seeman, and Abhi Shelat. Analysis of the
+blockchain protocol in asynchronous networks. In Annual International Conference on the Theory and Applications of Cryptographic
+Techniques, pages 643–673. Springer, 2017.
+
+[45] Roger A Hallman, Kim Laine, Wei Dai, Nicolas Gama, Alex J Malozemoff, Yuriy Polyakov, and Sergiu Carpov. Building applications
+with homomorphic encryption. In Proceedings of the 2018 ACM
+SIGSAC Conference on Computer and Communications Security,
+pages 2160–2162, 2018.
+
+[65] Eli Ben Sasson, Alessandro Chiesa, Christina Garman, Matthew
+Green, Ian Miers, Eran Tromer, and Madars Virza. Zerocash:
+Decentralized anonymous payments from bitcoin. In 2014 IEEE
+Symposium on Security and Privacy, pages 459–474. IEEE, 2014.
+
+[46] Muneeb Ul Hassan, Mubashir Husain Rehmani, and Jinjun Chen.
+Differential privacy in blockchain technology: A futuristic approach. Journal of Parallel and Distributed Computing, 145:50–74,
+2020.
+
+[66] Microsoft SEAL (release 3.5). https://github.com/Microsoft/SEAL,
+April 2020. Microsoft Research, Redmond, WA.
+
+[47] Don Johnson, Alfred Menezes, and Scott Vanstone. The elliptic
+curve digital signature algorithm (ecdsa). International journal of
+information security, 1(1):36–63, 2001.
+
+[67] Samuel Steffen, Benjamin Bichsel, Roger Baumgartner, and Martin
+Vechev. Zeestar: Private smart contracts by homomorphic encryption and zero-knowledge proofs. In 2022 IEEE Symposium
+on Security and Privacy (SP), pages 1543–1543. IEEE Computer
+Society, 2022.
+
+[48] Harry Kalodner, Steven Goldfeder, Xiaoqi Chen, S Matthew Weinberg, and Edward W Felten. Arbitrum: Scalable, private smart
+contracts. In 27th {USENIX} Security Symposium ({USENIX}
+Security 18), pages 1353–1370, 2018.
+
+[68] Samuel Steffen, Benjamin Bichsel, Mario Gersbach, Noa Melchior,
+Petar Tsankov, and Martin Vechev. zkay: Specifying and enforcing
+data privacy in smart contracts. In Proceedings of the 2019 ACM
+SIGSAC Conference on Computer and Communications Security,
+pages 1759–1776, 2019.
+
+[49] Thomas Kerber, Aggelos Kiayias, and Markulf Kohlweiss.
+Kachina–foundations of private smart contracts. In 2021 IEEE
+34th Computer Security Foundations Symposium (CSF), pages 1–
+16. IEEE, 2021.
+
+[69] Alexander Viand, Patrick Jattke, and Anwar Hithnawi. Sok: Fully
+homomorphic encryption compilers. In 2021 IEEE Symposium on
+Security and Privacy (SP), pages 1092–1108. IEEE, 2021.
+
+[50] Ahmed Kosba, Andrew Miller, Elaine Shi, Zikai Wen, and Charalampos Papamanthou. Hawk: The blockchain model of cryptography and privacy-preserving smart contracts. In 2016 IEEE
+symposium on security and privacy (SP), pages 839–858. IEEE,
+2016.
+
+[70] Gavin Wood. Ethereum: A secure decentralised generalised transaction ledger. Ethereum Project Yellow Paper, 2014.
+[71] Aaron Wright. The rise of decentralized autonomous organizations:
+Opportunities and challenges. Stanford Journal of Blockchain Law
+& Policy, 4(2):152–176, 2021.
+
+[51] Kristin Lauter, Adriana López-Alt, and Michael Naehrig. Private computation on encrypted genomic data. In Progress in
+Cryptology-LATINCRYPT 2014: Third International Conference
+on Cryptology and Information Security in Latin America Florianópolis, Brazil, September 17–19, 2014 Revised Selected Papers, pages 3–27. Springer, 2015.
+
+[72] Alex Luoyuan Xiong, Binyi Chen, Zhenfei Zhang, Benedikt Bünz,
+Ben Fisch, Fernando Krell, and Philippe Camacho. Veri-zexe:
+Decentralized private computation with universal setup. Cryptology
+ePrint Archive, 2022.
+[73] Jiahua Xu, Krzysztof Paruch, Simon Cousaert, and Yebo Feng.
+Sok: Decentralized exchanges (dex) with automated market maker
+(amm) protocols. ACM Computing Surveys, 55(11):1–50, 2023.
+
+[52] Yehuda Lindell. Secure multiparty computation. Communications
+of the ACM, 64(1):86–96, 2020.
+[53] Zeyu Liu, Daniele Micciancio, and Yuriy Polyakov. Largeprecision homomorphic sign evaluation using fhew/tfhe bootstrapping. Cryptology ePrint Archive, 2021.
+
+A. Cryptographic Building Blocks
+
+[54] Zeyu Liu and Eran Tromer. Oblivious message retrieval. In Annual
+International Cryptology Conference, pages 753–783. Springer,
+2022.
+
+In this section, we provide an extended review of the
+cryptographic building blocks that we use in our instantiation of smartFHE (Section 5)—namely, fully homomorphic encryption, zero-knowledge proof systems, and
+digital signatures.
+
+[55] Vadim Lyubashevsky, Ngoc Khanh Nguyen, and Maxime Plancon.
+Lattice-based zero-knowledge proofs and applications: Shorter,
+simpler, and more general. Cryptology ePrint Archive, 2022.
+[56] Vadim Lyubashevsky, Chris Peikert, and Oded Regev. On ideal
+lattices and learning with errors over rings. In Annual International
+Conference on the Theory and Applications of Cryptographic
+Techniques, pages 1–23. Springer, 2010.
+
+A.1. Fully Homomorphic Encryption
+FHE supports computations directly on ciphertexts.
+All currently known schemes rely on lattice-based
+cryptography, thus providing post-quantum security
+guarantees. In our instantiation, we use the BFV
+
+[57] Samir Jordan Menon and David J Wu. Spiral: Fast, high-rate
+single-server pir via fhe composition. In 2022 IEEE Symposium
+on Security and Privacy (SP), pages 1568–1568. IEEE Computer
+Society, 2022.
+
+324
+
+16
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+v − us = p(er + e2 − se1 ) + m and all the coefﬁcients
+in the above equation were chosen to be small so that no
+reduction modulo q occurred.
+Correctness is straightforward. Semantic security is
+based on the hardness of Ring-LWE for ring R [56].
+Recall that the Ring-LWE problem with appropriately
+chosen parameters can be reduced (via a quantum
+reduction) to the Shortest Vector Problem over ideal
+lattices. Full details on the reduction can be found in [56].
+
+scheme [36], which is based on the Ring-LWE public
+key encryption scheme [56]. We provide an overview of
+both schemes starting with the latter.
+Ring-LWE Encryption Scheme. The Ring-LWE public
+key encryption scheme [56], which we denote as RPKE
+is composed of ﬁve algorithms: Setup, SecretKeyGen,
+PublicKeyGen, Encrypt, and Decrypt. All operations are
+performed over the polynomial ring Rq = Zq [x]/(f (x))
+where q is an integer and f (x) ∈ Z[X] is a monic,
+irreducible polynomial of degree d. In describing the
+previous algorithms, we loosely follow the presentation
+from short discrete log proofs here [34]. Let λ be the
+security parameter, the RPKE is deﬁned as follows:
+
+BFV Scheme. The BFV scheme [36] is a leveled FHE
+scheme, meaning that only a certain number of homomorphic multiplications can be performed sequentially
+before reaching a point at which the resulting ciphertext
+cannot be decrypted. Each time we perform homomorphic operations (especially multiplication), the ciphertext’s
+noise grows. As mentioned before, bootstrapping can be
+used as an optimization to avoid having to specify the
+multiplicative depth in advance.
+When we multiply two ciphertexts c and c together,
+we get a long resulting ciphertext. Having to work with
+these increasingly long ciphertexts impacts the efﬁciency
+of the scheme so BFV utilizes an additional technique
+called key switching (or relinearization) that instead allows
+us to work with a smaller ciphertext that is of the same
+size as the original. This technique is encapsulated in the
+refreshing procedure that can be performed by anyone.
+The security of the BFV scheme follows from the security
+of the basic Ring-LWE encryption scheme [56].
+We present a simpliﬁed description of the BFV
+scheme below, while full details can be found in [36].
+The BVF scheme is composed of seven algorithms:
+Setup, KeyGen, Encrypt, Decrypt, HomAdd, HomMult,
+and refresh deﬁned as follows:
+
+RPKE.Setup(1λ , 1μ ): Takes as inputs security parameter
+λ and positive integer μ. It outputs public parameters
+rpke.pp = (p, q, d, χ) where p is the size of the plaintext
+space (often chosen to be binary), q is a μ-bit modulus,
+d = d(λ, μ) is a power of 2 for R = Z[x]/f (x) where
+f (x) = xd + 1, and χ = χ(λ, μ) is a “small” noise
+distribution. The parameters are chosen such that the
+scheme is based on a Ring-LWE instance that achieves
+2λ security against known attacks [21].
+RPKE.SecretKeyGen(rpke.pp):
+Takes
+the
+public
+parameters rpke.pp as input, and outputs a secret
+key rpke.sk = s where s is a polynomial with small,
+bounded coefﬁcients from the error distribution χ.
+RPKE.PublicKeyGen(rpke.pp, rpke.sk): Takes the public
+parameters rpke.pp and the secret key rpke.sk as inputs,
+and outputs public key rpke.pk = (a, t) for a, t ∈ Rq
+where a is a random polynomial and t = as + e such
+that e is a polynomial with small, bounded coefﬁcients
+from the error distribution χ.
+
+BFV.Setup(1λ ): Takes the security parameter λ as input,
+and outputs the parameters bfv.pp, which includes a
+modulus, noise distribution, two integers, and rpke.pp
+(produced by invoking RPKE.SecretKeyGen(rpke.pp)).
+
+RPKE.Encrypt(rpke.pp, rpke.pk, m): Takes the public parameters rpke.pp, and the public key rpke.pk, and the
+message m = m ∈ Rq to be encrypted as inputs (where all
+the coefﬁcients of m are in Zp ), and outputs the ciphertext
+c that is computed as follows:
+1) Sample polynomials r, e1 , e2 with small, bounded
+∗
+coefﬁcients from the error distribution χ. Form m
+consisting
+of
+the
+message
+and
+randomness
+as
+follows:
+⎛ ⎞
+r
+⎜e 1 ⎟
+∗
+ =⎝ ⎠
+m
+e2
+m
+2) Form the matrix A from
+ rpke.pk by setting:
+pa p 0 0
+A=
+pt 0 p 1
+⎛ ⎞
+
+ r
+ 
+pa p 0 0 ⎜e1 ⎟
+u
+∗=
+=
+3) Compute A · m
+⎠
+⎝
+e2
+pt 0 p 1
+v
+m
+ 
+u
+4) Output ciphertext c =
+v
+
+BFV.KeyGen(bfv.pp): Takes the public parameters bfv.pp
+as input, and outputs a secret key sk = s obtained by
+running RPKE.SecretKeyGen(rpke.pp)), a public key pk
+(obtained by running RPKE.PublicKeyGen(rpke.pp, s)),
+and auxiliary information {τ } needed to facilitate the key
+switching procedure in BFV.Refresh.
+BFV.Encrypt(bfv.pp, bfv.pk, m): Takes the public
+parameters bfv.pp, the public key bfv.pk, and a message
+m as inputs. It outputs a ciphertext c which consists of
+two Ring-LWE samples. The ﬁrst sample c0 encodes the
+message m using t from rpke.pk and the second sample
+c1 is auxiliary and formed from a in rpke.pk.
+BFV.Decrypt(bgv.pp, bfv.sk,c): Takes the public
+parameters bfv.pp, the secret key bfv.sk, and a ciphertext
+c as inputs. It outputs the corresponding plaintext m
+after performing the appropriate modulo reductions and
+rounding operations on c0 + c1 s.
+
+RPKE.Decrypt(rpke.pp, rpke.sk,c): Takes the public parameters rpke.pp, the public key rpke.pk, and the ciphertext c as inputs, and outputs the plaintext m produced by decrypting c as follows: compute v − us
+mod p. This will return the plaintext message m since
+
+BFV.HomAdd(bfv.pk,c1 ,c2 ): Takes as inputs two
+ciphertexts c1 = (c1,0 , c1,1 ) and c2 = (c2,0 , c2,1 ), such
+that both are encrypted under the public key bfv.pk. It
+outputs c3 = (c1,0 + c2,0 , c1,1 + c2,1 ), which is the sum of
+325
+
+17
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+the two ciphertexts c1 and c2 resulted from performing
+component-wise vector addition.
+
+Then, to prove the linear relation, a variant of Bulletproofs is used, which differs from the original Bulletproofs
+construction in that the inner-product proof will be zeroknowledge [34]. Using the initial Pedersen commitment
+to s, we can use Bulletproofs to prove properties of the
+plaintext—such as a secret value being in a particular
+range. The soundness of the proofs is based on the discrete
+log problem, whereas secrecy is based on Ring-LWE, a
+problem generally considered to be hard even for quantum
+computers [56].
+
+BFV.HomMult(bfv.pk,c1 ,c2 ): Takes as inputs two
+ciphertexts c1 = (c1,0 , c1,1 ) and c2 = (c2,0 , c2,1 ), such
+that both are encrypted under the public key bfv.pk. It
+computes (c1,0 · c2,0 , c1,0 · c2,1 + c1,1 · c2,0 , c1,1 · c2,1 )
+over the integers and then performs a rounding operation
+mod q to obtain c3 , which is the product of the two
+ciphertexts. Finally, it calls BFV.Refresh on c3 and
+outputs the result.
+
+A.3. Digital Signatures
+
+BFV.Refresh(c, τ ): Takes as inputs a ciphertext c and
+auxiliary information τ to facilitate key switching. It then
+expands the ciphertext and performs the key switching
+procedure resulting in a new ciphertext c of the original
+size, and outputs c .
+
+As our system deals with public and private accounts,
+issuing public and private transactions and computation
+requests, a user needs at least two keypairs: one for a
+private account and one for a public account (assuming
+the user is interested in both modes of operation). As mentioned earlier, with public accounts, we use ECDSA [47]
+as in Ethereum. For private accounts, if post-quantum
+security for signatures is desired, we can use a latticebased digital signature scheme compatible with our FHE
+scheme. In practice, we would like for such a scheme to be
+fairly efﬁcient. We use the lattice-based Falcon signature
+scheme [40] in our instantiation, one of three ﬁnalists
+for NIST’s post-quantum cryptography standardization
+competition. If post-quantum security is not a concern,
+we can instead use ECDSA for improved efﬁciency and
+compatibility with existing public smart contract-enabled
+blockchains. The only condition is that the user must use
+a different keypair for the private account than that of the
+public account to preserve privacy.
+
+A.2. Zero-Knowledge Proofs
+As FHE uses lattice-based cryptography, lattice-based
+ZKPs would be a natural candidate for proving relations about the input plaintexts in our instantiation. There
+have been recent improvements to lattice-based ZKPs
+(namely [18], [16], and [9]) but these constructions still
+do not achieve the desired efﬁciency level with regards to
+proof sizes (<100KB).
+Perhaps surprisingly, it is possible to use elliptic
+curve-based ZKPs to prove relations in lattice-based
+cryptography quite efﬁciently via the short discrete log
+proofs construction [34]. We take this approach in our
+instantiation to obtain small proof sizes (in the single
+digit kilobyte range). We will then use Bulletproofs [23]
+to prove properties of the plaintext (such as ensuring that
+a currency amount is in a particular value range). Both
+of these ZKP systems provide soundness, completeness,
+and zero-knowledge guarantees and can be made
+non-interactive using the Fiat-Shamir transform [38].
+Additionally, neither requires a trusted setup.
+
+B. Applications
+In this section, we demonstrate how our smartFHE
+instantiation can be used to support real-world applications that require privacy. These applications are used
+for performance evaluation purposes of our framework
+as shown in Section 6. Note that the goal is to provide
+representative computations that require FHE to enable
+evaluating the overhead of our framework.
+
+Bulletproofs. This proof system [23] allows us to
+efﬁciently prove that a committed value is in a particular
+range using an inner product argument. We have chosen
+Bulletproofs for our smartFHE instantiation as they are
+universal (i.e. a single reference string can be used to
+prove any NP statement), transparent (i.e. no trusted
+setup), and efﬁcient. Bulletproofs are readily compatible
+with short discrete log proofs [34], relying also on the
+hardness of the discrete log assumption. Additionally, the
+Pedersen commitment obtained from short discrete log
+proofs can be re-used for our range proof [34].
+
+B.1. Automated Market Makers
+Automated market makers, or AMMs, are a form of
+decentralized exchange for trading cryptocurrency tokens
+without intermediaries [73]. They connect buyers with
+sellers, where sellers build liquidity pools for trading
+particular tokens, e.g. Ether-NU trading. AMMs are a
+prime example of Decentralized Finance (DeFi) services.
+They build a platform for automated order matching and
+execution. The price of the traded token is automatically
+computed based on supply and demand. Naturally, if
+supply is low (i.e. liquidity in the pool is low) then the
+price becomes higher. An AMM is usually implemented
+as a smart contract to support automatic execution, with
+many popular systems such as Uniswap [7] and Curve [2]
+deployed in practice.
+A major problem for AMMs is front-running attacks
+that allow manipulating the market to achieve signiﬁcant
+proﬁts. Malicious parties monitor the mempool for large
+
+Short Discrete Log Proofs. This proof system [34] allows
+us to efﬁciently prove knowledge of a short vector s such
+that As = t for public A and t over the polynomial ring
+Rq = Zq [X]/(f (x)), where f (x) is a monic, irreducible
+polynomial of degree d in Z[X].
+To do so, we ﬁrst form a Pedersen commitment to the
+coefﬁcients of s. This commitment is in some group G
+of size p such that the discrete log problem is hard. The
+proofs owe their efﬁciency to the fact that p is usually
+much larger than q , particularly in the FHE setting.
+326
+
+18
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+encrypts the correct amntA value. Upon receiving this
+transaction and executing it, the AMM contract issues
+a transfer transaction to send amntB tokens to Alice’s
+account (if Alice’s B account is private, this will be a
+shield transaction), and modiﬁes the pool reserves of token
+B accordingly. Note that even though these values are
+public, this does not impose any threat to Alice’s trade
+since it has already been executed—thus addressing frontrunning attacks.
+
+pending orders and submit competing (buy) ones with
+higher fees, before the matching happens, to front-run
+unsuspecting user orders. As the competing order may
+cause signiﬁcant price slippage, the victim’s (buy) order
+may execute at a worse price than anticipated. The malicious party will then execute a second (sell) order after
+the victim’s order, proﬁting off the price slippage caused
+by the prior trades. The root cause of this type of attack is
+lack of privacy. If AMMs permitted execution of private
+orders, then malicious parties could not manipulate the
+pool price in such a manner. This is a critical problem
+that has received widespread interest [12], [63].
+In this application, we show how smartFHE can
+be used to build a private AMM. We follow the constant product formula for computing the trading price
+as adopted in Uniswap. This formula keeps the ratio of
+token reserves, and consequently prices, in the pool as
+balanced as possible to reduce price slippage. In particular,
+let token A and token B be the pair of tokens being
+traded, and totalA and totalB be the pool reserve values
+of tokens A and B , respectively. This formula ensures that
+the price of token A multiplied by the price of token B
+equals a constant number, where the price of token A is
+totalB /totalA (i.e. it is the number of B tokens required
+to purchase a single A token); a similar formula applies
+to the price of token B .
+Accordingly, for an order trading an amount of token
+A, amntA , the amount of token B , amntB , that this order
+receives is computed as:
+
+B.2. Statistical Data Analysis
+Many ﬁnancial applications rely on the results of
+particular statistical analyses of user ﬁnancial standing or
+other user-related private information, e.g. health records.
+The spread of blockchain-based applications to avoid
+centralized trust has led to several innovations through
+which traditional services and organizations are reshaped
+into fully decentralized ones. Decentralized autonomous
+organizations (DAOs) [71] are one such example. These
+facilitate company/organization formation, with a transparent way of buying shares, voting on project and business proposals, decision making, e.g. for loan services or
+health insurance. We discuss two sub-applications under
+this category—namely, analyzing user ﬁnancial standing
+and performing a chi-squared test over genetic data.
+B.2.1. Analyzing Financial Standing. For this application, we imagine that a DAO is trying to decide on forming
+a new company or spinning out a project based on the
+ﬁnancial standing of the users backing the endeavour.
+Suppose we have a set of users P1 , . . . , Pn , each of
+which is willing to put funds u1 , . . . , un to back the
+proposal, where the fund amounts are private. The goal
+is to compute the mean and variance to assist in making
+the decision. Speciﬁcally, the mean must be close enough
+to some target value set by the DAO and the individual
+funds should not be far from the mean.
+This application relies on inputs from multiple users;
+we want all these to be encrypted under the same public
+key to allow the DAO contract to compute the mean
+and variance over the ciphertexts. One approach is to let
+the users collectively generate a public key pk and share
+the corresponding secret key sk. Thus, to decrypt any
+ciphertext under pk, all the users’ secret key shares are
+needed. Each Pi will encrypt her fund value ui (under pk)
+and send it to the DAO contract, which in turn computes
+the mean and the variance over all ciphertexts and updates
+the contract state with the (encrypted) result. The users
+can collectively decrypt the results and take further action
+(if needed). For example, if the statistical analysis values
+are within the required bounds stated by the DAO, any of
+these users can issue a transaction to inform the DAO
+of that (without disclosing the plaintext values of the
+statistical results).
+In terms of smartFHE operations, the above can be
+done as follows. User Pi locks her own private account
+(which contains a balance that can cover the individual
+fund ui ) to the DAO smart contract. Then she submits
+a ciphertext ci of the value of her fund ui (encrypted
+under the group public key pk) to the DAO. This is done
+by issuing a transaction, which is basically a function call
+
+amntB = totalB − totalA · totalB /(totalA + amntA )
+
+A private version of this AMM can be implemented in
+smartFHE as follows. Alice locks her private account that
+contains tokens of type A to the AMM smart contract (to
+avoid any concurrency issues). She then issues an order,
+which is basically a transaction, to the AMM representing
+the intended trade. This transaction includes the encrypted
+amount of token A to be traded, denoted as cA , and a ZKP
+attesting that:20
+• cA encrypts a non-negative value,
+• that Alice’s private account can cover the total order
+value,
+• and that cA is well-formed.
+The AMM smart contract will compute the amount of
+B tokens Alice will get for her order. This is done using
+the constant product formula as follows (where cB is the
+ciphertext of B token amount resulting from the trade,
+encrypted under Alice’s public key):
+cB = totalB −
+
+totalA · totalB
+totalA + cA
+
+Alice will then ﬁnalize the trade by issuing a deshield
+transaction to send amntA tokens out of her private
+account to the AMM contract account, which the AMM
+adds to the pool reserve of token A. This transaction
+will include as auxiliary information the randomness used
+to encrypt cA , allowing anyone to verify that indeed cA
+20. It is unlikely that a single trade will drain the pool reserves entirely
+of token B . Pool reserves are generally quite large and Alice will be
+required to show that she owns a sufﬁciently large amount of token A
+along with locking her account to the contract. Even if this is the case,
+submitting such an order is to Alice’s detriment.
+
+327
+
+19
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+with the encrypted fund as an input. This call also includes
+a ZKP attesting that:
+• The balance of the private account of Pi can cover
+the fund value ui ,
+• and that the ciphertext of ui is well-formed.
+After receiving c1 , . . . , cn , the DAO contract will
+n perci
+,
+form the computation. It 
+computes the mean c̄ = i=1
+n
+n
+2
+21
+i=1 (ci −c̄)
+.
+and the variance var =
+n−1
+The resulting (encrypted) mean and variance will be
+recorded in the DAO smart contract. The users can retrieve
+these values and use their shares of the secret key to
+collectively decrypt the result. If they ﬁnd out that these
+values satisfy the conditions set by the DAO, anyone can
+notify the DAO of that. This is can be done by issuing a
+transaction with a ZKP attesting that the encrypted mean
+and variance are within the prescribed bounds.
+
+these hospitals will generate one public key pk and share
+the corresponding sk. Then, each hospital hi will submit
+the encrypted genetic counts for population ni , denoted
+as cti,0 , cti,1 , cti,2 such that ni = ti,0 + ti,1 + ti,2 . Hospital
+hi provides a ZKP attesting that the counts are for the
+given population size ni (which is public). That is, this
+ZKP attests that:
+• All ti,0 , ti,1 , ti,2 are non-negative,
+• that ni = ti,0 + ti,1 + ti,2 ,
+• and that all submitted ciphertexts are well-formed.
+The contract ﬁrst checks that all ZKPs are valid, then
+computes the total encrypted counts from all hospitals:
+
+B.2.2. Chi-squared Test. The chi-squared test, or X 2 ,
+is a popular statistical test that answers questions with
+respect to association relations or goodness of ﬁt [42].
+In association relations, this involves testing whether a
+particular factor, such as age or gender, has a signiﬁcant
+association with a particular outcome, such as election
+results or health status. In goodness of ﬁt, this involves
+testing whether a particular variable (or set of variables)
+follows a particular distribution. In Genome-Wide Association Studies (GWAS), the chi-squared test is used to
+test for deviation from the Hardy-Weinberg equilibrium,
+and, thus, detect potential risks for diseases. Testing such
+hypotheses is also useful for ﬁnancial applications, such
+as setting health insurance premiums.
+In this application, we consider a scenario in which
+a (decentralized) health insurance company relies on the
+genetic testing results for a population of users of size
+n to make decisions for insurance premiums. The genetic data of these users is hosted by several trusted
+medical institution or hospitals. The population is divided
+into sub-populations of size n1 , n2 , . . . , nq such that for
+i ∈ {1, . . . , q} the ni group data is hosted by hospital hi .
+All these hospitals want to keep the hosted data private
+from others.
+We use the approach proposed in [51], [69] to compute
+this genetic test. We start with one group to explain the
+computation and then show how hospitals h1 , . . . , hq will
+participate together under smartFHE. For population n1 ,
+let the genetic counts be t0 , t1 , t2 such that n1 = t0 +
+t1 + t2 . For example, assume that the test is for the two
+alleles A and a of the gene, then t0 = tAA , t1 = tAa ,
+and t2 = taa . The chi-squared test is computed in two
+stages. First, compute the quantities α = (4t0 t2 − t21 )2 ,
+β1 = 2(2t0 + t1 )2 , β2 = (2t0 + t1 )(2t2 + t1 ), and β3 =
+2(2t2 + t1 )2 . Second, compute the test value as:
+
+cα = (4ct0 ct2 − c2t1 )2
+
+X2 =
+
+q
+
+c t0 =
+i=1
+
+q
+
+q
+
+cti,0 , ct1 =
+
+cti,1 , and ct2 =
+i=1
+
+cti,2
+i=1
+
+After that, the contract computes four quantities:
+
+cβ1 = 2(2ct0 + ct1 )2
+cβ2 = (2ct0 + ct1 )(2ct2 + ct1 )
+cβ3 = 2(2ct2 + ct1 )2
+
+The hospitals can retrieve these encrypted quantities
+from the contract, collectively decrypt them using their
+shares of sk, and then any hospital can compute the test
+result X 2 using the formula above.
+Any of these hospitals can notify the insurance company smart contract of the result, which is done by issuing
+a transaction with a ZKP attesting that the test result:
+• is correctly computed using the quantities computed
+by the contract,
+• and that this result is in a given premium threshold
+range set in the contract.
+This is done without disclosing the test value.
+
+C. Proof of Theorem 1
+To prove Theorem 1, we need to prove that no PPT
+adversary can win the correctness and security games
+deﬁned in Section 2 with non-negligible probability.
+Intuitively, our smartFHE instantiation satisﬁes these
+properties by relying on the correctness and security of the
+underlying cryptographic primitives it uses. The use of a
+secure zero-knowledge proof guarantees: completeness (a
+valid honest proof generated by a user will be accepted
+by the miners), soundness (a user that does not own valid
+private inputs cannot forge valid proofs for any transaction
+or computation request), and zero-knowledge (so the proof
+does not reveal anything about the private inputs and
+private account state). The use of a semantically secure
+FHE scheme guarantees that the ciphertexts of the inputs
+and balances do not reveal anything about the underlying
+(plaintext) values, and operating on them (by homomorphically adding or multiplying them) will produce valid
+results. Also, the correctness of the locking process will
+avoid invalidating any pending ZKPs, and the correctness
+of the rolling over process at the end of each epoch will
+gurantee that account balances are updated correctly. The
+security of the digital signature scheme guarantees that a
+malicious adversary cannot forge signatures, and thus steal
+
+1 1
+α
+1
++
+2n1 β1
+β2 β3
+
+The goal is to have all hospitals collectively compute
+one test value over their data through the insurance company smart contract. Similar to the previous application,
+21. Note that the squaring operation is simply a homomorphic multiplication of the quantity by itself and the number of users is public—it
+is the count of the submitted ciphertexts. Thus, dividing the resulting
+ciphertext by a public constant is a cheap operation.
+
+328
+
+20
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+Lemma 2. The smartFHE instantiation described in Section 5 satisﬁes the overdraft safety property (cf. Deﬁnition 6).
+
+others’ currency, and that a man-in-the-middle attacker
+cannot manipulate any of the messages sent in the system.
+Formally, the proof of Theorem 1 requires proving
+three lemmas showing that smartFHE is correct and supports both overdraft safety and ledger indistinguishability.
+
+Proof. To prove that our instantiation supports overdraft
+safety, we must consider Transfer, Shield, Deshield, and
+PrivTransfer, and show that none of these transaction
+algorithms can be used to send more currency than a user
+rightfully owns with non-negligible probability. Recall
+that our instantiation satisﬁes correctness (as shown in
+Lemma 1) so that private computations cannot be used
+to falsely increase a user’s account balance. Ultimately,
+operations on private balances and transfer amounts will
+be captured in the transactions listed above.
+In Transfer, all account and transaction details are
+associated with public accounts so are publicly veriﬁable information (e.g. sender/receiver’s balances, transfer amount). Thus, if the sender attempts to send more
+currency than he rightfully owns, VerifyTransfer would
+output 0 and the transaction would be rejected.
+In Shield, the state of the sender’s account can be publicly tracked and veriﬁed. The encrypted transfer amount
+will be checked to ensure that it matches the published
+plaintext transfer amount (with the randomness used in
+encryption), and that the sender’s remaining balance is
+non-negative. If the sender attempts to send more currency
+than he rightfully owns, VerifyShield will output 0.
+In Deshield, the state of the sender’s account is private.
+The encrypted transfer amount will be checked to ensure
+it matches the published non-negative plaintext transfer
+amount with the corresponding encryption randomness.
+The ZKP showing that the sender has enough currency
+in his private account to perform this transfer will also
+be veriﬁed as part of VerifyDeshield. Thus, if the sender
+is able to send more currency than he rightfully owns
+(i.e. VerifyDeshield(txdeshield ) = 1), he has violated the
+soundness of the ZKP systems of Bulletproofs or short
+discrete log proofs (which happens with at most negligible
+probability).
+In PrivTransfer, the state of the sender and receiver’s
+accounts are private. As part of VerifyPrivTransfer, ZKPs
+will be checked showing that the sender has enough
+currency in his account to perform the transaction and
+that the transfer amount encrypted under the sender and
+receiver’s public key is identical and non-negative. Thus,
+if the sender is able to send more currency than he
+rightfully owns (i.e. VerifyPrivTransfer(txprivtransf ) = 1),
+he has violated the soundness of the ZKP systems of
+Bulletproofs or short discrete log proofs (which happens
+with at most negligible probability).
+As in the proof of correctness, by the assumption that
+the underlying blockchain system is secure, the miners
+will reject any invalid operations and transactions. Thus,
+any transaction in which its corresponding verify operation outputs 0 will be rejected, so it will not impact the
+updated ledger state.
+Accordingly, in the OSGame game, the adversary A
+will have a negligible probability to succeed in spending
+more currency than what it owns. That is, regardless of
+how A interacts with the PPSC scheme (by instructing
+honest parties to place transactions and computation requests, or by inserting its own via its accounts or those that
+
+Lemma 1. The smartFHE instantiation described in Section 5 satisﬁes the correctness property (cf. Deﬁnition 2).
+Proof. Correctness follows by the correctness of the FHE
+scheme, the security of the ZKP system and the digital signature scheme, and the correctness of the locking
+and roll-over processes. Every operation, whether a valid
+transaction or a circuit computation, will be processed
+successfully in our instantiation and leads to a veriﬁable
+ledger update. This can easily be seen for each transaction
+type in the system. By relying on the completeness of the
+ZKP systems for Bulletproofs [23] and short discrete log
+proofs [34], the correctness of the BFV fully homomorphic encryption scheme [36], the locking process (to lock
+account states to avoid invalidating any pending ZKPs),
+and the rolling over process at the end of each epoch, it
+can be easily seen that valid transactions will update the
+ledger state as expected.
+That is, an adversary, who does not own an account or
+does not know the actual private inputs and data, cannot
+forge valid ZKPs; thus, any operation request he issues
+will not be accepted. Also, this adversary cannot forge
+a signature on behalf of an honest user or manipulate
+the operation requests issued by others in the system.
+For computations on private inputs, the correctness of the
+results is based on the correctness of the BFV scheme.
+That is, operating on the ciphertexts of the inputs will
+produce ciphertexts of the correct results (the same as
+what would be obtained if these inputs were public and the
+computation was performed in the clear). Being able to do
+any of these means violating the security of the underlying
+cryptographic primitives, which is a contradiction.
+Furthermore, the result correctness of any FHE-based
+is guaranteed by the assumption that the underlying
+smart contract-enabled blockchain system is secure (so
+its consensus protocol satisﬁes the security properties
+of consensus—liveness, persistence/consistency, and chain
+quality [64]). In other words, miners will accept blocks
+that contain only valid results computed by correctly performing a Compute request using the supplemented user
+inputs, according to the circuit representing the function
+call in a given smart contract. Same for transactions issued
+by the users. This guarantees that the updated ledger state
+contains only valid state changes even for those over
+private inputs and private accounts.
+Accordingly, in the INCGame game, applying Ops to
+accpub and applying an equivalent private version Ops to
+accpriv , will lead to the same ﬁnal balance value. Given
+that all balance values are not allowed to exceed some
+maximum value MAX determined by the system’s setup,
+the homomorphic operations on account balances will
+not cause an overﬂow that may lead to invalid updates.
+Thus, A will have a negligible probability to succeed in
+producing an operation transcript that leads to different
+account balances, which completes the proof.
+
+329
+
+21
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+it corrupted), the probability of breaking overdraft safety
+is negligible, which completes the proof.
+
+FHE keypair and fresh input values, then we encrypt these
+values using the fresh secret key and use them to replace
+the original input ciphertexts in aux0 and aux1 .
+The hybrids Hybrid1 and Hybrid2 are indistinguishable
+by the zero-knowledge property of the ZKP system and
+the semantic security of the FHE scheme. These imply
+that, regardless of the actual plaintext input values,
+the input ciphertexts are indistinguishable—neither the
+ZKPs nor the FHE ciphertexts will reveal anything
+about the plaintext values. In other words, if A can
+distinguish these two hybrids, then we can use it to build
+two adversaries: B1 that can break the zero-knowledge
+property of the underlying ZKP systems, and B2 that can
+break the semantic security of the FHE scheme, which is
+a contradiction.
+
+Lemma 3. The smartFHE instantiation described in Section 5 satisﬁes the ledger indistinguishability property (cf.
+Deﬁnition 8).
+Proof. Recall that in the LINDGame, starting with some
+ledger state, A interacts with the PPSC scheme (through
+OPPSC ) and can initiate any of the query types this oracle
+provides. A can request creating (public and private)
+accounts, transfer currency between them, request any
+(public or private) computation execution in any smart
+contracts it wishes, instruct honest parties to initiate transactions and computation requests, and can corrupt any of
+these parties and control it. At the end, A chooses two
+operations (transactions or computation requests) among
+which the challenger C will choose one at random and
+request OPPSC to execute it. Based on the updated ledger
+state, A will guess which operation was chosen and will
+win if the guess is correct. To rule out trivial wins of A, the
+two operations op0 and op1 must be publicly consistent
+in the sense of Deﬁnition 7.
+The proof must show that for all operation types in the
+system (including all transaction types and private computation requests), A will not be able to win the LINDGame
+with non-negligible probability. Without loss of generality,
+we show that for private computation requests; a similar
+proof and reasoning arguments can be applied to the rest
+of the operation types.
+Using a proof technique inspired by the one in [37],
+we prove ledger indistinguishability for private computation operations using a series of hybrids starting with an
+LINDGame with b = 0 (Hybrid0 ), and ﬁnishing with an
+LINDGame game with b = 1 (Hybrid7 ). By showing that
+all these hybrids are indistinguishable, we prove that A
+cannot tell which operation C has chosen for execution.
+A private computation operation is composed of a
+public computation circuit (or code) to be executed, a
+set of private inputs that are encrypted using the BFV
+FHE scheme, and ZKPs (using the Bulletproofs and
+the short discrete log proofs system) to attest for the
+well-formedness of the input ciphertexts and that these
+inputs respect all conditions speciﬁed in the system.
+Based on that, we show the following series of hybrids:
+
+Hybrid3 : Same as Hybrid2 , but we replace the output of
+the execute query with fresh output produced by executing
+opb using the fresh inputs generated in Hybrid2 .
+The hybrids Hybrid2 and Hybrid3 are indistinguishable
+by the semantic security of the FHE scheme that our
+smartFHE instantiation uses. Similar to above, if A can
+distinguish them, then we can use it to build B that can
+break the semantic security of the FHE scheme, which is
+a contradiction.
+Hybrid4 : Same as Hybrid3 , but with b = 1. The hybrids
+Hybrid3 and Hybrid4 are indistinguishable by the same
+argument described above. Since the computation is
+identical for both op0 and op1 , by the semantic security
+of the FHE scheme and the zero-knowledge property
+of the ZKP scheme, and regardless of the actual input
+values, A will not be able to deduce anything about these
+inputs or the computed output. Thus, A will not be able
+to tell that op1 has been executed instead of op0 in this
+hybrid. Otherwise, we can use A to break the security of
+the FHE and ZKP schemes that our instantiation uses (as
+described above), which is a contradiction.
+Hybrid5 : Same as Hybrid4 , but with aux0 and aux1 used
+in the original game (i.e. original inputs ciphertexts). So
+this is Hybrid3 with b = 1. The hybrids Hybrid4 and
+Hybrid5 are indistinguishable by the indistinguishability
+argument of Hybrid3 and Hybrid2 .
+Hybrid6 : Same as Hybrid5 , but with the original output
+(i.e. ledger sate updates) that will be produced by opb
+using the original aux0 and aux1 from the original game.
+So this is Hybrid2 with b = 1. The hybrids Hybrid5 and
+Hybrid6 are indistinguishable by the indistinguishability
+argument of Hybrid2 and Hybrid1 .
+
+Hybrid0 : The game LINDGame with b = 0.
+Hybrid1 : Same as Hybrid0 , but we replace the zeroknowledge proofs with simulated ones, i.e., we invoke the
+zero-knowledge property simulator for each of the input
+values, and we replace the actual proofs in aux0 and aux1
+with simulated ones.
+The hybrids Hybrid0 and Hybrid1 are indistinguishable
+by the zero-knowledge property of the ZKP systems we
+use. If A can distinguish these two hybrids, then we
+can use A to build an adversary B that can break the
+zero-knowledge property of the underlying ZKP systems,
+which is a contradiction.
+
+Hybrid7 : Same as Hybrid6 , but with the real (original)
+ZKPs used in the original game instead of the simulated
+ones. So this is the original LINDGame with b = 1. The
+hybrids Hybrid6 and Hybrid7 are indistinguishable by the
+indistinguishability argument of Hybrid1 and Hybrid0 .
+
+This sequence shows that LINDGame with b = 0
+is (negligibly) indistinguishable from LINDGame with
+b = 1. This means that publicly-consistent private computation requests in our smartFHE instantiation are indistinguishable and will not give A any additional information
+that allows it to win LINDGame with non-negligible
+advantage.
+
+Hybrid2 : Same as Hybrid1 , but we replace the input ciphertexts in aux0 and aux1 with fresh ciphertexts (for
+plaintext inputs that may have different values than the
+original ones, but produce same circuit behavior but not
+necessarily same output value). That is, we choose a fresh
+330
+
+22
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+Similar hybrid sequence can be developed for other
+operation types, and by relying on the security of the ZKP
+systems and the FHE scheme we use, similar reasoning
+as above can be used to show that they do not give A any
+non-negligible advantage in winning LINDGame, which
+completes the proof.
+Proof of Theorem 1. Follows by Lemmas 1, 2, and 3.
+
+331
+
+23
+
+Authorized licensed use limited to: Columbia University Libraries. Downloaded on April 28,2025 at 20:34:03 UTC from IEEE Xplore. Restrictions apply.
+
+

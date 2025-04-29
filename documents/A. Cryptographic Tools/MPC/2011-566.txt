@@ -1,0 +1,2288 @@
+Fully Homomorphic Encryption with Polylog Overhead
+C. Gentry1 , S. Halevi1 , and N.P. Smart2
+1
+
+IBM T.J. Watson Research Center,
+Yorktown Heights, New York, U.S.A.
+2
+Dept. Computer Science, University of Bristol,
+Bristol, United Kingdom.
+
+Abstract. We show that homomorphic evaluation of (wide enough) arithmetic circuits can be accomplished with only
+polylogarithmic overhead. Namely, we present a construction of fully homomorphic encryption (FHE) schemes that for
+security parameter λ can evaluate any width-Ω(λ) circuit with t gates in time t · polylog(λ).
+To get low overhead, we use the recent batch homomorphic evaluation techniques of Smart-Vercauteren and BrakerskiGentry-Vaikuntanathan, who showed that homomorphic operations can be applied to “packed” ciphertexts that encrypt
+vectors of plaintext elements. In this work, we introduce permuting/routing techniques to move plaintext elements across
+these vectors efficiently. Hence, we are able to implement general arithmetic circuit in a batched fashion without ever
+needing to “unpack” the plaintext vectors.
+We also introduce some other optimizations that can speed up homomorphic evaluation in certain cases. For example, we
+show how to use the Frobenius map to raise plaintext elements to powers of p at the “cost” of a linear operation.
+
+Keywords. Homomorphic encryption, Bootstrapping, Batching, Automorphism, Galois group, Permutation network.
+Acknowledgments. The first and second authors are sponsored by DARPA and ONR under agreement number
+N00014-11C-0390. The U.S. Government is authorized to reproduce and distribute reprints for Governmental
+purposes notwithstanding any copyright notation thereon. The views and conclusions contained herein are those
+of the authors and should not be interpreted as necessarily representing the official policies or endorsements,
+either expressed or implied, of DARPA, or the U.S. Government. Distribution Statement “A” (Approved for Public
+Release, Distribution Unlimited).
+The third author is sponsored by DARPA and AFRL under agreement number FA8750-11-2-0079. The same
+disclaimers as above apply. He is also supported by the European Commission through the ICT Programme under
+Contract ICT-2007-216676 ECRYPT II and via an ERC Advanced Grant ERC-2010-AdG-267188-CRIPTO, by
+EPSRC via grant COED–EP/I03126X, and by a Royal Society Wolfson Merit Award. The views and conclusions
+contained herein are those of the authors and should not be interpreted as necessarily representing the official
+policies or endorsements, either expressed or implied, of the European Commission or EPSRC.
+
+Table of Contents
+
+Fully Homomorphic Encryption with Polylog Overhead . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+i
+
+C. Gentry, S. Halevi, and N.P. Smart
+1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+1
+
+1.1 Packing Plaintexts and Batched Homomorphic Computation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+1
+
+1.2 Permuting Plaintexts Within the Plaintext Slots . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+
+1.3 FHE with Polylog Overhead . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+2 Computing on (Encrypted) Arrays . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+2.1 Computing with `-Fold Gates . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+4
+
+2.2 Permutations over Hyper-Rectangles . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+2.3 Batch Selections, Swaps, and Permutation Networks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+2.4 Cloning: Handling High Fan-out in the Circuit . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+6
+
+3 Permutation Networks from Abelian Group Actions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+7
+
+3.1 Permutation Networks from Cyclic Rotations and Swaps . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+8
+
+3.2 Generalizing to Sharply-Transitive Abelian Groups . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+8
+
+4 FHE With Polylog Overhead . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+10
+
+4.1 The Basic Setting of FHE Schemes Based on Ideal Lattices and Ring LWE . . . . . . . . . . . . . . . . . . . . .
+
+10
+
+4.2 Implementing Group Actions on FHE Plaintext Slots . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+10
+
+4.3 Parameter Setting for Low-Overhead FHE . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+12
+
+Plaintext-Space Terminology and Notations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+12
+
+Step 1. Lower-Bounding the Dimension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+13
+
+Step 2. Choosing the parameter m . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+14
+
+4.4 Achieving Depth-Independent Overhead . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+15
+
+References . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+15
+
+A Additional Optimizations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+16
+
+A.1 Faster Cloning . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+16
+
+A.2 Faster Routing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+17
+
+A.3 Powering (Almost) for Free . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+17
+
+B Proofs . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+18
+
+C Basic Algebra . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+C.1 Reductions of Cyclotomic Fields . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+C.2 Underlying Plaintext Algebra . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+C.3 Galois Theory of Cyclotomic Fields . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+22
+
+When H is cyclic . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+23
+
+D Using mod-Φm Polynomial Arithmetic . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+25
+
+D.1 Canonical Embeddings and Norms . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+
+Modular Reduction in Canonical Embedding. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+
+D.2 Our Cryptosystem . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+27
+
+Decryption. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+27
+
+Key Generation. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+28
+
+Encryption. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+Addition. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+“Raw Multiplication”. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+Key Switching. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+Galois Group Actions. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+30
+
+Modulus Switching. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+31
+
+Variants. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+32
+
+E A Delayed-Reduction Technique . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+33
+
+E.1 Key generation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+33
+
+E.2 Encryption . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+E.3 Addition . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+E.4 “Raw multiplication” . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+E.5 Key switching . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+35
+
+E.6 Modulus switching . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+36
+
+E.7 Galois group actions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+36
+
+iii
+
+1
+
+Introduction
+
+Fully homomorphic encryption (FHE) [16, 9, 8] allows a worker to perform arbitrarily-complex dynamicallychosen computations on encrypted data, despite not having the secret decryption key. Processing encrypted data
+homomorphically requires more computation than processing the data unencrypted. But how much more? What
+is the overhead, the ratio of encrypted computation complexity to unencrypted computation complexity (using a
+circuit model of computation)? Here, under the ring-LWE assumption, we show that the overhead can be made as
+low as polylogarithmic in the security parameter.
+We accomplish this by packing many plaintexts into each ciphertext; each ciphertext has Ω̃(λ) “plaintext slots”.
+Then, we describe a complete set of operations – Add, Mult and Permute – that allows us to evaluate arbitrary
+circuits while keeping the ciphertexts packed. Batch Add and Mult have been done before [18], and follow easily
+from the Chinese Remainder Theorem within our underlying polynomial ring. Here we introduce the operation
+Permute, that allows us to homomorphically move data between the plaintext slots, show how to realize it from
+our underlying algebra, and how to use it to evaluate arbitrary circuits.
+Our approach begins with the observation [3, 18] that we can use an automorphism group H associated to our
+underlying ring to “rotate” or “re-align” the contents of the plaintext slots. (These automorphisms were used in a
+somewhat similar manner by Lyubashevsky et al. [15] in their proof of the pseudorandomness of RLWE.) While
+H alone enables only a few permutations (e.g., “rotations”), we show that any permutation can be constructed as
+a log-depth permutation network, where each level consists of a constant number of “rotations”, batch-additions
+and batch-multiplications. Our method works when the underlying ring has an associated automorphism group H
+which is abelian and sharply transitive, a condition that we prove always holds for our scheme’s parameters.
+Ultimately, the Add, Mult and Permute operations can all be accomplished with Õ(λ) computation by building
+on the recent Brakerski-Gentry-Vaikuntanathan (BGV) “FHE without bootstrapping” scheme [3], which builds on
+prior work by Brakerski and Vaikuntanathan and others [5, 4, 12]. Thus, we obtain an FHE scheme that can evaluate
+any circuit that has Ω(λ) average width with only polylog(λ) overhead. For comparison, the smallest overhead for
+FHE was Õ(λ3.5 ) [19] until BGV recently reduced it to Õ(λ) [3].3
+In addition to their essential role in letting us move data across plaintext slots, ring automorphisms turn out to
+have interesting secondary consequences: they also enable more nimble manipulation of data within plaintext slots.
+Specifically, in some cases we can use them to raise the packed plaintext elements to a high power with hardly any
+increase in the noise magnitude of the ciphertext! In practice, this could permit evaluation of high-degree circuits
+without resorting to bootstrapping, in applications such as computing AES. See Appendix A.3.
+1.1
+
+Packing Plaintexts and Batched Homomorphic Computation
+
+Smart and Vercauteren [17, 18] were the first to observe that, by an application the Chinese Remainder Theorem
+to number fields, the plaintext space of some previous FHE schemes can be partitioned into a vector of “plaintext slots”, and that a single homomorphic Add or Mult of a pair of ciphertexts implicitly adds or multiplies
+(component-wise) the entire plaintext vectors. Each plaintext slot is defined to hold an element in some finite
+field Kn = Fpn , and, abstractly, if one has two ciphertexts that hold (encrypt) messages m0 , . . . , m`−1 ∈ K`n
+and m00 , . . . , m0`−1 ∈ K`n respectively in plaintext slots 0, . . . , ` − 1, applying `-Add to the two ciphertexts gives
+a new ciphertext that holds m0 + m00 , . . . , m`−1 + m0`−1 and applying `-Mult gives a new ciphertext that holds
+m0 · m00 , . . . , m`−1 · m0`−1 . Smart and Vercauteren used this observation for batch (or SIMD [11]) homomorphic
+3
+
+However, the polylog factors in our new scheme are rather large. It remains to be seen how much of an improvement this approach yields
+in practice, as compared to the Õ(λ3.5 ) approach implemented in [10, 19].
+
+1
+
+operations. That is, they show how to evaluate a function f homomorphically ` times in parallel on ` different
+inputs, with approximately the same cost that it takes to evaluate the function once without batching.
+Here is a taste of how these separate plaintext slots are constructed algebraically. As an example, for the ringLWE-based scheme, suppose we use the polynomial ring A = Z[x]/(x` + 1) where ` is a power of 2. Ciphertexts
+are elements of A2q where (as in in [3]) q has only polylog(λ) bits. The “aggregate” plaintext space is Ap (that
+is, ring elements taken modulo p) for some small prime p = 1 mod 2`. Any prime p = 1 mod 2` splits over the
+field associated to this ring – that is, in A, the ideal generated by p is the product of ` ideals {pi } each of norm
+p – and therefore Ap ≡ Ap0 × · · · × Ap`−1 . Consequently, using the Chinese remainder theorem, we can encode
+` independent mod-p plaintexts m0 , . . . , m`−1 ∈ {0, . . . , p − 1} as the unique element in Ap that is in all of the
+cosets mi + pi . Thus, in a single ciphertext, we may have ` independent plaintext “slots”.
+In this work, we often use `-Add and `-Mult to efficiently implement a Select operation: Given an index set I
+we can construct a vector vI of “select bits” (v0 , . . . , v`−1 ), such that vi = 1 if i ∈ I and vi = 0 otherwise.
+Then element-wise multiplication of a packed ciphertext c with the select vector v results in a new ciphertext that
+contains only the plaintext element in the slots corresponding to I, and zero elsewhere. Moreover, by generating
+two complementing select vectors vI and vI¯ we can mix-and-match the slots from two packed ciphertexts c1 and
+c2 : Setting c = (vI × c1 ) + (vI¯ × c2 ), we pack into c the slots from c1 at indexes from I and the slots from c2
+elsewhere.
+While batching is useful in many setting, it does not, by itself, yield low-overhead homomorphic computation
+in general, as it does not help us to reduce the overhead of computing a complicated function just once. Just as in
+normal program execution of SIMD instructions (e.g., the SSE instructions on x86), one needs a method of moving
+data between slots in each SIMD word.
+1.2
+
+Permuting Plaintexts Within the Plaintext Slots
+
+To reduce the overhead of homomorphic computation in general, we need a complete set of operations over packed
+vectors of plaintexts. The approach above allows us to add or multiply messages that are in the same plaintext slot,
+but what if we want to add the content of the i-th slot in one ciphertext to the content of the j-th slot of another
+ciphertext, for i 6= j? We can “unpack” the slots into separate ciphertexts (say, using homomorphic decryption4 [8,
+9]), but there is little hope that this approach could yield very efficient FHE. Instead, we complement `-Add and
+`-Mult with an operation `-Permute to move data efficiently across slots within a a given ciphertext, and efficient
+procedures to clone slots from a packed ciphertext and move them around to other packed ciphertexts.
+Brakerski, Gentry, and Vaikuntanathan [3] observed that for certain parameter settings, one can use automorphisms associated with the algebraic ring A to “rotate” all of plaintext spaces simultaneously, sort of like turning
+a dial on a safe. That is, one can transform a ciphertext that holds m0 , m1 , . . . , m`−1 in its ` slots into another
+ciphertext that holds mi , mi+1 , . . . , mi+`−1 (for an arbitrary given i, index arithmetic mod `), and this rotation
+operation takes time quasi-linear in the ciphertext size, which is quasi-linear in the security parameter. They used
+this tool to construct Pack and Unpack algorithms whereby separate ciphertexts could be aggregated (packed) into
+a single ciphertext with packed plaintexts before applying bootstrapping (and then the refreshed ciphertext would
+be unpacked), thereby lowering the amortized cost of bootstrapping.
+We exploit these automorphisms more fully, using the basic rotations that the automorphisms give us to construct permutation networks that can permute data in the plaintext slots arbitrarily. We also extend the application
+of the automorphisms to more general underlying rings, beyond the specific parameter settings considered in prior
+work [5, 4, 3]. This lets us devise low-overhead homomorphic schemes for arithmetic circuits over essentially any
+small finite field Fpn .
+4
+
+This is the approach suggested in [18] for Gentry’s original FHE scheme.
+
+2
+
+Our efficient implementation of Permute, described in Section 3, uses the Beneš/Waksman permutation network [2, 20]. This network consists of two back-to-back butterfly network of width 2k , where each level in the
+network has 2k−1 “switch gates” and each switch gate swaps (or not) its two inputs, depending on a control bit.
+It is possible to realize any permutation of ` = 2k items by appropriately setting the control bits of all the switch
+gates. Viewing this network as acting on k-bit addresses, the i-th level of the network partitions the 2k addresses
+into 2k−1 pairs, where each pair of addresses differs only in the |i − k|-th bit, and then it swaps (or not) those pairs.
+The fact that the pairs in the i-th level always consist of addresses that differ by exactly 2|i−k| , makes it easy to
+implement each level using rotations: All we need is one rotation by 2|i−k| and another by −2|i−k| , followed by
+two batched Select operations.
+For general rings A, the automorphisms do not always exactly “rotate” the plaintext slots. Instead, they act on
+the slots in a way that depends on a quotient group H of the appropriate Galois group. Nonetheless, we use basic
+theorems from Galois theory, in conjunction with appropriate generalizations of the Beneš/Waksman procedure,
+to construct a permutation network of depth O(log `) that can realize any permutation over the ` plaintext slots,
+where each level of the network consists of a constant number of permutations from H and Select operations. As
+with the rotations considered in [3], applying permutations from H can be done in time quasi-linear in ciphertext
+size, which is only quasi-linear in the security parameter. Overall, we find that permutation networks and Galois
+theory are a surprisingly fruitful combination.
+We note that Damgård, Ishai and Krøigaard [7] used permutation networks in a somewhat analogous fashion
+to perform secure multiparty computation with packed secret shares. In their setting, which permits interaction
+between the parties, the permutations can be evaluated using much simpler mathematical machinery.
+
+1.3
+
+FHE with Polylog Overhead
+
+In our discussion above, we glossed over the fact that ciphertext sizes in a BGV-like cryptosystem [3] depend
+polynomially on the depth of the circuit being evaluated, because the modulus size must grow with the depth of the
+circuit (unless bootstrapping [8, 9] is used). So, without bootstrapping, the “polylog overhead” result only applies
+to circuits of polylog depth. However, decryption itself can be accomplished in log-depth [3], and moreover the
+parameters can be set so that a ciphertext with Ω̃(λ) slots can be decrypted using a circuit of size Õ(λ). Therefore,
+“recryption” can be accomplished with polylog overhead, and we obtain FHE with polylog overhead for arbitrary
+(wide enough) circuits.
+
+2
+
+Computing on (Encrypted) Arrays
+
+As we explained above, our main tool for low-overhead homomorphic computation is to compute on “packed
+ciphertexts”, namely make each ciphertext hold a vector of plaintext values rather than a single value. Throughout
+this section we let ` be a parameter specifying the number of plaintext values that are packed inside each ciphertext,
+namely we always work with `-vectors of plaintext values. Let Kn = Fpn denote the plaintext space (e.g., Kn = F2
+if we are dealing with binary circuits directly). It was shown in [3, 18] how to homomorphically evaluate batch
+addition and multiplication operations on `-vectors:
+ def
+= hu0 + v0 , . . . , u`−1 + v`−1 i
+ def
+`-Mult hu0 , . . . , u`−1 i , hv0 , . . . , v`−1 i = hu0 × v0 , . . . , u`−1 × v`−1 i
+`-Add hu0 , . . . , u`−1 i , hv0 , . . . , v`−1 i
+
+3
+
+on packed ciphertexts in time Õ((` + λ)(log |Kn |) where λ is the security parameter (with addition and multiplication in Kn ).5 Specifically, if the size of our plaintext space is polynomially bounded and we set ` = Θ(λ), then
+we can evaluate the above operations homomorphically in time Õ(λ).
+Unfortunately, component-wise `-Add and `-Mult are not sufficient to perform arbitrary computations on encrypted arrays, since data at different indexes within the arrays can never interact. To get a complete set of operations for arrays, we introduce the `-Permute operation that can arbitrarily permute the data within the `-element
+arrays. Namely, for any permutation π over the indexes I` = {0, 1, . . . , ` − 1}, we want to homomorphically
+evaluate the function
+
+`-Permuteπ hu0 , . . . , u`−1 i = uπ(0) , . . . , uπ(`−1) .
+on a packed ciphertext, with complexity similar to the above. We will show how to implement `-Permute homomorphically in Sections 3 and 4 below. For now, we just assume that such an implementation is available and show
+how to use it to obtain low-overhead implementation of general circuits.
+2.1
+
+Computing with `-Fold Gates
+
+We are interested in computing arbitrary functions using “`-fold gates” that operate on `-element arrays as above.
+We assume that the function f (·) to be computed is specified using a fan-in-2 arithmetic circuit with t “normal”
+arithmetic gates (that operate on singletons). Our goal is to implement f using as few `-fold gates as possible,
+hopefully not much more than t/` of them.
+We assume that the input to f is presented in a packed form, namely when computing an r-variate function
+f (x1 , . . . , xr ) we get as input dr/`e arrays (indexed A0 , . . . , Adr/`e ) with the j’th array containing the input elements xj` through xj`+`−1 . The last array may contain less than ` elements, and the unused entries contain “don’t
+care” elements. In fact, throughout the computation we allow all of the arrays to contain “don’t care” entries.
+We say that an array is sparse if it contains `/2 or more “don’t care” entries. We maintain the invariant that our
+collection of arrays is always at least half full, i.e., we hold r values using at most d2r/`e `-element arrays.
+The gates that we use in the computation are the `-Add, `-Mult, and `-Permute gates from above. The rest of
+this section is devoted to establishing the following theorem:
+Theorem 1. Let `, t, w and W be parameters. Then any t-gate fan-in-2 arithmetic circuit C with average
+width w
+
+and maximum width W , can be evaluated using a network of O dt/`e · d`/we · log W · polylog(`) `-fold gates
+of types `-Add, `-Mult, and `-Permute. The depth of this network of `-fold gates is at most O(log W ) times that of
+the original circuit C, and the description of the network can be computed in time Õ(t) given the description of C.
+Before turning to proving Theorem 1, we point out that Theorem 1 implies that if the original circuit C has
+size t = poly(λ), depth L, and average width w = Ω(λ), and if we set the packing parameter as ` = Θ(λ), then
+we get an O(L · log λ)-depth implementation of C using O(t/λ · polylog(λ)) `-fold gates. If implementing each
+`-fold gate takes Õ(Lλ) time, then the total time to evaluate C is no more than
+O
+
+
+t
+polylog(λ) · L · λ · polylog(λ) = O(t · L · polylog(λ)).
+λ
+
+Therefore, with this choice of parameter (and for “wide enough” circuits of average width Ω(λ)), our overhead
+for evaluating depth-L circuits is only O(L · polylog(λ)). And if L is also polylogarithmic, as in BGV with
+bootstrapping [3], then the total overhead is polylogarithmic in the security parameter.
+5
+
+To compute L levels of such operations, the complexity expression becomes Õ((` + λ)(L + log |Kn |)).
+
+4
+
+The high-level idea of the proof of Theorem 1 is what one would expect. Consider an arbitrary fan-in two
+arithmetic circuit C. Suppose that we have ≈ w output wire values of level i − 1 packed into roughly w/` arrays.
+We need to route these output values to their correct input positions at level i. It should be obvious that the
+`-Permute gates facilitate this routing, except for two complications:
+1. The mapping from outputs of level i − 1 to inputs of level i is not a permutation. Specifically, level-(i − 1)
+gates may have high fan-out, and so some of the output values may need to be cloned.
+2. Once the output values are cloned sufficiently (for a total of, say, w0 values), routing to level i apparently calls
+for a big permutation over w0 elements, not just a small permutation within arrays of ` elements.
+Below we show that these complications can be handled efficiently.
+2.2
+
+Permutations over Hyper-Rectangles
+
+First, consider the second complication from above – namely, that we need to perform a permutation over some
+w elements (possibly w  `) using `-Add, `-Mult, and `-Permute operations that only work on `-element arrays.
+We use the following basic fact (cf. [14]), for completeness we provide a proof in Appendix B.
+Lemma 1. Let S = {0, . . . , a − 1} × {0, . . . , b − 1} be a set of ab positions, arranged as a matrix of a rows and
+b columns. For any permutation π over S, there are permutations π1 , π2 , π3 such that π = π3 ◦ π2 ◦ π1 (that is, π
+is the composition of the three permutations) and such that π1 and π3 only permute positions within each column
+(these permutations only change the row, not the column, of each element) and π2 only permutes positions within
+each row. Moreover, there is a polynomial-time algorithm that given π outputs the decomposition permutations
+π1 , π2 , π3 .
+In our context, Lemma 1 says that if we have w elements packed into k = dw/`e `-element arrays, we can express
+any permutation π of these elements as π = π3 ◦ π2 ◦ π1 where π2 invokes `-Permute (k times in parallel) to
+permute data within the respective arrays, and π1 , π3 only permute (` times in parallel) elements that share the
+same index within their respective arrays. In Section 2.3, we describe how to implement π1 , π3 using `-Add and
+`-Mult, and analyze the overall efficiency of implementing π. The following generalization of Lemma 1 to higher
+dimensions will be used later in this work. It is proved by invoking Lemma 1 recursively.
+Lemma 2. Let S = In1 × · · · × Ink where Ini = {0, . . . , ni − 1}. (Each element in S has k coordinates.) For
+any permutation π over S, there are permutations π1 , . . . , π2k−1 such that π = π2k−1 ◦ · · · ◦ π1 and such that πi
+affects only the i-th coordinate for i ≤ k and only the (2k − i)-th coordinate for i ≥ k.
+2.3
+
+Batch Selections, Swaps, and Permutation Networks
+
+We now describe how to use `-Add and `-Mult to realize the outer permutations π1 , π3 , which permute (` times in
+parallel) elements that share the same index within their respective arrays. To perform these permutations, we can
+apply a permutation network à la Beneš/Waksman [2, 20]. Recall that a r-dimensional Beneš network consists of
+two back-to-back butterfly networks. Namely it is a (2r − 1)-level network with 2r nodes in each level, where for
+i = 1, 2, . . . , 2r − 1, we have an edge connecting node j in level i − 1 to node j 0 in level i if the indexes j, j 0 are
+either equal (a “straight edge”) or they differ in only in the |r − i|’th bit (a “cross edge”). The following lemma is
+an easy corollary of Lemma 2.
+5
+
+Lemma 3. [13, Thm 3.11] Given any one-to-one mapping π of 2r inputs to 2r outputs in an r-dimensional Beneš
+network (one input per level-0 node and one output per level-(2r − 1) node), there is a set of node-disjoint paths
+from the inputs to the outputs connecting input i to output π(i) for all i.
+In our setting, to implement our π1 and π3 from Lemma 1 we need to evaluate ` of these permutation networks
+in parallel, one for each index in our `-fold arrays. Assume for simplicity that the number of `-fold arrays is a
+power of two, say 2r , and denote these arrays by A0 , . . . , A2r −1 , we would have a (2r − 1)-level network, where
+the i’th level in the network consists of operating on pairs of arrays (Aj , Aj 0 ), such that the indexes j, j 0 differ only
+in the |r − i|’th bit.
+The operation applied to two such arrays Aj , Aj 0 works separately on the different indexes of these arrays. For
+each k = 0, 1, . . . , ` − 1 the operation will either swap Aj [k] ↔ Aj 0 [k] or will leave these two entries unchanged,
+depending on whether the paths in the k’th permutation network uses the cross edges or the straight edges between
+nodes j and j 0 in levels i − 1, i of the permutation network.
+Thus, evaluating ` such permutation networks in parallel reduces to the following Select function: Given two
+arrays A = [m0 , . . . , m`−1 ] and A0 = [m00 , . . . , m0`−1 ] and a string S = s0 · · · s`−1 ∈ {0, 1}` , the operation
+SelectS (A, A0 ) outputs an array A00 = [m000 , . . . , m00`−1 ] where, for each k, m00k = mk if sk = 1 and m00k = m0k
+otherwise. It is easy to implement SelectS (A, A0 ) using just the `-Add and `-Mult operations – in particular
+
+SelectS (A, A0 ) = `-Add `-Mult(A, S), `-Mult(A0 , S̄)
+where S̄ is the bitwise complement of S. Note that SelectS̄ (A, A0 ) outputs precisely the elements that are discarded
+by SelectS (A, A0 ). So, SelectS (A, A0 ) and SelectS̄ (A, A0 ) are exactly like the arrays A0 and A0 , except that some
+pairs of elements with identical indexes have been swapped – namely, those pairs at index k where Sk = 0. Hence
+we obtain the following, again the proof is deferred to Appendix B.
+Lemma 4. Evaluating ` permutation networks in parallel, each permuting k items, can be accomplished using
+O(k · log k) gates of `-Add and `-Mult, and depth O(log k). Also, evaluating a permutation π over k · ` elements
+that are packed into k `-element arrays, can be accomplished using k `-Permute gates and O(k log k) gates of
+`-Add and `-Mult, in depth O(log k). Moreover, there is an efficient algorithm that given π computes the circuit of
+`-Permute, `-Add, and `-Mult gates that evaluates it, specifically we can do it in time O(k · ` · log(k · `)).
+2.4
+
+Cloning: Handling High Fan-out in the Circuit
+
+We have described how to efficiently realize a permutation over w > ` items using `-Add, `-Mult and `-Permute
+gates that operate on `-element arrays. However, the wiring between adjacent levels of a fan-in-two circuit are
+typically not permutations, since we typically have gates with high fan-out. We therefore need to clone the output
+values of these high-fan-out gates before performing a permutation that maps them to their input positions at the
+next level. We describe an efficient procedure for this “cloning” step.
+A cloning procedure. The input to the cloning procedure consists of a collection of k arrays, each with ` slots,
+where each slot is either “full” (i.e., contains a value that we want to use) or “empty” (i.e., contains a don’t-care
+value). We assume that initially more than k · `/2 of the available slots are full, and will maintain a similar invariant
+throughout the procedure. Denote the number of full slots in the input arrays by w (with k · `/2 < w ≤ k · `), and
+denote the i’th input value by vi . The ordering of input values is arbitrary – e.g., we concatenate all the arrays and
+order input values by their index in the concatenated multi-array.
+We are also given a set of positive integers m1 , . . . , mw ≥ 1, such that v1 should be duplicated m1 times, v2
+should be duplicated m2 times, etc. We say that mi is the intended multiplicity of vi . The total number of full slots
+6
+
+def
+
+in the output arrays will therefore be w0 = m1 + m2 + · · · + mw ≥ w. In more detail, the output of the cloning
+procedure must consist of some number k 0 of `-slot arrays, where k 0 `/2 < w0 ≤ k 0 `, such that v1 appears in at
+least m1 of the output slots, v2 appears in at least m2 of the output slots, etc.
+Denote the largest intended multiplicity of any value by M = maxi {mi }. The cloning procedure works in
+dlog M e phases, such that after the j’th phase each value vi is duplicated min(mi , 2j ) times. Each phase consists
+of making a copy of all the arrays, then for values that occur too many times marking the excess slots as empty
+(i.e., marking the extra occurrences as don’t-care values), and finally merging arrays that are “sparse” until the
+remaining arrays are at least half full. A simple way to merge two sparse arrays is to permute them so that the full
+slots appear in the left half in one array and the right half in the other, and then apply Select in the obvious way.
+A pseudo-code description of this procedure is given in Figure 1, whilst the proof of the following lemma is in
+Appendix B.
+Input: k `-slot arrays, A1 , . . . , Ak , each of the k · ` slots containing either a value or the special symbol ‘⊥’,
+w positive integers m1 , . . . , mw ≥ 1, where w is the number of full slots in the input arrays.
+Output: k0 `-slot arrays, P
+A01 , . . . , A0k0 , with each slot containing either a value or the special symbol ‘⊥’,
+where k0 /2 ≤ ( i mi )/` ≤ k0 and each input value vi is replicated mi times in the output arrays
+0. Set M ← maxi {mi }
+1. For j = 1 to dlog M e
+// The j’th phase
+2.
+Make another copy of all the arrays
+// Duplicate everything
+3.
+While there are values vi with multiplicity more than mi :
+4.
+Replace the excess occurrences of vi by ⊥
+// Remove redundant entries
+5.
+While there exist pairs of arrays that have between them ` or more slots with ⊥:
+6.
+Pick one such pair and merge the two arrays
+//Merge sparse arrays
+7. Output the remaining arrays
+Fig. 1. The cloning procedure
+
+Lemma 5. (i) The cloning procedure from Figure 1 is correct.
+(ii) Assuming that at least half the slots in the input arrays are full, this procedure can be implemented by a network
+of O(w0 /` · log(w0 ))P`-fold gates of type `-Add, `-Mult and `-Permute, where w0 is the total number of full slots
+in the output, w0 = mi . The depth of the network is bounded by O(log w0 ).
+(iii) This network can be constructed in time Õ(w0 ), given the input arrays and the mi ’s.
+We also describe some more optimizations in Appendix A, including a different cloning procedure that improves on the complexity bound in Lemma 5. Putting all the above together we can efficiently evaluate a circuit
+using `-Permute, `-Add and `-Mult, yielding a proof of Theorem 1, see Appendix B.
+
+3
+
+Permutation Networks from Abelian Group Actions
+
+As we will show in Section 4, the algebra underlying our FHE scheme makes it possible to perform inexpensive
+operations on packed ciphertexts, that have the effect of permuting the ` plaintext slots inside this packed ciphertext. However, not every permutation can be realized this way; the algebra only gives us a small set of “simple”
+permutations. For example, in some cases, the given automorphisms “rotate” the plaintext slots, transforming a
+ciphertext that encrypts the vector hv0 , . . . , v`−1 i into one that encrypts hvk , . . . , v`−1 , v0 , . . . , vk−1 i, for any value
+of k of our choosing. (See Section 3.2 for the general case.)
+7
+
+Our goal in this section is therefore to efficiently implement an `-Permuteπ operation for an arbitrary permutation π using only the simple permutations that the algebra gives us (and also the `-Add and `-Mult operations that
+we have available). We begin in Section 3.1 by showing how to efficiently realize arbitrary permutations when the
+small set of “simple permutations” is the set of rotations. In Section 3.2 we generalize this construction to a more
+general set of simple permutations.
+3.1
+
+Permutation Networks from Cyclic Rotations and Swaps
+
+Consider the Beneš permutation network discussed in Lemma 3. It has the interesting property that when the 2r
+items being permuted are labeled with r-bit strings, then the i-th level only swaps (or not) pairs whose index differs
+in the |r − i|-th bit. In other words, the i-th level swaps only disjoint pairs that have offset 2|r−i| from each other.
+We call this operation an “offset-swap”, since all pairs of elements that might be swapped have the same mutual
+offset.
+Definition 1 (Offset Swap). Let I` = {0, . . . , ` − 1}. We say that a permutation π over I` is an i-offset swap
+if it consists only of 1-cycles and 2-cycles (i.e., π = π −1 ), and moreover all the 2-cycles in π are of the form
+(k, k + i mod `) for different values k ∈ I` .
+Offset swaps modulo ` are easy to implement by combining two rotations with the Select operation defined in
+Section 2.3. Specifically, for an i-offset swap, we need rotations by i and −i mod ` and two Select operations. By
+Lemma 3, a Beneš network can realize any permutation over 2r elements using 2r − 1 levels where the i-th level
+is a 2|k−i| -offset swap modulo 2r . An i-offset modulo 2r , ` < 2r < 2` can be cobbled together using a constant
+number of offset swaps modulo ` and Select operations, with offsets i and 2` − i. Therefore, given a cyclic group
+of “simple” permutations H and Select operations, we can implement any permutation using a Beneš network with
+low overhead. Specifically, we prove the following lemma in Appendix B.
+Lemma 6. Fix an integer ` and let k = dlog `e. Any permutation π over I` = {0, . . . , ` − 1} can be implemented
+by a (2k − 1)-level network, with each level consisting of a constant number of rotations and Select operations on
+`-arrays.
+Moreover, regardless of the permutation π, the rotations that are used in level i (i = 1, . . . , 2k − 1) are always
+exactly 2|k−i| and ` − 2|k−i| positions, and the network depends on π only via the bits that control the Select
+operations. Finally, this network can be constructed in time Õ(`) given the description of π.
+3.2
+
+Generalizing to Sharply-Transitive Abelian Groups
+
+Below, we extend our techniques above to deal with a more general set of “simple permutations” that we get from
+our ring automorphisms. (See Sections 4 and C.3.)
+Definition 2 (Sharply Transitive Permutation Groups). Denote the `-element symmetric group by S` (i.e., the
+group of all permutations over I` = {0, . . . , ` − 1}), and let H be a subgroup of S` . The subgroup H is sharply
+transitive if for every two indexes i, j ∈ I` there exists a unique permutation h ∈ H such that h(i) = j.
+Of course, the group of rotations is an example of an abelian and sharply transitive permutation group. It is
+abelian: rotating by k1 positions and then by k2 positions is the same as rotating by k2 positions and then by k1
+positions. It is also sharply transitive: for all i, j there is a single rotation amount that maps index i to index j,
+8
+
+namely rotation by j − i. However, rotations are certainly not the only example. We now explain how to efficiently
+realize arbitrary permutations using as building blocks the permutations from any sharply-transitive abelian group.
+Recall that any abelian group is isomorphic to a direct product of cyclic groups, hence H ∼
+= C` × · · · × C`
+1
+
+k
+
+(where C`i is a cyclic group with `i elements for some integers `i ≥ 2 where `i divides `i+1 for all i). As any
+cyclic group with `i elements is isomorphic to I`i = {0, 1, . . . , `i − 1} with the operation of addition mod `i , we
+will identify elements in H with vectors in the box B = I`1 × · · · × I`k , where composing two group elements
+corresponds to adding their associated vectors (modulo the box). The group H is generated by the k unit vectors
+{er }kr=1 (where er = h0, . . . , 0, 1, 0, . . . , 0i with 1 in the r-th position). We stress that our group H has polynomial
+size, so we can efficiently compute the representation of elements in H as vectors in B.
+Since H is a sharply transitive group of permutations over the indexes I` = {0, . . . , ` − 1}, we can similarly
+label the indexes in I` by vectors in B: Pick an arbitrary index i0 ∈ I` , then for all h ∈ H label the index h(i0 ) ∈ I`
+with the vector associated with h. This procedure labels every element in I` with exactly one vector from B, since
+for every i ∈ I` there is a unique h ∈ H such that h(i0 ) = i. Also, since H ∼
+= B, we use all the vectors in B
+for this labeling (|H| = |B| = `). Note that with this labeling, applying the generator er to an index labeled with
+vector v ∈ B, yields an index labeled with v 0 = v + er mod B. Namely we increment by one the r’th entry in v
+(mod `r ), leaving the other entries unchanged.
+In other words, rather than a one-dimensional array, we view I` as a k-dimensional matrix (by identifying it
+with B). The action of the generator er on this matrix is to rotate it by one along the r-th dimension, and similarly
+applying the permutation ekr ∈ H to this matrix rotates it by k positions along the r-th dimension. For example,
+when k = 2, we view I` as an `1 × `2 matrix, and the group H includes permutations of the form ek1 that rotate
+all the columns of this matrix by k positions and also permutations of the form ek2 that rotate all the rows of this
+matrix by k positions.
+Using Lemma 6, we can now implement arbitrary permutations along the r’th dimension using a permutation
+network built from offset-swaps along the r’th dimension. Moreover, since the offset amounts used in the network
+do not depend on the specific permutation that we want to implement, we can use just one such network to implement in parallel different arbitrary permutations on different r’th-dimension sub-matrices. For example, in the
+2-dimensional case, we can effect a different permutation on every column, yet realize all these different permutations using just one network of rotations and Selects, by using the same offset amounts but different Select bits for
+the different columns. More generally we can realize arbitrary (different) `/`r permutations along all the different
+“generalized columns” in dimension-r, using a network of depth O(log `r ) consisting of permutations h ∈ H and
+`-fold Select operations (and we can construct that network in time `/`r · Õ(`r ) = Õ(`)).
+Once we are able to realize different arbitrary permutations along the different “generalized columns” in all
+the dimensions, we can apply Lemma 2. That lemma allows us to decompose any permutation π on I` into 2k − 1
+permutations π = πi ◦ · · · ◦ π2k−1 where each πi consists only of permuting the generalized columns in dimension
+r = |k − i|. Hence we can realize an arbitrary permutation
+on I` as a network of permutations h ∈ H and
+P
+`-fold Select operations, of total depth bounded by 2 k−1
+O(log
+`i ) = O(log `) (the last bound follows since
+i=0
+Qk−1
+Pk−1
+` = i=0 `i ). Also we can construct that network in time bounded by 2 i=0
+Õ(`i ) = Õ(`) (the bound follows
+since k ≤ log `). Concluding this discussion, we have:
+Lemma 7. Fix any integer ` and any abelian sharply-transitive group of permutations over I` , H ⊂ S` . Then for
+every permutation π ∈ S` , there is a permutation network of depth O(log `) that realizes π, where each level of
+the network consists of a constant number of permutations from H and Select operations on `-arrays.
+Moreover, the permutations used in each level do not depend on the particular permutation π, the network
+depends on π only via the bits that control the Select operations. Finally, this network can be constructed in time
+Õ(`) given the description of π and the labeling of elements in H, I` as vectors in B.
+t
+u
+9
+
+Lemma 7 tells us that we can implement an arbitrary `-Permute operation using a log-depth network of permutations h ∈ H (in conjunction with `-Add and `-Mult). Plugging this into Theorem 1 we therefore obtain:
+Theorem 2. Let `, t, w and W be parameters, and let H be an abelian, sharply-transitive group of permutations
+over I` .
+Then any t-gate fan-in-2 arithmetic circuit C with average width w and maximum width W , can be evaluated
+using a network of O dt/`e·d`/we·log W ·polylog(`) `-fold gates of types `-Add, `-Mult, and h ∈ H. The depth
+of this network of `-fold gates is at most O(log W · log `) times that of the original circuit C, and the description
+of the network can be computed in time Õ(t · log `) given the description of C.
+t
+u
+
+4
+
+FHE With Polylog Overhead
+
+Theorem 2 implies that if we could efficiently realize `-Add, `-Mult, and H-actions on packed ciphertexts (where
+H is a sharply transitive abelian group of permutations on `-slot arrays), then we can evaluate arbitrary (wide
+enough) circuits with low overhead. Specifically, if we could set ` = Θ(λ) and realize `-Add, `-Mult, and Hactions in time Õ(λ), then we can realize any circuit of average width Ω(λ) with just polylog(λ) overhead. It
+remains only to describe an FHE system that has the required complexity for these basic homomorphic operations.
+4.1
+
+The Basic Setting of FHE Schemes Based on Ideal Lattices and Ring LWE
+
+Many of the known FHE schemes work over a polynomial ring A = Z[X]/F (X), where F (X) is irreducible
+monic polynomial, typically a cyclotomic polynomial. Ciphertexts are typically vectors (consisting of one or two
+elements) over Aq = A/qA where q is an integer modulus, and the plaintext space of the scheme is Ap = A/pA
+for some integer modulus p  q with gcd(p, q) = 1, for example p = 2. (Namely, the plaintext is represented
+as an integer polynomial with coefficients mod p.) Secret keys are also vectors over Aq , and decryption works by
+taking the inner product b ← hc, si in Aq (so b is an integer polynomial with coefficients in (−q/2, q/2]) then
+recovering the message as b mod p. Namely, the decryption formula is [[hc, si mod F (X)]q ]p where [·]q denotes
+modular reduction into the range (−q/2, q/2]. Below we consider ciphertext vectors and secret-key vectors with
+two entries, since this is indeed the case for the variant of the BGV scheme [3] that we use.
+Smart and Vercauteren [18] observed that the underlying ring structure of these schemes makes it possible to
+realize homomorphic (batch) Add and Mult operations, i.e. our `-Add and `-Mult.
+Specifically, though F (X) is
+Q
+F
+typically irreducible over Q, it may nonetheless factor modulo p; F (X) = `−1
+i=0 i (X) mod p. In this case, the
+`−1
+plaintext space of the scheme also factors: Ap = ⊗j=0 Apj where pi is the ideal in A generated by p and Fi (X).
+In particular, the Chinese Remainder Theorem applies, and the plaintext space is partitioned into ` independent
+non-interacting “plaintext slots”, which is precisely what we need for component-wise `-Add and `-Mult. The
+decryption formula recovers the “aggregate plaintext” a ← [[hc, si mod F (X)]q ]p , and this aggregate plaintext is
+decoded to get the individual plaintext elements, roughly via zj ← a mod (Fi (x), p) ∈ Apj .
+4.2
+
+Implementing Group Actions on FHE Plaintext Slots
+
+While component-wise Add and Mult are straightforward, getting different plaintext slots to interact is more
+challenging. For ease of exposition, suppose at first that F (X) is the degree-(m − 1) polynomial Φm (X) =
+(X m − 1)/(X − 1) for m prime, and that p ≡ 1 (mod m). Thus our
+Q ring A above is the mth cyclotomic number
+field. In this case F (X) factors to linear terms modulo p, F (X) = `−1
+i=0 (X − ρi ) (mod p) with ρi ∈ Fp . Hence
+10
+
+we obtain ` = m − 1 plaintext slots, each slot holding an element of the finite field Fp (i.e. in this case Api above
+is equal to Fp ).
+To get Φm to factor modulo p into linear terms we must have p ≡ 1 (mod m), so p > m. Also we need
+m = Ω(λ) to get security (since m is roughly the dimension of the underlying lattice). This means that to get Φm
+to factor into linear terms we must use plaintext spaces that are somewhat large (in particular we cannot directly
+use F2 ). Later in this section we sketch the more elaborate algebra needed to handle the general (and practical)
+case of non-prime m and p  m, where Φm may not factor into linear terms. This is covered in more detail in
+Appendix C. For now, however, we concentrate on the simple case where Φm factors into linear terms modulo p.
+Recall that ciphertexts are vectors over Zq [X]/Φm (X), so each entry in these vectors corresponds to an integer
+polynomial. Consider now what happens if we simply replace X with X i inside all these polynomials, for some
+∗ , i > 1. Namely, for each polynomial f (X), we consider f (i) (X) = f (X i ) mod Φ (X). Notice
+exponent i ∈ Zm
+m
+that if we were using polynomial arithmetic modulo X m − 1 (rather then modulo Φm (X)) then this transformation
+would just permutes the coefficients of the polynomials. Namely f (i) has the same coefficients as f but in a different
+order, which means that if the coefficient vector of f has small norm then the same holds for the coefficient vector
+of f (i) . In Appendix D we show that using a different notion of “size” of a polynomial (namely, the norm of the
+canonical embedding of a polynomial rather than the norm of its coefficient vector), we can conclude the same
+also for mod-Φm polynomial arithmetic. Namely, the mapping f (X) 7→ f (X i ) mod Φm (X) does not change the
+“size” of the polynomial. To simplify presentation, below we describe everything in terms of coefficient vectors
+and arithmetic modulo X m − 1. The actual mod-Φm implementation that we use is described in Appendix D (and
+a slightly different implementation is described in Appendix E).
+Let us now consider the effect of the transformation X 7→ X i on decryption. Let c = (c0 (X), c1 (X)) and s =
+(s0 (X), s1 (X)) be ciphertext and secret-key vectors, and let b = hc, si mod (X m −1, q) and a = b mod p. Denote
+c(i) = (c0 (X i ), c1 (X i )) mod (X m −1), and define s(i) , b(i) and a(i) similarly. Since hc, si = b (mod X m −1, q),
+we have that
+c0 (X)s0 (X) + c1 (X)s1 (X) = b(X) + q · r(X) + (X m − 1)s(X) (over Z[X])
+for some integer polynomials r(X), s(X), and therefore also
+c0 (X i )s0 (X i ) + c1 (X i )s1 (X i ) = b(X i ) + q · r(X i ) + (X mi − 1)s(X i ) (over Z[X]).
+Since X m − 1 divides X mi − 1, then we also have
+E
+D
+c(i) , s(i) = b(i) + q · r(X i ) + (X m − 1)S(X) (over Z[X])
+for some r(X), S(X). That is, b(i) = c(i) , s(i) mod (X m − 1, q). Clearly, we also have a(i) = b(i) (mod p).
+This means that if c decrypts to the aggregate plaintext a under s, then c(i) decrypts to a(i) under s(i) !
+The cryptosystem from [3, 4] have a mechanism for “key switching” (which is also applicable to the scheme
+from [5]), transforming a ciphertext c that decrypts to a under s to a new ciphertext c0 that decrypts to the same a
+under some other secret key s0 . Using the same mechanism, we can translate the transformed ciphertext c(i) into
+one that decrypts to a(i) under another s0 of our choice. We can even translate it back to a ciphertext decryptable
+under the original s is we are willing to assume circular security. Using the BGV cryptosystem [5, 4, 3] with
+appropriate parameters, key switching can be accomplished in time Õ(λ). (See Appendices D and E for details on
+our variants of the BGV scheme [5].)
+But how does this new aggregate plaintext a(i) relate to the original a? Here we apply to Galois theory, which
+tells us that decoding the aggregate a(i) (which we do roughly by setting zj ← a(i) mod (Fj , p)), the set of zj ’s
+11
+
+that we get is exactly the same as when decoding the original aggregate a, albeit in different order. Roughly, this is
+because each of our plaintext slots corresponds to a root of the polynomial F (X), and the transformations X 7→
+X i , which are precisely the elements of the Galois group, permute these roots. In other words by transforming
+c → c(i) (followed by key switching), we can permute the plaintext slots inside the packed ciphertext. Moreover,
+in our simplified case, the permutations have a single cycle – i.e., they are rotations of the slots. Arranging the slots
+appropriately we can get that the transformation c → c(i) rotates the slots by exactly i positions, thus we get the
+group of rotations that we were using in Section 3.1. In general the situation is a little more complicated, but the
+above intuition still can be made to hold; for more details see Appendix C.
+The general case. In the general case, when m is not a prime, the polynomial Φm (X) has degree φ(m) (where φ(·)
+is Euler’s totient function), and it factors mod p into a number of same-degree irreducible factors. Specifically, the
+d
+degree of the factors is the smallest integer d such
+Q`−1that p = 1 (mod m), and the number of factors is ` = φ(m)/d
+(which is of course an integer), Φm (X) = j=0 Fj (X). For us, it means that we have ` plaintext slots, each
+isomorphic to the finite field Fpd , and an aggregate plaintext is a degree-(φ(m) − 1) polynomial over Fp .
+Suppose that we want to evaluate homomorphically a circuit over some underlying field Kn = Fpn , then we
+need to find an integer m such that Φm (X) factors mod p into degree-d factors, where d is divisible by n. This way
+we could directly embed elements of the underlying plaintext space Kn inside our plaintext slots that hold elements
+of Fpd , and addition and multiplication of plaintext slots will directly correspond to additions and multiplications
+of elements in Kn . (This follows since Kn = Fpn is a subfield of Fpd when n divides d.)
+Note that each plaintext slot will only have n log p bits of relevant information, i.e., the underlying element of
+Fpn , but it takes d log p bits to specify. We thus get an “embedding overhead” factor of d/n even before we encrypt
+anything. We therefore need to choose our parameter m so as to keep this overhead to a minimum.
+Even for a non-prime m, the Galois group Gal(Q[X]/Φm (X)) consists of all the transformations X 7→ X i
+for i ∈ Z∗m , hence there are exactly φ(m) of them. As in the simplified case above, if we have a ciphertext c
+that decrypts to an aggregate plaintext a under s, then c(i) decrypts to a(i) under s(i) . Differently from the simple
+case, however, not all members of the Galois group induce permutations on the plaintext slots, i.e., decoding the
+aggregate plaintext a(i) does not necessarily give us the same set of (permuted) plaintext elements as decoding
+j
+the original a. Instead Gal(Q[X]/Φm (X)) contains a subgroup G = {(X 7→ X p ) : j = 0, 1, . . . , d − 1}
+corresponding to the Frobenius automorphisms6 modulo p. This subgroup does not permute the slots at all, but the
+quotient group H = Gal/G does. Clearly, G has order d and H has order φ(m)/d = `. In Appendix C we show
+that the quotient group H acts as a transitive permutation group on our ` plaintext slots, and since it has order `
+then it must be sharply transitive. In the general case we therefore use this group H as our permutation group for
+the purpose of Lemma 7. Another complication is that the automorphism that we can compute are elements of Gal
+and not elements in the quotient group H. In Appendix C we also show how to emulate the permutations in H, via
+use of coset representatives in Gal.
+4.3
+
+Parameter Setting for Low-Overhead FHE
+
+Given the background from above (and the modification of the BGV cryptosystem [5] in Appendices D or E), we
+explain how to set the parameters for our variant of the BGV scheme so as to get low-overhead FHE scheme. Below
+we first show how to evaluate depth-L circuits with average-width Ω(λ) with overhead of only Õ(L)·polylog(λ),
+and then use bootstrapping to get overhead of polylog(λ) regardless of depth.
+Plaintext-Space Terminology and Notations The discussion below refers to three different “plaintext spaces”:
+6
+
+The group G is called the decomposition group at p in the literature.
+
+12
+
+– The “underlying plaintext space”: The circuit that we want to evaluate homomorphically is an arithmetic
+circuit over some (finite) ring, and that finite ring is the “underlying plaintext space”. We typically think of the
+underlying plaintext space as being just F2 , but it is sometimes convenient to use other spaces (e.g., F28 when
+computing AES, or perhaps Fp for some 32-bit prime p in other applications).
+In this work we always assume that the underlying plaintext space is small, either of constant size or at most of
+size polynomial in λ. Moreover, we assume that it is a field, namely Kn = Fpn for some prime p and integer
+n ≥ 1.
+– The “embedded plaintext space”. This is what is held in each of our plaintext slots. For example, we could
+have underlying space F2 , but embed our bits in elements of Fp for some larger integer p, or maybe in elements
+of F2d for some d > 1. (In the former case we need to emulate binary XOR using a degree-2 polynomial mod p,
+in the latter case multiplication and addition work as expected.)
+– The “aggregate plaintext space”. This is the plaintext space that is natively encrypted in the cryptosystem: An
+element in the aggregate plaintext space is a polynomial in some Fp [X], and as explained above it encodes (via
+CRT) an `-vector over the embedded plaintext space.
+When choosing parameters for our FHE construction, we are given the depth and width of the circuits that we
+need to evaluate homomorphically, as well as the underlying plaintext space and the security parameter. We then
+want to choose the “embedded” and “aggregate” plaintext spaces and all the other parameters so as to minimize
+the overhead. Namely, minimize the ratio between the number of gates in the underlying circuits and the time that
+it takes to evaluate them homomorphically. We describe two methods for choosing the parameters: One is likely to
+be more efficient in practice, but we can only prove that it yields low overhead for either small underlying plaintext
+spaces (of size polylog(λ)) or very wide circuits (of width Ω(λ · pn )). The other (simpler) method can be shown to
+work for any poly-size underlying plaintext space and circuits of width Ω(λ), but is almost certain to yield worst
+performance in practice.
+In either approach, we begin by lower-bounding the dimension of the lattice that we need (in order to get
+security), thus getting a lower-bound on our parameter m (recall that we will eventually get a dimension-φ(m)
+lattice). Once we have this lower-bound M , we either pick m = pns − 1 ≥ M for some integer s, or just choose m
+as p0 − 1 for some prime number p0 sufficiently larger than M . In the former case we have “embedded plaintext
+space” Fpns into which we can directly embed the underlying space Fpn , and in the latter case we need to emulate
+Fpn arithmetic using polynomials over Fp0 .
+Once we set the parameter m and get the corresponding “embedded plaintext space”, we can easily compute
+the packing parameter ` and all the other parameters.
+Step 1. Lower-Bounding the Dimension Suppose that we want to evaluate homomorphically circuits of depth L
+over some small finite field Fpn , with average depth w and maximum depth W = poly(λ), where λ is the security
+parameter. Clearly, for security parameter λ we need ciphertexts of size at least Ω(λ), so we cannot hope to
+evaluate any homomorphic operation faster than Õ(λ). To get low overhead, we therefore must be able to pack
+at least ` = Ω̃(λ) plaintext slots (from our “embedded” space) into one ciphertext. This means that we only get
+low-overhead implementation when the width of the underlying circuits is at least Ω̃(λ).
+From Theorem 2 we know that for any packing parameter ` we can evaluate depth-L circuits using a network
+of `-fold gates of depth L0 = O(L · log W · log `). (If we use the second approach below for choosing the
+parameter m then we need another additive term of L · log(pn ) = O(L · log λ) to emulate Fpn arithmetic using
+mod-m polynomials.) We will show below that it is sufficient to choose either ` = Θ(λ) or ` = Θ(pn ·λ) ≤poly(λ)
+(depending on which of the two approaches we use), but in either case we have L0 ≤ c · L · log W · log λ for some
+constant c that we can compute from the given parameters.
+13
+
+Recall that the BGV cryptosystem needs L0 different moduli qi when evaluating a depth-L0 network. When
+implementing arithmetic operations over a characteristic-p field and working with dimension-M lattices, the largest
+0 0
+modulus needs to be q0 = (M · p)c ·L (for some constant c0 < 2) to get the homomorphic evaluation functionality,
+and M ≥ λ · log q0 to get security. Plugging in all these constraints, we get a lower-bound on the dimension of the
+lattice M ≥ c00 · L · λ log λ · log W · log p for some constant c00 that we can compute from the given parameters
+(note that M = Θ̃(L · λ)).
+Step 2. Choosing the parameter m Below we will choose our parameter m so as to get φ(m) ≥ M . We use the
+following lemma, whose proof is in Appendix B.
+Lemma 8. For all positive integers m we have m/φ(m) = O(log log m).
+We will then choose our parameter m larger than c∗ M for some c∗ = O(log log M ), to ensure that φ(m) ≥ M .
+Approach 1: Using Extension Fields. Setting s = dlogpn (c∗ M + 1)e, we see that the integer m = pns − 1 satisfies
+all our requirements. On one hand it is large enough, m ≥ c∗ M by construction. On the other hand for d = n · s
+we clearly have that pd = 1 (mod m), which is what we need in order to use the “embedded plaintext space” Fpd
+with the “aggregate plaintext space” Fp [X]/Φm (X).
+Moreover, the “embedding overhead” d/n = s is small: since M = Õ(L · λ) and s ≤ log2 (c∗ M + 1) then
+clearly s = O(log(L · λ)). Thus the number of bits that it takes to specify an “aggregate plaintext” is only a factor
+of O(log(L · λ)) larger than what you need to specify all the elements of the “underlying plaintext space” that are
+embedded in this aggregate plaintext.
+However, in some cases the parameter m itself (and therefore the lattice dimension) could be large: Note that
+we have M = Õ(L · λ) and since s = dlogpn (c∗ M + 1)e then pns < (c∗ M + 1) · pn . If the size of the underlying
+plaintext space (i.e., pn ) is polylogarithmic, then we have m = Õ(L · λ) which is what we need. However, if the
+underlying plaintext size is larger, say pn ≈ λ, then we could have m = Θ̃(L · λ2 ). In this case we can no longer
+hope to evaluate homomorphic operations in time Õ(L · λ) (since the ciphertext size is too large).
+If the circuits that we want to evaluate are very wide (i.e., of width Ω̃(λ · pn )) then we can just pack sufficiently
+many plaintext slots inside each ciphertext to get the overhead down. We can do this since the “embedding overhead” is logarithmic. But for narrower circuits, say of width Θ(λ + pn ), we just don’t have enough plaintext to put
+in all these slots, hence our overhead increases.
+We point out that we may be able to do better than m = pns − 1, for example we can use any m0 such that
+φ(m0 ) > M and m0 divides pns − 1. But it is not clear that such m0 < m exists (for example when p = 2
+then pns − 1 could be a prime number). It is also permissible to choose some s0 > s and then choose m0 that
+0
+divides pns − 1 with φ(m0 ) ≥ M . As long as s0 ≤polylog(L · λ) then we still have only a polylog “embedding
+overhead”, and m0 may be much smaller than m = pns − 1. Unfortunately we were not able to prove that such
+s0 ≤polylog(L · λ) and m0 ≤ Õ(L · λ) always exist, we consider this an interesting open problem.
+Approach 2: Using Prime Fields. An alternative, simpler, approach is to just pick m = p0 − 1 for a prime number
+p0 sufficiently larger than M , (so as to get φ(m) ≥ M ), and set our “embedded plaintext space” to be Fp0 . This will
+give us the “simple case” that we discussed earlier in this section, where Φm factors into linear terms mod p0 . Note
+that in this case we clearly have m = Õ(M ), so (a) the “embedding overhead” is at most O(log M ) = Õ(log(Lλ)),
+and (b) as long as we work with circuits of width Ω̃(λ) we can pack enough plaintext elements into each ciphertext
+to get low overhead.
+14
+
+This solutions has a few drawbacks, however. One relatively minor drawback is that the native operations of
+the scheme are now over a characteristic-p0 field, and if p0 > p then the bound M on the dimension will be slightly
+larger than before (since the noise in fresh ciphertexts is now of the form p0 · e rather that p · e). A more serious
+problem is that each gate of the underlying circuit must now be emulated using a polynomial mod p0 . We note,
+however, that this only results in a logarithmic slowdown: It is not hard to see that arithmetic over Fpn can be
+emulated by mod-p0 circuits of depth and size O(n · log p) (e.g., express these operations as binary circuits and
+emulate that binary circuit mod-p0 ).
+Once we determined the parameter m and the “embedded plaintext space”, all the other parameters of the
+scheme easily follow, and we obtain the following theorem:
+Theorem 3. For security parameter λ, any t-gate, depth-L arithmetic circuit of average width Ω(λ) over underlying plaintext space Fpn (with pn ≤poly(λ)) can be evaluated homomorphically in time t · Õ(L)·polylog(λ).
+4.4
+
+Achieving Depth-Independent Overhead
+
+Theorem 3 implies that we can implement shallow arithmetic circuit with low overhead, but when the circuit
+gets deeper the dependence of the overhead on L causes the overhead to increase. Recall that the reason for this
+dependence on the depth is that in the BGV cryptosystem [3], the moduli get smaller as we go up the circuit, which
+means that for the first layers of the circuit we must choose moduli of bitsize Ω(L).
+As explained in [3], the dependence on the depth can be circumvented by using bootstrapping. Namely, we can
+start with a modulus which is not too large, then reduce it as we go up the circuit, and once the modulus become
+too small to do further computation we can bootstrap back into the larger-modulus ciphertexts, then continue with
+the computation.
+For our purposes, we need to ensure that we bootstrap often enough to keep the moduli small, and yet that the
+time we spend on bootstrapping does not significantly impact the overhead. Here we apply to the analysis from
+[3], that shows that a packed ciphertext with Ω̃(λ) slots can be decrypted using a circuit of size Õ(λ) and depth
+polylog(λ). Hence we can even bootstrap after every layer of the circuit and still keep the overhead polylogarithmic, and the moduli never grow beyond polylogarithmic bitsize. We thus get:
+Theorem 4. For security parameter λ, any t-gate arithmetic circuit of average width Ω(λ) over underlying plaintext space Fpn (with pn ≤poly(λ)) can be evaluated homomorphically in time t·polylog(λ).
+
+References
+1. Paul T. Bateman, Carl Pomerance, and Robert C. Vaughan. On the size of the coefficients of the cyclotomic polynomial. In Topics in
+Classical Number Theory, Vol. I, pages 171–202, 1984.
+2. Václav E. Beneš. Optimal rearrangeable multistage connecting networks. Bell System Technical Journal, 43:16411656, 1964.
+3. Zvika Brakerski, Craig Gentry, and Vinod Vaikuntanathan. Fully homomorphic encryption without bootstrapping. Manuscript at
+http://eprint.iacr.org/2011/277, 2011.
+4. Zvika Brakerski and Vinod Vaikuntanathan. Efficient fully homomorphic encryption from (standard) LWE, 2011.
+5. Zvika Brakerski and Vinod Vaikuntanathan. Fully homomorphic encryption from ring-LWE and security for key dependent messages.
+In Advances in Cryptology - CRYPTO 2011, volume 6841 of Lecture Notes in Computer Science, pages 505–524. Springer, 2011.
+6. I. Damgård, Valerio Pastro, Nigel P. Smart, and Sarah Zakarais. Multiparty computation from somewhat homomorphic encryption.
+Manuscript at http://eprint.iacr.org/2011/535, 2011.
+7. Ivan Damgård, Yuval Ishai, and Mikkel Krøigaard. Perfectly secure multiparty computation and the computational overhead of
+cryptography. In EUROCRYPT, volume 6110 of Lecture Notes in Computer Science, pages 445–465. Springer, 2010.
+
+15
+
+8. Craig Gentry. A fully homomorphic encryption scheme. PhD thesis, Stanford University, 2009. http://crypto.stanford.
+edu/craig.
+9. Craig Gentry. Fully homomorphic encryption using ideal lattices. In Michael Mitzenmacher, editor, STOC, pages 169–178. ACM,
+2009.
+10. Craig Gentry and Shai Halevi. Implementing gentry’s fully-homomorphic encryption scheme. In EUROCRYPT, volume 6632 of
+Lecture Notes in Computer Science, pages 129–148. Springer, 2011.
+11. John L. Hennessy and David A. Patterson. Computer Architecture: A Quantitative Approach, 4th Edition. Morgan Kaufmann, 2006.
+12. Kristin Lauter, Michael Naehrig, and Vinod Vaikuntanathan. Can homomorphic encryption be practical? Manuscript at
+http://www.codeproject.com/News/15443/Can-Homomorphic-Encryption-be-Practical.aspx, 2011.
+13. Frank Thomson Leighton. Introduction to parallel algorithms and architectures: arrays, trees, hypercubes. M. Kaufmann Publishers,
+2 edition, 1992.
+14. G. Lev, N. Pippenger, and L. Valiant. A fast parallel algorithm for routing in permutation networks. IEEE Transactions on Computers,
+C-30:93–100, 1981.
+15. Vadim Lyubashevsky, Chris Peikert, and Oded Regev. On ideal lattices and learning with errors over rings. In EUROCRYPT, volume
+6110 of Lecture Notes in Computer Science, pages 1–23, 2010.
+16. Ron Rivest, Leonard Adleman, and Michael L. Dertouzos. On data banks and privacy homomorphisms. In Foundations of Secure
+Computation, pages 169–180, 1978.
+17. Nigel P. Smart and Frederik Vercauteren. Fully homomorphic encryption with relatively small key and ciphertext sizes. In Public Key
+Cryptography - PKC’10, volume 6056 of Lecture Notes in Computer Science, pages 420–443. Springer, 2010.
+18. Nigel P. Smart and Frederik Vercauteren. Fully homomorphic SIMD operations. Manuscript at http://eprint.iacr.org/2011/133, 2011.
+19. Damien Stehlé and Ron Steinfeld. Faster fully homomorphic encryption. In ASIACRYPT, volume 6477 of Lecture Notes in Computer
+Science, pages 377–394. Springer, 2010.
+20. Abraham Waksman. A permutation network. J. ACM, 15(1):159–163, 1968.
+21. Lawrence C. Washington. Introduction to Cyclotomic Fields, volume 83 of Graduate Texts in Mathematics. Springer, 1996.
+
+A
+
+Additional Optimizations
+
+A.1
+
+Faster Cloning
+
+In Lemma 5 we establish that we can clone w0 values using `-fold operations in time O((w0 log w0 )/`). Below we
+show how to remove the log w0 term, which would allow us to clone values between levels in the circuit using
+asymptotically optimal O(w0 /`) time.
+Recall that for the cloning procedure we are given a “multi-array” A0 consisting of several `-element arrays,
+and also the intended multiplicities of the values in these arrays m1 , . . . , mw . As before, denote the maximum
+intended multiplicity by M = maxi {mi }. The new procedure consists of two main parts:
+Decomposition: For i = 0, 1 . . . , M , construct a “multi-array” A0 i that contains the elements whose intended
+multiplicity is at least 2i , as follows:
+Set A0 0 = A0 . Then for i > 0 we compute A0 i from A0 i−1 by marking the slots of all the elements with
+intended multiplicity smaller than 2i as empty, and then merging sparse arrays until the multi-array is at least halffull (or contains only one array). Note that when computing A0 i from A0 i−1 , we also keep a copy of A0 i−1 for use
+in the aggregation part below.
+Aggregation: For i = M, . . . , 1, 0, construct a multi-array Ai as follows. Set AM = A0 M , then for all i < M
+concatenate two copies of Ai+1 with one copy of A0 i , and if the result is not half full them merge sparse arrays
+until it is half full again. The result is Ai .
+Note since each of Ai+1 , A0 i is either half full or contains a single array, then at most two merge operations
+are needed in each aggregation step. The output of the cloning procedure is A0 .
+16
+
+0
+
+Lemma 9. The procedure above
+is correct, and it uses only O( w` + log w0 ) copy and merge operations on `P
+element arrays, where w0 = i mi
+Proof. Consider an arbitrary element of the input multi-array A0 , with intended multiplicity mi ∈ [2j , 2j+1 −1] for
+some j. The decomposition part will output multi-arrays such that this element is in each of A0 0 , . . . , A0 j . Then,
+during the aggregation part, Aj will include one copy of this element, Aj−1 three copies, Aj−2 seven copies,
+and in general Aj−k contains 2k+1 − 1 copies. Hence at the end of the aggregation part, A0 includes 2j+1 − 1
+occurrences of this element (which is at least as much as mi but less than 2mi ).
+To analyze complexity, notice that the number of arrays in every multi-array A0 j equals the number of arrays
+in A0 j−1 minus the number of merge operations that were used when computing A0 j . Since A0 M cannot have less
+than zero arrays, it follows that the total number of merge operations throughout the decomposition part cannot
+be more than the initial number of arrays, namely d2w/`e ≤ d2w0 /`e. We observed above that the aggregation
+part does at most two merges for each Aj , so the total number of merges during this part is at most 2dlog M e ≤
+0
+2dlog w0 e. Thus the total number of merge operations is bounded by N = d2w0 /`e + 2dlog M e = O( w` + log w0 ).
+Finally, the output multi-array A0 contains at most twice as many occurrences of each element as needed, and
+0
+it is at least half full. Hence it contains at most d 4w` e arrays, which means that the entire procedure duplicated
+0
+0
+t
+u
+arrays at most d 4w` e + N = O( w` + log w0 ) times.
+The procedure above can be made particularly efficient in our case, when used in conjunction with the following optimization: When considering a circuit, we sort the gates in each level according to their fan-out, thus
+making the input to the cloning procedure sorted by the intended multiplicity. Note that the decomposition part
+now becomes unnecessary, we just define A0 j to be the collection of the first few arrays, all the ones that contain
+elements of intended multiplicity at least 2j .
+Also important is that once the inputs are sorted, merging arrays do not need the full power of the Permute
+operation. As long as we keep the full slots in the arrays continuous, we can use the simple rotation operation
+to align the two arrays before we merge them. (The same can be done with the “higher-dimensional rotations”
+that we get in the general case in Section 4.) Hence the entire cloning network can be implemented using only
+0
+O( w` + log w0 ) basic operations of `-Add, `-Mult, and H-actions.
+A.2
+
+Faster Routing
+
+Tracing through the proofs in Section 2, in conjunction with the more efficient cloning technique from above, one
+can verify that the log W term in the statement of Theorem 1 can be made to multiply only the number of `-Add
+and `-Mult gates, not `-Permute, which can make a big difference in practice. Roughly, the log W term arises from
+the fact that we seem to need Ω(W ·log W ) computation (in the worst-case) to route the inter-level wires. Note that
+such a log W term does not appear in the overhead of non-batched FHE schemes that operate on singletons rather
+than arrays. It seems plausible that this term could be eliminated somehow, and we consider this an interesting
+open problem.
+A.3
+
+Powering (Almost) for Free
+
+In some applications, plaintext elements are not bits or integers, but rather elements in a finite extension field.
+For example, when implementing homomorphic AES, it may be convenient to use F28 as the underlying plaintext
+space [12, 18]. In these cases, the corresponding Galois group (whose automorphisms we use to permute the slots)
+j
+j
+includes also the Frobenius automorphism. (This is x → x2 in the AES example, and more generally x → xp
+17
+
+when using a characteristic-p field.) We show in Section 4 that applying the Galois group transformations to packed
+ciphertexts results in almost no additional noise. Thus we get a new function, `-Frobenius, that raises the ` slots in
+parallel to a power of p, while adding almost no additional noise. This may not be surprising, since the Frobenius
+map is a linear operation on Fpn .
+In practice this turns out to be a useful optimization for particular functions of interest: For the case of AES,
+the only non-linear part of AES is inversion in F28 , which is equivalent to exponentiation to the 254-th power.
+While this may seem to be high-degree, the Frobenius automorphism allows us to evaluate this power relatively
+cheaply on ` elements in parallel. For an a ∈ F28 sitting in a plaintext slot, we use the Frobenius map to compute
+j
+aj = a2 for j = 1, 2, . . . , 7 (these are the ’1’s in the binary representation of 254), then multiply all the aj to
+get a254 = a−1 . Thus, we can evaluate a254 at a price of only seven products (in terms of noise), and this 7-fold
+product can be computed by a depth-3 circuit. The binary affine transformation of the AES S-box is not linear over
+F28 , but it is linear over the outputs of the Frobenius automorphisms, and so it is linear in terms of its effect on
+ciphertext noise (although to extract and pack the bits uses up two more levels in the circuit). The ShiftRows and
+MixColumns operation take four more levels using our permutation networks, and the matrix multiplication in the
+MixColumns uses another level. An AES round can therefore be accomplished using only a depth-10 circuit (in
+terms of noise), so homomorphic implementation of the full AES-128 will take a circuit of depth less than 100. It
+is therefore plausible that we could implement AES-128 homomorphically without resorting to bootstrapping at
+all!!! (We note, however, that many other optimizations are possible, and it is not clear if the approach sketched
+above is really the most efficient one for implementing AES-128.)
+
+B
+
+Proofs
+
+Lemma 1. Let S = {0, . . . , a − 1} × {0, . . . , b − 1} be a set of ab positions, arranged as a matrix of a rows and
+b columns. For any permutation π over S, there are permutations π1 , π2 , π3 such that π = π3 ◦ π2 ◦ π1 (that is, π
+is the composition of the three permutations) and such that π1 and π3 only permute positions within each column
+(these permutations only change the row, not the column, of each element) and π2 only permutes positions within
+each row. Moreover, there is a polynomial-time algorithm that given π outputs the decomposition permutations
+π1 , π2 , π3 .
+Proof. The basic strategy of the decomposition is that π2 will send each element to some address with the same
+y-coordinate as its target destination, and similarly π3 will correct all of the x-coordinates. The permutation π1 , on
+the other hand, serves as a strategic indirection. The reason this indirection is needed – i.e., the reason we cannot
+decompose π just as π3 ◦ π2 with the properties above – is that several elements in the same row could have the
+same target y-coordinate (and thus π2 cannot achieve its goal). Thus, π1 is used to ensure that, when π2 receives
+its input, no two elements in the same row have the same target column. The only nontrivial part of the proof is
+showing that a suitable π1 always exists.
+For s ∈ S, let sx and sy denote its x and y coordinates, namely s = (sx , sy ). Consider a bipartite graph
+G = (V1 , V2 , E) where V1 and V2 each have b vertexes with labels {0, . . . , b − 1}. For every s ∈ S, we draw an
+edge from the V1 -vertex labeled sy to the V2 -vertex labeled π(s)y , and we label the edge ‘s’. (We may have more
+than one edge between the same pair of vertices’s.) Clearly, this is a bipartite, a-regular graph. Therefore G’s edges
+can be partitioned into a perfect matches, and this partition can be computed efficiently (e.g., using network-flow
+algorithms). In other words, one can compute in polynomial time a coloring of the edges of G using the colors
+{0, . . . , a − 1}, such that for all i the i-colored subgraph Gi of G is a perfect matching.
+Let ρ(s) denote the color of the edge labeled ‘s’. Now, define π1 , π2 , π3 as follows: for all s = (sx , sy ) ∈ S:
+π1 (s) = (ρ(s), sy ),
+
+π2 ◦ π1 (s) = (ρ(s), π(s)y ),
+18
+
+π3 ◦ π2 ◦ π1 (s) = (π(s)x , π(s)y )
+
+Clearly, π1 , π3 have the claimed property of only permuting within columns and π2 only permutes within rows.
+All that remains is to establish that they are all well-defined permutations – i.e., that no “collisions” occur. π1
+is a permutation because no two edges emanating from the V1 -vertex labeled ‘sy ’ have the same color. π2 is a
+permutation, in particular it permutes elements in row i, because the subgraph Gi is a perfect matching. Finally,
+π3 is a permutation since both π2 ◦ π1 and π are permutations and since π = π3 ◦ π2 ◦ π1 .
+t
+u
+Lemma 4. Evaluating ` permutation networks in parallel, each permuting k items, can be accomplished using
+O(k · log k) gates of `-Add and `-Mult, and depth O(log k). Also, evaluating a permutation π over k · ` elements
+that are packed into k `-element arrays, can be accomplished using k `-Permute gates and O(k log k) gates of
+`-Add and `-Mult, in depth O(log k). Moreover, there is an efficient algorithm that given π computes the circuit of
+`-Permute, `-Add, and `-Mult gates that evaluates it, specifically we can do it in time O(k · ` · log(k · `)).
+Proof. The first statement follows directly from Lemma 3 and the discussion above. The second statement follows
+from Lemma 1, which says that the permutation π can be decomposed as π = π3 ◦ π2 ◦ π1 where π1 and π3 each
+involve evaluating n permutation networks in parallel across the ` indexes, and π2 only permutes elements within
+each `-element array, and therefore can be done using k gates of `-Permute and just one level.
+The efficiency of computing the circuit that realizes π follows from the fact that the decomposition π1 , π2 , π3
+can be computed efficiently, as per Lemma 1. In fact, it was shown by Lev et al. [14] that this decomposition can
+be computed in time O(k · ` · log(k · `)).
+t
+u
+Lemma 5. (i) The cloning procedure from Figure 1 is correct.
+(ii) Assuming that at least half the slots in the input arrays are full, this procedure can be implemented by a network
+of O(w0 /` · log(w0 ))P`-fold gates of type `-Add, `-Mult and `-Permute, where w0 is the total number of full slots
+in the output, w0 = mi . The depth of the network is bounded by O(log w0 ).
+(iii) This network can be constructed in time Õ(w0 ), given the input arrays and the mi ’s.
+Proof. In each phase j, first the number of occurrences of every value is doubled, and next if a value vi occurs more
+than mi times then the excess occurrences are removed. Therefore after the j’th phase each value vi is duplicated
+def P
+j
+min(mi , 2j ) times. Denoting the number of full slots after the j’th phase by wj =
+i min(mi , 2 ), we have at
+the end of phase j some number kj of `-slot arrays, where (kj − 1)`/2 < wj ≤ kj · `, since once the merging part
+is over we must have at least half the slots full. Correctness now follows easily just by looking at j = dlog M e.
+Regarding complexity (part (ii)), we note that if the input arrays are at least half full then at the beginning of
+every iteration we have kj−1 ≤ 2wj−1 /` =< 2w0 /` = O(w0 /`) arrays (clearly wj < w0 for all j by definition.)
+After the duplication step (Line 2) we have 2kj−1 arrays, and then each merging step (Line 6) removes one array,
+so we can have at most 2kj−1 = O(w0 /`) such steps. Observing that every merge takes a constant number of gates
+(two `-Permute gates and one Select operation), we conclude that each phase takes at most O(w0 /`) `-fold gates.7
+The number of phases is dlog M e ≤ dlog w0 e, and the claimed complexity follows.
+Part (iii) follows easily by noting that the network implementing each phase can be constructed in time quasilinear in the number of slots that are available at the beginning of that phase, just by using greedy algorithms
+to make all the decisions. (The most time-consuming operation is marking entries as “don’t-care”s in Line 4,
+everything else can be done in time Õ(w0 /`).)
+t
+u
+Theorem 1. Let `, t, w and W be parameters. Then any t-gate fan-in-2 arithmetic circuit C with average
+width w
+
+and maximum width W , can be evaluated using a network of O dt/`e · d`/we · log W · polylog(`) `-fold gates
+7
+
+Note that removing redundant values (Line 4) does not take any gates, we leave the arrays unchanged and just mark the redundant values
+as “don’t-care”s.
+
+19
+
+of types `-Add, `-Mult, and `-Permute. The depth of this network of `-fold gates is at most O(log W ) times that of
+the original circuit C, and the description of the network can be computed in time Õ(t) given the description of C.
+Proof. Consider one level of the circuit with w0 gates, where in the previous level we computed w ≤ 2w0 input
+values, packed into O(dw/`e) `-element arrays. Our approach is to first clone and then permute these values so
+that the 2w0 input slots of the w0 gates are filled correctly. More precisely, these 2w0 input slots will be arranged in
+two sets of `-slot array, one set for the left inputs and the other for the right inputs to all the gates. Concatenating
+these two sets of arrays into two multi-arrays, we arrange the slots such that the left and right inputs to each gate
+are aligned in the same index in the two multi-arrays. Once all the values are routed to their correct locations in the
+multi-arrays, the actual computation of the gates in this layer can obviously be evaluated only O(dw0 /`e) `-fold
+gates of `-Adds or `-Mults.
+By Lemma 5, we can compute the multi-arrays of O(w0 /`) `-element arrays that contains the inputs with
+sufficient multiplicity using O(dw0 /`e · log(w0 )) `-fold gates. The resulting multi-arrays have O(w) slots (more
+than either the source or target multi-arrays), at least half of which contain “real values” while the other slots
+contain “don’t-care”s. Let π be a permutation over these O(w) slots that maps the slots that contain the real
+values to the appropriate positions in the target multi-arrays. By Lemma 4 we can evaluate π with a network of
+O(w0 /`polylogdw0 /`e) n-fold gates, and can compute the structure of that network in time Õ(w0 ).
+The result for the whole circuit follows easily, using as our inductive hypothesis that the w0 outputs are indeed
+packed into O(dw0 /`e) `-element arrays for input to the next level.
+t
+u
+Lemma 6. Fix an integer ` and let k = dlog `e. Any permutation π over I` = {0, . . . , ` − 1} can be implemented
+by a (2k − 1)-level network, with each level consisting of a constant number of rotations and Select operations on
+`-arrays.
+Moreover, regardless of the permutation π, the rotations that are used in level i (i = 1, . . . , 2k − 1) are always
+exactly 2|k−i| and ` − 2|k−i| positions, and the network depends on π only via the bits that control the Select
+operations. Finally, this network can be constructed in time Õ(`) given the description of π.
+Proof. If ` is a power of two then the network is just a Beneš network. Otherwise (i.e., 2k−1 < ` < 2k for some k)
+the basic strategy is to realize a permutation over I` by using two k-element arrays to realize a Beneš permutation
+network over the first 2k of the 2` positions. We realize each level of the Beneš network using a constant number of
+rotations and Select operations. Since 2k > ` then clearly any permutation on I` can be expressed as a permutation
+over the first 2k positions (e.g., where the last 2k − ` elements remain fixed).
+It remains only to show how to realize an i-offset-swap over the first 2k elements using just a constant number
+of operations on the two `-slot arrays. Clearly, we can handle all the pairs (v, v + j) where both indexes are in the
+same array using the rotations j and `−j and two Select operations, applied to the each of the arrays. To handle the
+pairs where v is in the first array and v + j is in the second (at index v + j − `), we shift the first array by ` − j and
+the second array by j, then again use two Select operations (one Select on the first array and the shifted version of
+the second, the other Select on the second array and the shifted version of the first). All in all we have four rotation
+operations (two for each array) and six Select’s. The “Finally” part follows directly from Lemma 3.
+t
+u
+Lemma 8. For all positive integers m we have m/φ(m) = O(log log m).
+Proof. The “worst-case” that maximizes m/φ(m) is when m is a product of distinct primes m = p1 · · · pt , in
+which case we have m/φ(m) = p1 /(p1 − 1) · · · pt /(pt − 1). Clearly, the worst-case is when the pi ’s are the first
+t primes. In this case, we can use the prime number theorem
+Q to argue that pt = polylog(m) (actually, something
+like log m). By Merten’s theorem the product over primes p<polylogm p/(p − 1) is θ(log log m).
+20
+
+C
+
+Basic Algebra
+
+To understand our techniques it is first necessary to recap on the underlying algebra of cyclotomic fields. We have
+tried to cover as much detail as needed, but the reader should be aware a self contained treatment will be hard to
+come by in such a short space. We therefore refer the interested reader to [21] for details on cyclotomic fields.
+C.1
+
+Reductions of Cyclotomic Fields
+
+We let Φm (X) be the m-th cyclotomic polynomial, and let K = Q(ζm ) denote the associated number field. The
+degree of Φm is φ(m), where φ(·) is Euler’s phi-function. Note that asymptotically m is of the same size as φ(m),
+but for the small values of m that we will use in practice, φ(m) is roughly 10%-50% smaller than m. We associate
+K with the set of rational polynomials in X of degree less than N , with multiplication and addition defined modulo
+Φm . We let the ring of integers of K be denoted by OK = Z[ζm ].
+We now fix a prime p, which is neither ramified in K, nor an index divisor (i.e. p does not divide m). Consider
+the reduction of K at p; we define
+Ap := Zp [X]/Φm (X)
+to be the ring of polynomials over Zp where multiplication and addition are defined modulo Φm and p. Note, we
+assume that the representation of Ap is such that the coefficients are given in the range (−p/2, p/2]. In general Ap
+is not a field but is an algebra, since Φm is generally not irreducible mod p.
+Since p is neither an index divisor nor ramified, and because K/Q is Galois, we have that the polynomial Φm
+splits mod p into ` distinct factors Fi (X), each of degree d, where ` · d = φ(m). We then have that
+Ap ∼
+= Zp [X]/F0 (X) × . . . × Zp [X]/F`−1 (X)
+= L0 × . . . × L`−1 =: Ap .
+i.e. the reduction of K modulo p is isomorphic to ` copies Li = Zp [X]/Fi (X) of Fpd . Since all finite fields of a
+given degree are isomorphic, each of these copies of Fpd is isomorphic to each other. Note we let Ap denote the
+representation of the algebra by polynomials modulo Φm and Ap denote the algebra by a set of l copies of the
+fields defined by the polynomials Fi (X).
+We note there is a natural homomorphic inclusion maps Ap −→ OK defined by mapping Ap to the coset
+representative with coefficients in (−p/2, p/2]. If α ∈ OK then we let α mod p denote the inverse in Ap under
+this inclusion. If q is a prime greater than p then we can also consider elements of Ap as elements in Aq but
+this inclusion is not a homomorphism (since it only preserve the arithmetic operations “as long as there is no
+wraparound”).
+We will use Ap (resp. Ap ) in two distinct ways. In the first way we use Ap and Ap to describe the message
+space of our scheme; in this case we take p to be small (think p = 2, or a 32-bit prime). In the second way, we use
+Aq (for a large prime q) as an approximation of the global object A. Looking ahead the basic construction is that
+we take an element α ∈ Ap , then form the element in Aq given by α + pt · τ , where τ is referred to as the noise.
+Public operations are then performed, and these will correspond to valid operations in Ap only if the noise term
+does not become too large (in the sense of the ∞-norm of the noise becoming bigger than q/2). If the operation is
+does not result in wrap-around then we can (upon decrypting) obtain the plaintext in Ap .
+C.2
+
+Underlying Plaintext Algebra
+
+Each message in Ap actually corresponds to ` messages in Fpd ∼
+= Zp [X]/Fi (X). We call each of these components
+a “slot”. By the Chinese Remainder Theorem, additive and multiplicative operations in Ap correspond to SIMD
+21
+
+operations on the slots. However, in many applications we will be interested in plaintexts where each slot lies in
+Fpn , for some n dividing d. (In particular this includes the important case of n = 1.) In addition an application
+may have a preferred representation (i.e. preferred polynomial basis) for the underlying field, Fpn .
+We therefore fix (or are given) an irreducible polynomial G(X) ∈ Zp [X], of degree n, which defines the
+specific polynomial basis we are interested in; we take G(X) = X − 1 when n = 1. To fix notation we define
+Kn = Zp [X]/G(X) to denote one copy of this degree n field, with the given polynomial representation.
+Note, in applications one is given p and n, and then one needs to find values of m which enable the above
+representation. Basic algebra shows us that Φm (X) will have a degree d factor if and only if m divides pd − 1.
+Thus, given p and n, we need to select m such that for some value d = s · n, we have m divides pd − 1. The value
+` is given by φ(m)/d.
+For each of our fields Li = Zp [X]/Fi (X) there will be a distinct homomorphic embedding of Kn into Li which
+we will denote by Ψn,i , which will be an isomorphism in the case when n = d. Our basic plaintext space will now
+be defined as ` copies of Kn , i.e. M = (Kn )` , where addition and multiplication will be defined component-wise.
+We therefore can define a map
+
+M
+−→
+Ap
+Ψn :
+(m0 , . . . , m`−1 ) 7−→ (Ψn,0 (m0 ), . . . , Ψn,`−1 (m`−1 )).
+By applying the Chinese Remainder Theorem given an element a ∈ Ap we can obtain a value α ∈ Ap ; we
+write α = CRTp (a). Note, our use of notations: Elements in Ap and Bp will be represented by lower case Greek
+letters; elements in Ap and M will be represented by bold face roman letters (since they are vectors); and elements
+in Kn and Li will be represented by standard lower case roman letters.
+We end this discussion of the plaintext space by noting that there is a simple operation that produces the
+projection map. If we consider the element πi ∈ Ap which is defined by the element in Ap given by the i unit
+vector ei . Then if m = (m0 , . . . , m`−1 ) ∈ Ap that πi · CRTp (m) = CRTp (0, . . . , 0, mi , 0, . . . , 0). From πi we
+can also P
+define a projection on an arbitrary subset I ⊂ {0, . . . , ` − 1} in the obvious way; by defining πI to be the
+element i∈I CRTp (ei ).
+C.3
+
+Galois Theory of Cyclotomic Fields
+
+The field K = Q(ζm ) is abelian (i.e. has abelian Galois group) and has Galois group given by Gal(K/Q) ∼
+=
+(Z/mZ)∗ . If we think of X in the representation of K as denoting a generic mth root of unity ζm , then given an
+element i ∈ (Z/mZ)∗ the associated element of the Galois group is given by the mapping κi : X 7→ X i .
+We now need to consider how the Galois group Gal(K/Q) works when we consider K modulo p, to Ap and
+Ap . Notice, that since Ap is not a field the usual theorems of Galois Theory do not apply (an obvious fact but worth
+stating). The maps defined by the Galois group commute with our functions Ψn , and CRTp etc. Thus, to fix ideas,
+consider an element m = (m0 , . . . , m`−1 ) ∈ M = K` . We obtain the corresponding element in Ap by applying
+α = CRTp (Ψn (m)) ∈ Ap . Now if we apply the element κi from Gal(K/Q) to the element α we obtain an element
+β such that β = CRTp (Ψn (κi (m1 ), . . . , κi (m` ))), where κi (mj (X)) = mj (X i ) (mod G(X)).
+Considering how automorphisms work on Ap , it is well known that any field Fpk has Galois group over Zp
+given by the cyclic group Ck of order k. Now since Ap contains the subfield Fpd we have that Gal(K/Q) contains
+the cyclic subgroup Cd C (Z/mZ)∗ . The group Cd is called the decomposition group of a prime ideal lying
+above p in K. The group Cd is generated by the element p ∈ (Z/mZ)∗ , which corresponds to the Frobenius map
+κp : X 7→ X p . In what follows we let G denote this subgroup Cd of (Z/mZ)∗
+Considering how Gal(K/Q) acts on Kn , we notice that the Galois group of Kn over Zp is given by Cn ∼
+=
+Cd /Cd/n and generated by the Frobenius map. The key difference, between Kn and Kd , being that the map κpn
+22
+
+is the identity on the subfields Kn . If we want to restrict to the Galois group of Kn we let Ĝ denote the subset
+{1, p, p2 , . . . , pn−1 } consisting of a set of representatives for the Galois group of Kn .
+Since (Z/mZ)∗ is abelian all subgroups are normal, and hence we can define quotient groups, and so we define
+H to be the quotient group (Z/mZ)∗ /G, note H has order `. We write H as a product of cyclic groups Cn1 × Cnt
+with ni dividing ni+1 . As a set of coset representatives for H we first pick a coset representative hi for Cni , and
+then as the coset representatives of all other elements we take those elements in (Z/mZ)∗ given by
+t
+Y
+
+hei i for 0 ≤ ei < ni .
+
+i=1
+
+Thus we can identify H with a subset of (Z/mZ)∗ .
+(0)
+
+(φ(m)−1)
+
+If we label the roots of Φm in K by ζm to ζm
+then it is a standard fact that the Galois group acts
+transitively on these roots. The subgroup G acts on these roots, and we can partition the set of roots into disjoint
+sets with respect to the group action of G. That is we create ` = φ(m)/d subsets each of d elements, we label
+(0)
+(φ(m)−1)
+these subsets X0 , . . . , X`−1 . Since Gal(K/Q) acts transitively on the set {ζm , . . . , ζm
+}, the quotient group
+H = Gal(K/Q)/G acts transitively on the set X0 , . . . , X`−1 .
+Since G was the decomposition group of p the sets Xi , each containing d complex roots, when reduced modulo
+p can be placed in correspondence with the roots of Fi (X), i.e. one of the factors of Φm modulo p. We need to fix a
+representative for for each set Xi mod p. Fixing a representative for Xi mod p means essentially fixing a root of
+Fi (X) modulo p; and one can think of the symbolic root X being such a root with all other roots being given by a
+polynomial in X modulo p of degree less than d − 1 (when reduced arithmetic is considered modulo Fi (X)). Since
+H has order ` and acts transitively on {X0 , . . . , X`−1 }, for each i ∈ {0, . . . , ` − 1} there is exactly one element
+(0)
+σi in H which sends 0 to i. If we fix the representative of the set X0 to be ζm then to define the representative of
+(0)
+the set Xi we take σi ∈ H and set the representative of Xi to be σi (ζm ). Since, defining a representative of Xi
+essentially means fixing a representation of the field Zp [X]/Fi (X) this then means that our set of representatives
+for H act “transitively on the plaintext slots” in the following sense: For each pair i, j ∈ {0, . . . , ` − 1} we have
+that
+t
+σj (σi−1 (CRTp (Ψn (0, . . . , 0, mi , 0, . . . , 0)))) = CRTp (Ψn (0, . . . , 0, mpj , 0, . . . , 0)).
+t
+
+for some integer t. In the case n = 1 we have mpj = mj and so our set of representatives for H act directly as
+permutations on the slots.
+Our main technical contribution in both practical and theoretical terms to FHE is based on the properties of the
+group H and how it acts on the plain text slots. It is clear, since H acts transitively as above and we have projection
+maps, that we can, given a vector of slots (m0 , . . . , m`−1 ) ∈ K`n map it to an arbitrary permutation of the slots.
+The naive algorithm for this, consisting of projecting each element, mapping via H as above, making sure we cope
+with the possibility of powering by Frobenius, and then recombining via addition, has complexity O(`). In Section
+3 we showed that an arbitrary permutation on the slots can be realized in O(t · log `) operations, where t is the
+number of cyclic components of the group H, note t = O(log `). That this algorithm can be applied in our case
+should be immediate, but to fix ideas, we examine how H acts on the slots when H is cyclic; and how to construct
+our offset swaps in this case.
+When H is cyclic If H = hhi is cyclic we can, by fixing on a given value of F0 (X), reorder the factors Fi (X)
+so that the factors are precisely those factors corresponding to σhi (1). Thus we can consider H as defining permutations on the factors of Φm modulo p. Although H is rarely cyclic this case is illustrative of what is occurring,
+23
+
+and in practice we can often restrict the number of slots to correspond to the largest cyclic subgroup of H. 8 We
+consider three examples of increasing complexity:
+Example 1: The simplest case to understand is when the decomposition group is trivial, i.e. d = 1. Consider the
+case of m = 11 and p = 23, we have that the polynomial Φm (X) factors into ten linear factors modulo 23, and
+the Galois group (Z/mZ)∗ is cyclic of order 10 and generated by the element 2. Since G = h1i we take using the
+procedure above H ∼
+= (Z/mZ)∗ = h2i. Thus we have ten slots and we order them such that we have
+κ2 (CRTp (Ψn (m0 , m2 , . . . , m9 ))) = CRTp (Ψn (m9 , m0 , m2 , . . . , m8 )).
+Hence κ2 produces a cyclic shift of the slots. If we wish to switch elements in positions i and j, for i < j, the we
+only need to apply the following operation
+swapi,j (α) = κ2j−i (πi · α) + κ2i−j (πj · α) + π{0,...,9}\{i,j} · α.
+Example 2: To see what happens for non-trivial decomposition groups we consider the case of m = 31 and p = 2.
+We have since 25 ≡ 1 (mod 31) that the decomposition group at p is cyclic of order 5, i.e. d = 5. In this example
+we find that by Gal factors directly into the product of G = h2i and the cyclic subgroup h6i. The set of coset
+representatives for H we can take to be this subgroup h6i, thus we can identify H with a subgroup of Gal. This
+implies that the elements in H act as direct permutations on the slots, and we do not need to worry about the action
+of Frobenius. In particular we can define the six slots so that we have, for a specific representation of Kn = F25 ,
+κ6 (CRT2 (Ψn (m0 , m1 , m2 , m3 , m4 , m5 ))) = CRT2 (Ψn (m5 , m0 , m1 , m2 , m3 , m4 )).
+If we wish to shift to the left we take the elements in Gal(K/Q) given by 1/6i (mod m), so for example since
+1/6 = 26 (mod 31) we have
+κ26 (CRT2 (Ψn (m0 , m1 , m2 , m3 , m4 , m5 ))) = CRT2 (Ψn (m1 , m2 , m3 , m4 , m5 , m0 )).
+If we wish to switch elements, for an element α ∈ Ap , in positions i and j, with i < j, then we apply the following
+operation
+swapi,j (α) = κ6j−i (πi · α) + κ6i−j (πj · α) + π{0,...,5}\{i,j} · α.
+Example 3: The above example, in which H could be identified with a subgroup of Gal is not typical. In the
+general case we have the added complication of dealing with actions of Frobenius on applying automorphism
+corresponding to elements in H. We examine this more general situation via means of an example. We make
+m = 257 and p = 2. In this case we find that 2 has order 16 modulo m, and that the quotient group H = Gal/ h2i
+is cyclic of order 16. We also find that there is no cyclic subgroup of order 16 of Gal which is not equal to h2i.
+Thus H cannot be represented as a subgroup of Gal.
+We instead represent H by the set of coset representatives given by 3i mod m, for i = 0, . . . , 15. Since
+38 mod m = 136 6∈ h2i, whilst 316 mod m = 249 = 211 mod m. We therefore have 16 slots, each consisting of
+an element in Kn = F216 . We fix a specific representation of each slot so that
+11
+
+κ3 (CRT2 (Ψn (m0 , m1 , . . . , m14 , m15 ))) = CRT2 (Ψn (m215 , m0 , m1 , . . . , m13 , m14 )).
+8
+
+For implementation purposes restricting the slots in this way is simpler, although for our asymptotic result on FHE with polylog overhead
+we will require to consider the whole of H.
+
+24
+
+However, we also have
+5
+
+κ8 6(CRT2 (Ψn (m0 , m1 , . . . , m14 , m15 ))) = CRT2 (Ψn (m1 , . . . , m13 , m14 , m15 , m20 )).
+Note that (1/3) mod m = 86, but that 86 is not one of our coset representatives for H.
+In other words to move elements to the right (without wrap around) by i places we apply the map κ3i mod m ,
+but to move elements to the left (without wrap around) by i places we need to apply the map κ3−i mod m . Hence if
+we wish to switch elements, for an element α ∈ Ap , in positions i and j, with i < j, then we apply the following
+operation
+swapi,j (α) = κ3j−i (πi · α) + κ(1/3)j−i mod m (πj · α) + π{0,...,5}\{i,j} · α.
+Hence, although the underlying algebra is different when H cannot be identified with a subgroup of Gal, the method
+to obtain a swap is exactly the same.
+These examples show that for cyclic groups we can realize any transposition via the use of scalar multiplication
+by the πI and application of maps κi . The above technique also allows us to realize the offset swaps from Definition
+1 for any subset T ⊂ S = {0, . . . , ` − 1} and any i. The following technique works for when H = hhi is a cyclic
+group generated by h, generalizing to other groups follows from our methods but leads to more complex formulas.
+Recall that a permutation π over S is an i-offset swap over S if there exists a subset T ⊂ S such that the pairs
+{(t, t + i mod `) : t ∈ T } are disjoint and π simply swaps each pair (leaving the other elements fixed).
+For a set A we let A + i = {j + i mod ` : j ∈ A} and A = S \ A. We also split T into two sets TL and TR
+such that t ∈ TL if and only if t ∈ T and t + i < `, i.e. TL is the set of elements in T which can be shifted to
+the left by i, without wrap around. Algebraically an offset swap on an element α is then defined in terms of our
+isomorphisms κi etc as
+πT ∪(T +i) · α + κhi (πTL · α) + κ(1/h)i (πTL +i · α) + κ(1/h)`−i (πTR · α) + κh`−i (πTR +i · α)
+The first term corresponds to those elements which are kept fixed by the offset swap, i.e. those elements neither in
+T nor T + i. The second term corresponds to those elements shifted to the left by i without wrap around, the third
+corresponds to elements shifted to the right by i without wrap around by i without wraparound, the final two terms
+deal with the case of wraparound.
+
+D
+
+Using mod-Φm Polynomial Arithmetic
+
+Part of our goal in this paper is to allow implementations of BGV-type cryptosystems over rings of the form
+Z[X]/Φm (X) for arbitrary integers m, not only when m is a prime. Although most of the underlying algebra
+works the same way regardless of what m is, we do not have a good bound on the increase in the size of coefficient
+vectors when using mod-Φm arithmetic.
+Recall that for every ring R = Z[X]/F (X) there is a “ring-constant” γR , such that for all a, b ∈ R it holds
+that kabk ≤ γR · kak · kbk, where kxk is the norm of the coefficient-vector of x (say, the l∞ norm). However, we
+do not have a good bound on the “ring-constant” for rings of the for Rm = Z[X]/Φm (X), and in particular γRm
+can be super-polynomial in m. In particular γRm is related to the sizes of the coefficients of Φm (X) which are
+known to get rather large [1]. In our context, this means that when multiplying two “short” ciphertexts, the result
+can be “longer” than the product of the two by this factor γRm for which we do not have a good bound.
+25
+
+D.1
+
+Canonical Embeddings and Norms
+
+To analyze a cryptosystem that works mod-Φm , we therefore use a different measure of “size” of polynomials:
+Rather than considering the norm of the coefficient vector of a polynomial, we consider the norm of the “canonical
+embedding” of that polynomial: For an integer m, let Pm be the set of complex primitive m-th roots of unity. Then
+for a polynomial a ∈ Q[X]/Φm (X), the “canonical embedding” of a is the vector of values that a assumes in all
+the roots in Pm ,
+D
+E
+def
+E(a) = a(ρk ) : k ∈ Z∗m , where ρ is a fixed complex primitive m-th root of unity (e.g., ρ = e−2πi/m ).
+More generally, the canonical embedding of an element a ∈ Q[X]/F (X) consists of the evaluations of a in
+all the complex roots of F . Below we only use the canonical embeddings for the cases F (X) = Φm (X) and
+F (X) = X m − 1. Note that E(a) is in general a vector of complex numbers, and the size of each entry in that
+vector is the norm (absolute value) of that complex number.
+Below we refer to the norm of E(a) as the “canonical embedding norm” of a, and denote it by kakcan . Although
+it is possible to define the “canonical embedding lp norm” for any lp , below we always refer to the canonical
+embedding l∞ norm. Namely,
+def
+kakcan = kE(a)k = max
+|a(ρk )|.
+∗
+k∈Zm
+
+(Note again that in this section we consistently use k · k to refer to the l∞ norm of a vector and not the l2
+norm.) We extend the canonical embedding norm to vectors over Q[X]/Φm (X) in the natural way, namely if
+a = (a0 , a1 , . . . , an−1 ) is an n-vector over Q[X]/Φm (X), then kakcan = maxi<n kai kcan .
+It is easy to see that for any element a ∈ Q[X]/Φm (X), the canonical embedding norm is not much more than
+the coefficient norm, namely kakcan < φ(m) · kak (where kak is the norm of a’s coefficient vector). This follows
+since each of the m-th roots of unity has norm one, and we are adding φ(m) of them with coefficients bounded
+by kak. Clearly, for any two elements a, b ∈ Z[X]/Φm (X) we have ka + bkcan ≤ kakcan + kbkcan , and since
+the primitive m-th roots of unity are all roots of Φm (X) then kab mod Φm (X)kcan = kabkcan ≤ kakcan · kbkcan .
+Similarly for n-vectors a, b ∈ (Q[X]/Φm (X))n we get k ha, bi mod Φm (X)kcan ≤ n · kakcan · kbkcan .
+Also, for every m there exists a “ring constant” cm (which is a real number) such that for all a ∈ Z[X]/Φm (X)
+it holds that kak ≤ cm · kakcan ; see [6] for a discussion of cm . Another property of the canonical embedding norm
+that we use below, is that a nonzero integer polynomial must have norm at least one:
+Lemma 10. Let a ∈ Z[X]/Φm (X) for some integer m, then kakcan ≥ 1.
+Q
+Proof. Since a is a nonzero integer polynomial, then the result of the complex product k∈Z∗m a(ρk ) must be a
+nonzero integer, and therefore it has magnitude at least 1. It follows that some of the terms in the product must
+have magnitude 1 or more, hence the l∞ norm of E(a) is at least 1.
+t
+u
+Modular Reduction in Canonical Embedding. To talk about the canonical norm of elements in Zq [X]/Φm (X)
+(i.e., polynomials reduced both mod Φm (X) and mod q), we define the “canonical embedding norm reduced
+can among all the polynomials that are congruent to a modulo q.
+mod q”, denoted |a|can
+q , as the smallest norm kbk
+Namely, for a ∈ Z[X]/Φm (X) we denote
+def
+
+|a|can
+= min{ kbkcan : b ∈ Z[X]/Φm (X), b ≡ a
+q
+
+(mod q) }.
+
+(We note that the minimum exists, even though we take it over an infinite set, since the set {E(b) : b ≡ a (mod q)}
+is a coset of a lattice.) Sometimes we may want to talk about the specific polynomial where the minimum is
+26
+
+obtained, namely the polynomial b satisfying b ≡ a (mod q) and kbkcan = |a|can
+q . If this polynomial is unique,
+then we call it the “canonical reduction mod q of a” and denote it by
+can
+
+[a] q
+
+def
+
+= argmin{ kbkcan : b ∈ Z[X]/Φm (X), b ≡ a (mod q) }.
+
+We stress that our cryptosystem never needs to compute the canonical embedding (or the canonical reduction,
+or the canonical norm) of polynomials, it is only in the analysis of this scheme that we use these terms.
+Obviously, for any element a ∈ Z[X]/Φm (X) and any modulus q, the reduced canonical embedding norm
+is not more than the canonical embedding norm, namely |a|can
+≤ kakcan . Similarly, it is easy to check that if
+p
+c ≡ ab mod (Φm (X), q) then |c|can
+≤ |a|can
+· |b|can
+q
+q
+q . A corollary of Lemma 10 (that we use in our analysis of
+modulus switching) is that an element with small enough canonical embedding norm must be the unique canonical
+reduction mod q of its coset:
+Lemma 11. Let m, q be integers, and let a ∈ Z[X]/Φ(m) be such that kakcan < q/2. Then for any b ∈ Z[X]/Φm
+such that b 6= a but b ≡ a mod q, it holds that kbkcan
+kakcan = |b|can
+q . Hence for all b ≡ a mod q we have
+can
+
+a = [b] q .
+Proof. Fix any b ∈ Z[X]/Φm such that b 6= a but b ≡ a mod q. Then b−a
+q is a nonzero integer polynomial, and by
+Lemma 10 its canonical embedding has an entry of magnitude ≥ 1. This implies that E(b) has an entry of distance
+at least q from the corresponding entry in E(a). Since that entry in E(a) has magnitude < q/2, then the one in
+E(b) must have magnitude > q/2, and therefore kbkcan > q/2 > kakcan . It follows that a has the unique smallest
+canonical embedding norm among all the polynomials in its coset mod q.
+t
+u
+D.2
+
+Our Cryptosystem
+
+In terms of operations, our cryptosystem is almost identical to the BGV cryptosystem [3], where all the operations
+are done modulo Φm (X). However, our analysis of (the functionality of) this cryptosystem is somewhat different,
+in that we keep track of the canonical norm of “the noise” rather than the norm of its coefficient vector. Specifically,
+we maintain the invariant that if c is a ciphertext encrypting the aggregate plaintext a ∈ Zp [X]/Φm (X) relative to
+secret key s and modulus q, then in the ring Zq [X]/Φm (X) we have the equality
+hc, si = p · u + a (mod Φm (X), q),
+
+(1)
+
+where u ∈ Z[X]/Φm (X) has small canonical norm mod q, |u|can
+ q.
+q
+Decryption. We claim that as long as this invariant holds, we can use s to decrypt c. This can be done in one of
+two ways:
+– If the “ring constant” cm happens to be small enough (i.e., much smaller than q), then from kukcan  q and
+p  q and cm  q we conclude that also kp · uk ≤ cm · p · kukcan  q, which means that the coefficient
+vector of the noise has small norm and decryption works just as in standard BGV cryptosystems. For example
+for prime values of m the constant cm is equal to approximately 4/π, [6].
+– Otherwise, we “lift” decryption to work modulo X m − 1 rather than modulo Φm (X), and use the fact that the
+√
+“ring constant” of Z[X]/(X m − 1) is small (namely, it is m).
+27
+
+Describing the second option in more detail, Lemma 12 below tells us that there exists an integer polynomial
+G ∈ Z[X]/(X m − 1) such that G(α) = m for every complex primitive m-th root of unity α, and G(β) = 0 for
+every complex non-primitive m-th root of unity β. This means in particular that G ≡ m (mod Φm (X)) (in words,
+the polynomial G reduces to the constant m modulo Φm ).
+Computing b ← G·hc, si mod (X m −1, q), we get b = p·Gu+Ga (mod X m −1, q), due to Equation (1). We
+now observe that the evaluation of the polynomial Gu in all the m-th roots of unity must be small: For the primitive
+roots this evaluation is only m times that of u (which is small by our invariant), and for the non-primitive roots this
+evaluation is zero (since G evaluates to zero in these roots). Therefore the canonical norm of Gu in Z[X]/(X m −1)
+is small and therefore also the norm of its coefficient vector is small, so it can be decrypted as in standard BGV
+cryptosystems. Namely, we have no wraparound so setting b0 ← b mod p we have b0 = Ga ∈ Z[X](X m − 1). If
+we now further reduce modulo Φm (X), b00 ← b0 mod Φm , we get b = m · a ∈ Z[X]/Φm (X) (because G ≡ m
+(mod Φm (X)). Finally we can multiply by (m−1 mod p) to get a = m−1 · b00 mod p.
+Lemma 12. For any integer m there is an integer polynomial Gm of degree ≤ m − 1, such that Gm (α) = m
+for every complex primitive m-th root of unity α, and Gm (β) = 0 p
+for every complex non-primitive m-th root of
+unity β. Moreover the Euclidean norm of Gm ’s coefficient vector is m · φ(m).
+Proof. Clearly there exists a complex polynomial of degree ≤ m − 1 which evaluates to m in the primitive m-th
+roots of unity and to zero in the non-primitive m-th roots of unity. We only need to show that this polynomial has
+integer coefficients, and that it has a low-norm coefficient vector.
+To show that, let D be the m × m DFT matrix (i.e., the Vandemonde matrix on complex m-th roots of unity,
+Dij = ρij for some fixed primitive m-th root of unity ρ). Denote the coefficient vector of G by g, and the vector
+of values that it assumes in all the m-th roots of unity by v (so v is a vector of m’s and 0’s), and we have v = Dg.
+Recalling that the inverse of D is D−1 = D∗ /m (with D∗ the conjugate transpose of D), and considering the 0-1
+vector v 0 = v/m, we have that g = D∗ v 0 . Each coefficient in G is therefore a 0-1 combination of the entries in one
+row of D∗ , with theP
+1’s in the positions corresponding to the primitive roots of unity. Specifically, the coefficient
+of xj in G is gj = i (ρ−j )i , where the sum goes over all indexes i ∈ Z∗m . Since the sum is symmetric over the
+primitive roots of unity, then it must sum to an integer. Hence G must be an integer polynomial.
+√
+√
+Finally, recall that the matrix D∗ is orthogonal with rows of norm m, hence the l2 norm
+of g is m times
+p
+0
+0
+the l2 -norm of v 0 . Since
+p the number of 1’s in v is exactly φ(m), then the l2 norm of v is φ(m), and therefore
+t
+u
+the l2 norm of g is mφ(m).
+Having described decryption, we now proceed to describe all the other elements of our cryptosystem, namely
+key-generation, encryption, addition, “raw multiplication”, key-switching, modulus switching, and Galois group
+actions. All these components (bar the last) are very similar to their counterpart in the BGV cryptosystem [3], but
+their analysis is slightly different.
+Key Generation. The parameters of the scheme include the integer m (that defines the polynomial Φm ), the
+integer p (that defines the aggregate plaintext space Zp [X]/Φm ), and the sequence of moduli q0 > q1 > · · · > qL .
+Key generation is as in the ring-LWE-based version BGV [3] over the ring Z[x]/Φm . That is, for appropriate
+N = polylog(q0 , m), one chooses s0 , 0,1 , . . . 0,N ∈ Z[X]/Φm (with l∞ coefficient norm  q0 ) as well as
+a random elements α0,1 , . . . , α0,N ∈R Zq0 [X]/Φm , and computes β0,i ← α0,i s0 + p · 0,i mod (Φm (X), q0 ).
+The level-0 secret key is s0 = [1, s0 ], and the corresponding public encryption key includes the vectors bi =
+[β0,i , −α0,i ].
+In addition to these keys, the key-generation procedure chooses other secret key vectors for the other levels,
+and generates the key-switching matrices between them, as described in Section D.2 below.
+28
+
+Encryption. Encryption is as in BGV. An aggregate plaintext a ∈ Zp [X]/Φm (X) is encrypted by choosing
+random short elements τ1 , . . . τN ∈ Z[X]/Φm (with l∞ coefficient norm  q0 ) and setting
+c = [c0 , c1 ] ← [a, 0] +
+
+N
+X
+
+τi · bi mod (Φm (X), q0 ).
+
+(2)
+
+i=1
+
+(Actually, the τi ’s can be chosen as elements of Z[x]/Φm with 0/1 coefficients, versus merely being short.)
+It is easy to show that semantic security reduces to the hardness of the decision ring-LWE problem for the ring
+Zq [X]/Φm and the distributions used to sample the short elements.
+To see that our invariant holds with respect
+P to the level-0 secret key s0 and freshly encrypted ciphertexts, note
+that Equation (2) implies that c = [a, 0] + N
+i=1 τi · bi (mod Φm (X), q0 ), and therefore
+hc, s0 i = a +
+
+N
+X
+
+τi hs0 , bi i = a + p ·
+
+i=1
+
+=a+p·
+
+N
+X
+
+N
+X
+
+τi · i
+
+i=1
+
+τi · i
+
+(mod Φm (X), q0 )
+
+i=1
+
+and the since all the τi ’s and i ’s are small (and therefore
+also have small canonical embedding norm), then the
+PN
+canonical embedding norm of the polynomial u = i=1 τi · i mod (Φm (X), q0 ) is small.
+Addition. Adding two ciphertext vectors that are defined with respect to the same secret key and modulus is just
+standard addition in Zq [X]/Φm (X). Clearly, if hc, si = p · u + a and hc0 , si = p · u0 + a0 then also hc + c0 , si =
+p · (u + u0 ) + (a + a0 ), and the canonical embedding norm of u + u0 is still small.
+“Raw Multiplication”. As in the BV/BGV family of cryptosystems [5, 4, 3], “raw multiplication” of two ciphertext vectors (defined with respect to the same modulus) is done using tensor product. Namely, if we have ciphertext
+vector c which is decrypted to a under s and q, and another vector c0 which is decrypted to a0 under s0 and q, then
+we set c̃ = vector(c⊗c0 ) mod (Φm (X), q) (where vector(·) opens the matrix into a vector using some appropriate
+ordering). Denoting s̃ = vector(s ⊗ s0 ) mod (Φm (X), q), we thus have
+hc̃, s̃i = st (c ⊗ c0 )s0 = hc, si · c0 , s0
+= (p · u + a) · (p · u0 + a0 ) = p · (puu0 + ua0 + au0 ) + aa0
+
+(mod Φm (X), q).
+
+Since the canonical embedding norm of ũ = puu0 + ua0 + au0 mod (Φm (X), q) is still small, it means that c̃ is a
+valid ciphertext with respect to s̃ and q, which is decrypted to aa0 .
+Key Switching. A crucial component of the BV/BGV cryptosystems is the ability to translate a ciphertext with
+respect to one secret key into a ciphertext that decrypts to the same thing under another secret key. This is used, for
+example, to translate the “extended ciphertext” that we get from raw multiplication back to a normal ciphertext, or
+to translate two ciphertext vectors with respect to different keys into ciphertexts with respect to the same key, so
+that they can be added or raw-multiplied.
+Let s be a secret-key vector over Zq [X]/Φm (X), and consider another 2-element secret-key vector t ∈
+(Zq [X]/Φm (X))2 whose first entry is 1. To allow translation from s-ciphertexts to t-ciphertexts, we first encode s in a redundant manner by computing 2i s mod q for i = 0, 1, . . . , l = dlog qe and concatenating all these
+29
+
+vectors to form
+
+def
+
+ŝ = Powersof2q (s) = [s | 2s | 4s | . . . | 2l s] mod q.
+Then we choose a random low coefficient norm vector v over Zq [X]/Φm (X) of the same dimension as ŝ (call
+this dimension d), and a matrix R ∈ (Zq [X]/φm )2×d which is chosen at random from the orthogonal space to t,
+namely tR = 0 (mod Φm (X), q). The key-switching matrix from s to t is then set as
+
+
+ŝ + pv
+W = W [s → t] =
++ R mod (Φm (X), q)
+– 0 –
+Again it is easy to show that if decision ring-LWE is hard for the ring Zq [X]/Φm (X) and the distributions used to
+sample t and v, then the matrix W above is pseudo-random, even for someone who knows s.
+Given a ciphertext vector c (over Zq [X]/Φm (X)) that satisfies our invariant with respect to s and q, we use
+W to translate it into another vector c0 that satisfies our invariant with respect to t and q, as follows: First, for
+i = 0, 1, . . . , l = dlog qe we denote by ci the vector over Z2 [X]/Φm (X) containing the i’th bits from all the
+coefficients of all the entries of c. Namely:
+X
+
+c0 = c mod 2, and ci = 2−i · (c mod 2i+1 ) −
+2j cj for i > 0.
+j<i
+
+Then the bit-decomposition of c is the concatenation of all these vectors,
+def
+
+ĉ = BitDecomp(c) = [c0 | c1 | . . . | cl ].
+Clearly ĉ has low norm coefficient vectors, since they are all 0-1 vectors, and we have hĉ, ŝi = hc, si over Zq [X]
+(and therefore also over Zq [X]/Φm (X)). Switching keys from s to t is done simply by setting c0 ← W ĉ mod
+(Φm (X), q). To see that this maintains our invariant, assume that for some a ∈ Zp [X]/Φm (X) we have hc, si =
+p · u + a (mod Φm (X), q), where u has low canonical embedding norm. Then:
+
+
+(a)
+ŝ + pv
+0
+c , t = tW ĉ = t
+ĉ = hĉ, ŝi + p · hĉ, vi
+– 0 –
+(b)
+
+= hc, si + p · hĉ, vi = p · (u + hĉ, vi) +a
+|
+{z
+}
+
+(mod Φm (X), q),
+
+u0
+
+where Equality (a) holds since the first entry of t is 1, and Equality (b) follows from hĉ, ŝi = hc, si. Finally, since
+both v and ĉ have low canonical embedding norm (because they have low coefficient norm), then so has hĉ, vi
+and therefore also u0 = hĉ, vi + u mod (Φm (X), q).
+Galois Group Actions. Recall that a Galois group action is obtained by applying the transformation f (X) 7→
+f (X i ) mod (Φm (X), q) for some i ∈ Z∗m to all the polynomials in our ciphertext vectors, secret keys, etc. Assume
+that we have hc, si = p · u + a (mod Φm (X), q), and define c(i) , s(i) , u(i) , a(i) as what you get by applying the
+above Galois group action to c, s, u, a, respectively. Our invariant means that for some polynomial k ∈ Zq [X] we
+have
+X
+cj (X)sj (X) = p · u(X) + a(X) + k(X)Φm (X) (equality in Zq [X]),
+(3)
+j
+
+and therefore also for every i
+X
+cj (X i )sj (X i ) = p · u(X i ) + a(X i ) + k(X i )Φm (X i ) (equality in Zq [X]).
+j
+
+30
+
+(4)
+
+Equation (4) follows since the two sides of Equation (3) are identical as formal polynomials over Zq , and therefore
+they must coincide also as functions over any characteristic-q field. It follows that the functions on both sides of
+Equation (4) must also coincide over any characteristic-q field, and therefore the two sides must be identical as
+formal polynomials over Zq .
+Recalling that if i ∈ Z∗m then Φ(X) divides Φ(X i ), we obtain
+D
+E X
+c(i) , s(i) =
+cj (X i )sj (X i ) = p · u(X i ) + a(X i ) = p · u(i) + a(i)
+
+(mod Φm (X), q),
+
+j
+
+as needed. Observing that for i ∈ Z∗m the canonical embeddings of u and u(i) are just a permutation of each other
+(and hence have the same norm) we deduce that our invariant in maintained under the transformation X 7→ X i
+whenever i ∈ Z∗m .
+Modulus Switching. Our modulus switching procedure works exactly as in the BGV cryptosystem. Namely, to
+switch a ciphertext c (in coefficient representation) from qi to qi+1 , we just scale the coefficient vectors in c by a
+qi+1 /qi factor, and then round the result to get an integer polynomial vector c0 such that c0 ≡ c (mod p).
+Definition 3 (Scale). For a vector c over Z[X]/Φm (X) and integers qi > qi+1 > p, define c0 ← Scale(c, qi , qi+1 , p)
+to be the vector over Z[X]/Φm (X) closest to (p/q)·c (in coefficient representation) that satisfies c0 ≡ c (mod p).
+Our analysis, however, is a little different than in [3]. The proof from [3, Lemma 4] relies on the fact that the
+coefficient vector of [hc, si]qi has low norm, whereas in out case we instead have that this polynomials has low
+canonical embedding norm mod qi . We therefore re-prove this lemma under our new condition.
+Lemma 13. Let qi > qi+1 > p be positive integers satisfying qi = qi+1 = 1 (mod p). Let c, s be two n-vectors
+qi
+can , and let c0 = Scale(c, q , q
+over Z[X]/Φm (X) such that | hc, si |can
+i i+1 , p).
+qi < qi /2 − qi+1 · pn · φ(m) · ksk
+0
+0
+Denoting e = hc, si mod Φm (X) and e = hc , si mod Φm (X) (arithmetic in Z[X]/Φm (X)), it holds that
+can0 
+e q
+
+i+1
+
+|e0 |can
+qi+1
+
+can
+
+≡ [e] qi (mod p) (in coefficient representation), and
+qi+1
+<
+· |e|can
++ pn · φ(m) · kskcan
+qi
+qi
+can
+
+Proof. For some k ∈ Z[X]/Φm (X), we have [e] qi = hc, si − qi k, where the equality is over Z[X]/Φm (X). For
+the same k, let e00 = e0 − qi+1 k ∈ Z[X]/Φm (X). Since c0 ≡ c (mod p) and qi ≡ qi+1 (mod p), then also
+can
+
+e00 = c0 , s − qi+1 k ≡ hc, si − qi k = [e] qi
+
+(mod Φm (X), p).
+
+can
+
+It therefore suffices to prove that e00 =[e0 ]qi+1 (equality over Z[X]/Φm (X)) and that it has small enough norm.
+def
+
+qi+1
+0
+0
+Denote the distance between qi+1
+qi · c and its rounded version c by δ = c − qi c. Then δ is a vector over
+Q[X]/Φm (X), and the coefficient-vectors in δ all have entries in [−p/2, p/2). Moreover, we have
+
+e00 =
+
+qi+1
+hc, si + hδ, si − qi+1 k
+qi
+
+qi+1
+qi+1 can
+=
+hc, si − qi k + hδ, si =
+· [e] qi + hδ, si .
+qi
+qi
+
+c0 , s − qi+1 k =
+
+31
+
+(5)
+
+Considering the polynomial hδ, si ∈ Q[X]/Φm (X), we can bound its canonical embedding norm by:
+k hδ, si kcan ≤ n · kδkcan · kskcan ≤ n · φ(m) · kδk · kskcan ≤ pn · φ(m) · kskcan .
+From Equation (5) we now get:
+qi+1
+qi+1
+can
+can
+· |e|can
+≤
+· |e|can
+qi + k hδ, si k
+qi + pn · φ(m) · ksk
+qi
+qi
+q
+
+qi+1
+i+1
+<
+− pn · φ(m) · kskcan + pn · φ(m) · kskcan =
+2
+2
+
+ke00 kcan ≤
+
+(6)
+
+can
+
+Finally, Lemma 11 implies that e00 =[e0 ]qi+1 , completing the proof.
+
+t
+u
+
+It follows immediately from Lemma 13 that if c satisfies our invariant with respect to s and qi , and if the
+qi
+can ,
+canonical embedding norm of s is small enough so that we have | hc, si |can
+qi < qi /2 − qi+1 · pn · φ(m) · ksk
+then the scaled vector c0 = Scale(c, qi , qi+1 , p) satisfies our invariant with respect to the same s and the new
+modulus qi+1 .
+
+Variants. We note that one can optimize BGV key generation and encryption using a cute trick by Brakerski and
+Vaikuntanathan [5] (following [15]). This reduces the public key size and encryption time, without changing the
+scheme in an any way that affects the applicability of our techniques; we still obtain FHE with polylog overhead
+using BGV with BV’s optimizations. (We note that our techniques can be applied to the cryptosystem of BV [5]
+as well, but one needs to use BGV’s noise management technique to reduce the overhead to polylog.)
+In BV key generation [5], for level-0, one only needs to choose low-norm elements s0 , 0 ∈ Z[X]/Φm (X)
+(with coefficient norm  qL ) as well as a random element α0 ∈R Zq0 [X]/Φm (X), and computing β0 ← −α0 s0 +
+p · 0 mod (Φm (X), q0 ). The level-0 secret key is s0 = [1, s0 ], and the corresponding public encryption key is
+b = [β0 , α0 ]. This approach reduces level-0 key size by factor of O(log q0 ). One generates keys for the other
+levels similarly.
+In BV encryption, an aggregate plaintext a ∈ Zp [X]/Φm (X) is encrypted by choosing three random short
+elements τ, 1 , 2 ∈ Zq0 [X]/Φm (X) and setting
+c = [c0 , c1 ] ← [τ β0 , τ α0 ] + p · [1 , 2 ] + [a, 0] mod (Φm (X), q0 ).
+
+(7)
+
+It is easy to show that semantic security reduces to the hardness of the decision ring-LWE problem for the ring
+Zq [X]/Φm (X) and the distributions used to sample s0 , τ , and , 1 , 2 .
+To see that our invariant holds with respect to the level-0 secret key s0 and freshly encrypted ciphertexts, note
+that Equation (7) implies that c = [τ β0 , τ α0 ] + p · [1 , 2 ] + [a, 0] (mod Φm (X), q0 ), and therefore
+hc, s0 i = τ β0 + p1 + a + s(τ α0 + p2 ) = − τ sα0 + pτ 0 + p1 + a + s(τ α0 + p2 )
+= p · (τ 0 + 1 + s2 ) + a (mod Φm (X), q0 )
+and the polynomial u = (τ 0 + 1 + s2 ) mod (X m − 1, q0 ) has low coefficient norm, and therefore also low
+canonical embedding norm. When using BV encryption and key generation, the other aspects of the scheme remain
+the same.
+32
+
+E
+
+A Delayed-Reduction Technique
+
+We describe here another variant, where we work with polynomials modulo X m − 1 rather than polynomials
+modulo Φm , and reduce back mod Φm only upon decryption. Importantly, we still want to base our security on
+the hardness of ring-LWE with respect to the ring Zq [X]/Φm (X) (recall that decision ring-LWE is easy modulo
+X m − 1, since it can be reduced to the one-dimensional problem modulo X − 1).
+We can use Lemma 12 to “lift” the mod-Φm (x) polynomials in the cryptosystem into mod-(X m − 1) polynomials, simply by multiplying by the polynomial G(X) from that lemma. (This has the effect of introducing an
+m −1
+extra multiplicative factor of m, which we can correct upon decryption.) Note that since G = 0 (mod X
+Φm (x) ),
+m
+
+−1
+then we can write G(X) = X
+Φm (x) · µ(X) (equality over Z[X]) for some integer polynomial µ. It follows that
+if we have two polynomials satisfying u = v (mod Φm ) then Gu = Gv (mod X m − 1). This is because over
+Z[X]/(X m − 1) we have u = v + τ Φm for some integer polynomial τ , and so
+
+Gu = G(v + τ Φm ) = Gu + (
+
+Xm − 1
+µ) · τ Φm = Gu + (X m − 1) · µτ = Gu (mod X m − 1)
+Φm
+
+In our variant of the BGV cryptosystem, ciphertexts are vectors over the ring Z[X]/(X m − 1), secret keys
+are vectors over the sub-ring Z[X]/Φm , and aggregate plaintexts are elements in Zp [X]/Φm . We maintain the
+invariant that if c is a ciphertext encrypting the aggregate plaintext a relative to secret key s and modulus q, then
+in the ring Zq [X]/(X m − 1) we have the equality
+G · hc, si = p · G · u + G · a (mod X m − 1, q),
+
+(8)
+
+where u ∈ Z[X]/(X m − 1) has coefficient vector with small l2 -norm, kuk2  q. Note that we can use s to
+decrypt c by setting b ← G · hc, si mod (X m − 1, q), then recovering a = m−1 · b mod (Φm , p). Since both b and
+p · Gu + Ga (mod X m − 1) have coefficients smaller than q/2 in absolute value, then we have the equality b =
+p · Gu + Ga holding over Z[X]/(X m − 1), without reduction modulo q. We thus have b = Ga (mod X m − 1, p),
+so also b = Ga = m · a (mod Φm , p), so indeed a = b · m−1 (mod Φm , p).
+Having described decryption, we now proceed to describe all the other elements of our cryptosystem, namely
+key-generation, encryption, addition, “raw multiplication”, key-switching, modulus switching, and Galois group
+actions. All these components (bar the last) are very similar to their counterpart in the BGV cryptosystem [3],
+except that we use some mix of mod-Φm and mod-(X m −1) arithmetic, using multiplication-by-G and Equation (8)
+to move between them.
+
+E.1
+
+Key generation
+
+The parameters of the scheme include the integer m (that defines the polynomials Φm and X m − 1), the integer p
+(that defines the aggregate plaintext space Zp [X]/Φm ), and the sequence of moduli q0 > q1 > · · · > qL .
+Key generation is as in the ring-LWE-based version BGV [3] over the ring Z[x]/Φm . That is, for appropriate
+N = polylog(q0 , m), one chooses low-norm elements s0 , 0,1 , . . . 0,N ∈ Z[X]/Φm (with l2 norm  q0 ) as well as
+a random elements α0,1 , . . . , α0,N ∈R Zq0 [X]/Φm , and computes β0,i ← α0,i s0 +p·0,i mod (Φm , q0 ). The level0 secret key is s0 = [1, s0 ], and the corresponding public encryption key includes the vectors bi = [β0,i , −α0,i ].
+In addition to these keys, the key-generation procedure chooses other secret key vectors for the other levels,
+and generates the key-switching matrices between them, as described in Section E.5 below.
+33
+
+E.2
+
+Encryption
+
+Encryption is as in BGV. An aggregate plaintext a ∈ Zp [X]/Φm (X) is encrypted by choosing random short
+elements τ1 , . . . τN ∈ Z[X]/Φm and setting
+c = [c0 , c1 ] ← [a, 0] +
+
+N
+X
+
+τi · bi mod (Φm , q0 ).
+
+(9)
+
+i=1
+
+(Actually, the τi ’s can be chosen as elements of Z[x]/Φm with 0/1 coefficients, versus merely being short.)
+Note that freshly encrypted ciphertexts are vectors over the sub-ring Z[X]/Φm (X), but later we allow evaluated ciphertexts to be in the larger ring Z[X]/(X m − 1). It is easy to show that semantic security reduces to the
+hardness of the decision ring-LWE problem for the ring Zq [X]/Φm and the distributions used to sample the short
+elements.
+To see that our invariant holds with respect toP
+the level-0 secret key s0 and freshly encrypted ciphertexts, note
+m
+that Equation (9) implies that G · c = G([a, 0] + N
+i=1 τi · bi ) (mod X − 1, q0 ), and therefore
+G · hc, s0 i = G(a +
+
+N
+X
+
+τi hs0 , bi i)
+
+i=1
+
+= G(a + p ·
+
+N
+X
+
+τi · i )
+i=1
+N
+X
+
+= Ga + p · G(
+
+τi · i )
+
+(mod X m − 1, q0 )
+
+i=1
+
+and the coefficient vector of the polynomial u =
+
+PN
+
+i=1 τi · i mod (X
+
+m − 1, q ) has low l norm.
+0
+2
+
+We stress that the low l2 norm of u depends crucially on our delayed reduction. Indeed, each of the polynomials
+{τi }, {i }, G has low l2 norm, hence their products and sums over Z[X] would still have low norms. However, we
+do not know how to prove that the norm remains low when we reduce them modulo Φm , it is only because we
+reduce modulo X m − 1 that we can argue that the norm remains low.
+E.3
+
+Addition
+
+Adding two ciphertext vectors that are defined with respect to the same secret key and modulus is just standard
+addition in Zq [X]/(X m − 1). Indeed, if we have G · hc, si = p · Gu + Ga and G · hc0 , si = p · Gu0 + Ga0 (both
+over Zq [X]/(X m − 1)) then also G · hc + c0 , si = p · G(u + u0 ) + G(a + a0 ), and the l2 norm of the coefficient
+vector of u + u0 is still small.
+E.4
+
+“Raw multiplication”
+
+As in the BV/BGV family of cryptosystems [5, 4, 3], “raw multiplication” of two ciphertext vectors (defined with
+respect to the same secret key and modulus) is done using tensor product. Namely, if we have ciphertext vector
+c which is decrypted to a under s and q, and another vector c0 which is decrypted to a0 under s and q, then we
+set c̃ = vector(c ⊗ c0 ) mod (X m − 1, q) (where vector(·) opens the matrix into a vector using some appropriate
+34
+
+ordering). Denoting s̃ = vector(s ⊗ s) mod (Φm , q), we thus have
+G · hc̃, s̃i = G · st (c ⊗ c0 )s = G · hc, si · c0 , s
+= (p · Gu + Ga) · c0 , s
+
+= (p · u + a) · G · c0 , s
+
+= p · G(puu0 + ua0 + au0 ) + Gaa0
+
+= (p · u + a) · (p · Gu0 + Ga0 )
+
+(mod X m − 1, q).
+
+Since the coefficient vector of ũ = puu0 + ua0 + au0 mod (X m − 1, q) still has small l2 norm, it means that c̃
+is a valid ciphertext with respect to s̃ and q, which is decrypted to aa0 . Note that above we used mod-(X m − 1)
+arithmetic for the ciphertext and mod-Φm arithmetic for the secret key. This choice was made for convenience in
+other operations.
+E.5
+
+Key switching
+
+A crucial component of the BV/BGV cryptosystems is the ability to translate a ciphertext with respect to one
+secret key into a ciphertext that decrypts to the same thing under another secret key. This is used, for example, to
+translate the “extended ciphertext” that we get from raw-multiplication back to a normal ciphertext, or to translate
+two ciphertext vectors with respect to different keys into ciphertexts with respect to the same key, so that they can
+be added or raw-multiplied.
+Let s be a secret-key vector over Zq [X]/Φm , and consider another 2-element secret-key vector t ∈ (Zq [X]/Φm )2
+whose first entry is 1. To allow translation from s-ciphertexts to t-ciphertexts, we first encode s in a redundant manner by computing 2i s mod q for i = 0, 1, . . . , l = dlog qe and concatenating all these vectors to form
+def
+
+ŝ = Powersof2q (s) = [s | 2s | 4s | . . . | 2l s] mod q.
+Then we choose a random low l2 norm vector v over Zq [X]/Φm of the same dimension as ŝ (call this dimension d),
+and a matrix R ∈ (Zq [X]/φm )2×d which is chosen at random from the orthogonal space to t, namely tR = 0
+(mod Φm , q). The key-switching matrix from s to t is then set as
+
+
+ŝ + pv
+W = W [s → t] =
++ R mod (Φm , q)
+– 0 –
+Again it is easy to show that if decision ring-LWE is hard for the ring Zq [X]/Φm (X) and the distributions used to
+sample t and v, then the matrix W above is pseudo-random, even for someone who knows s.
+Given a ciphertext vector c (over Zq [X]/(X m − 1)) that satisfies our invariant with respect to s and q, we
+use W to translate it into another vector c0 that satisfies our invariant with respect to t and q, as follows: First, for
+i = 0, 1, . . . , l = dlog qe we denote by ci the vector over Z2 [X]/(X m − 1) containing the i’th bits from all the
+coefficients of all the entries of c. Namely:
+X
+
+c0 = c mod 2, and ci = 2−i · (c mod 2i+1 ) −
+2j cj for i > 0.
+j<i
+
+Then the bit-decomposition of c is the concatenation of all these vectors,
+def
+
+ĉ = BitDecomp(c) = [c0 | c1 | . . . | cl ].
+Clearly ĉ has low l2 norm, since it is represented by a 0-1 vector, and we have hĉ, ŝi = hc, si over Zq [X] (and
+therefore also over Zq [X]/(X m −1)). Switching keys from s to t is done simply by setting c0 ← W ĉ mod (X m −
+35
+
+1, q). To see that this maintains our invariant, assume that for some a ∈ Zp [X]/Φm we have G·hc, si = p·Gu+Ga
+(mod X m − 1, q), where the coefficient vector of u has low l2 norm. Then:
+
+
+(a)
+(b)
+ŝ + pv
+0
+G · c , t = G · tW ĉ = G · t
+ĉ = G · hĉ, ŝi + p · G · hĉ, vi
+– 0 –
+(c)
+
+= G · hc, si + p · G · hĉ, vi = p · G (u + hĉ, vi) +Ga
+{z
+}
+|
+
+(mod X m − 1, q),
+
+u0
+
+where Equality (a) follows since tR = 0 (mod Φm , q) and therefore G · tR = 0 (mod X m − 1, q), Equality (b)
+holds since the first entry of t is 1, and Equality (c) follows from hĉ, ŝi = hc, si. Finally, since both v and ĉ have
+low l2 norm, then over Zq [X]/(X m − 1) so has hĉ, vi and therefore also u0 = hĉ, vi + u mod (X m − 1, q).
+E.6
+
+Modulus switching
+
+The modulus-switching procedure is exactly as in the BGV cryptosystem. Note that this procedure does not involve
+any mod-Φm or mod-(X m − 1) arithmetic: All we do is take a ciphertext vector c over Zqi [X]/(X m − 1), scale it
+0
+down by a factor qi+1 /qi and round to get c0 = roundc ( qi+1
+qi · c) such that c ≡ c (mod p). The reason that this
+works in our case is exactly as in BGV, our delayed reduction has no effect here.
+E.7
+
+Galois group actions
+
+As described in Section 4.2, applying the action X → X i on a ciphertext vector c over Zq [X]/(X m − 1) requires
+only a permutation of the coefficients in each of the elements of c (all which are degree-(m − 1) polynomials
+over Zq ).
+Assume that we have G · hc, si = p · Gu + Ga (mod X m − 1, q), and define c(i) , u(i) as what you get by
+applying the transformation X → X i to c, u, respectively, over Zq [X]/(X m − 1), and s(i) , a(i) as what you get
+by applying the transformation X → X i to s, a, respectively over Zq [X]/Φm . Below we prove that if i, m are
+co-prime and also q, m are co-prime, then we have G · c(i) , s(i) = p · Gu(i) + Ga(i) (mod X m − 1, q).
+Using G = m (mod Φm ), and reducing modulo Φm the equality G·hc, si = p·Gu+Ga, we have m·hc, si =
+pm · u + ma (mod Φm , q). Since m, q are co-prime then multiplying by m−1 (mod q) we get hc, si = p · u + a
+(mod Φm , q). Namely, for some polynomial k ∈ Zq [X] we have
+X
+cj (X)sj (X) = p · u(X) + a(X) + k(X)Φm (X) (equality in Zq [X]),
+(10)
+j
+
+and therefore also for every i
+X
+cj (X i )sj (X i ) = p · u(X i ) + a(X i ) + k(X i )Φm (X i ) (equality in Zq [X]).
+
+(11)
+
+j
+
+Equation (11) follows since the two sides of Equation (10) are identical as formal polynomials over Zq , and
+therefore they must coincide also as functions over any characteristic-q field. It follows that the functions on both
+sides of Equation (11) must also coincide over any characteristic-q field, and therefore the two sides must be
+identical as formal polynomials over Zq .
+∗ then Φ(X) divides Φ(X i ), we obtain
+Recalling that if i ∈ Zm
+D
+E X
+c(i) , s(i) =
+cj (X i )sj (X i ) = p · u(X i ) + a(X i ) = p · u(i) + a(i)
+j
+
+36
+
+(mod Φm (X), q).
+
+Now we can multiply by G to “lift” the equality over to Zq [X]/(X m − 1) and we get
+D
+E
+G · c(i) , s(i) = p · Gu(i) + Ga(i) (mod X m − 1, q),
+as needed. Observing that over Zq [X]/(X m − 1) the coefficient vectors of u and u(i) are just a permutation of
+each other (and hence have the same l2 norm) we deduce that our invariant in maintained under the transformation
+X 7→ X i whenever i ∈ Z∗m and m ∈ Z∗q .
+
+37
+
+

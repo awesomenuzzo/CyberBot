@@ -1,0 +1,1864 @@
+Homomorphic Encryption
+for Arithmetic of Approximate Numbers
+Jung Hee Cheon1 , Andrey Kim1 , Miran Kim2 , and Yongsoo Song1
+1
+
+Seoul National University, Republic of Korea
+{jhcheon, kimandrik, lucius05}@snu.ac.kr
+2
+University of California, San Diego
+mrkim@ucsd.edu
+
+Abstract. We suggest a method to construct a homomorphic encryption scheme for approximate arithmetic. It supports an approximate addition and multiplication of encrypted messages,
+together with a new rescaling procedure for managing the magnitude of plaintext. This procedure truncates a ciphertext into a smaller modulus, which leads to rounding of plaintext. The
+main idea is to add a noise following significant figures which contain a main message. This noise
+is originally added to the plaintext for security, but considered to be a part of error occurring
+during approximate computations that is reduced along with plaintext by rescaling. As a result, our decryption structure outputs an approximate value of plaintext with a predetermined
+precision.
+We also propose a new batching technique for a RLWE-based construction. A plaintext polynomial is an element of a cyclotomic ring of characteristic zero and it is mapped to a message
+vector of complex numbers via complex canonical embedding map, which is an isometric ring
+homomorphism. This transformation does not blow up the size of errors, therefore enables us
+to preserve the precision of plaintext after encoding.
+In our construction, the bit size of ciphertext modulus grows linearly with the depth of the
+circuit being evaluated due to rescaling procedure, while all the previous works either require
+an exponentially large size of modulus or expensive computations such as bootstrapping or bit
+extraction. One important feature of our method is that the precision loss during evaluation is
+bounded by the depth of a circuit and it exceeds at most one more bit compared to unencrypted
+approximate arithmetic such as floating-point operations. In addition to the basic approximate
+circuits, we show that our scheme can be applied to the efficient evaluation of transcendental
+functions such as multiplicative inverse, exponential function, logistic function and discrete
+Fourier transform.
+Keywords. Homomorphic encryption, approximate arithmetic
+
+1
+
+Introduction
+
+Homomorphic encryption (HE) is a cryptographic scheme that enables homomorphic operations on encrypted data without decryption. Many of HE schemes (e.g. [18, 6, 7, 4, 5, 25,
+33, 2, 26, 13, 12, 21, 19]) have been suggested following Gentry’s blueprint [23]. HE can be
+applied to the evaluation of various algorithms on encrypted financial, medical, or genomic
+data [36, 31, 11, 41, 29].
+Most of real-world data contain some errors from their true values. For instance, a measured value of quantity has an observational error from its true value and sampling error
+can be made as only a sample of the whole population is being observed in statistics. In
+practice, data should be discretized (quantized) to an approximate value such as floatingpoint number, in order to be represented by a finite number of bits in computer systems.
+In this case, an approximate value may substitute the original data and a small rounding
+error does not have too much effect on computation result. For the efficiency of approximate
+arithmetic, we store a few numbers of significant digits (e.g. most significant bits, MSBs)
+and carry out arithmetic operations between them. The resulting value should be rounded
+again by removing some inaccurate least significant bits (LSBs) to maintain the bit size of
+significand (mantissa).
+
+e1
+
+m1
+
+I1
+
+m1
+
+×
+
+e1
+×
+
+e2
+
+m2
+
+I2
+
+m1 m2
+e∗
+
+m2
+
+e2
+
+m1 m2
+I∗
+
+[m1 m2 ]t
+
+e∗
+
+[m1 m2 ]t
+
+q
+
+q
+
+Fig. 1. Homomorphic multiplications of BGV-type HE schemes (left) and FV-type HE schemes (right)
+m1
+
+m2
+e1
+
+e2
+
+q
+
+q
+
+×
+m1 m2
+e∗
+
+MSB
+
+LSB
+
+q
+
+RS
+p−1 · m1 m2
+e0
+p−1 · q
+
+Fig. 2. Homomorphic multiplication and rescaling for approximate arithmetic
+
+Unfortunately this rounding operation has been considered difficult to perform on HE
+since it is not simply represented as a small-degree polynomial. Previous approaches to
+approximate arithmetic require similar multiplicative depth and complexity to the case of
+bootstrapping for extraction of MSBs [1, 27]. Other methods based on exact integer operations [20, 16] require an exponentially large bit size of ciphertext modulus with the depth of
+the circuit to ensure correctness.
+We point out that the decryption structures of existing HE schemes are not appropriate
+for arithmetic of indiscrete spaces. For a plaintext modulus t and a ciphertext modulus q,
+BGV-type HE schemes [5, 25, 33, 19] have a decryption structure of the form hci , ski = mi +tei
+(mod q). Therefore, the MSBs of m1 + m2 and m1 m2 are destroyed by inserted errors ei
+during homomorphic operations. On the other hand, the decryption structure of FV-type
+HE schemes [4, 22, 2] is hci , ski = qIi + (q/t)mi + ei for some Ii and ei . Multiplication of
+two ciphertexts satisfies hc∗ , ski = qI ∗ + (q/t)m1 m2 + e∗ for I ∗ = tI1 I2 + I1 m2 + I2 m1 and
+e∗ ≈ t(I1 e2 + I2 e1 ), so the MSBs of resulting message are also destroyed (see Fig.1 for an
+illustration). HE schemes with matrix ciphertexts [26, 21] support homomorphic operations
+over the integers (or integral polynomials) but the error growth depends on the size of
+plaintexts.As a result, previous HE schemes are required to have an exponentially large
+ciphertext modulus with the depth of a circuit for approximate arithmetic.
+Homomorphic Encryption for Approximate Arithmetic. The purpose of this paper
+is to present a method for efficient approximate computation on HE. The main idea is to
+treat an encryption noise as part of error occurring during approximate computations. That
+2
+
+is, an encryption c of message m by the secret key sk will have a decryption structure of
+the form hc, ski = m + e (mod q) where e is a small error inserted to guarantee the security
+of hardness assumptions such as the learning with errors (LWE), the ring- LWE (RLWE) and
+the NTRU problems. If e is small enough compared to the message, this noise is not likely to
+destroy the significant figures of m and the whole value m0 = m + e can replace the original
+message in approximate arithmetic. One may multiply a scale factor to the message before
+encryption to reduce the precision loss from encryption noise.
+For homomorphic operations, we always maintain our decryption structure small enough
+compared to the ciphertext modulus so that computation result is still smaller than q. However, we still have a problem that the bit size of message increases exponentially with the
+depth of a circuit without rounding. To address this problem, we suggest a new technique
+- called rescaling - that manipulates the message of ciphertext. Technically it seems similar to the modulus-switching method suggested by Brakerski and Vaikuntanatan [6], but it
+plays a completely different role in our construction. For an encryption
+ −1c ofm such that
+hc, ski = m + e (mod q), the rescaling procedure outputs a ciphertext p · c (mod q/p),
+which is a valid encryption of m/p with noise about e/p. It reduces the size of ciphertext
+modulus and consequently removes the error located in the LSBs of messages, similar to
+the rounding step of fixed/floating-point arithmetic, while almost preserving the precision of
+plaintexts.
+The composition of homomorphic operation and rescaling mimics the ordinary approximate arithmetic (see Fig.2). As a result, the bit size of a required ciphertext modulus grows
+linearly with the depth of a circuit rather than exponentially. We also prove that this scheme
+is almost optimal in the sense of precision: precision loss of a resulting message is at most
+one bit more compared to unencrypted floating-point arithmetic.
+Encoding Technique for Packing Messages. It is inevitable to encrypt a vector of multiple plaintexts in a single ciphertext for efficient homomorphic computation. The plaintext
+space of previous RLWE-based HE schemes is a cyclotomic polynomial ring Zt [X]/(ΦM (X))
+of a finite characteristic. A plaintext polynomial could be decoded as a vector of plaintext
+values into a product of finite fields by a ring isomorphism [38, 39]. An inserted error is placed
+separately from the plaintext space so it may be removed by using plaintext characteristic
+after carrying out homomorphic operations.
+On the other hand, a plaintext of our scheme is an element of a cyclotomic ring of
+characteristic zero and it embraces a small error which is inserted from encryption to ensure
+the security or occurs during approximate arithmetic. Hence we adapt an isometric ring
+homomorphism - the complex canonical embedding map. It preserves the size of polynomials
+so that a small error in a plaintext polynomial is not blow up during encoding/decoding
+procedures.
+Let H = {(zj )j∈Z∗M : z−j = zj , ∀j ∈ Z∗M } ⊆ CΦ(M ) and let T be a subgroup of the multiplicative group Z∗M satisfying Z∗M /T = {±1}. The native plaintext space of our scheme is the
+set of polynomials in the cyclotomic ring R = Z[X]/(ΦM (X)) with magnitude bounded by ciphertext modulus. The decoding procedure first transforms a plaintext polynomial m(X) ∈ R
+into a complex vector (zj )j∈Z∗M ∈ H by the canonical embedding map σ and then sends it
+to a vector (zj )j∈T using the natural projection π : H → Cφ(M )/2 . The encoding method
+is almost the inverse of the decoding procedure, but a round-off algorithm is required for
+discretization so that the output becomes an integral polynomial. In short, our encoding
+function is given by
+Cφ(M )/2
+z = (zi )i∈T
+
+π −1
+
+−−−→
+
+b·eσ(R)
+
+σ −1
+
+σ(R)
+−−−−→
+ R 
+
+ −1 
+−1
+−1
+7−→ π (z) 7−→ π (z) σ(R) 7−→ σ
+π −1 (z) σ(R)
+H
+
+−−−−→
+
+3
+
+where b·eσ(R) denotes the rounding to a close element in σ(R).
+Homomorphic Evaluation of Approximate Arithmetic. One important feature of our
+method is that the precision loss during homomorphic evaluation is bounded by depth of
+a circuit and it is at most one more bit compared to unencrypted approximate arithmetic.
+Given encryptions of d messages with η bits of precision, our HE scheme of depth dlog de
+computes their product with (η − log d − 1) bits of precision in d multiplications while
+unencrypted approximate arithmetic such as floating-point multiplication can compute a
+significand with (η −log d) bits of precision. On the other hand, the previous methods require
+Ω(η 2 d) homomorphic computations by using bitwise encryption or need a large plaintext
+space of bit size Ω(ηd) unless relying on expensive computations such as bootstrapping or
+bit extraction.
+In our scheme, the required bit size of the largest ciphertext modulus can be reduced down
+to O(η log d) by performing the rescaling procedure after multiplication of ciphertexts. The
+parameters are smaller than for the previous works and this advantage enables us to efficiently
+perform the approximate evaluation of transcendental functions such as the exponential,
+logarithm and trigonometric functions by the evaluation of their Taylor series expansion.
+In particular, we suggest a specific algorithm for computing the multiplicative inverse with
+reduced complexity, which enables the efficient evaluation of rational functions.
+We verify our algorithms by implementation on a machine with an Intel Core i5 running at
+2.9 GHz processor using a parameter set with 80-bit security level. It takes about 0.45 seconds
+for multiplicative inverse of ciphertext with 14 bits of precision, yielding an amortized rate
+of 0.11 milliseconds per slot. We can also evaluate the exponential function using its Taylor
+expansion and it results in an amortized time per slots of 0.16 milliseconds.
+In a cloud-computing environment, a large amount of data is being generated and one
+needs to handle these huge data collections. Our scheme could be a practical solution for
+data analysis as it allows the encryption of much information in a single ciphertext so we can
+parallelize both space and computation together. For example, we improved the homomorphic
+evaluation of logistic function using a batching technique, which can be used in a disease
+prediction analysis. Our implementation homomorphically evaluated the degree seven Taylor
+polynomial of logistic function in about 0.13 milliseconds per slot (and less than 0.54 seconds
+total) compared to 30 seconds and 1.8 seconds of evaluation time of [3] and [9] without
+parallelization, respectively.
+Another example is evaluating discrete Fourier transform homomorphically using a fast
+Fourier transform (FFT) algorithm. We follow the encoding method of [15] for roots of unity
+in polynomial ring so that it does not consume ciphertext level during evaluation. We also
+apply our rescaling procedure for operations to Hadamard space and a batching technique,
+which results in a much smaller parameter and amortized evaluation time, respectively. We
+could process the standard processing (FFT-Hadamard product of two vectors-inverse FFT)
+of dimension 213 in 22 minutues (0.34 seconds per slot) on a machine with four cores compared
+to 17 minutes of previous work [16] with six processors with no batching technique. Based on
+evaluation of discrete Fourier transform, we can securely compute the exact multiplication
+of integral polynomials by removing the fractional part of an approximate result. Likewise,
+our HE for approximate arithmetic can be applied to exact computation when the result has
+a specific format or property.
+Follow-up. We provide an open-source implementation of our HE library (HEAAN) and algorithms in the C++ language. The source code is available at github [10]. We introduced
+HEAAN at a workshop for the standardization of HE hosted by Microsoft Research.3
+3
+
+https://www.microsoft.com/en-us/research/event/homomorphic-encryption-standardization-workshop/
+
+4
+
+There are some follow-up works on application of this paper to a secure control of cyberphysical system [28] and a gradient descent algorithm for privacy-preserving logistic regression of biomedical data [30].
+Related Works. A substantial number of studies have concerned about the processing of
+real numbers over encryption. Jäschke and Armknecht [27] observed that a rational number
+can be approximated to an integer by multiplying with a power of two and rounding. An
+integer is encoded in a binary fashion, so that each bit is encrypted separately. The one
+performing homomorphic multiplication can bring the product to the required precision by
+simply discarding the ciphertexts which corresponds to the last LSBs. However, bitwise encryption causes a huge number of computation of ciphertexts for a single rounding operation.
+The other method is to scale them to integers, but a plaintext modulus is exponential in
+the length of message. For example, Arita and Nakasato [1] scale the fixed point numbers
+by a power of two and then represent them as scalars in a polynomial ring with an enlarged
+plaintext modulus. In order to realize homomorphic multiplication of encrypted fixed point
+numbers, it needs a right shift by a number equal to the precision. However, it requires a
+considerable amount of computations including a bit extraction operation.
+On the other hand, Dowlin et al. [20] present an efficient method to represent fixed-point
+numbers, which are encoded as integral polynomials with coefficients in the range (− 21 B, 12 B)
+using its base-B representation for an odd integer B ≥ 3. Costache et al. [16] analyze the
+representations of [20] and compute the lower bound of plaintext modulus. However, exact
+arithmetic of fixed point numbers causes required the size of plaintext modulus to grow
+exponentially with the depth of a circuit.
+Road-map. Section 2 briefly introduces notations and some preliminaries about algebras and
+the RLWE problem. Section 3 presents a homomorphic encryption scheme for approximate
+arithmetic and analyzes the noise growth during basic homomorphic operations. In Section
+4, we suggest some algorithms to homomorphically evaluate typical approximate circuits,
+multiplicative inverse, exponential function, logistic function and discrete Fourier transform.
+We also compute the theoretical precision of the outputs. In Section 5, we perform the
+implementation of our scheme for the evaluations of circuits described in Section 4.
+
+2
+2.1
+
+Preliminaries
+Basic Notation
+
+All logarithms are base 2 unless otherwise indicated. We denote vectors in bold, e.g. a, and
+every vector in this paper will be a column vector. We denote by h·, ·i the usual dot product
+of two vectors. For a real number r, bre denotes the nearest integer to r, rounding upwards
+in case of a tie. For an integer q, we identify Z ∩ (−q/2, q/2] as a representative of Zq and
+use [z]q to denote the reduction of the integer z modulo q into that interval. We use x ← D
+to denote the sampling x according to a distribution D. It denotes the sampling from the
+uniform distribution over D when D is a finite set. We let λ denote the security parameter
+throughout the paper: all known valid attacks against the cryptographic scheme under scope
+should take Ω(2λ ) bit operations.
+2.2
+
+The Cyclotomic Ring and Canonical Embedding
+
+For a positive integer M , let ΦM (X) be the M -th cyclotomic polynomial of degree N =
+φ(M ). Let R = Z[X]/(ΦM (X)) be the ring of integers of a number field Q[X]/(ΦM (X)).
+We write Rq = R/qR for the residue ring of R modulo an integer q. An arbitrary element
+of the cyclotomic ring S = R[X]/(ΦM (X)) of real polynomials will be represented as a
+5
+
+PN −1
+j
+polynomial a(X) =
+j=0 aj X of degree less than N and identified with its coefficient
+vector (a0 , . . . , aN −1 ) ∈ RN . We define the relevant norms on the coefficient vector of a such
+as kak∞ and kak1
+We write Z∗M = {x ∈ ZM : gcd(x, M ) = 1} for the multiplicative group of units in ZM .
+Recall that the canonical embedding of a ∈ Q[X]/(ΦM (X)) into CN is the vector of evaluation
+values of a at the roots of ΦM (X). We naturally extend it to the set of real polynomials S so
+j
+σ(a) will be defined as (a(ζM
+))j∈Z∗M ∈ CN for any a ∈ S where ζM = exp(−2πi/M ) denotes
+a primitive M -th roots of unity. The `∞ -norm of σ(a) is called the canonical embedding
+norm of a, denoted by kakcan
+∞ = kσ(a)k∞ . This measurement will be used to analyze the
+size of polynomials throughout this paper. The canonical embedding norm k·kcan
+∞ satisfies
+the following properties:
+can
+can
+• For all a, b ∈ S, we have ka · bkcan
+∞ ≤ kak∞ · kbk∞
+can
+• For all a ∈ S, we have kak∞ ≤ kak1 .
+• There is a ring constant cM depending only on M such that kak∞ ≤ cM · kakcan
+∞ for all
+a ∈ S.
+
+The ring constant is obtained by cM = kCRT−1
+M k∞ where CRTM is the CRT matrix for M ,
+i.e., the Vandermonde matrix over the complex primitive M -th n
+roots of unity,
+o and the norm
+PN −1
+for a matrix U = (uij )0≤i,j<N is defined by kU k∞ = max0≤i<N
+j=0 |uij | . Refer [17] for
+a discussion of cM .
+2.3
+
+Gaussian Distributions and RLWE Problem
+
+We first define the space
+H = {z = (zj )j∈Z∗M ∈ CN : zj = z−j , ∀j ∈ Z∗M },
+which is isomorphic to RN as an inner product space via the unitary basis matrix
+!
+√1 I √i J
+2
+2
+U=
+−i
+√1 J √
+I
+2
+2
+where I is the identity matrix of size N/2 and J is its reversal matrix.
+For r > 0, we define the Gaussian function ρr : H → (0, 1] as ρr (z) = exp(−πkzk22 /r2 ).
+Denote by Γr the continuous Gaussian probability distribution whose density is given by
+r−N · ρr (z). Now one can extend this to an elliptical Gaussian distribution Γr on H as
+follows: let r = (r1 , . . . , rN ) ∈ (R+ )N be a vector of positive real numbers, then a sample from Γr is given by U · z where each entry of z = (zi ) is chosen independently from
+the (one-dimensional) Gaussian distribution Γri on R. This also gives a distribution Ψr on
+Q[X]/(ΦM (X)) ⊗ R. That is, CRT−1
+M · U · z gives us the coordinates with respect to the
+polynomial basis 1, X, X 2 , . . . , X N −1 .
+In practice, one can discritize the continuous Gaussian distribution Ψr by taking a valid
+rounding bΨr eR∨ . Refer [34, 35] for explaining the methods in more details. We use this
+discrete distribution as the RLWE error distribution.
+Here we define the RLWE distribution and decisional problem associated with it. Let R∨
+∨
+∨
+be the dual fractional ideal of R and write R∨
+q = R /qR . For a positive integer modulus
++ N
+q ≥ 2, s ∈ R∨
+q , r ∈ (R ) and an error distribution χ := bΨr eR∨ , we define AN,q,χ (s) as the
+RLWE distribution obtained by sampling a ← Rq uniformly at random, e ← χ and returning
+(a, a · s + e) ∈ Rq × R∨
+q.
+The (decision) ring learning with errors, denoted by RLWEN,q,χ (D), is a problem to
+distinguish arbitrarily many independent samples chosen according to AN,q,χ (s) for a random
+choice of s sampled from the distribution D over R∨ from the same number of uniformly
+random and independent samples from Rq × R∨
+q.
+6
+
+3
+
+Homomorphic Encryption for Approximate Arithmetic
+
+In this section, we describe a method to construct a HE scheme for approximate arithmetic on
+encrypted data. Given encryptions of m1 and m2 , this scheme allows us to securely compute
+encryptions of approximate values of m1 + m2 and m1 m2 with a predetermined precision.
+The main idea of our construction is to treat an inserted noise of RLWE problem as part of am
+error occurring during approximate computation. The most important feature of our scheme
+is the rounding operation of plaintexts. Just like the ordinary approximate computations
+using floating-point numbers, the rounding operation removes some LSBs of message and
+makes a trade-off between size of numbers and precision loss.
+Our concrete construction is based on the BGV scheme [5] with a multiplication method by
+raising the ciphertext modulus [25], but our methodology can be applied to most of existing
+HE schemes. Appendix A shows a description of LWE-based HE scheme for approximate
+arithmetic.
+3.1
+
+Decryption Structure of Homomorphic Encryption for Approximate
+Arithmetic
+
+Most of existing HE schemes perform operations on a modulo space such as Zt and Zt [X]/(ΦM (X)).
+In other words, they aim to compute a ciphertext which encrypts some LSBs of a resulting message after homomorphic computation. For example, in the case of BGV-type
+schemes [5, 25, 33], plaintexts are placed in the lowest bits of ciphertext modulus, that is,
+an encryption c of a message m with respect to a secret sk has a decryption structure of
+the form hc, ski = m + te (mod q). A multiplication of encryptions of m1 , m2 preserves some
+LSBs of m1 m2 (i.e., [m1 m2 ]t ), while its MSBs (i.e., bm1 m2 /te) are destroyed by errors. On
+the other hand, FV-type schemes [4, 22, 2] put messages in the left-most bits of ciphertext
+modulus, so that their decryption structures satisfy hc, ski = bq/te ·m+e (mod q). However,
+the MSBs of the resulting message are also destroyed during homomorphic multiplication
+between hci , ski = q · Ii + bq/te · mi + ei , each of which contains an additional error Ii in the
+left position of message.
+Our goal is to carry out approximate arithmetic over encrypted data, or equivalently,
+compute the MSBs of a resulting message after homomorphic operations. The main idea is
+to add an encryption noise following significant figures of an input message. More precisely,
+our scheme has a decryption structure of the form hc, ski = m + e (mod q) for some small
+error e. We insert this encryption error to guarantee the security of scheme, but it will be
+considered as an error that arises during approximate computations. That is, the output of
+decryption algorithm will be treated as an approximate value of the original message with
+a high precision. The size of a plaintext will be small enough compared to the ciphertext
+modulus for homomorphic operations so that the result of an arithmetic computation is still
+smaller than the ciphertext modulus.
+There are some issues that we need to consider more carefully. In unencrypted approximate computations, small errors may blow up when applying operations in succession, so it is
+valuable to consider the proximity of a calculated result to the exact value of an algorithm.
+Similarly, encrypted plaintexts in our scheme will contain some errors and they might be
+increased during homomorphic evaluations. Thus we compute an upper bound of errors and
+predict the precision of resulting values.
+The management of the size of messages is another issue. If we compute a circuit of
+multiplicative depth L without rounding of messages, then the bit size of an output value will
+exponentially grow with L. This naive method is inappropriate for practical usage because
+it causes a huge ciphertext modulus. To resolve this problem, we suggest a new technique
+which divides intermediate values by a base. It allows us to discard some inaccurate LSBs of
+7
+
+a message while an error is still kept relatively small compared to the message. This method
+leads to maintain the size of messages almost same and make the required ciphertext modulus
+linear in the depth L.
+3.2
+
+Plaintext Encoding for Packing
+
+The batching technique in HE system allows us to encrypt multiple messages in a single
+ciphertext and enables a parallel processing in SIMD manner. In practice, we take its advantage to parallelize computations and reduce the memory and complexity. A ring of finite
+characteristic has been used as a plaintext space in the previous RLWE-based HE schemes.
+A small error, which is located in a separated place in a ciphertext modulus, is inserted to
+ensure security and it may be removed after carrying out homomorphic operations. Then an
+output polynomial is decoded into a message vector with respect to the CRT-based encoding
+technique [38, 39]. Meanwhile, a plaintext of our scheme is a polynomial contained in a ring
+of characteristic zero and it embraces am error for security, so an inserted error cannot be
+removed after decryption.
+Intuition. A native plaintext space of our RLWE-based construction can be understood as the
+set of polynomials m(X) ∈ S such that kmkcan
+∞  q. The roots of a cyclotomic polynomial
+ΦM (X) are the complex primitive roots of unity in the extension field C. We evaluate a
+plaintext polynomial at these roots in order to transform it into a vector of complex numbers,
+so the (extended) canonical embedding map σ : S → CN plays a role of decoding algorithm.
+For technical details, we first point out that the image of canonical embedding map is
+the subring H = {(zj )j∈Z∗M : zj = z−j } of CN . Let T be a multiplicative subgroup of Z∗M
+satisfying Z∗M /T = {±1}. Then H can be identified with CN/2 via the natural projection π,
+defined by (zj )j∈Z∗M 7→ (zj )j∈T . Then our decoding algorithm is to transform an arbitrary
+polynomial m(X) ∈ R into a complex vector z such that z = π ◦ σ(m) ∈ CN/2 .
+The encoding algorithm is defined as the inverse of decoding procedure. Specifically, it
+encodes an input vector z = (zi )i∈T in a polynomial m(X) = σ −1 ◦ π −1 (z) where π −1 (z)[j]
+is zj if j ∈ T , and z−j otherwise. Note that the encoding/decoding algorithms are isometric
+N/2 , k·k ), so the size of plaintexts and errors
+ring isomorphisms between (S, k·kcan
+∞
+∞ ) and (C
+are preserved via these transformations.
+Since π −1 (z) might not be contained in the image of canonical embedding map, we need
+to discritize π −1 (z) to an element of σ(R). Recall that R has a Z-basis {1, X, . . . , X N −1 }
+and it yields a rank-N ideal lattice σ(R) having basis {σ(1), σ(X),
+. . . , σ(X N −1 )}. The goal
+
+of rounding process is to find a vector, denoted by π −1 (z) σ(R) , with a rounding error
+
+
+kπ −1 (z) − π −1 (z) σ(R) k∞ . There are several round-off algorithms including the coordinatewise randomized rounding. See [35] for details.
+A rounding error may destroy the significant figures of a message during encoding procedure. Hence we recommend to multiply a scaling factor ∆ ≥ 1 to a plaintext before rounding
+in order to preserve its precision. Our encoding/decoding algorithms are explicitly given as
+follows:
+• Ecd(z; ∆). For a (N/2)-dimensional vector z = (zi )i∈T of complex numbers, the encoding
+procedure first expands it into the vector π −1 (z) ∈ H and computes its discretization to
+σ(R) after multiplying
+a scaling factor ∆. Return the corresponding integral polynomial
+
+−1
+−1
+m(X) = σ ( ∆ · π (z) σ(R) ) ∈ R.
+• Dcd(m; ∆). For an input polynomial m ∈ R, output the vector z = π ◦ σ(∆−1 · m),
+j
+i.e., the entry of z of index j ∈ T is zj = ∆−1 · m(ζM
+).
+8
+
+As a toy example, let M = 8 (i.e., Φ8 (X) = X 4 + 1) and ∆ = 64. Let T = {ζ8 , ζ83 } for the
+root of unity ζ8 = exp(−2πi/8).
+For√a given vector z = (3 + 4i, 2 − i), the corresponding real
+√
+1
+2
+polynomial 4 (10+4 2X +10X +2 2X 3 ) has evaluation values 3+4i and 2−i at ζ8 and ζ83 ,
+3 ←
+respectively. Then the output of encoding algorithm is m(X) = 160+91X
++160X 2 +45X
+√
+√
+Ecd(z; ∆), which is the closest integral polynomial to 64 · 41 (10 + 4 2X + 10X 2 + 2 2X 3 ).
+Note that 64−1 · (m(ζ8 ), m(ζ83 )) ≈ (3.0082 + 4.0026i, 1.9918 − 0.9974i) is approximate to the
+input vector z with a high precision.
+3.3
+
+Leveled Homomorphic Encryption Scheme for Approximate Arithmetic
+
+The purpose of this subsection is to construct a leveled HE scheme for approximate arithmetic. For convenience, we fix a base p > 0 and a modulus q0 , and let q` = p` ·q0 for 0 < ` ≤ L.
+The integer p will be used as a base for scaling in approximate computation. For a security
+parameter λ, we also choose a parameter M = M (λ, qL ) for cyclotomic polynomial. For a
+level 0 ≤ ` ≤ L, a ciphertext of level ` is a vector in Rkq` for a fixed integer k. Our scheme
+consists of five algorithm (KeyGen, Enc, Dec, Add, Mult) with constants Bclean and Bmult (`) for
+noise estimation. For convenience, we will describe a HE scheme over the polynomial ring
+R = Z[X]/(ΦM (X)).
+• KeyGen(1λ ). Generate a secret value sk, a public information pk for encryption, and a
+evaluation key evk.
+• Encpk (m). For a given polynomial m ∈ R, output a ciphertext c ∈ RkqL . An encryption c
+of m will satisfy hc, ski = m + e (mod qL ) for some small e. The constant Bclean denotes
+an encryption bound, i.e., error polynomial of a fresh ciphertext satisfies kekcan
+∞ ≤ Bclean
+with an overwhelming probability.
+• Decsk (c). For a ciphertext c at level `, output a polynomial m0 ← hc, ski (mod q` ) for
+the secret key sk.
+Unlike the most of existing schemes, our scheme does not have a separate plaintext
+space from an inserted error. An output m0 = m + e of decryption algorithm is slightly
+different from the original message m, but it can be considered to be an approximate value for
+can
+approximate computations when kekcan
+∞ is small enough compared to kmk∞ . The intuition of
+approximate encryption has been partially used previously, for example, a switching key for
+homomorphic multiplication in [6, 4, 5, 12] or an evaluation key for the squashed decryption
+circuit in [18, 13] are encrypted in a similar way.
+The algorithms for homomorphic operations are required to satisfy the following properties.
+• Add(c1 , c2 ). For given encrypts of m1 and m2 , output an encryption of m1 + m2 . An error
+of output ciphertext is bounded by sum of two errors in input ciphertexts.
+• Multevk (c1 , c2 ). For a pair of ciphertexts (c1 , c2 ), output a ciphertext cmult ∈ Rkq` which
+satisfies hcmult , ski = hc1 , ski · hc2 , ski + emult (mod q` ) for some polynomial emult ∈ R
+with kemult kcan
+∞ ≤ Bmult (`).
+We may adapt the techniques of existing HE schemes over the ring R to construct a HE
+scheme for approximate arithmetic. For example, the ring-based BGV scheme [5], its variant
+with multiplication by raising ciphertext modulus [25] (k = 2), or the NTRU scheme [33] (k =
+1) can be used as a base scheme. Our scheme has its own distinct and unique characteristic
+represented by the following rescaling procedure.
+• RS`→`0 (c). For a ciphertext c ∈ Rkq` at level ` and a lower level `0 < `, output the
+j
+m
+q
+q
+ciphertext c0 ← q``0 c in Rkq`0 , i.e., c0 is obtained by scaling q``0 to the entries of c and
+9
+
+rounding the coefficients to the closest integers. We will omit the subscript ` → `0 when
+`0 = ` − 1.
+For an input ciphertext c of a message m such that hc, ski = m + e (mod q` ), the output
+q
+q
+ciphertext c0 of rescaling procedure satisfies hc0 , ski = q``0 m + ( q``0 e + escale ) (mod q`0 ). Let
+q
+τ = q``0 c − c0 and assume that an error polynomial escale = hτ , ski is bounded by some
+q
+constant Bscale . Then the output ciphertext becomes an encryption of q``0 m with a noise
+q
+bounded by q``0 kekcan
+∞ + Bscale .
+Technically this procedure is similar to the modulus-switching algorithm [5], but it has
+a completely different role in our construction. The rescaling algorithm divides a plaintext
+by an integer to remove some inaccurate LSBs as a rounding step in usual approximate
+computations using floating-point numbers or scientific notation. The magnitude of messages
+can be maintained almost the same during homomorphic evaluation, and thus the required
+size of the largest ciphertext modulus grows linearly with the depth of the circuit being
+evaluated.
+Tagged Informations. A homomorphic operation has an effect on the size of plaintext and
+the growth of message and noise. Each ciphertext will be tagged with bounds of a message
+and an error in order to dynamically manage their magnitudes. Hence, a full ciphertext will
+be of the form (c, `, ν, B) for a ciphertext vector c ∈ Rkq` , a level 0 ≤ ` ≤ L, an upper bound
+ν ∈ R of message and an upper bound B ∈ R of noise. Table 1 shows the full description of
+our scheme and homomorphic operations for ciphertexts with tagged information.
+Encpk : m 7→ (c, L, ν, Bclean ) for some ν ≥ kmkcan
+∞
+Decsk : (c, `, ν, B) 7→ (hc, ski (mod q` ), B)
+0
+
+0
+
+RS`→`0 : (c0 , `, ν, B) 7→ (c, `0 , p` −` · ν, p` −` · B + Bscale )
+Add : ((c1 , `, ν1 , B1 ), (c2 , `, ν2 , B2 )) 7→ (cadd , `, ν1 + ν2 , B1 + B2 )
+Multevk : ((c1 , `, ν1 , B1 ), (c2 , `, ν2 , B2 ))
+7→ (cmult , `, ν1 ν2 , ν1 B2 + ν2 B1 + B1 B2 + Bmult )
+Table 1. Description of our scheme
+
+Homomorphic Operations of Ciphertexts at Different Levels. When given encryptions c, c0 of m, m0 belong to the different levels ` and `0 < `, we should bring a ciphertext c
+at a larger level ` to the smaller level `0 before homomorphic operation. There are two candidates: simple modular reduction and the RS procedure. It should be chosen very carefully
+by considering the scale of messages because the simple modular reduction c 7→ c (mod q`0 )
+q
+preserves the plaintext while RS procedure changes the plaintext from m to q``0 m as in Fig.3.
+Throughout this paper, we perform simple modulus reduction to the smaller modulus before
+computation on ciphertexts at different levels unless stated otherwise.
+3.4
+
+Concrete Construction of RLWE-based HE scheme
+
+The performance of our construction and the noise growth depend on the base HE scheme.
+Moreover, a more accurate noise estimation can be done if we choose a specific one. We
+take the BGV scheme [5] with multiplication method by raising ciphertext modulus [25] as
+the underlying scheme of our concrete construction and implementation. From Costache and
+10
+
+m
+
+m
+e
+
+e
+
+q`
+
+q`
+0
+
+RS
+
+Modular reduction
+
+p` −` · m
+
+q`0
+
+m
+
+q`0
+
+Fig. 3. Rescaling and simple modular reduction
+
+Smart’s comparison [14], it seems to be the most efficient among the existing RLWE-based
+schemes.
+For security and simplicity, we will use power-of-two degree cyclotomic rings. In this case,
+the dual ideal R∨ = N −1 · R of R = Z[X]/(X N + 1) is simply a scaling of the ring. The
+RLWE problem is informally described by transforming samples (a, b = a · s0 + e0 ) ∈ Rq × R∨
+q
+into (a, b = a · s + e) ∈ Rq × Rq where s = s0 · N ∈ R and e = e0 · N ∈ R, so that the
+coefficients of e can be sampled independently from the discrete Gaussian distribution.
+We will also choose the ring of Gaussian integers Z[i] as a discrete subspace of C for
+implementation. Another advantage of power-of-two degree cyclotomic rings is the efficient
+rounding operation b·eR∨ in dual fractional ideal R∨ . Since the columns of matrix CRTM
+defined in Section 2.2 are mutually orthogonal, the encoding of plaintext can be efficiently
+done by rounding coefficients to the nearest integers after multiplication with the matrix
+CRT−1
+M.
+We adopt the notation of some distributions on from [25]. For a real σ > 0, DG(σ 2 )
+samples a vector in ZN by drawing its coefficient independently from the discrete Gaussian
+distribution of variance σ 2 . For an positive integer h, HW T (h) is the set of signed binary
+vectors in {0, ±1}N whose Hamming weight is exactly h. For a real 0 ≤ ρ ≤ 1, the distribution
+ZO(ρ) draws each entry in the vector from {0, ±1}N , with probability ρ/2 for each of −1
+and +1, and probability being zero 1 − ρ.
+• KeyGen(1λ ).
+- Given the security parameter λ, choose a power-of-two M = M (λ, qL ), an integer
+h = h(λ, qL ), an integer P = P (λ, qL ) and a real value σ = σ(λ, qL ).
+- Sample s ← HW T (h), a ← RqL and e ← DG(σ 2 ). Set the secret key as sk ← (1, s)
+and the public key as pk ← (b, a) ∈ R2qL where b ← −as + e (mod qL ).
+- Sample a0 ← RP ·qL and e0 ← DG(σ 2 ). Set the evaluation key as evk ← (b0 , a0 ) ∈ R2P ·qL
+where b0 ← −a0 s + e0 + P s2 (mod P · qL ).
+• Ecd(z; ∆). For a (N/2)-dimensional
+vector z = (zj )j∈T ∈ Z[i]N/2 of Gaussian integers,
+
+
+−1
+compute the vector ∆ · π (z) σ(R) . Return its inverse with respect to canonical embedding map.
+• Dcd(m; ∆). For an input polynomial m(X) ∈ R, compute the corresponding vector π ◦
+N/2 after scaling,
+σ(m). Return
+the closest
+j
+m vector of Gaussian integers z = (zj )j∈T ∈ Z[i]
+j
+i.e., zj = ∆−1 · m(ζM
+) for j ∈ T .
+
+• Encpk (m). Sample v ← ZO(0.5) and e0 , e1 ← DG(σ 2 ). Output v · pk + (m + e0 , e1 )
+(mod qL ).
+• Decsk (c). For c = (b, a), output b + a · s (mod q` ).
+• Add(c1 , c2 ). For c1 , c2 ∈ R2q` , output cadd ← c1 + c2 (mod q` ).
+• Multevk (c1 , c2 ). For c1 = (b1 , a1 ), c2 = (b2 , a2 ) ∈ R2q` , let (d0 , d1 , d2 ) = (b1 b2 , a1 b2 +
+a2 b1 , a1 a2 ) (mod q` ). Output cmult ← (d0 , d1 ) + P −1 · d2 · evk (mod q` ).
+11
+
+• RS`→`0 (c). For c ∈ R2q` , output c0 ←
+
+j
+
+q`0
+q` c
+
+m
+
+∈ (mod q`0 ).
+
+Throughout this paper, we use non-integral polynomial as plaintext for convenience of
+analysis, so that a ciphertext (c ∈ R2q` , `, ν, B) will be called a valid encryption of m ∈ S
+can
+if kmkcan
+∞ ≤ ν and hc, ski = m + e (mod q` ) for some polynomial e ∈ S with kek∞ ≤ B.
+The following lemmas give upper bounds on noise growth after encryption, rescaling and
+homomorphic operations. See Appendix B for proofs.
+√
+Lemma
+1
+(Encoding
+and
+Encryption).
+Encryption
+noise
+is
+bounded
+by
+B
+=
+8
+2σN +
+clean
+√
+√
+N/2
+6σ N + 16σ hN . If c ← Encpk (m) and m ← Ecd(z; ∆) for some z ∈ Z[i]
+and ∆ >
+N + 2Bclean , then Dcd(Decsk (c)) = z.
+0
+
+Lemma 2 (Rescaling). Let (c, `, ν, B) be an encryption of m ∈ S. Then (c0 , `0 , p` −` ·
+0
+`0 −` · m for c0 ← RS
+ν, p` −` · B + B
+`→`0 (c) and Bscale =
+p
+√scale ) is a valid encryption of p
+N/3 · (3 + 8 h).
+Lemma 3 (Addition/Multiplication). Let (ci , `, νi , Bi ) be encryptions of mi ∈ S for i =
+1, 2, and let cadd ← Add(c1 , c2 ) and cmult ← Multevk (c1 , c2 ). Then (cadd , `, ν1 + ν2 , B1 + B2 )
+and (cmult , `, ν1 ν2 , ν1 B2 + ν2 B1 + B1 B√
+2 + Bmult (`)) are valid encryptions of m1 + m2 and
+m1 m2 , respectively, where Bks = 8σN/ 3 and Bmult (`) = P −1 · q` · Bks + Bscale .
+Permutations over the Plaintext Slots. It is known that the Galois group Gal =
+Gal(Q(ζM )/Q) consists of the mappings κk : m(X) 7→ m(X k ) (mod ΦM (X)) for a polynomial m(X) ∈ R and all k co-prime with M , and that it is isomorphic to Z∗M . As describe
+in [24], applying the transformation κk to the polynomials is very useful for the permutation
+on a vector of plaintext values.
+For example, a plaintext polynomial m(X) is decoded into a vector of evaluations at the
+j
+))j∈T for a subgroup T of Z∗M satisfying Z∗M /T = {±1}. For any
+specific points, i.e., (m(ζM
+i, j ∈ T , there is an element κk ∈ Gal which sends an element in the slot of index i to an
+element in the slot of index j. That is, for a vector of plaintext values z = (zj )j∈T ∈ CN/2 with
+the corresponding polynomial m(X) = σ −1 ◦π −1 (z), if k = j −1 ·i (mod M ) and m0 = κk (m),
+jk
+j
+i ) = z . Hence the element in the slot of index
+) = m(ζM
+) = m(ζM
+then we have zj0 = m0 (ζM
+i
+0
+j of m is the same as that in the slot of index i of m.
+Given an encryption c of a message m ∈ R with a secret key sk = (1, s), we denote
+κk (c) the vector obtained by applying κk to the entries of ciphertext c. It follows from [24]
+that κk (c) is a valid encryption of κk (m) with respect to the secret κk (s). In addition, the
+key-switching technique can be applied to the ciphertext κk (c) in order to get an encryption
+of the same message with respect to the original secret s.
+Relative Error. The decryption result of a ciphertext is an approximate value of plaintext,
+so the noise growth from homomorphic operations may cause some negative effect such as loss
+of significance. Hence it needs to dynamically manage the bound of noise of ciphertexts for
+a correct understanding of the outputs. A full ciphertext (c, `, ν, B) contains upper bounds
+of plaintext and noise, but sometimes it is convenient to consider the relative error defined
+by β = B/ν.
+For example, it is easy to see that the addition of ciphertexts with relative errors βi =
+Bi /νi produces a ciphertext with a relative error bounded by maxi {βi }. In other case, if we
+multiply two ciphertexts (c1 , `, ν1 , B1 ), (c2 , `, ν2 , B2 ) and scale down to a lower level `0 (as
+floating-point multiplication does), it produces a ciphertext at level `0 with a relative error
+0
+
+Bmult (`) + p`−` · Bscale
+β = β1 + β2 + β1 β2 +
+ν1 ν2
+from Lemmas 2 and 3. This relative error is very close to β1 + β2 similar to the case of
+unencrypted floating-point multiplication under an appropriate choice of parameter and level.
+0
+
+12
+
+4
+
+Homomorphic Evaluation of Approximate Arithmetic
+
+In this section, we describe some algorithms for evaluating some circuits commonly used
+in practical applications and analyze error growth of an output ciphertext based on our
+concrete construction. We start with the homomorphic evaluations of typical circuits such as
+addition and multiplication by constants, monomial, and polynomial. These can be extended
+to approximate series for analytic functions such as multiplicative inverse and exponential
+function. The required parameters and precision of results will be also analyzed together.
+0
+For the convenience of analysis, we will assume that the term β1 β2 + (Bmult (`) + p`−` ·
+Bscale )/(ν1 ν2 ) is always bounded by a fixed constant β∗ , so the relative error of ciphertext
+c0 ← RS`→`0 (Mult(c1 , c2 )) satisfies the inequality β 0 ≤ β1 + β2 + β∗ . We will discuss about
+the choice of β∗ and check the validity of this assumption at the end of Section 4.1.
+4.1
+
+Polynomial Functions
+
+The goal of this subsection is to suggest an algorithm for evaluating an arbitrary polynomial,
+and analyze its complexity and precision of output ciphertext. We start with the constant
+addition and multiplication functions f (x) = x + a and f (x) = ax for a constant a ∈ R.
+Lemma 4 (Addition/Multiplication by Constant). Let (c, `, ν, B) be an encryption of
+m ∈ S. For a constant a ∈ R, let ca ← c + (a, 0) (mod q` ) and cm ← a · c (mod q` ). Then
+can
+can
+(ca , `, ν + kakcan
+∞ , B) and (cm , `, kak∞ · ν, kak∞ · B) are valid encryptions of m + a and am,
+respectively.
+Proof. There is a polynomial e ∈ R such that hc, ski = m + e (mod q` ) and kekcan
+∞ ≤ B.
+It is obvious that hca , ski = a + hc, ski = (a + m) + e (mod q` ). We also have hcm , ski =
+can
+a · (m + e) = am + ae (mod q` ) and ka · ekcan
+t
+u
+∞ ≤ kak∞ · B.
+Now we describe an algorithm to evaluate the power polynomial xd for a power of two
+integer d. For simplicity, we assume that the bound ν of message m is equal to the base p.
+Algorithm 1 Power polynomial f (x) = xd of power-of-two degree
+1: procedure Power(c ∈ R2q` , d = 2r )
+2:
+c0 ← c
+3:
+for j = 1 to r do
+4:
+cj ← RS(Mult(cj−1 , cj−1 ))
+5:
+end for
+6:
+return cr
+7: end procedure
+
+For an input polynomial m ∈ R of size kmkcan
+∞ ≤ p, Algorithm 1 repeatedly performs
+the rescaling procedure after each of squaring step to maintain the size of message, thus
+the output of Algorithm 1 is an encryption of the scaled value p · f (m/p) = md /pd−1 . The
+following lemma explains the correctness of Algorithm 1 and gives the relative error of the
+output ciphertext.
+Lemma 5. Let (c, `, p, β0 · p) be an encryption of m ∈ S and d be a power-of-two integer.
+Then Algorithm 1 outputs a valid encryption (cr , ` − r, p, βd · p) of md /pd−1 for some real
+number βd ≤ d · β0 + (d − 1) · β∗ .
+13
+
+Proof. We argue by induction on j. It is easy to see that (cj , ` − j, p, β2j · p) is an encryption
+j
+j
+of m2 /p2 −1 for some real number β2j ≤ 2 · β2j−1 + β∗ . After r iterations, it produces an
+r
+r
+encryption (cr , ` − r, p, β2r · p) of m2 /p2 −1 for some β2r such that β2r ≤ 2r · β0 + (2r − 1) · β∗ .
+t
+u
+Algorithm 1 can be extended to an algorithm which evaluates an arbitrary polynomial.
+Similar to the previous case, this extended algorithm outputs an encryption of the scaled
+value p · f (m/p) = md /pd−1 .
+Lemma 6. Let (c, `, p, B) be an encryption of m ∈ S and let d be a positive integer. Then
+one can compute a valid encryption (c0 , ` − dlog de, p, βd · p) of md /pd−1 for some real number
+βd ≤ d · β0 + (d − 1) · β∗ .
+P
+Lemma 7 (Polynomial). Let f (x) = dj=0 aj xj be a nonzero polynomial of coefficients aj
+in R and of degree d. Let (c, `, p, β0 · p) be an encryption of mS. Then
+Pone can compute a
+valid encryption (c0 , ` − dlog de, Mf , βd · Mf ) of p · f (m/p) for Mf = p · dj=0 kaj kcan
+∞ and for
+some real number βd ≤ d · β0 + (d − 1) · β∗ .
+If the relative error of input ciphertext satisfies β0 ≤ β∗ , the relative error of the resulting
+ciphertext is bounded by βd ≤ d · β0 + (d − 1) · β∗ ≤ 2d · β0 . Hence, the precision loss is
+bounded by (log d + 1) bits, which is comparable to loss of significance occurring in unencrypted numerical computations. The evaluation of polynomial of degree d can be done in d
+homomorphic multiplications between ciphertext of depth r = dlog de by computing the encryptions of m, m2 /p, . . . , md /pd−1 simultaneously. We may apply the Paterson-Stockmeyer
+algorithm√ [37] to the evaluation procedure. Then a degree d polynomial can be evaluated
+using O( d) multiplications, which gives a similar upper bound on relative error as the naive
+approach.
+0
+Let us return to the assumption β1 β2 + (Bmult (`) + p`−` · Bscale )/(ν1 ν2 ) ≤ β∗ . We will
+choose β∗ as an upper bound of relative errors of fresh ciphertexts in our scheme. After
+evaluation of circuits of depth less than (L − 1), the resulting ciphertext will have a relative
+error less than 2L · β∗ . It means that the first term β1 β2 will be bounded by 2L+1 · β∗2 after
+evaluation. The condition 2L+1 · β∗2 ≤ 21 β∗ , or equivalently β∗ ≤ 2−L−2 , seems to be natural;
+otherwise the relative error becomes 2L+1 ·β∗ ≥ 2−1 after evaluation, so the decryption result
+will have almost no information. Thus we have β1 + β2 ≤ 12 β∗ . The second term is equal to
+0
+0
+(p` −` · Bmult (`) + Bscale )/ν 0 where ν 0 = p` −` · ν1 ν2 is the message bound of new ciphertext
+obtained by rescaling after multiplication. The numerator is asymptotically bounded by
+0
+p` −` · Bmult (`) + Bscale = O(N ). If the message bound always satisfies ν 0 ≥ p as in our
+0
+algorithms, the second term is (Bmult (`) + p`−` · Bscale )/(ν1 ν2 ) = O(p−1 · N ) which is smaller
+than a half of relative error of fresh ciphertext because β∗ ≥ p−1 · Bclean = Ω(p−1 · σN ).
+4.2
+
+Approximate Polynomials and Multiplicative Inverse
+
+We now homomorphically evaluate complex analytic functions f (x) using their Taylor de(j)
+P
+composition f (x) = Td (x) + Rd (x) for Td (x) = dj=0 f j!(0) xj and Rd (x) = f (x) − Td (x).
+Lemma 7 can be utilized to evaluate the rounded polynomial of scaled Taylor expansion
+bpu · Td e (x) of f (x) for some non-negative integers u and d, which outputs an approximate
+value of pu+1 · f (m/p). The bound of error is obtained by aggregating the error occurring
+during evaluation, the rounding error and the error of the remainder term pu+1 · Rd (m/p). In
+the case of RLWE-based constructions, we should consider the corresponding plaintext vector
+π ◦ σ(m) = (zj )j∈T and convergence of series in each slot.
+As anPexample, the exponential function f (x) = exp(x) has the Taylor polynomial
+e
+when |x| ≤ 1.
+Td (x) = dj=0 j!1 xj and the remaining term is bounded by |Rd (x)| ≤ (d+1)!
+14
+
+Assume that we are given an encryption (c, `, p, β0 · p) of m. With the input ciphertext c and
+the polynomial bpu · Td e (x), one can compute an encryption of pu+1 · Td (m/p). We see that
+an error of the resulting ciphertext is bounded by
+u+1
+
+dp + p
+
+·
+
+d
+X
+1
+j=1
+
+j!
+
+(j · β0 + (j − 1)β∗ ) ≤ dp + pu+1 · (eβ0 + β∗ ).
+
+If we write exp(m/p) := σ −1 ◦ π −1 ((exp(zj /p))j∈T ), the output ciphertext can be also viewed
+as an encryption of pu+1 · exp(m/p) of the form (c0 , ` − dlog de, ν 0 , B 0 ) for ν 0 = pu+1 · e and
+e
+), and its relative error is bounded by β 0 ≤ (β0 + β∗ · e−1 ) +
+B 0 = dp + pu+1 · (eβ0 + β∗ + (d+1)!
+1
+(p−u ·d·e−1 + (d+1)!
+). If β0 ≥ β∗ , then we may take integers d and u satisfying (d+1)! ≥ 4β0−1
+
+and pu ≥ 2β0−1 · d to make the relative error less than 2β0 . In this case, the precision loss
+during evaluation of exponential function is less than one bit.
+In the case of multiplicative inverse, we adopt an algorithm described in [8] to get a better
+complexity. Assuming that a complex number x satisfies |x̂| ≤ 1/2 for x̂ = 1 − x, we get
+2
+
+r−1
+
+x(1 + x̂)(1 + x̂2 )(1 + x̂2 ) · · · (1 + x̂2
+
+r
+
+) = 1 − x̂2 .
+
+(1)
+
+Q
+r
+r
+2j
+Note that |x̂2 | ≤ 2−2 , and it converges to one as r goes to infinity. Hence, r−1
+j=0 (1 + x̂ ) =
+r
+x−1 (1 − x̂2 ) can be considered as an approximate multiplicative inverse of x with 2r bits of
+precision.
+For homomorphic evaluation, we change a scale and assume that a complex number zj
+satisfies |zˆj | ≤ p/2 for zˆj = p − zj . The standard approach starts by normalizing those
+numbers to be in the unit interval by setting x = zj /p. Since we cannot multiply fractions
+over encrypted data, the precision point should move to the left for each term of (1). That
+r
+is, we multiply both sides of the equation (1) by p2 and then it yields
+1
+
+1
+
+2
+
+2
+
+r−1
+
+zj (p + zˆj )(p2 + zˆj 2 )(p2 + zˆj 2 ) · · · (p2
+
+r−1
+
++ zˆj 2
+
+r
+
+r
+
+) = p2 − zˆj 2 .
+
+r Q
+2i
+2i
+Therefore, the product p−2 · r−1
+i=0 (p + zˆj ) can be seen as the approximate inverse of zj with
+2r bits of precision. Let ẑ = (zˆj )j∈T and z −1 = (zj−1 )j∈T . Algorithm 2 takes an encryption of
+m̂ = σ −1 ◦ π −1 (ẑ) as an input and outputs an encryption
+scaled multiplicative inverse
+Qr−1of 2its
+j
+j
+2
+−1
+−1
+−1
+p · (σ ◦ π (z )) by evaluating the polynomial j=0 (p + m̂2 ). The precision of the
+resulting ciphertext and the optimal iterations number r will be analyzed in the following
+lemma.
+
+Algorithm 2 Inverse function f (x) = x−1
+1: procedure Inverse(c ∈ R2q` , r)
+2:
+p ← (p, 0)
+3:
+c0 ← c
+4:
+v 1 ← p + c0 (mod q`−1 )
+5:
+for j = 1 to r − 1 do
+6:
+cj ← RS(Mult(cj−1 , cj−1 ))
+7:
+v j+1 ← RS(Mult(v j , p + cj ))
+8:
+end for
+9:
+return v r
+10: end procedure
+
+15
+
+Lemma 8 (Multiplicative Inverse). Let (c, `, p/2, B0 = β0 · p/2) be an encryption of
+m̂ ∈ S and Q
+let m = p − m̂. Then Algorithm 2 outputs a valid encryption (v r , ` − r, 2p, β · 2p)
+2i
+0
+of m = p · r−1
+i=0 (1 + (m̂/p) ) for some β ≤ β0 + rβ∗ .
+Proof. From Lemma 4, (v 1 , ` − 1, 3p/2, B0 ) is a valid encryption of p + m̂ and its relative
+j
+j
+error is β10 = β0 /3. It also follows from Lemma 5 that (cj , ` − j, 2−2 · p, βj · 2−2 · p) is a valid
+j
+j
+encryption of m̂2 /p2 −1 for some real number βj ≤ 2j · (β0 + β∗ ), and so (p + cj , ` − j, (1 +
+j
+j
+j
+j
+j
+j
+j
+2−2 )p, βj · 2−2 · p) is a valid encryption of p + m̂2 /p2 −1 = (p2 + m̂2 )/p2 −1 with a relative
+j
+j
+error βj0 ≤ βj /(22 + 1) ≤ 2j · (β0 + β∗ )/(22 + 1), respectively.
+Using the induction on j, we can show that
+!
+j−1
+j−1
+Y
+Y
+i
+i
+v j , ` − j, p ·
+(1 + 2−2 ), βj00 · p ·
+(1 + 2−2 )
+i=0
+
+i=0
+
+Qj−1 2i
+Q
+i
+j
+i
+is a valid encryption of i=0
+(p + m̂2 )/p2 −2 = p · j−1
+(1 + (m̂/p)2 ) with a relative error
+i=0
+Pj−1 0
+Qj−1
+−2i ) =
+βj00 ≤
+i=0 βi + (j − 1) · β∗ . Note that the message is bounded by p ·
+i=0 (1 + 2
+j
+(2p) · (1 − 2−2 ) < 2p and the relative error satisfies
+!
+j−1
+X
+2i
+00
+· (β0 + β∗ ) + (j − 1) · β∗ ≤ β0 + j · β∗
+βj ≤
+2i + 1
+2
+i=0
+2i
+i=0 22i +1 = 1. Therefore, the output v r of Algorithm 2 represents a valid
+Q
+2i
+t
+u
+encryption (v r , ` − r, 2p, β · 2p) of m0 = p · r−1
+i=0 (1 + (m̂/p) ) for some β ≤ β0 + r · β∗ .
+
+from the fact that
+
+P∞
+
+Let m−1 (X) := σ −1 ◦ π −1 (z −1 ) be the polynomial in S corresponding to z −1 . The output
+ciphertext (v r , ` − r, 2p, β · 2p) of the previous lemma can be also viewed as an encryption
+of p2 · m−1 . The error bound is increased by the convergence error kp2 · m−1 − m0 kcan
+∞ =
+r
+−2r · 2p. Therefore, the ciphertext (v , ` − r, 2p, (β + 2−2r ) · 2p) is a
+kp2 · m−1 · (m̂/p)2 kcan
+≤
+2
+r
+∞
+r
+r
+valid encryption of m0 and its relative error is β + 2−2 ≤ β0 + rβ∗ + 2−2 , which is minimized
+r
+r
+when rβ∗ ≈ 2−2 . Namely, r = dlog log β∗−1 e yields the inequality β0 +rβ∗ +2−2 ≤ β0 +2rβ∗ =
+β0 + 2dlog log β∗−1 e · β∗ . Thus the precision loss during evaluation of multiplicative inverse is
+less than one bit if 2dlog log β∗−1 e · β∗ ≤ β0 .
+The optimal iterations number r can be changed upon more/less information about the
+magnitude of m̂. Assume that we have an encryption of message m̂ whose size is bounded
+can ≤ p for some 0 <  < 1. By applying Lemma 8, we can compute an encryption
+by km̂k
+Q∞
+2i
+2
+−1
+2r
+of p · r−1
+β ≤ β0 + rβ∗ ,
+i=0 (1 + (m̂/p) ) = (p · m ) · (1 − (m̂/p) ) with a relative error
+r
+which is an approximate value of p2 · m−1 with an error bounded by 2 · 2p. Then the
+optimal iterations number is r ≈ log log β∗−1 − log log −1 and the relative error becomes
+β ≤ β0 + 2d(log log β∗−1 − log log −1 )e · β∗ when r = d(log log β∗−1 − log log −1 )e.
+4.3
+
+Fast Fourier Transform
+
+Let d be a power of two integer and consider the complex primitive d-th root of unity
+ζd = exp(2πi/d). For a complex vector u = (u0 , . . . , ud−1 ), its discrete Fourier transform
+P
+jk
+(DFT) is defined by the vector v = (v0 , . . . , vd−1 ) ← DFT(u) where vk = d−1
+j=0 ζd · uj for
+k = 0, . . . , d−1. The DFT has a numerous applications in mathematics and engineering such
+as signal processing technology. The basic idea is to send the data to Fourier space, carry out
+Hadamard operations and bring back the computation result to a original domain via the
+inverse DFT. We denote by Wd (z) = (z j·k )0≤j,k<d the Vandermonde matrix generated by
+{z k : 0 ≤ k < d}. The DFT of u can be evaluated by the matrix multiplication DFT(u) =
+16
+
+Wd (ζd )·u, but the complexity of DFT can be reduced down to O(d log d) using FFT algorithm
+by representing the DFT matrix Wd (ζd ) as a product of sparse matrices.
+Recently, Costache et al. [15] suggested an encoding method which sends the complex d-th
+root of unity to the monomial Y = X M/d over cyclotomic ring R = Z[X]/(ΦM (X)) for cryptosystem. Then homomorphic evaluation of DFT is simply represented as a multiplication
+of the matrix Wd (Y ) to a vector of ciphertexts over polynomial ring.
+On the other hand, our RLWE-based HE scheme can take advantage of batch technique
+as described in Section 3.2. In the slot of index k ∈ T , the monomial Y = X M/d and
+matrix Wd (Y ) are converted into ζdk and the DFT matrix Wd (ζdk ), respectively, depending
+on primitive root of unity ζdk . However, our batching scheme is still meaningful because the
+evaluation result of whole pipeline consisting of DFT, Hadamard operations, and inverse
+DFT is independent of index k, even though Wd (Y ) corresponds to the DFT matrices
+generated by different primitive d-th roots of unity.
+It follows from the property of ordinary FFT algorithm that if (ci , `, ν, B) is an encryption
+of ui for i = 0, . . . , d − 1 and v = (v0 , . . . , vd−1 ) ← Wd (Y ) · u, √
+then the
+√ output of FFT
+M/d
+0
+algorithm using X
+instead of ζd forms valid encryptions (ci , `, d · ν, d · B). Note that
+the precision of input ciphertexts is preserved as B/ν. Our FFT algorithm takes a similar
+time with [15] in the same parameter setting, but the amortized time is much smaller thanks
+to our own plaintext packing technique. In the evaluation of whole pipeline DFT-Hadamard
+√
+multiplication-inverse DFT, one may scale down the transformed ciphertexts by d before
+Hadamard operations to maintain the magnitude of messages and reduce the required levels
+for whole pipeline.
+The fast polynomial multiplication using the FFT algorithm is a typical example that
+computes the exact value using approximate arithmetic. In particular for the case of integral
+polynomials, the exact multiplication can be recovered from its approximate value since we
+know that their multiplication is also an integral polynomial. Likewise, when the output of
+a circuit has a specific format or property, it is possible to get the exact computation result
+from its sufficiently close approximation.
+
+5
+
+Implementation Results
+
+In this section we describe how to select parameters for evaluating arithmetic circuits described in Section 4. We also provide implementation results with concrete parameters. Our
+implementation is based on the NTL C++ library running over GMP. Every experimentation was performed on a machine with an Intel Core i5 running at 2.9 GHz processor using
+a parameter set with 80-bit security level.
+We need to set the ring dimension N that satisfies the security condition N ≥ λ+110
+7.2 log(P ·
+qL ) to get λ-bit security level. [32, 25] We note that P · qL is the largest modulus to generate
+evaluation key and it suffices to assume that P is approximately equal to qL . In our implementation, we used the Gaussian distribution of standard deviation σ = 3.2 to sample error
+polynomials, and set h = 64 as the number of nonzero coefficients in a secret key s(X).
+Evaluation of Typical Circuits. In Table 2, we present the parameter setting and performance results for computing a power of a ciphertext, the multiplicative inverse of a ciphertext
+and exponential function. The average running times are only for ciphertext operations, excluding encryption and decryption procedures. As described in Section 3.4, each ciphertext
+can hold N/2 plaintext slots and one can perform the computation in parallel in each slot.
+Here the amortized running time means a relative time per slot.
+The homomorphic evaluation of the circuit x1024 with an input of 36-bit precision is hard
+to be implemented in practice over previous methods. Meanwhile, our scheme can compute
+17
+
+this circuit simultaneously over 214 slots in about 7.46 seconds, yielding an amortized rate of
+0.43 milliseconds per slot. Computation of the multiplicative inverse is done by evaluating the
+polynomial up to degree 8 as described in Algorithm 2. It gives an amortized time per slots
+of about 0.11 milliseconds. In the case of exponential function, we used terms in its Taylor
+expansion up to degree 8 and it results in an amortized time per slots of 0.16 milliseconds.
+Table 2. Implementation results for homomorphic evaluation of typical circuits
+
+Function
+
+N
+
+log q
+
+log p
+
+Consumed
+
+Input
+
+Total Amortized
+
+levels
+
+precision
+
+x16
+213
+
+x−1
+
+155
+
+30
+
+4
+
+14 bits
+
+exp(x)
+x1024
+
+215
+
+620
+
+56
+
+10
+
+36 bits
+
+time
+
+time
+
+0.31s
+
+0.07ms
+
+0.45s
+
+0.11ms
+
+0.65s
+
+0.16ms
+
+7.46s
+
+0.43ms
+
+16
+Theoretical lower bound
+Experimental result
+
+14
+12
+10
+8
+6
+
+0
+
+1
+
+2
+3
+Consumed level
+
+Bit precision of output (log β −1 )
+
+Bit precision of output (log β −1 )
+
+Significance Loss. In Section 4, we analyzed the theoretical upper bounds on the growth of
+relative errors during evaluations. We can see from experimental result that initial precision
+is about 4 bits greater than theoretic bound of precision since we multiply 16 to the variance
+of encryption error to get a high probability bound. In Fig.4, we depict bit precisions of
+output ciphertexts during the evaluation of homomorphic multiplications (e.g. x16 for the
+left figure and x1024 for the right figure). We can actually check that both theoretic bound
+and experimental result of precision loss during homomorphic multiplications is less than 4.1
+(or resp. 10.1) when the depth of the circuit is 4 (or resp. 10).
+
+4
+
+38
+Theoretical lower bound
+Experimental result
+
+36
+34
+32
+30
+28
+26
+24
+
+0
+
+1
+
+2
+
+3 4 5 6 7
+Consumed level
+
+8
+
+9
+
+10
+
+Fig. 4. The variation of bit precision of ciphertexts when (f (x), N, log p, log q) = (x16 , 213 , 30, 155) and
+(x1024 , 215 , 56, 620)
+
+Logistic Function. Let us consider the logistic function f (x) = (1 + exp(−x))−1 , which is
+widely used in statistics, neural networks and machine learning as a probability function. For
+example, logistic regression is used for a prediction of the likelihood to have a heart attack
+in an unspecified period for men, as indicated in [3]. It was also used as a predictive equation
+to screen for diabetes, as described in [40]. This function can be approximated by its Taylor
+series
+1 1
+1
+1 5
+17 7
+31
+f (x) = + x − x3 +
+x −
+x +
+x9 + O(x11 ).
+2 4
+48
+480
+80640
+1451520
+18
+
+In [3, 9], every real number is scaled by a predetermined factor to transform it as a binary
+polynomial before computation. The plaintext modulus t should be set large enough so that
+no reduction modulo t occurs in the plaintext space. The required bit size of plaintext modulus exponentially increases on the depth of the circuit, which strictly limits the performance
+of evaluation. On the other hand, the rescaling procedure in our scheme has the advantage
+that it significantly reduces the size of parameters (e.g. (log p, log q) = (30, 155)).
+The parallelized computation for logistic function is especially important in real world
+applications such as statistic analysis using multiple data. In previous approaches, each slot
+of plaintext space should represent a larger degree than encoded polynomials so they could
+support only a few numbers of slots. On the other hand, we provide a parallelization method
+with an amortization amount independent from target circuit and get a better amortized
+time of evaluation.
+Table 3. Comparison of implementation results for homomorphic evaluation of logistic function
+
+Method
+
+N
+
+log q
+
+Polynomial Amortization Total Amortized
+degree
+
+amount
+
+time
+
+time
+
+[3]
+
+214
+
+512
+
+7
+
+-
+
+> 30s
+
+-
+
+[9]
+
+17430
+
+370
+
+7
+
+-
+
+1.8s
+
+-
+
+7
+
+212
+
+0.54s
+
+0.13ms
+
+9
+
+213
+
+0.78s
+
+0.09ms
+
+213
+
+Ours
+
+214
+
+155
+185
+
+Discrete Fourier Transform. With the parameters (N, log p) = (213 , 50), we encrypt
+coefficients of polynomials and homomorphically evaluate the standard processing (FFTHadamard product of two vectors-inverse FFT) in 73 minutes (amortized 1.06 seconds per
+slot) when d = 213 . We could reduce down the evaluation time to 22 minutes (amortized
+0.34 seconds per slot) by adapting the multi-threading method on a machine with four cores,
+compared to 17 minutes of the previous work [15] on six cores. Since the rescaling procedure of transformed ciphertexts enables us to efficiently carry out higher degree Hadamard
+operations in Fourier space, the gap of parameter and running time between our scheme
+and previous methods grows very quickly as degree N and the depth of Hadamard operation
+increase. For instance, we also homomorphically evaluate the product of 8 polynomials, using
+pipeline consisting of FFT-Hadamard product of eight vectors-inverse FFT with parameters
+(N, log q) = (214 , 250) in amortized time of 1.76 seconds.
+Table 4. Comparison of implementation results for homomorphic evaluation of a full image processing pipeline
+
+Method
+[15]4
+
+Ours5
+
+d
+
+N
+
+log q
+
+Degree of
+
+Amortization
+
+Total Amortized
+
+Hadamard operation
+
+amount
+
+time
+
+time
+
+24 213
+
+150
+
+2
+
+-
+
+0.46s
+
+-
+
+213
+
+214
+
+192
+
+2
+
+-
+
+17min
+
+-
+
+24
+
+213
+
+120
+
+2
+
+212
+
+0.88s
+
+0.21ms
+
+213 213
+
+130
+
+2
+
+212
+
+22min
+
+0.34s
+
+8
+
+213
+
+4h
+
+1.76s
+
+213
+
+214
+
+250
+
+19
+
+6
+
+Conclusion
+
+In this work, we presented a homomorphic encryption scheme which supports an approximate
+arithmetic over encryption. We also introduced a new batching technique for packing much
+information in a single ciphertext, so we could achieve practical performance advantage by
+parallelism. Another benefit of our scheme is the rescaling procedure, which enables us to
+preserve the precision of the message after approximate computation. Furthermore, it leads
+to reduce the size of ciphertext significantly so the scheme can be a reasonable solution for
+computation over large integers.
+The primary open problem is finding way to convert our scheme to a fully homomorphic
+scheme using bootstrapping. The modulus of ciphertext decreases with homomorphic operations and our scheme can no longer support homomorphic computation at the lowest level.
+To overcome this problem, we aim to transform an input ciphertext into an encryption of
+almost the same plaintext with a much larger modulus.
+Further improvement of our implementations are possible by other optimizations. We
+would like to enhance them to take advantage of Number Theoretical Transform (NTT) for
+fast polynomial multiplication.
+Acknowledgments. This work was partially supported by IT R&D program of MSIP/KEIT (No.
+B0717-16-0098) and Samsung Electronics Co., Ltd. (No. 0421-20150074). The fourth author
+was supported by National Research Foundation of Korea (NRF) Grant funded by the Korean Government (No. NRF-2012H1A2A1049334). We would like to thank Kristin Lauter,
+Damien Stehlé and an anonymous ASIACRYPT referee for useful comments.
+
+References
+1. S. Arita and S. Nakasato. Fully homomorphic encryption for point numbers. In International Conference
+on Information Security and Cryptology, pages 253–270. Springer, 2016.
+2. J. W. Bos, K. Lauter, J. Loftus, and M. Naehrig. Improved security for a ring-based fully homomorphic
+encryption scheme. In Cryptography and Coding, pages 45–64. Springer, 2013.
+3. J. W. Bos, K. Lauter, and M. Naehrig. Private predictive analysis on encrypted medical data. Journal
+of biomedical informatics, 50:234–243, 2014.
+4. Z. Brakerski. Fully homomorphic encryption without modulus switching from classical GapSVP. In
+Advances in Cryptology–CRYPTO 2012, pages 868–886. Springer, 2012.
+5. Z. Brakerski, C. Gentry, and V. Vaikuntanathan. (Leveled) fully homomorphic encryption without bootstrapping. In Proc. of ITCS, pages 309–325. ACM, 2012.
+6. Z. Brakerski and V. Vaikuntanathan. Efficient fully homomorphic encryption from (standard) LWE. In
+Proceedings of the 2011 IEEE 52nd Annual Symposium on Foundations of Computer Science, FOCS’11,
+pages 97–106. IEEE Computer Society, 2011.
+7. Z. Brakerski and V. Vaikuntanathan. Fully homomorphic encryption from Ring-LWE and security for
+key dependent messages. In Advances in Cryptology–CRYPTO 2011, pages 505–524. Springer, 2011.
+8. G. S. Çetin, Y. Doröz, B. Sunar, and W. J. Martin. An investigation of complex operations with word-size
+homomorphic encryption. Cryptology ePrint Archive, Report 2015/1195, 2015. http://eprint.iacr.
+org/2015/1195.
+9. J. H. Cheon, J. Jung, J. Lee, and K. Lee. Privacy-preserving computations of predictive medical models
+with minimax approximation and non-adjacent form. To appear in WAHC 2017.
+10. J. H. Cheon, A. Kim, M. Kim, and Y. Song. Implementation of HEA-AN, 2016. https://github.com/
+kimandrik/HEAAN.
+11. J. H. Cheon, M. Kim, and K. Lauter. Homomorphic computation of edit distance. In International
+Conference on Financial Cryptography and Data Security, pages 194–212. Springer, 2015.
+12. J. H. Cheon and D. Stehlé. Fully homomophic encryption over the integers revisited. In Advances in
+Cryptology–EUROCRYPT 2015, pages 513–536. Springer, 2015.
+13. J.-S. Coron, T. Lepoint, and M. Tibouchi. Scale-invariant fully homomorphic encryption over the integers.
+In Public-Key Cryptography–PKC 2014, pages 311–328. Springer, 2014.
+14. A. Costache and N. P. Smart. Which ring based somewhat homomorphic encryption scheme is best? In
+Cryptographers Track at the RSA Conference, pages 325–340. Springer, 2016.
+
+20
+
+15. A. Costache, N. P. Smart, and S. Vivek. Faster homomorphic evaluation of discrete fourier transforms.
+Cryptology ePrint Archive, Report 2016/1019, 2016. http://eprint.iacr.org/2016/1019.
+16. A. Costache, N. P. Smart, S. Vivek, and A. Waller. Fixed point arithmetic in SHE schemes. Cryptology
+ePrint Archive, Report 2016/250, 2016. http://eprint.iacr.org/2016/250.
+17. I. Damgård, V. Pastro, N. Smart, and S. Zakarias. Multiparty computation from somewhat homomorphic
+encryption. In Advances in Cryptology–CRYPTO 2012, pages 643–662. Springer, 2012.
+18. M. v. Dijk, C. Gentry, S. Halevi, and V. Vaikuntanathan. Fully homomorphic encryption over the integers.
+In Advances in Cryptology–EUROCRYPT 2010, pages 24–43. Springer, 2010.
+19. Y. Doröz, Y. Hu, and B. Sunar. Homomorphic AES evaluation using the modified LTV scheme. Designs,
+Codes and Cryptography, 80(2):333–358, 2016.
+20. N. Dowlin, R. Gilad-Bachrach, K. Laine, K. Lauter, M. Naehrig, and J. Wernsing. Manual for using
+homomorphic encryption for bioinformatics. Proceedings of the IEEE, 105(3):552–567, 2017.
+21. L. Ducas and D. Micciancio. FHEW: Bootstrapping homomorphic encryption in less than a second. In
+Advances in Cryptology–EUROCRYPT 2015, pages 617–640. Springer, 2015.
+22. J. Fan and F. Vercauteren. Somewhat practical fully homomorphic encryption. IACR Cryptology ePrint
+Archive, 2012:144, 2012.
+23. C. Gentry. A fully homomorphic encryption scheme. PhD thesis, Stanford University, 2009. http:
+//crypto.stanford.edu/craig.
+24. C. Gentry, S. Halevi, and N. P. Smart. Fully homomorphic encryption with polylog overhead. In Annual
+International Conference on the Theory and Applications of Cryptographic Techniques, pages 465–482.
+Springer, 2012.
+25. C. Gentry, S. Halevi, and N. P. Smart. Homomorphic evaluation of the AES circuit. In Advances in
+Cryptology–CRYPTO 2012, pages 850–867. Springer, 2012.
+26. C. Gentry, A. Sahai, and B. Waters. Homomorphic encryption from learning with errors: Conceptuallysimpler, asymptotically-faster, attribute-based. In Advances in Cryptology–CRYPTO 2013, pages 75–92.
+Springer, 2013.
+27. A. Jäschke and F. Armknecht. Accelerating homomorphic computations on rational numbers. In International Conference on Applied Cryptography and Network Security, pages 405–423. Springer, 2016.
+28. J. Kim, C. Lee, H. Shim, J. H. Cheon, A. Kim, M. Kim, and Y. Song. Encrypting controller using fully
+homomorphic encryption for security of cyber-physical systems. IFAC-PapersOnLine, 49(22):175–180,
+2016.
+29. M. Kim, Y. Song, and J. H. Cheon. Secure searching of biomarkers through hybrid homomorphic encryption scheme. BMC medical genomics, 10(2):42, 2017.
+30. M. Kim, Y. Song, S. Wang, Y. Xia, and X. Jiang. Privacy-preserving logistic regression based on homomorphic encryption. preprint.
+31. K. Lauter, A. López-Alt, and M. Naehrig. Private computation on encrypted genomic data. In International Conference on Cryptology and Information Security in Latin America, pages 3–27. Springer,
+2014.
+32. R. Lindner and C. Peikert. Better key sizes (and attacks) for LWE-based encryption. In Topics in
+Cryptology–CT-RSA 2011, pages 319–339. Springer, 2011.
+33. A. López-Alt, E. Tromer, and V. Vaikuntanathan. On-the-fly multiparty computation on the cloud via
+multikey fully homomorphic encryption. In Proceedings of the 44th Symposium on Theory of Computing
+Conference, STOC 2012, pages 1219–1234. ACM, 2012.
+34. V. Lyubashevsky, C. Peikert, and O. Regev. On ideal lattices and learning with errors over rings. In
+Advances in Cryptology–EUROCRYPT 2010, pages 1–23, 2010.
+35. V. Lyubashevsky, C. Peikert, and O. Regev. A toolkit for ring-lwe cryptography. In Annual International
+Conference on the Theory and Applications of Cryptographic Techniques, pages 35–54. Springer, 2013.
+36. M. Naehrig, K. Lauter, and V. Vaikuntanathan. Can homomorphic encryption be practical? In Proceedings of the 3rd ACM workshop on Cloud computing security workshop, pages 113–124. ACM, 2011.
+37. M. S. Paterson and L. J. Stockmeyer. On the number of nonscalar multiplications necessary to evaluate
+polynomials. SIAM Journal on Computing, 2(1):60–66, 1973.
+38. N. P. Smart and F. Vercauteren. Fully homomorphic encryption with relatively small key and ciphertext
+sizes. In Public-Key Cryptography–PKC 2010, pages 420–443. Springer, 2010.
+39. N. P. Smart and F. Vercauteren. Fully homomorphic SIMD operations. Designs, codes and cryptography,
+71(1):57–81, 2014.
+40. B. P. Tabaei and W. H. Herman. A multivariate logistic regression equation to screen for diabetes
+development and validation. Diabetes Care, 25(11):1999–2003, 2002.
+41. S. Wang, Y. Zhang, W. Dai, K. Lauter, M. Kim, Y. Tang, H. Xiong, and X. Jiang. Healer: Homomorphic
+computation of exact logistic regression for secure rare disease variants analysis in GWAS. Bioinformatics,
+32(2):211–218, 2016.
+
+21
+
+A
+
+LWE-based Construction
+
+We start by adapting some notations from [5] to our context. Let n and q be positive integers.
+For a vector x ∈ ZN
+q , its bit decomposition and power of two are defined by BD(x) =
+Pdlog qe−1 i
+(u0 , . . . , udlog qe−1 ) ∈ {0, 1}N dlog qe with x = i=0
+2 ui , and P2 (x) = (x, . . . , 2dlog qe−1 x).
+Then we can see that hBD(x), P2 (y)i = hx, yi. We also recall the definition of tensor product
+u ⊗ v = (u1 v1 , u1 v2 , . . . , u1 vm , . . . , un v1 , . . . , un vm ) on the vector space Rn × Rm , and its
+relation with the inner product hu ⊗ v, u0 ⊗ v 0 i = hu, u0 i · hv, v 0 i.
+• KeyGen(1λ )
+- Take an integer p and q0 . Let q` = p` · q0 for ` = 1, . . . , L. Choose the parameters
+N = N (λ, qL ) and an error distribution χ = χ(λ, qL ) appropriately for LWE problem
+of parameter (N, qL , χ). Let τ = 2(N + 1)dlog qL e. Output the parameters params =
+(n, qL , χ, τ ).
++1
+- Sample s ← HW T (h) and set the secret key as sk ← (1, s) ∈ ZN
+qL . For 1 ≤ i ≤ τ ,
+sample A ← ZτqL×N , e ← χτ and let b ← −As + e (mod qL ). Set the public key as
+τ ×(N +1)
+
+pk ← (b, A) ∈ ZqL
+.
+2
+N 2 dlog qL e×N
+0
+- Let s ← P2 (s ⊗ s). Sample A0 ← ZqL
+and e0 ← χN dlog qL e , and let b0 ←
+N 2 dlog q e×(N +1)
+
+L
+.
+−A0 s0 + e0 . Set the evaluation key as evk ← (b0 , A0 ) ∈ ZqL
+τ
+• Enc(m). For an integer m ∈ Z, sample a vector r ← {0, 1} . Output c ← (m, 0)+pk T ·r ∈
++1
+ZN
+qL .
++1 , output c
+• Add(c1 , c2 ). For c1 , c2 ∈ ZN
+add ← c1 + c2 (mod q` ).
+q`
+N
++1
+0
+• Mult(c1 , c2 ). For c1 , c2 ∈ Zq` , let c ← BD(c1 ⊗ c2 ). Output cmult ← evk T · c0 (mod
+j
+mq` ).
+
++1 at level `, output the ciphertext c0 ←
+• RS`→`0 (c). For a ciphertext c ∈ ZN
+q`
+
+q`0
+q` c
+
+∈
+
++1
+ZN
+q`0 .
+
+B
+
+Noise Estimations
+
+We follow the heuristic approach in [25, 14]. Assume that a polynomial a(X) ∈ R =
+Z[X]/(ΦM (X)) is sampled from one of above distributions, so its nonzero entries are independently and identically distributed. Since a(ζM ) is the inner
+√ product of coefficient vector of
+N −1
+) of Euclidean norm N , the random variable a(ζM )
+a and the fixed vector (1, ζM , . . . , ζM
+has variance V = σ 2 N , where σ 2 is the variance of each coefficient of a. Hence a(ζM ) has the
+variances VU = q 2 N/12, VG = σ 2 N and VZ = ρN , when a is sampled from U (Rq ), DG(σ 2 )
+and ZO(ρ), respectively. In particular, a(ζM ) has the variance VH = h when a(X) is chosen
+from HW T (h). Moreover, we can assume that a(ζM ) is distributed similarly to a Gaussian
+random variable over complex plane since it is a sum of many independent and identically
+j
+distributed random variables. Every evaluations at root of unity ζM
+share the same variance.
+Hence, we will use 6σ as a high-probability bound on the canonical embedding norm of a
+when each coefficient has a variance σ 2 . For a multiplication of two independent random variables close to Gaussian distributions with variances σ12 and σ22 , we will use a high-probability
+bound 16σ1 σ2 .
+Proof of Lemma 1.
+Proof. We choose v ← ZO(0.5)2 and e0 , e1 ← DG(σ 2 ), then set c ← v · pk + (m + e0 , e1 ).
+The bound Bclean of encryption noise is computed by the following inequality:
+khc, ski − m
+
+can
+(mod qL )kcan
+∞ = kv · e + e0 + e1 · sk∞
+can
+can
+≤ kv√· ek∞ + ke0√
+k∞ + ke1 √
+· skcan
+∞
+≤ 8 2 · σN + 6σ N + 16σ hN .
+
+22
+
+For a vector z ∈ Z[i]N/2 , an encryption of m = Ecd(z; ∆) is also a valid encryption of
+∆ · σ −1 ◦ π −1 (z) with an increased error bound B 0 = Bclean + N/2. If ∆−1 · B 0 < 1/2, then
+this error polynomial is removed by the rounding operation in decoding algorithm.
+t
+u
+Proof of Lemma 2.
+Proof. It is satisfied that hc, ski = m +j e (mod
+q` ) for some polynomial e ∈ S such that
+m
+q`0
+q
+can
+0
+kek∞ ≤ B. The output ciphertext c ← q` c satisfies hc0 , ski = q``0 (m+e)+escale (mod q`0 )
+q
+
+for the rounding error vector τ = (τ0 , τ1 ) = c0 − q``0 c and the error polynomial escale =
+hτ , ski = τ0 + τ1 · s.
+We may assume that each coefficient of τ0 and τ1 in the rounding error vector is comq
+putationally indistinguishable from the random variable in the interval q``0 Zq` /q`0 with variance ≈ 1/12. Hence, the
+magnitudepof scale error polynomial is bounded by kescale kcan
+∞ ≤
+p
+can
+can
+kτ0 k∞ + kτ1 · sk∞ ≤ 6 N/12 + 16 hN/12, as desired.
+t
+u
+Proof of Lemma 3.
+Proof. Let ci = (bi , ai ) for i = 1, 2. Then hci , ski = mi + ei (mod q` ) for some polynomials
+ei ∈ S such that kei kcan
+∞ ≤ Bi . Let (d0 , d1 , d2 ) = (b1 b2 , a1 b2 + a2 b1 , a1 a2 ). This vector can be
+viewed as a level-` encryption of m1 m2 with an error m1 e2 + m2 e1 + e1 e2 with respect to
+2
+the−1secret vector (1, s, s ). It
+ follows from Lemma 2 that the ciphertext cmult ← (d0 , d1 ) +
+P · (d2 · evk (mod P q` )) contains an additional error e00 = P −1 · d2 e0 and a rounding
+error bounded by Bscale . We may assume
+that d2 behaves as a uniform random variable on
+q
+√
+√
+00
+can
+2
+Rq` , so P ke k∞ is bounded by 16 N q` /12 N σ 2 = 8N σq` / 3 = Bks · q` . Therefore, cmult
+is an encryption of m1 m2 with an error bounded by
+−1
+km1 e2 + m2 e1 + e1 e2 + e00 kcan
+· q` · Bks + Bscale ,
+∞ + Bscale ≤ ν1 B2 + ν2 B1 + B1 B2 + P
+
+t
+u
+
+as desired.
+
+23
+
+

@@ -1,0 +1,1803 @@
+Fully Homomorphic Encryption beyond
+IND-CCA1 Security: Integrity through
+Verifiability
+Mark Manulis
+
+and Jérôme Nguyen
+
+PACY Lab @ RI CODE, Universität der Bundeswehr München, Munich, Germany
+mark@manulis.eu, jerome.nguyen@unibw.de
+
+Abstract. We focus on the problem of constructing fully homomorphic
+encryption (FHE) schemes that achieve some meaningful notion of adaptive chosen-ciphertext security beyond CCA1. Towards this, we propose
+a new notion, called security against verified chosen-ciphertext attack
+(vCCA). The idea behind it is to ascertain integrity of the ciphertext
+by imposing a strong control on the evaluation algorithm. Essentially,
+we require that a ciphertext obtained by the use of homomorphic evaluation must be ”linked” to the original input ciphertexts. We formalize the vCCA notion in two equivalent formulations; the first is in the
+indistinguishability paradigm, the second follows the non-malleability
+simulation-based approach, and is a generalization of the targeted malleability introduced by Boneh et al. in 2012.
+We strengthen the credibility of our definitions by exploring relations to
+existing security notions for homomorphic encryption schemes, namely
+CCA1, RCCA, FuncCPA, CCVA, and HCCA. We prove that vCCA
+security is the strongest notion known so far, that can be achieved by an
+FHE scheme; in particular, vCCA is strictly stronger than CCA1.
+Finally, we provide a general transformation, that takes any CPA-secure
+FHE scheme and makes it vCCA-secure. Our transformation first turns
+an FHE scheme into a CCA2-secure scheme where a part of the ciphertext retains the homomorphic properties and then extends it with a
+succinct non-interactive argument of knowledge (SNARK) to verifiably
+control the evaluation algorithm. In fact, we obtain four general variations of this transformation. We handle both the asymmetric and the
+symmetric key FHE schemes, and for each we give two variations differing in whether the ciphertext integrity can be verified publicly or requires
+the secret key. We use well-known techniques to achieve CCA2 security
+in the first step of our transformation. In the asymmetric case, we use the
+double encryption paradigm, and in the symmetric case, we use Encryptthen-MAC techniques. Furthermore, our transformation also gives the
+first CCA1-secure FHE scheme based on bootstrapping techniques.
+Keywords: Fully homomorphic encryption · Chosen-ciphertext attack
+· Bootstrapping · IND-vCCA · Ciphertext integrity · Verifiable FHE
+
+2
+
+1
+
+Mark Manulis, Jérôme Nguyen
+
+Introduction
+
+Fully homomorphic encryption (FHE) [37, 51] is a primitive that allows to perform computations on encrypted data without needing to first decrypt it. While
+the obvious application is to permit privacy-preserving outsourced computation,
+it has also found strong applications in other areas of cryptography such as
+low communication multi-party computations [46], privacy-preserving machinelearning [45] and many more, see e.g. [18, 21, 23, 39].
+As is the case with traditional public key encryption schemes (PKE), the most
+basic security notion for FHE schemes is indistinguishability against chosenplaintext attacks (CPA). An adversary, after receiving the public key, chooses
+two messages and receives a challenge ciphertext that encrypts one of them. The
+adversary must then decide which message has been encrypted. This needs to
+hold in spite of the homomorphic properties of the scheme. This is the minimal
+standard that an FHE scheme has to achieve. However, in stark contrast with
+traditional PKE where CPA is only a starting point before considering stronger
+security notions, CPA has so far become the standard security notion for FHE
+schemes (e.g. [24, 25, 38]).
+This is unsatisfactory as CPA secure FHE schemes suffer from various practical attacks that arise from the lack of integrity of the ciphertexts. Observe, CPA
+security does not provide any guarantees if an adversary is able to access decryptions of certain ciphertexts. This may happen, for example, when a ciphertext is
+modified, maliciously or even accidentally. An adversary may then observe the
+reaction of the decrypting party to infer sensitive information. This has been
+leveraged by Zhang et al. [57] to construct a decryption oracle. Additionally,
+Akavia and Vald [2] have shown that a family of homomorphic encryption based
+protocols, called client-aided outsourcing protocols also suffers from attacks, even
+when the adversary never sees any decrypted value. Other results, e.g. [26, 43],
+have further shown the inadequacy of CPA secure FHE schemes for a whole host
+of applications.
+A line of work [1,14,33,44,49] has, therefore, emerged to try to strengthen the
+security guarantees of FHE schemes. For traditional PKE, the “gold standard”
+for encryption is security against adaptive chosen-ciphertext attacks (CCA2) [28,
+30,50], where the adversary additionally gets access to a decryption oracle. It can
+query any ciphertext apart from the actual challenge ciphertext before making
+its guess. Unfortunately, it is well known that homomorphic encryption schemes
+cannot achieve CCA2 security since homomorphism is a direct contradiction to
+it. Notions like generalized CCA (gCCA) [3] or replayable-CCA (RCCA) [19],
+which are slight relaxations of CCA2 that have been studied for PKE in the past,
+are similarly unachievable. Therefore, FHE schemes must be considered in the
+context of some weaker notion.
+A first approach has been to build non-adaptive CCA (CCA1) secure FHE
+schemes. CCA1 is an intermediate notion, which is stronger than CPA, and
+where the adversary gets access to the decryption oracle before receiving the
+challenge ciphertext. Well-known group homomorphic encryption schemes such
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+3
+
+as the Pailier [48] and ElGamal [32] encryption have been proven to be CCA1
+secure [4]. However, for FHE schemes the situation is more complicated.
+The main breakthrough to achieve efficient FHE schemes has been the introduction of ”Gentry’s blueprint” [37]. This framework uses a somewhat homomorphic encryption (SHE) scheme and a ”bootstrapping” technique to turn
+it into an FHE scheme. All state-of-the-art FHE schemes, e.g. [24, 25, 38], have
+subsequently followed this approach. However, Fauzi et al. [33] have shown that
+a wide array of the known SHE schemes suffer from CCA1 attacks. Additionally,
+a crucial requirement for bootstrapping is the need to publicly release a bootstrapping key, which is essentially an encryption of the secret key. This allows for
+an easy CCA1 attack, since the adversary can simply query the bootstrapping
+key to its decryption oracle to obtain the secret key.
+To compound the issue, even CCA1-secure FHE schemes have been shown
+to suffer from attacks. In particular, Loftus et al. [44] show that their CCA1
+construction suffers from chosen-ciphertext verification attacks (CCVA), where
+an adversary only gets access to an oracle that tells if a ciphertext is valid or not.
+This attack is, arguably, very practical. For example, in the context of outsourced
+computations, a server may send an evaluated ciphertext to a client and observe
+their reaction to deduce if the ciphertext is invalid.
+Therefore, it becomes important to design FHE schemes that achieve some
+stronger notion than CCA1. This has previously been considered by Prabhakaran and Rosulek [49], but for a limited class of homomorphic encryption
+schemes supporting only univariate functions. They introduced a notion called
+Homomorphic-CCA (HCCA), which captures the idea that a scheme may be
+homomorphic for a certain set of functions but must stay non-malleable with
+respect to all other operations. Although HCCA is stronger than CCA1, as the
+adversary may access the decryption oracle after receiving the challenge ciphertext, it is not applicable to (general) FHE schemes.
+Further intermediate notions between CPA and CCA2 have been considered
+to address specific types of attacks. Akavia et al. [1] defined a notion called
+FuncCPA to capture security for FHE schemes against attacks in the context
+of client-aided outsourcing. Boneh et al. [14] introduced targeted malleability,
+which similarly to HCCA, requires the scheme to stay non-malleable apart from
+some allowed functions. However, targeted malleability is different from HCCA
+in the sense that it covers FHE schemes, but only in the context of CPA and
+CCA1 attacks.
+In light of this, we ask in this paper whether the boundaries for the security
+guarantees of FHE schemes can be pushed beyond CCA1? Is it possible to define
+a security notion that covers all the previously mentioned attacks? And if so,
+can it be achieved for FHE schemes that are based on bootstrapping techniques?
+1.1
+
+Our Contributions and Techniques
+
+We answer these questions positively. We propose a new relaxation of CCA2,
+called verified chosen-ciphertext attack (vCCA). This notion is meant to verifi-
+
+4
+
+Mark Manulis, Jérôme Nguyen
+
+ably capture the integrity of the ciphertext for the whole chain of FHE operations: from the encryption, the homomorphic evaluation to the decryption. The
+idea is that a malicious party that executes the evaluation algorithm, should be
+forced to use valid ciphertexts, and run the evaluation algorithm correctly. We
+show that our vCCA security notion strictly implies CCA1 security. Finally, we
+show that vCCA is achievable for FHE schemes by giving a general transformation that takes any CPA secure FHE scheme and makes it vCCA secure. This
+includes schemes based on bootstrapping.
+Defining the vCCA notion. In the CCA2 game, an adversary that attacks an
+FHE scheme can always modify the challenge ciphertext using homomorphism
+before querying it to its decryption oracle. Our idea for vCCA is to capture
+schemes such that this is detectable under certain conditions. Essentially, we
+require that the ciphertext output by the evaluation algorithm is ”linked” to the
+ciphertexts used as inputs. This allows us to define a modified vCCA oracle to
+characterize the vCCA security notion. This oracle, upon receiving a decryption
+query, checks whether it is linked to the challenge ciphertext, and performs
+decryption only if it is not the case.
+We give two formulations of vCCA security. Our first definition is based
+on the indistinguishability game, where the oracle of the second phase is the
+vCCA oracle described above. Consequently, we call this notion indistinguishability against verified chosen ciphertext-attack (IND-vCCA). Our second definition uses the non-malleability simulation paradigm [30]. We use the vCCA oracle
+to generalize the targeted malleability notion from [14]. For every adversary that
+gets a tuple of ciphertexts and produces some output, there should exist a simulator that does not get these ciphertexts and produces an indistinguishable
+output. Our generalization, which we call TNM-vCCA, proceeds identically but
+replaces the oracles of the game with the vCCA oracle described above.
+We show that TNM-vCCA is equivalent to IND-vCCA. This suggests that
+it is possible to think of TNM-vCCA as the non-malleability formulation of
+the IND-vCCA notion, similarly to the relationship between IND-CCA2 and
+NM-CCA2. It is interesting from a theoretical standpoint that the equivalence
+holds for this relaxed version of IND-CCA2 and NM-CCA2, whereas it is known
+that IND-CCA1 does not imply NM-CCA1 [7].
+Relations between vCCA and other notions. To substantiate the validity
+of the definition of vCCA, we compare it with the existing notions that are
+achievable for FHE mentioned previously. We show that IND-vCCA implies them
+all. We also show that IND-vCCA is implied by RCCA (which is not achievable
+for FHE). We summarise our results in Figure 1. In the interest of readability,
+we do not include some of the known results between existing notions.
+Constructing IND-vCCA-secure FHE. We show that IND-vCCA is achievable for FHE by giving a general framework to build IND-vCCA secure FHE
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+5
+
+HCCA
+Thm. 2
+
+FuncCPA
+/
+
+
+
+Prop. 3
+
+Prop. 1
+
+Thm. 4
+CPA
+
+CCA1
+
+Thm. 3 
+CCA1.5
+
+IND-vCCA
+
+Thm. 5
+RCCA
+/
+
+CCA2
+
+Prop. 2
+Lem. 1
+
+Lem. 2
+
+CCVA
+TNM-vCCA
+Fig. 1. Relation between the notions. If there is a path from A to B, then A =⇒ B.
+A hatched arrow represents a separation. A solid arrow is our result. A dashed arrow
+is a trivial result or a previous result.
+
+schemes. The framework uses any CPA secure FHE scheme, and a succinct noninteractive argument of knowledge (SNARK). In particular, it supports schemes
+that are based on bootstrappping techniques. For instance, it can be built from
+state-of-the-art FHE schemes such as TFHE [25] or BGV [17]. The construction
+can also be used for approximate FHE schemes such as CKKS [24] with the
+caveat that the approximate FHE schemes need to be CPAD secure. This stems
+from the fact that the common CCA2 transforms we use such as Encrypt-thenMAC or Naor-Yung double encryption assume the starting encryption scheme to
+be passively secure before preventing active attacks. In the case of approximate
+FHE, this has been shown to require CPAD security [43]. We do not consider
+this further, and we will assume the FHE schemes to be exact in the rest of the
+paper.
+Remark 1. In a recent paper, Checri et al. [22] have shown CPAD attacks on
+non-approximate FHE schemes such as TFHE or BGV. However, to do so they
+”break” the correctness of the schemes, rendering them in essence ”approximate”. These attacks would carry over to our construction. Hence, it may be
+advisable in practice to implement the fixes they propose to get the CPAD versions of these schemes as starting point for our construction. In this paper, we
+assume the homomorphic evaluations of the schemes to be correct, see Definition
+3. As such, we only ask for CPA security (for exact FHE schemes). We discuss
+this further in Section 5.4.
+Our framework proceeds along two separate steps. The first step is to make
+the FHE scheme CCA2 secure. This obviously implies that what is obtained after
+
+6
+
+Mark Manulis, Jérôme Nguyen
+
+the first step is no longer a homomorphic encryption scheme. However, following
+ideas from Loftus et al. [44], we do it in such a way that part of the ciphertext
+keeps the homomorphic properties. We call such a procedure, embedding the
+FHE scheme into a CCA2 encryption scheme.
+We propose four different ways to embed an FHE scheme into a CCA2 encryption scheme. We give embedding methods for public-key FHE schemes as
+well as symmetric-key FHE schemes. For each of these types, we consider two
+variants. In the first variant checking the validity of ciphertexts requires knowledge of the private key. We refer to such schemes as being designated verifier.
+In the second variant, checking the validity of ciphertexts does not require any
+secrets. We call such schemes publicly verifiable.
+We use well-known paradigms to achieve CCA2 security for the embedding.
+In the symmetric case, we use Encrypt-then-MAC and Encrypt-then-Sign [8].
+The latter one may be surprising, as Encrypt-then-Sign does not provide CCA2
+security to PKE. However, here we are using it as part of a symmetric-key encryption scheme, essentially as a publicly verifiable message authentication code
+(MAC). In the asymmetric case, we use the double encryption paradigm by Naor
+and Yung [30,47]. In the publicly verifiable variant, we adopt Naor-Yung directly.
+However, in the designated-verfier case, we can remove the non-interactive zeroknowledge proof (NIZK) by using a CCA2 secure PKE. For the second ciphertext,
+we encrypt the concatenation of the actual message with the randomness used to
+do the first encryption. This implicitly acts as a NIZK and may be more efficient
+when using a PKE based for example on the Fujisaki-Okamoto transform [34].
+The second step of the framework modifies the evaluation algorithm. We use
+a SNARK [12] to do the ”linking” we require for IND-vCCA as mentioned above.
+More precisely, we make the evaluator prove that it did the homomorphic operation with valid input ciphertexts with respect to the CCA2 encryption scheme.
+Recall, the first step embeds the ciphertext of the FHE scheme in such a way
+that it is preserved after the embedding. This allows the evaluation algorithm to
+take that part as input, and then prove that it knows the corresponding ”full”
+CCA2 ciphertext. This then allows to reduce any attack against the IND-vCCA
+security to the CCA2 security, modulo the soundness of the SNARK. We emphasize that since the bootstrapping keys are never valid ciphertexts for the CCA2
+construction, an attacker cannot pass them through the evaluation algorithm as
+it will not be able to prove that it knows the corresponding valid ciphertext.
+The designated-verifier constructions only achieve a relaxed version of compactness, i.e. the evaluated ciphertext grows linearly with the number of inputs
+to the evaluation algorithm as we actually must output back every input ciphertext in addition to the actual output of the homomorphic evaluation. This
+is necessary because the evaluator cannot check the validity of the ciphertexts
+when doing the SNARK proof. However, this also means that the designatedverifier construction has a more efficient evaluation algorithm than the publicly
+verifiable construction, exactly because the evaluator does not need to do the
+proof of validity. In contrast, the FHE scheme obtained with the publicly verifiable construction achieves standard compactness.
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+7
+
+The standard security property regarding soundness for SNARKs is knowledge soundness. This asks that one should be able to extract a witness from a
+proof given white-box access to the prover. To achieve IND-vCCA security, we require somewhat stronger soundness properties from the SNARK. As IND-vCCA
+regulates the malleability of the FHE schemes, we need non-malleable proofs
+from the SNARK. This is caputred by a property called simulation-extractability.
+Furthermore, we require for our security reduction that the witness extraction
+can be done with only black-box access to the prover, i.e., without any knowledge about its code or the randomness it is using. Nonetheless, we also show that
+if our transformation is instantiated with a SNARK that is ”just” (white-box)
+simulation-extractable, we still obtain a CCA1-secure FHE scheme.
+1.2
+
+Related Work
+
+Earlier constructions of CCA1 secure FHE schemes did not support bootstrapping. Loftus et al. [44] gave a CCA1 secure SHE construction based on adding
+plaintext-awareness to a CPA secure SHE scheme, which is a known way to
+achieve CCA1 security [9]. However, the CPA security of their SHE was based
+on the short principal ideal problem (SPIP), which has later been shown to be
+insecure [10, 11, 27].
+Canetti et al. [20] and Yasuda et al. [56] proposed concurrently similar CCA1
+secure FHE schemes based on multi-key identity-based homomorphic encryption
+(IBHE) and multi-key homomorphic encryption respectively. Both constructions
+share the drawback that the evaluated ciphertext must contain all the identities used to do the encryption for the input ciphertexts. Therefore, evaluated
+ciphertexts grow linearly in the amount of inputs to the evaluation algorithm,
+resulting in non-compact FHE schemes.
+A different CCA1 secure FHE construction, also proposed in [20], achieves
+compactness by using indistinguishability obfuscation (iO). Wang et al. [55] later
+identified and patched a security weakness in this scheme, but importantly it
+still hinges on iO. This is a major drawback to its practicality due to the heavy
+complexity price iO demands. Hence, this remains primarily a theoretical result
+pending some major new developments in the iO field. None of these schemes
+have been concretely implemented.
+The integrity of FHE schemes as a byproduct of verifiability has been considered by Viand et al. [53,54]. They define verifiable FHE (vFHE), which combines
+notions from verifiable computation - such as soundness - with confidentiality
+notions such as CCA1 security. Note, however, that the CCA1 definition used
+in [53,54] is weaker than what would be expected from a standard CCA1 notion.
+In particular, the adversary in [53,54] is limited in its use of the evaluation algorithm to a single function which is fixed at the beginning of the game. Moreover,
+the general vFHE construction in [53,54] is a combination of a CPA secure FHE
+scheme with a SNARK. However, we highlight here that this construction is not
+CCA1 secure, neither wrt. the standard CCA1 definition nor wrt. the weaker
+definition used in [53, 54], as explained in the following. Their vFHE scheme
+
+8
+
+Mark Manulis, Jérôme Nguyen
+
+uses a SNARK to prove that the evaluation algorithm has been run correctly.
+More precisely, let cx be an encryption of some plaintext m. Then, the decryption algorithm only decrypts a tuple (cy , π) if π is a valid proof that cy is the
+output of the evaluation algorithm with f, cx as inputs, where f is a function
+fixed at the key generation. However, this does not prevent any existing CCA1
+attacks on the underlying FHE scheme. Any ciphertext that would be queried to
+a decryption oracle in the context of a CCA1 attack against the underlying FHE
+scheme can easily be converted into a ciphertext for the proposed vFHE scheme.
+Indeed, any queried ciphertext c can be put through the evaluation algorithm
+with the identity function as input, and compute the corresponding SNARK
+proof. This results in a valid ciphertext for the vFHE scheme, which can then
+be submitted to the decryption oracle.
+The use of SNARKs in FHE constructions has been considered multiple times
+in the literature, either in the context of verifiable computations as mentioned
+previously, or to achieve higher levels of security. Boneh et al. [14] and Cannetti et
+al. [20] gave similar constructions based on the Naor-Yung paradigm, where the
+usual NIZK is replaced with a SNARK to achieve the required FHE compactness.
+An FHE ciphertext c = (c1 , c2 , π) is a double encryption of a message with a
+proof π that c1 and c2 encrypt the same plaintext. The evaluation algorithm is
+performed on both c1 and c2 to maintain that invariant. This FHE approach is
+proven CCA1 secure in [20]. We note that one variant of our FHE constructions
+is closely related to this approach, as we also use the double encryption paradigm
+to embed the homomorphic encryption scheme. The main differences with our
+construction is that we extend this idea to support bootstrapping, and that we
+only require the execution of the evaluation algorithm once, instead of twice.
+From a practical perspective, several works aimed at improving the efficiency
+of combining FHE with SNARKs. State-of-the-art FHE schemes work over lattices. This means that proving their evaluation algorithm amounts to proving
+ring operations. However, the most well-known SNARKs (e.g. [41]) work over
+groups. This means that proving the homomorphic evaluation requires to emulate the ring operations with group operations. To avoid this source of inefficiencies, Ganesh et al. [36] designed a SNARK that natively works over rings.
+However, the proof system in [36] is not suited for ciphertexts maintenance
+techniques such as bootstrapping or modulus switching. This has recently been
+addressed by Atapoor et al. [5]. Using lattice-based SNARKs, they were able to
+efficiently prove the modulus switching and key switching operations, in addition
+to the regular homomorphic operations.
+Organisation of the paper. We give the notations and preliminaries in Section
+2. In Section 3, we define the vCCA security notion, giving both the indistinguishability version as well as the non-malleability one. In Section 4, we start by
+establishing the equivalence of both formulations, before analysing the relations
+between vCCA and other security notions. In Section 5, we present the first
+step of our framework — embedding of an FHE scheme into a CCA2-secure encryption scheme and present four approaches for different types of schemes and
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+9
+
+ciphertext validity checks. In Section 6, we provide the second step of the framework — construction of an IND-vCCA-secure FHE scheme from a CCA2-secure
+encryption scheme with FHE embedding. We conclude in Section 7.
+
+2
+
+Preliminaries
+
+Notations. Let A be a probabilistic algorithm. We write c ← A(x1 , . . . , xl ; r)
+to denote that A on input x1 , . . . , xl with randomness r outputs c. We may omit
+r and write A(x1 , . . . , xl ) to denote that we run the algorithm with a uniformly
+sampled r.
+Definition 1 (PKE). A public-key encryption scheme E = (Gen, Enc, Dec) over
+a message space M is a triple of algorithms: a PPT key generation algorithm
+Gen, a PPT encryption algorithm Enc and a deterministic polynomial-time decryption algorithm Dec such that for any security parameter λ:
+1. Gen(1λ ): Outputs a public key / secret key pair denoted (pk, sk) ← Gen(1λ ).
+2. Encpk (m): On input a message m ∈ M and the public-key pk, output the
+encryption of m denoted c ← Encpk (m) .
+3. Decsk (c): On input a ciphertext c and the secret key sk, output m ← Decsk (c)
+with m ∈ M ∪ {⊥}.
+We require correctness. Let (pk, sk) ← Gen(1λ ) be a public key/ secret key
+pair. Then for all m ∈ M,
+Pr[Decsk (Encpk (m)) ̸= m] ≤ negl(λ)
+We call a ciphertext c valid if there exist m ∈ M and an appropriate value r
+such that c = Encpk (m; r). Otherwise we say it is invalid. For a given encryption
+scheme E, we say that a polynomial-time algorithm Vf is a verification algorithm
+for E, if on input a ciphertext c it outputs whether or not it is valid. If Vf only
+requires public information, we say that E is publicly verifiable. If it requires the
+secret key, we say that E is designated verifier. In that case we define a canonical
+verification algorithm that runs Decsk (c), and simply outputs ”invalid” if Dec
+outputs ⊥, and ”valid” otherwise. As indicated, the keys are given as subscript
+to the algorithms. We may also explicitly write them as input to the algorithm
+if we want to emphasize which key is used when multiple exist in the setting.
+Remark 2. For the rest of this paper, we take the convention from [29] and
+restrict the definition of PKE to require that the decryption algorithm outputs
+⊥ when it receives an invalid input. In the general case, this could also be a
+random value m in the message space.
+We recall the usual security notions for encryption. For conciseness, we give
+a general indistinguishability game in Figure 2, that we specify with the string
+atk ∈ {CPA, CCA1, CCA2} to determine which oracle should be considered.
+
+10
+
+Mark Manulis, Jérôme Nguyen
+Experiment Expatk
+E,A (λ)
+$
+
+(pk, sk) ←
+− Gen(1λ )
+O (·)
+
+(m0 , m1 , s) ← A1 1
+
+(1λ , pk), where |m0 | = |m1 |
+
+$
+
+b←
+− {0, 1}, c∗ ← Encpk (mb )
+O (·)
+
+b′ ← A 2 2
+
+(pk, s, c∗ )
+
+return b = b′
+Fig. 2. The indistinguishability experiment
+
+Definition 2 (Indistinguishability [7]). Let E = (Gen, Enc, Dec) be a publickey encryption scheme. We say that E is indistinguishable against atk, if for
+any PPT adversary A = (A1 , A2 ), the advantage of A in the indistinguishability
+game defined in Figure 2 is negligible, where,
+O1 (·) = ϵ
+
+O2 (·) = ϵ
+
+for atk = CPA
+
+O1 (·) = Decsk (·)
+
+O2 (·) = ϵ
+
+for atk = CCA1
+
+O1 (·) = Decsk (·)
+
+O2 (·) = Decsk (·)
+
+for atk = CCA2
+
+with ϵ being the function which, on any input, returns the empty string. In the
+case of CCA2, A2 is prohibited from asking its oracle to decrypt c∗ . The advantage is defined as,
+1
+atk
+Advatk
+E,A (λ) = | Pr[ExpE,A (λ) = 1] − |
+2
+(Fully) Homomorphic Encryption. We recall here the definition for publickey (fully) homomorphic encryption schemes, adapted from [1]. In this paper,
+we also consider the symmetric-key version, but skip its definition in the interest
+of space.
+Definition 3 ((Fully) Homomorphic Encryption). Let F be a family of
+functions. A public-key F-homomorphic encryption scheme HE = (Gen, Enc, Dec,
+Eval) with message space M is a quadruple of PPT algorithms such that:
+– (Gen, Enc, Dec) is a correct PKE
+– Eval takes as input the public key pk, a function f ∈ F, and a tuple of
+ciphertexts c1 , . . . , cl , and outputs a ciphertext ĉ ← Evalpk (f, c1 , . . . , cl ).
+– Homomorphic correctness: For all functions f ∈ F and for all plaintexts
+m1 , . . . , ml ∈ M, if we let (pk, sk) ← Gen(1λ ) and ci ← Encpk (mi ) for
+i ∈ {1, . . . l}, it holds that:
+Pr[Decsk (Evalpk (f, c1 , . . . , cl )) ̸= f (m1 , . . . , ml )] ≤ negl(λ)
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+11
+
+We say that HE is a fully homomorphic encryption (FHE) scheme if F is
+the set of all the efficiently computable functions.
+Typically, fully homomorphic encryption schemes require a property called
+compactness. This asks that the size of the evaluated ciphertexts does not grow
+trivially with the size of the evaluated function. We will also consider relaxed
+compactness where we allow the evaluated ciphertext to grow linearly with the
+number of inputs to the evaluation algorithm.
+Some FHE schemes output a bootstrapping key bk. We implicitly include
+it as part of the public key pk. In some cases, we may explicitly write it out
+when necessary for clarity. In that case, Gen(1λ ) generates (pk, sk, bk) and the
+Eval algorithm takes bk as input instead of pk. We call a ciphertext c a fresh
+ciphertext if it is the output of the encryption algorithm. If it is the output of
+the evaluation algorithm, we call it an evaluated ciphertext.
+MAC and Digital Signature. We use the standard definitions for message
+authentication codes (MAC) I = (I.Gen, I.Tag, I.Vfy) and digital signatures
+S = (S.Gen, S.Sign, S.Vfy). We require for both strong unforgeability against
+chosen-message attacks (SUF-CMA). See, e.g., [8, 15] for corresponding definitions.
+SNARK In our transformation we use a succinct non-interactive argument of
+knowledge (SNARK). Apart from its usual properties of completeness and succinctness, we ask for two somewhat more uncommon properties. First we require
+non-malleability, which is modelled as simulation-sound extractability (SE). This
+asks that an adversary should not be able to ”maul” a proof into another valid
+proof. More precisely, there must exists an extraction algorithm that can recover
+a witness for the proven statement from any valid proof, even if the adversary
+has access to a simulated proof oracle. SNARKs usually achieve white-box extractability where the extraction algorithm may depend on the adversary. We
+further require black-box extraction where there exists a single witness extractor
+that works for all adversaries.The following definitions are inspired from [6, 41].
+Let Rλ be an efficiently computable binary relation which consists of pairs
+of the form (x, w), where x is a statement, and w is a witness. Let L be the
+language associated with the relation Rλ , i.e. L = {x | ∃w R(x, w) = 1}. A noninteractive argument for an NP language L is a quadruple of PPT algorithms
+(Setup, Prove, Verify, Sim) such that
+– (σ, τ, τext ) ← Setup(Rλ ): The setup porduces a common reference string σ
+and trapdoors τ, τext for the relation Rλ .
+– π ← Prove(σ, x, w): Takes as input σ, a statement witness pair (x, w) ∈ Rλ
+and produces an argument π.
+– b ← Verify(σ, x, π): Takes as input a σ, a statement x and a proof π and
+outputs a bit b denoting accept or reject.
+– π ← Sim(τ, x): Takes as input a simulation trapdoor τ and a statement x
+and outputs an argument π
+
+12
+
+Mark Manulis, Jérôme Nguyen
+
+Definition 4. We say that Π = (Setup, Prove, Verify, Sim) is a succinct noninteractive argument of knowledge (SNARK) if it is a non-interactive argument
+with perfect completeness, black-box weak simulation-sound extractability and
+succinctness as defined below.
+Perfect completeness: For every true statement for the relation Rλ , an
+honest prover with a valid witness always convinces the verifier: ∀(x, w) ∈ Rλ :
+Pr[Verify(σ, x, π) = 1 | (σ, τ, τext ) ← Setup(Rλ ); π ← Prove(σ, x, w)] = 1
+Zero-knowledge: We say that Π is zero-knowledge if for all PPT adversaries
+and all (x, w) ∈ Rλ :
+Pr[A(σ, τ, π) = 1 | (σ, τ, τext ) ← Setup(Rλ ); π ← Prove(σ, x, w)]
+− Pr[A(σ, τ, π) = 1 | (σ, τ, τext ) ← Setup(Rλ ); π ← Sim(τ, x)] ≤ negl(λ)
+Black-box weak SE: We say that Π is black-box weak SE if there exists a
+PPT witness extraction algorithm Ext, such that for any PPT adversary A and
+Rλ ,
+"
+#
+(σ, τ, τext ) ← Setup(Rλ )
+Verify(σ, x, π) = 1∧
+Pr
+≤ negl(λ)
+(x, w) ∈
+/ Rλ ∧ x ∈
+/ Q (x, π) ← ASσ,τ (σ); w ← Ext(σ, τext , x, π)
+where Sσ,τ (x) is a simulator oracle that calls Sim(σ, τ, x) internally, and also
+records x into Q.
+Succinctnesss: The verifier runs in polynomial time in λ + |x| and the proof
+size is polynomial in λ.
+Ganesh et al. [35] gave a construction for a universal composable (UC)
+SNARK in the global random oracle model (GROM). It is known that a UC
+secure SNARK must be black-box SE [40], and as such is suitable for our construction.
+
+3
+
+Verified CCA (vCCA) Security
+
+In this section, we formally introduce vCCA security, and give two equivalent
+formulations of it. Our security definition aims to capture the intuitive notion of
+controlling the malleability of the ciphertexts to ensure some form of integrity.
+In the CCA2 game, the adversary is prohibited to make a decryption query
+for the challenge ciphertext. This is the minimal restriction that has to be placed
+for the notion to be achievable. Previous relaxations of CCA2, such as RCCA [19]
+or generalized CCA (gCCA) [3] have relaxed the non-malleability property by
+increasing this restriction. The ”illegal decryption query” set is expanded to
+contain ciphertexts that are related to the challenge ciphertext; in gCCA, the
+set is every ciphertext that satisfy a certain binary relation with the challenge
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+13
+
+ciphertext while in RCCA, the illegal set is the set of every ciphertext such that
+their decryption is one of the challenge plaintexts.
+As noted in [49], generalizing this approach further for homomorphic encryption quickly expands the illegal set to be the whole ciphertext space, making the
+notion equivalent to CCA1; this holds even for schemes that only support homomorphism over univariate functions.
+Our solution is to require the evaluated ciphertext to be linked to the input
+ciphertext. Our illegal set is then every ciphertext which is linked to the challenge
+ciphertext through the evaluation algorithm. In more detail, we will require the
+existence of an extraction algorithm that on input a ciphertext, will recover a
+statement describing if the ciphertext is the output of the evaluation algorithm.
+If so, the statement must contain the function f and the ciphertexts {c1 , . . . cl }
+that were the input to the evaluation algorithm. If the ciphertext c is a fresh
+output from the encryption algorithm, the extraction algorithm returns a special
+symbol e.g. ⊥ or (Id, c) where Id is the identity function.
+Definition 5 (Extraction algorithm). Let HE = (Gen, Enc, Dec, Eval) be a Fhomomorphic encryption scheme with ciphertext-space C and let F ′ be a subset
+of F. A F ′ -extraction algorithm Extract for HE is a PPT algorithm that takes as
+input a ciphertext c ∈ C, optionally some auxiliary information aux, and outputs
+a statement Φ ∈ F ′ × C l ∪ {⊥}.
+Let A be a PPT adversary and let (pk, sk) ← Gen(1λ ) be a key-pair. Let c be a
+ciphertext output by A(pk), and let (f, c1 , . . . , cl ) be the output of Extract(aux, c).
+We say that Extract is sound if every ci ∈ {c1 , . . . , cl } is a fresh ciphertext and
+the following two distributions are indistinguishable, i.e.
+{Decsk (c)} ≈ {f (Decsk (c1 ), . . . , Decsk (cl ))}
+We consider that f (Decsk (c1 ), . . . , Decsk (cl )) = ⊥ if there exists an i such that
+Decsk (ci ) = ⊥. The auxiliary input may include the public-key of the encryption
+scheme, but should not contain the secret-key. If F = F ′ , we may just write that
+Extract is an extraction algorithm for HE. As an abuse of notation, we may write
+c ∈ (f, c1 , . . . , cl ) to denote c ∈ {c1 , . . . , cl }. We now give the main definition for
+IND-vCCA.
+We use the extraction algorithm to define the vCCA oracle in Figure 3. We
+then use it to define the IND-vCCA security notion. It is exactly the IND-CCA2
+game, with the oracle for the second phase replaced by the vCCA oracle.
+Definition 6 (IND-vCCA Security). Let HE = (Gen, Enc, Dec, Eval) be a Fhomomorphic encryption scheme. We say that HE is indistinguishable against
+verified adaptive chosen-ciphertext attacks (IND-vCCA) secure with respect to
+F ′ , if there exists an F ′ -extraction algorithm Extract for HE such that for any
+PPT adversaries A = (A1 , A2 ), the advantage of A in the following experiment
+ExpIND-vCCA
+(λ) is negligible.
+HE,A
+
+14
+
+Mark Manulis, Jérôme Nguyen
+Oracle OvCCA (c∗ , c)
+(f, c1 , . . . cl ) ← Extract(aux, c)
+if c∗ ∈ {c1 , . . . cl }
+return ⊥
+else
+return Decsk (c)
+Fig. 3. The vCCA oracle
+
+Experiment ExpIND-vCCA
+(λ)
+E,A
+(pk, sk) ← Gen(1λ )
+Decsk (·)
+
+(m0 , m1 , s) ← A1
+
+(pk)
+
+$
+
+− {0, 1}
+b←
+c∗ ← Encpk (mb )
+O
+
+b′ ← A2 vCCA
+
+(c∗ ,·)
+
+(pk, s, c∗ )
+
+′
+
+return (b = b )
+
+where |m0 | = |m1 |. The advantage of A is defined as:
+1
+AdvIND-vCCA
+(λ) = | Pr[ExpIND-vCCA
+(λ) = 1] − |
+E,A
+E,A
+2
+Targeted Malleability. Boneh et al. [14] defined targeted malleability in order
+to ”restrict” the malleability of an FHE scheme. This enforces some form of
+control on the evaluation algorithm, and makes it a close notion to IND-vCCA.
+The original definitions of targeted malleability are in the context of CPA and
+CCA1 attacks. We extend the notion in Definition 7 by adding our vCCA oracle
+as we did for IND-vCCA.
+Definition 7 (TNM-vCCA). Let t = t(λ) be a polynomial. A public-key encryption scheme E = (Gen, Enc, Dec) is t-bounded non-malleable against verified
+chosen-ciphertext attacks with respect to a set of functions F (F-TNM-vCCA) if
+for any polynomials r = r(λ) and q = q(λ) and for any probabilistic polynomialtime algorithm A = (A1 , A2 ) there exists a probabilistic polynomial-time algorithm S = (S1 , S2 ) such that the following distributions {RealTNM-vCCA
+(λ)}λ∈N
+E,A,t,r,q
+and {SimTNM-vCCA
+(λ)}
+(see
+Figure
+4)
+are
+computationally
+indistinguishable.
+λ∈N
+E,S,t,r,q
+We write TNM-vCCA when the set F is clear from context. It is clear that
+this generalization implies the CCA1 and CPA versions defined in [14]. Furthermore, it should be clear from Definition 6 that IND-vCCA implies CCA1.
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+RealTNM-vCCA
+(λ)
+E,A,t,r,q
+
+SimTNM-vCCA
+(λ)
+E,S,t,r,q
+
+(pk, sk) ← Gen(1λ )
+
+(pk, sk) ← Gen(1λ )
+
+Decsk (·)
+
+(M, s1 , s2 ) ← A1
+
+(pk)
+
+c∗i ← Encpk (mi ) for i ∈ {1, . . . , r}
+O
+
+(M, s1 , s2 ) ← S1 (pk)
+(m1 , . . . , mr ) ← M
+
+(m1 , . . . , mr ) ← M
+(c1 , . . . cq ) ← A2 vCCA
+
+15
+
+∗
+
+(c ,·)
+
+(c∗1 , . . . , c∗r , s2 )
+
+for j ∈ {1, . . . , q} do
+if cj = c∗i do
+dj ← copyi
+else do
+dj ← Decsk (cj )
+return (s1 , m1 , . . . , mr , d1 , . . . , dq )
+
+(c1 , . . . cq ) ← S2 (s2 )
+for j ∈ {1, . . . , q} do
+if cj = copyi do
+dj ← copyi
+if cj = (i, f1 , . . . , fl ),
+with i ∈ {1, . . . , r}
+l ≤ t ∧ f1 , . . . , fl ∈ F do
+dj ← f (mi ) with f = f1 ◦ · · · ◦ fl
+else do
+dj ← Decsk (cj )
+return (s1 , m1 , . . . , mr , d1 , . . . , dq )
+
+(λ)}λ∈N
+(λ)}λ∈N and {SimTNM-vCCA
+Fig. 4. The distribution {RealTNM-vCCA
+E,S,t,r,q
+E,A,t,r,q
+
+4
+
+Relations between vCCA Security and Other Notions
+
+We start by showing that our formulations of vCCA security, namely IND-vCCA
+and TNM-vCCA, are equivalent. We then show that IND-vCCA is the strongest
+notion among the notions we consider that are achievable for FHE.
+4.1
+
+IND-vCCA and TNM-vCCA Are Equivalent
+
+As mentioned, being able to restrict a fully homomorphic encryption scheme
+to a scheme that only allows homomorphism for a smaller subset F implies
+some form of control on the evaluation algorithm. In fact, we show that for any
+F-homomorphic encryption scheme, IND-vCCA security with respect to F ′ is
+equivalent to F ′ -TNM-vCCA.
+Theorem 1. Let E = (Gen, Enc, Dec, Eval) be a F-homomorphic encryption
+scheme and let F ′ be a subset of F. Then E is IND-vCCA secure with respect to
+F ′ if and only if it is TNM-vCCA secure with respect to F ′ .
+We give the proof for the case that r = q = 1. The proof generalizes naturally
+to the other cases. We separate the proof into two lemmas. We start by showing
+that IND-vCCA =⇒ TNM-vCCA. The proof follows closely ideas given in the
+proof of TNM-vCCA-security given in [14, Section 4.4], and can be seen as a
+generalization of it. The main difference is that we use the extraction algorithm
+given by the IND-vCCA property to create the ”certification chain” that they
+use.
+
+16
+
+Mark Manulis, Jérôme Nguyen
+
+Lemma 1. IND-vCCA =⇒ TNM-vCCA
+Proof. Assume that E is IND-vCCA secure with respect to a set F ′ and let
+Extract be the associated extraction algorithm. Let A = (A1 , A2 ) be an adversary
+against the TNM-vCCA security of E. We build a simulator S = (S1 , S2 ) that
+uses A as a subroutine.
+On input pk, S1 generates its own key-pair (pk′ , sk′ ) ← Gen(1λ ). It then runs
+(M, s1 , s2 ) ← A1 (pk′ ). Any decryption queries are answered using sk′ . S1 then
+finally outputs (M, s1 , s′2 ) where s′2 = (s2 , M, pk, pk′ , sk′ ).
+On input s′2 = (s2 , M, pk, pk′ , sk′ ), S2 draws m′ ← M and computes c∗ ←
+Encpk (m′ ). It then runs c ← A2 (c∗ , s2 ). Any decryption queries to the vCCA
+oracle are answered by using sk′ and the extraction algorithm. S2 then uses the
+extraction algorithm on c to obtain Φ = (f, c1 . . . cl ). If c is not valid in the sense
+of TNM-vCCA, i.e. Decsk′ (c) = ⊥, then it outputs ⊥. Otherwise:
+– If c = c∗ , S2 outputs copy1 .
+– If c∗ ∈ Φ, S2 uses sk′ to obtain mi ← Decsk′ (ci ) for every ci ∈ Φ. It then
+outputs (f, m1 , . . . , 1, . . . , ml ) (the 1 indicates where the challenge plaintext
+is placed).
+– If c∗ ̸∈ Φ, S2 first computes c′i ← Encpk (Decsk′ (ci )) for every ci ∈ Φ. It then
+outputs c′ ← Evalpk (f, c′1 , . . . c′l ).
+(λ) and D3 =
+We define distributions D1 , . . . D3 where D1 = SimTNM-vCCA
+E,S,t,r,q
+TNM-vCCA
+RealE,A,t,r,q (λ).
+(λ).
+Distribution D1 . This is the distribution given by SimTNM-vCCA
+E,S,t,r,q
+Distribution D2 . This distribution is the same as D1 apart from the following
+modification. c∗ is now computed from m instead of m′ , i.e. c∗ ← Encpk (m).
+Distribution D3 . This is the distribution given by RealTNM-vCCA
+(λ).
+E,A,t,r,q
+The rest of the proof follows [14, Section 4.4], with the following modification.
+We use the IND-vCCA property to go from D1 to D2 . We use the soundness
+of the extraction algorithm to go from D2 to D3 . We sketch out the rest of the
+proof for completeness.
+The indistinguishably of distribution D1 and D2 follows from the IND-vCCA
+property. Indeed, S does not have access to any oracle of its own, and perfectly
+simulates the vCCA oracle for A.
+In both D2 and D3 , the algorithm A2 is given c∗ ← Encpk (m) as input and
+outputs a ciphertext c. Notice that in both distribution, if c is invalid the output
+is (s1 , m, ⊥) and if c = c∗ , the output is (s1 , m, copy1 ).
+When c is valid and c ̸= c∗ , the output in D3 is (s1 , m, Decsk (c)). We show
+that this is also the case in D2 with overwhelming probability. The soundness property of the extraction algorithm implies that the probability that c ̸=
+Eval(f, c1 , . . . , cl ) is negligible. Assume in the following that c = Eval(f, c1 , . . . , cl ).
+Consider the two possible cases:
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+17
+
+– If c ∈ Φ, the output of D2 is (s1 , m, f (m1 , . . . , ml )) with m = mj for some
+j. Since c = Eval(f, c1 , . . . , cl ), it follows from the correctness of E that with
+overwhelming probability Decsk (c) = f (m1 , . . . , ml ).
+– If c ∈
+/ Φ, the output of D2 is (s1 , m, Decsk (Eval(f, c′1 , . . . c′l ))) where every c′i
+is a ”translation” of ci under pk. And the homomorphic correctness of the
+scheme implies that Decsk (Eval(f, c′1 , . . . c′l )) = f (Decsk (c′1 ), . . . , Decsk (c′l )). It
+follows from the correctness of the scheme that Decsk′ (ci ) = Decsk (c′i ), so
+f (Decsk (c′1 ), . . . , Decsk (c′l )) = f (Decsk′ (c1 ), . . . , Decsk′ (cl )) = f (m1 , . . . , ml ).
+Finally, as in the other case Decsk (c) = f (m1 , . . . , ml ). It follows that the
+output of D2 is (s1 , m, Decsk (c)) with overwhelming probability.
+Hence, distribution D1 is indistinguishable from D3 and the lemma follows.
+
+⊔
+⊓
+
+Lemma 2. TNM-vCCA =⇒ IND-vCCA.
+Proof. Let A = (A1 , A2 ) be an IND-vCCA adversary against E. We build an
+adversary B = (B1 , B2 ) for the TNM-vCCA property.
+Upon receiving the public-key pk, B1 runs (m0 , m1 , s) ← A1 (pk). It answers
+any decryption queries by using its own decryption oracle. B1 then outputs
+(M, s1 , s2 ) where M is the uniform distribution over {m0 , m1 }, s1 = (m0 , m1 )
+and s2 = (m0 , m1 , s, pk).
+On input (c∗ , s2 ), where s2 = (m0 , m1 , s, pk), B2 runs b ← A2 (pk, c∗ , s).
+Again, B2 answers every decryption query by using its own decryption oracle.
+Finally, it outputs Encpk (f (mb )) for some f ∈ F \ F ′ . B perfectly simulates the
+IND-vCCA game for A and the lemma follows.
+⊔
+⊓
+4.2
+
+vCCA Implies HCCA
+
+Prabhakaran and Rosulek [49] introduced Homomorphic-CCA (HCCA) security
+as a generalization of PKE security notions such as RCCA [19] and gCCA [3].
+HCCA captures chosen-ciphertext security for homomorphic encryption schemes
+but with significant limitation that it applies only to univariate functions. Our
+IND-vCCA can be seen as the generalization of HCCA to fully homomorphic
+encryption schemes.
+Definition 8 (Homomorphic-CCA [49]). Let T be a subset of the univariate
+functions. A homomorphic encryption scheme is Homomorphic-CCA (HCCA)
+secure with respect to T if there are PPT algorithms RigEnc and RigExtract,
+where the range of RigExtract is T ∪ {⊥}, and such that for all PPT adversaries
+A,
+1. The oracle RigEnc has an output of the form (ζ, S) ← RigEncpk , such that
+the ζ is indistinguishable from an output from the encryption oracle Enc.
+2. The advantage of A in the following HCCA experiment is negligible:
+(a) Setup: Pick (pk, sk) ← Gen(1λ ) and give pk to A.
+(b) First Phase: A gets access to the Decsk (·) oracle and the following two
+”guarded” RigEnc and RigExtract oracles:
+
+18
+
+Mark Manulis, Jérôme Nguyen
+
+– GRigEncpk () = ζi where (ζi , Si ) ← RigEncpk , when called for the ith
+time
+– GRigExtractsk (ζ, i) = RigExtractsk (ζ, Si )
+(c) Challenge: A outputs a plaintext m∗ . We privately flip a coin b ← {0, 1}.
+If b = 0, we compute ζ ∗ ← Encpk (m∗ ). If b = 1, we compute (ζ ∗ , S ∗ ) ←
+RigEncpk . In both cases, we give ζ ∗ to A.
+(d) Second Phase: A gets access to the same GRigEnc and GRigExtract oracles as in the First Phase, as well as a ”rigged” version of the decryption
+oracle RigDec. When b = 0, RigDec is simply the normal decryption oracle Decsk (·). When b = 1, RigDec is implemented as follows:
+(
+T (m∗ ),
+if ⊥ =
+̸ T ← RigExtractsk (ζ, S ∗ )
+RigDecsk (ζ) =
+Decsk (ζ), otherwise
+(e) Output: A outputs a bit b′ . The advantage of A in this experiment is
+1
+′
+AdvHCCA
+HE,A (λ) = | Pr[b = b] − 2 |.
+We show that IND-vCCA with respect to a set of univariate functions closed
+under composition strictly implies HCCA.
+Theorem 2. Let HE = (Gen, Enc, Dec, Eval) be a F-homomorphic encryption
+scheme and let F ′ be a subset of F that contains only univariate function and is
+closed under composition. Then IND-vCCA-security with respect to F ′ implies
+HCCA-security with respect to F ′ . More precisely, for every PPT adversary A,
+there exists a PPT adversary B such that
+IND-vCCA
+AdvHCCA
+(λ)
+HE,A (λ) ≤ AdvHE,B
+
+Proof. We now show that IND-vCCA implies HCCA. Assume HE is IND-vCCA
+and let Extract be the associated F ′ -extraction algorithm. Let A be an HCCA
+adversary against HE. We build a IND-vCCA adversary B that uses A. Upon
+receiving the public-key pk, B runs A(pk) and answers queries to the oracles in
+the following way:
+– GRigEnc(): Draw a random plaintext ri and compute (ζi = Encpk (ri ), ri ).
+Return ζi .
+– GRigExtract(ζ, i): Compute (f, c) ← Extract(aux, ζ) where aux is the relevant
+auxialiary input. If c = ζi , return f , otherwise return ⊥.
+– Challenge encryption: When A sends the challenge plaintext m∗ , B first
+draws a random plaintext m′ and sends (m∗ , m′ ) to its challenger. B receives
+an answer c∗ and gives it to A.
+– RigDec(ζ): Compute (f, c) ← Extract(aux, ζ). If c = c∗ , return f (m∗ ). Else
+B queries ζ to its decryption oracle and returns the answer to A.
+When A halts and outputs a guess b̂, B also outputs b̂. The soundness of the
+extraction algorithm implies that B perfectly simulates the HCCA game for A
+and the theorem follows.
+⊔
+⊓
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+19
+
+We now separate HCCA from IND-vCCA by showing that the HCCA construction given in [49, Section 5] is not IND-vCCA secure. Indeed they have
+shown this construction to also be unlinkable [49, Definition 3], and we show
+that this is incompatible with IND-vCCA security. The proof of Proposition 1
+is given in Appendix A.
+Proposition 1. HCCA =⇒
+̸
+IND-vCCA
+4.3
+
+vCCA and Chosen-Ciphertext Verification Attacks
+
+The chosen-ciphertext verification attacks (CCVA) notion is a variation of the
+chosen-ciphertext attacks notion, where the adversary gets access to a verification oracle instead of a decryption oracle. This was first considered in [42]
+under the name illegal ciphertext attacks (IND-ICA), and covers very practical
+attacks such as Bleichenbacher’s attack on RSA-PKCS #1 [13]. More importantly for our purposes, Loftus et al. [44] have shown that their CCA1 secure
+FHE scheme, suffers from a CCVA attack. This underlines the relative strength
+of CCVA attacks.
+We consider the version of the notion introduced by Das et al. [29] called
+CCA1.5. It is an indistinguishabillity game that combines the decryption oracle
+of the CCA1 game with the verification oracle from the CCVA game. This results
+in a stronger notion that implies both. We show here that IND-vCCA strictly
+implies CCA1.5. The following definition is adapted from [29, Definition 2].
+Definition 9 (CCA1.5 [29]). An encryption scheme E = (Gen, Enc, Dec) is said
+to be CCA1.5 secure, if any PPT adversary A has negligible advantage in the
+bit-guessing version of the indistinguishability game defined in Figure 2, with the
+following oracles.
+– O1 (c): Return Decsk (c)
+– O2 (c): If c is a valid ciphertext, return ”valid”. Else, return ”invalid”.
+Theorem 3. IND-vCCA =⇒ CCA1.5
+Proof. Note that an IND-vCCA adversary B that simulates the CCA1.5 game
+has no difficulty answering decryption queries in the first phase as it has its own
+decryption oracle. In the second phase, B must use its decryption oracle as a
+verification oracle. In the case that a verification query comes in for a ciphertext
+derived from the challenge ciphertext, the decryption oracle will return ⊥, even
+for valid ciphertexts. Therefore, when B’s decryption oracle returns ⊥, it must
+check if the decryption failed because the ciphertext is related to the challenge
+ciphertext by using the extraction algorithm.
+Let HE = (Gen, Enc, Dec, Eval) be a F-homomorphic encryption scheme. Assume that it is IND-vCCA secure and let Extract be the associated extraction
+algorithm. Let A be a PPT adversary against the CCA1.5 security of HE, we use
+A to build an adversary B against the IND-vCCA security of HE. On input the
+public-key pk, B runs A(pk) and answers queries in the following way.
+
+20
+
+Mark Manulis, Jérôme Nguyen
+
+– The challenge query: (m0 , m1 ) is sent to B’s challenger and the answer
+c∗ is given to A.
+– Decryption queries: B simply uses its own decryption oracle.
+– Verification queries: On input c, if c = c∗ , B returns ”valid”. Otherwise, B queries its decryption oracle on c and receives an answer m. If
+m ̸= ⊥, B returns ”valid”. Else B uses the extraction algorithm to obtain (f, c1 , . . . , cl ) ← Extract(c). Then, B verifies every ci by querying every
+ciphertext ci to its decryption oracle and recording the answer mi in a list
+L. If one of the ciphertext cj is such that cj = c∗ , it records mj for some
+random mj ̸= ⊥. Finally, if for every mi ∈ L, mi ̸= ⊥, it outputs ”valid”.
+Else it outputs ”invalid”.
+Recall that the soundness of the extraction algorithm implies that if we have
+(f, c1 , . . . , cl ) ← Extract(c), then {Decsk (c)} ≈ {f (Decsk (c1 ), . . . , Decsk (cl ))}. It
+follows that B perfectly simulates the verification oracle and the theorem follows.
+⊔
+⊓
+We prove the separation between CCA1.5 and IND-vCCA in Proposition 2.
+The proof is deferred to Appendix A.
+Proposition 2. CCA1.5 =⇒
+̸
+IND-vCCA
+4.4
+
+vCCA Implies FuncCPA
+
+FuncCPA has been defined by Akavia et al. [1] to capture the security of a clientaided outsourcing protocol. These are protocols where a client outsources some
+computation to a server. But, since certain computations are disproportionately
+expensive to do homomorphically, the server may send ciphertexts to the client
+for re-encryption. The server may ask to perform some operation on the plaintext while it is decrypted. The FuncCPA notion is an indisitnguishability game,
+where the adversary gets access to a ”re-encryption” algorithm, both before and
+after receiving the challenge ciphertext. In more details, a query consists of a
+ciphertext and a function (c, Gn ). The oracle then decrypts the ciphertext, applies the function before returning the encryption of the result. We show that
+IND-vCCA security implies FuncCPA.
+Definition 10 (FuncCPA [1]). Let E = (Gen, Enc, Dec) be a PKE with message space M. We say that it is funcCPA-secure with respect to a family of
+functions G = {Gn : M → M}n∈N if for all PPT adversaries A = (A1 , A2 ),
+A has negligible advantage in the bit-guessing version of the indistinguishability
+game defined in Figure 2, with the oracle O(c, n) = Encpk (Gn (Decsk (c))) available
+in both phases.
+Theorem 4. IND-vCCA =⇒ FuncCPA
+Proof. We define a modified FuncCPA game, where the game proceeds similarly,
+but in the second phase the oracle answers queries in the following way; on
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+21
+
+input (c, n) the oracle draws a random plaintext m ← M and sends back c′ =
+∗
+Encpk (Gn (m)). We call this modified experiment ExpFuncCPA
+(λ). We show that:
+E,A
+∗
+
+FuncCPA
+(λ) = 1]| ≤ negl(λ)
+| Pr[ExpFuncCPA
+(λ) = 1] − Pr[ExpE,A
+E,A
+
+(1)
+
+Towards this we define a series of hybrid games. Let q be the number of
+queries made by the adversary in the second phase.
+Hybrid Hq is exactly the FuncCPA experiment ExpFuncCPA
+(λ).
+E,A
+Hybrid Hj (j = 0, . . . q) proceeds similarly to Hq except that for every query
+in the second phase (ci , ni ) with i > j, the oracle draws a random m ← M and
+sends back Encpk (Gni (m)) instead of Encpk (Gni (Decsk (ci ))).
+∗
+Notice that hybrid H0 is exactly the modified experiment ExpFuncCPA
+(λ). It
+E,A
+follows from the standard hybrid experiment, that if equation 1 does not hold,
+then their exists an integer j, a polynomial poly(λ) and an adversary A such
+that for infinitely many λ:
+H
+
+H
+
+j
+j−1
+(λ) = 1| ≥
+(λ) = 1 − Pr[ExpE,A
+| Pr[ExpE,A
+
+1
+poly(λ)
+
+(2)
+
+We use A to build an adversary B against the IND-vCCA security of E. Upon
+receiving the public-key pk, B draws a random j ∗ and runs A(pk) answering
+queries in the following way:
+– First Phase: On input (c, n), B uses its decryption oracle to obtain m =
+Decsk (c). B then computes c′ = Encpk (Gn (m)) and sends c′ to A.
+– Challenge: When A outputs (x0 , x1 ), B draws a random b∗ ← {0, 1}, computes c∗ = Encpk (xb∗ ) and send c∗ to A.
+– Second Phase: On input (ci , ni ) the ith query in the second phase:
+• If i < j ∗ , B answers the query as in the first phase.
+• If i = j ∗ , B queries ci to its decryption oracle to obtain mj ∗ and draws
+a random plaintext m′ ← M. B then sends (m0 , m1 ) = (m∗j , m′ ) to its
+challenger and sends the answer cchall to A.
+• If i > j ∗ , B draws a random m ← M, computes c′ = Encpk (Gn (m)) and
+sends c′ to A.
+• If ci = cchall , then B answers Encpk (Gn (mj ∗ )).
+When A finally outputs a bit b′ , output b′ = b∗ . It is clear that B simulates
+hybrid Hj when cchall = Encpk (m0 ) and hybrid Hj+1 when cchall = Encpk (m1 ).
+Equation 1 follows.
+Let A′ be an adversary against the FuncCPA∗ security. We build an adversary
+′
+B against the CCA1 security of E that uses A′ as a subroutine. Upon receiving
+the public-key pk, B ′ runs A′ (pk) and answers the queries by using its decryption
+oracle in the first phase. In the second phase, B ′ draws a random plaintext
+and answers with Encpk (Gn (m)). When A′ sends (m0 , m1 ), B ′ sends it to its
+challenger and forwards the response to A′ . When A′ outputs a guess b, B ′
+outputs b′ .
+∗
+IND-vCCA
+Notice that ExpFuncCPA
+(λ) = ExpCCA1
+(λ). Combine
+E,A′
+E,B′ (λ) ≤ ExpE,B′
+with Equation 1, it follows that,
+
+22
+
+Mark Manulis, Jérôme Nguyen
+
+ExpFuncCPA
+(λ) ≤ ExpIND-vCCA
+(λ) + negl(λ)
+E,A
+E,B′
+⊔
+⊓
+We now show the separation between FuncCPA and IND-vCCA. Towards
+this, we simply observe that bootstrapping without further precaution is incompatible with IND-vCCA, and that one of the FuncCPA schemes in [1] follows
+this paradigm. The proof is given in Appendix A.
+Proposition 3. FuncCPA =⇒
+̸
+IND-vCCA
+4.5
+
+gCCA and RCCA Imply vCCA
+
+Finally, we show that just like HCCA, IND-vCCA is implied by both gCCA
+and RCCA. Both these notions are known to be unattainable for homomorphic encryption schemes [49] separating these notions from IND-vCCA. Since
+gCCA is known to imply RCCA [19], we only need to show that RCCA implies IND-vCCA. We use the IND-RCCA variation of the notion, as Cannetti et
+al. [19] have shown it to be the weakest formulation of RCCA security. We defer
+the definition of IND-RCCA and the proof of the theorem to Appendix A.
+Theorem 5. IND-RCCA =⇒ IND-vCCA
+
+5
+
+Embedding CPA-Secure FHE into a CCA2-Secure
+Encryption Scheme
+
+In this section, we define the notion of embedding FHE schemes into CCA2 secure encryption schemes following ideas from Loftus et al. [44]. We then show
+how to embed any CPA secure FHE scheme into a CCA2 encryption secure
+scheme. We give separate embedding constructions for the symmetric and asymmetric FHE, and we distinguish between schemes where the ciphertext validity
+check is designated verifier (requiring knowledge of a private key) or is publicly
+verifiable. Our constructions are fully agnostic to the type of FHE scheme that
+is to be embedded. In particular, they are compatible with bootstrapping-based
+FHE schemes. This is achieved by ensuring that the bootstrapping material is
+not a valid ciphertext for the CCA2 encryption scheme.
+5.1
+
+An Encryption Scheme with (Fully) Homomorphic Embedding
+
+Informally, a (fully) homomorphic encryption scheme is embedded in a CCA2secure encryption scheme if the ciphertexts the CCA2 scheme produces can be
+subdivided into two parts: a homomorphic part, that exhibits all the homomorphic properties of the underlying homomorphic encryption scheme, and a
+”CCA-security” part, that allows the scheme to be CCA2 secure. This means
+that one may be able to apply the homomorphic evaluation algorithm on the
+homomorphic part, but it should not be possible to create a valid ciphertext for
+the CCA2 secure encryption scheme from this operation.
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+23
+
+Definition 11. Let E = (Gen, Enc, Dec) be a public-key encryption scheme, and
+let HE = (HE.Gen, HE.Enc, HE.Dec, HE.Eval) be a F-homomorphic encryption
+scheme. We say that HE is embedded in E if there exists an algorithm Eval′ and
+Dec′ such that, for every f ∈ F,
+Dec′sk (Eval′pk (f, {ci })) = f (Dec′sk (c1 ), . . . Dec′sk (cl ))
+
+(3)
+
+with (pk, sk) ← Gen(1λ ), and ci ← Enc(pk, mi ) for some plaintexts mi with
+i ∈ {1, . . . , l}.
+The definition may be relaxed so that the equality fails to hold with negligible
+probability. Notice that the definition directly implies that, if E is CCA2-secure,
+the output of the embedded evaluation algorithm Eval′ cannot be a valid ciphertext for E as this would contradict its CCA2 security.
+The symmetric variant of Definition 11 is derived in the natural way. The
+only subtlety is that when embedding a symmetric FHE scheme that uses bootstrapping keys, the symmetric CCA2 encryption scheme must publicly release
+these keys as well.
+5.2
+
+Embedding of Symmetric FHE Schemes
+
+We start with embeddings for symmetric FHE schemes. The designated-verifier
+embedding uses the well-known Encrypt-then-MAC paradigm [8]. The publicly
+verifiable embedding follows the same structure, yet using a digital signature.
+The Encrypt-then-Sign construction is usually considered for public-key encryption and is not generally CCA2-secure in that setting. However, we are applying
+it to a symmetric-key encryption scheme, which allows us to build a CCA2-secure
+publicly verifiable scheme.
+Symmetric, Designated verifier. Let I = (I.Gen, I.Tag, I.Vfy) be a MAC
+and let HE = (HE.Gen, HE.Enc, HE.Dec, HE.Eval) be a homomorphic encryption
+scheme. We explicitly denote the bootstrapping-key for clarity here. We define
+E1 = (Gen, Enc, Dec) as follows.
+– Gen(1λ ): Draw (kHE , bk′ ) ← HE.Gen(1λ ) and kI ← I.Gen(1λ ) then set k =
+(kHE , kI ) and bk = bk′ . Output (k, bk).
+– Enc(k, m): Output c = (c′ , t) with c′ ← HE.Enc(kHE , m) and t ← I.Tag(kI , c′ ).
+– Dec(k, c): Parse c as (c′ , t). If I.Vfy(kI , c′ , t) = 1, output HE.Dec(kHE , c′ ).
+Otherwise, output ⊥.
+We stress again here that the bootstrapping material from the underlying
+FHE scheme, if it exists, is not accompanied by a MAC tag and therefore, the
+bootstrapping material is not a valid ciphertext for the construction.
+Theorem 6. If I is a SUF-CMA-secure MAC, and HE is a CPA-secure FHE
+scheme, then the above construction is a CCA2-secure PKE with fully homomorphic embedding.
+
+24
+
+Mark Manulis, Jérôme Nguyen
+
+Proof. The proof for the CCA2 security is the standard proof of security for
+Encrypt-then-MAC as in [8]. It is clear that HE is embedded in the construction. Indeed, for any function f , and any ciphertext c = (c′ , t), where (c′ , t) ←
+Enck (m), we define the evaluation algorithm Eval′ as, Eval′bk (f, c) = HE.Evalbk (f,
+c′ ). We then define Dec′ as Dec′ (k, c) = HE.Dec(kHE , c). It is clear that equation
+3 follows from the correctness of HE.
+Symmetric, Publicly verifiable. Let S = (S.Gen, S.Sign, S.Vfy) be a signature scheme and let HE = (HE.Gen, HE.Enc, HE.Dec, HE.Eval) be a homomorphic
+encryption scheme. We define E2 = (Gen, Enc, Dec, Vf) as follows.
+λ
+λ
+– Gen(1λ ): Draw (kHE , bk′ ) ← HE.Gen(1
+ ) and (pkS , skS ) ← S.Gen(1 ). Output
+′
+(k, bk) = (kHE , skS , pkS ), (bk , pkS )
+– Enc(k, m): Output (c′ , t) where c′ ← HE.Enc(kHE , m) and t ← S.Sign(skS , c′ ).
+– Dec(k, c): Parse c as (c′ , t). If S.Vfy(pkS , c′ , t) = 1, output Dec(kHE , c′ ). Otherwise, output ⊥.
+– Vf(bk, c): Parse c as (c′ , t). Output S.Vfy(pkS , c′ , t).
+
+Corollary 1. If Sig is a SUF-CMA-secure signature scheme, and HE is a CPAsecure FHE scheme, then the above construction is a publicly verifiable CCA2secure symmetric-key encryption with fully homomorphic embedding.
+Proof. The proof is essentially the same as for the designated-verifier construction. Using a signature scheme instead of a MAC can be seen as giving a verification oracle to the adversary. It is a well known result (see e.g. [16]) that
+SUF-CMA security is equivalent to SUF-CMA security with verfication oracle.
+It is clear that the Vf algorithm performs the validity check correctly without
+the need for the secret key.
+5.3
+
+Embedding of Asymmetric FHE Schemes
+
+We now give embeddings for asymmetric FHE schemes. Both embeddings are
+based on the principle of double encryption. In the publicly verifiable case, we
+use the Naor-Yung approach [47]. However, in the designated-verifier case, we are
+able to forgo the use of a NIZK and obtain a more efficient encryption scheme.
+Asymmetric, Designated verifier. Let HE = (HE.Gen, HE.Enc, HE.Dec,
+HE.Eval) be a homomorphic encryption scheme with message space M. We write
+COIN to denote the randomness space of HE. Let E = (E.Gen, E.Enc, E.Dec)
+be a public-key encryption scheme with message space M × COIN. We define
+E3 = (Gen, Enc, Dec) as follows.
+λ
+– Gen(1λ ): Draw (pk0 , sk0 , bk) ← HE.Gen(1
+) and (pk1 , sk1 ) ← E.Gen(1λ ). Out
+put (pk, sk) = (pk0 , pk1 , bk), sk1
+$
+
+– Enc(pk, m): Sample a random value r ←
+− COIN. Output c = (c0 , c1 ) where
+c0 ← HE.Enc(pk0 , m; r) and c1 ← E.Enc(pk1 , m∥r).
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+25
+
+– Dec(sk, c, t): Parse c as (c0 , c1 ). Compute and parse m∥r ← E.Dec(sk1 , c1 ). If
+HE.Enc(pk0 , m; r) = c0 , output m. Otherwise, output ⊥.
+Theorem 7. If E is a CCA2-secure PKE, and HE is a CPA-secure FHE scheme,
+then the above construction is a CCA2-secure PKE with fully homomorphic embedding.
+Proof. HE is embedded in the construction in a similar manner as with the
+previous constructions. To prove the CCA2-security, we define a series of games
+G0 , G1 , G2 , G3 . We denote with Wi the event that the adversary A outputs 1 at
+the end of the game Gi .
+Let CCA2-b be the CCA2 game where the challenger picks the bit b. Let
+game G0 be the CCA2-0 game. Let game G1 be the same game as G0 , but the
+challenge ciphertext c∗ = (c∗0 , c∗1 ) is now computed differently. The ciphertext c∗1
+is computed by encrypting m1 ∥r′ instead of m0 ∥r, where r′ is a new random coin
+r′ ← COIN that may be different from the coin used to produce c∗0 . Additionally,
+the challenger rejects decryption queries of the form (c′0 , c∗1 ).
+Notice that in game G0 , there exists no valid ciphertext (c′0 , c∗1 ) with c′0 ̸= c∗0 .
+Indeed, mb , r, pkHE fully determine c0 = HE.Enc(pkHE , m0 ; r). This is why in
+game G1 , we require the challenger to reject any query of that form. This can
+be thought of as generating simulated proofs when using a NIZK.
+Let A0 be an adversary that distinguishes between G0 and G1 . Then we can
+build an adversary B0 that breaks the CCA2 security of E. Upon receiving the
+public-key pkE , B0 generates the keys (pkHE , skHE , bk) ← HE.Gen(1λ ) for the HE
+scheme and sets pk = (pkHE , pkE , bk). It then runs A0 (pk) and answers queries
+as follows.
+– Decryption queries: In the first phase, B0 answers decryption queries of
+the form c = (c0 , c1 ) by forwarding c1 to its decryption oracle. B parses the
+answer as m∥r and computes c′ ← Enc(pkHE , m; r). If c′ = c0 , it returns m
+and ⊥ otherwise. In the second phase, B0 does the same, but answers ⊥ to
+any query of the form (c′0 , c∗1 ) for any c′0 .
+– Challenge phase: When B0 receives the challenge plaintexts (m0 , m1 ), it
+draws two random coins r, r′ ← COIN and sends (m0 ∥r′ , m1 ∥r′ ) to its challenger. It receives the challenge ciphertext c∗1 = E.Enc(pkE , mb ∥r′ ) for some
+unknown b. B0 then computes c∗0 = HE.Enc(pkHE , m0 ; r), sets c∗ = (c∗0 , c∗1 )
+and returns (c∗0 , c∗1 ).
+Finally, when A0 outputs a guess b̂, B0 does the same. B0 perfectly simulates
+game G0 when b = 0, and game G1 when b = 1. It follows that,
+| Pr[W0 ] − Pr[W1 ]| ≤ AdvCCA2
+B0 ,E (λ)
+
+(4)
+
+Let game G2 be the same game as G1 , but c∗0 is computed by encrypting m1
+instead of m0 . Let A1 be an adversary that distinguishes between G1 and G2 .
+Then we can build an adversary B1 that breaks the CPA security of HE. Upon
+receiving the public-key pkHE , B1 generates the keys (pkE , skE ) ← E.Gen(1λ ) for
+
+26
+
+Mark Manulis, Jérôme Nguyen
+
+the E scheme and sets pk = (pkHE , pkE ). It then runs A1 (pk) and answers queries
+as follows.
+– Decryption queries: In the first phase, it answers decryption queries by
+using skE to run the Dec algorithm. In the second phase, it does the same
+but rejects any query of the form (c′0 , c∗1 ).
+– Challenge phase: When B1 receives the challenge plaintexts (m0 , m1 ),
+it sends (m0 , m1 ) to its challenger. It then receives the ciphertext c∗0 =
+HE.Enc(pkHE , mb ; r) for some unknown b and r. B1 then draws a random
+coin r′ ← COIN, computes c∗1 = E.Enc(pkE , m1 ∥r′ ) and returns c∗ = (c∗0 , c∗1 ).
+Finally, when A1 outputs a guess b̂, B1 does the same. B1 simulates game G1
+when b = 0, and simulates game G2 when b = 1. It follows that,
+| Pr[W1 ] − Pr[W2 ]| ≤ AdvCPA
+B1 ,HE (λ)
+
+(5)
+
+Game G3 is the same as game G2 except we return to computing c∗1 by
+using the same coin r as the one used in the encryption of c∗0 , i.e. we have
+c∗0 = HE.Enc(pkHE , m1 ; r) and c∗1 = E.Enc(pkE , m1 ∥r). We can build an adversary
+B2 against the CCA2 security of E from a distinguisher between G2 and G3 in
+the same manner as we built B0 . It follows that,
+| Pr[W2 ] − Pr[W3 ]| ≤ AdvCPA
+B2 ,HE (λ)
+
+(6)
+
+Remember that G0 is the CCA2-0 game, and notice that G3 is exactly the
+CCA2-1 game. The theorem follows from equations 4, 5 and 6.
+⊔
+⊓
+For completeness, we give the construction for the publicly verifiable, asymmetric case which simply uses the Naor-Yung paradigm [47]. The proof of security
+of the CCA2 variant can be found in [52]. This type of construction has already
+been used for FHE in [14, 20].
+Asymmetric, Publicly verifiable. Let HE = (HE.Gen, HE.Enc, HE.Dec,
+HE.Eval) be a homomorphic encryption scheme and NIZK = (Setup, P, Vf ′ , Sim)
+be a simulation-sound NIZK for the language of double encryptions We define
+E3 = (Gen, Enc, Dec, Vf) as follows.
+– Gen(1λ ): Draw (pk0 , sk0 , bk0 ) ← HE.Gen(1λ ), (pk1 , sk1 , bk1 ) ← HE.Gen(1λ )
+and σ ← Setup. Output (pk, sk) = (pk0 , pk1 , bk, σ), (sk0 )
+– Enc(pk, m): Compute c0 ← HE.Enc(pk0 , m; r0 ) and c1 ← HE.Enc(pk1 , m; r1 ).
+Output (c0 , c1 , π) where π ← P(c0 , c1 , m, r0 , r1 ).
+– Dec(sk, c): Parse c as (c0 , c1 , π). If Vf(π, c0 , c1 ), output m ← HE.Dec(sk0 , c0 ).
+Otherwise, output ⊥.
+– Vf(pk, c): Parse c as (c0 , c1 , π). Output Vf ′ (π, c0 , c1 ).
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+5.4
+
+27
+
+On Approximate FHE
+
+We highlight again here that special care needs to be taken when embedding
+approximate FHE schemes such as the CKKS scheme [24]. Indeed, the CCA2
+transforms we use, i.e., Encrypt-then-MAC and the Naor-Yung double encryption paradigm assume the encryption scheme to be passively secure. CPA security does not adequately capture that for approximate FHE schemes as shown
+by Li and Micciancio in [43]. It is easy to see that the CPAD attack that they
+introduce is still effective even after the CCA2 transformation. This is solved by
+using a CPAD secure encryption scheme as a starting point for the transformation when considering approximate encryption schemes.
+
+6
+
+Building vCCA-Secure FHE
+
+We now show how to transform a CCA2 secure encryption scheme with homomorphic embedding into a IND-vCCA secure FHE scheme by using a SNARK.
+We give two variations, depending on if the encryption scheme is publicly verifiable or designated verifier. Both can accommodate the use of a symmetric
+embedded encryption scheme or an asymmetric one. We will use the public-key
+notation but the symmetric case is built in a similar manner. The construction
+uses the CCA2-secure encryption scheme to ensure the security of the output of
+the encryption algorithm. We then use the SNARK to prove the correct execution of the evaluation algorithm. This links the evaluated ciphertext to the input
+ciphertext that have been used to generate it. This allows to reduce any attack
+on the FHE scheme to the CCA2 scheme. The extraction algorithm mandated
+by the IND-vCCA security is then simply the witness extractor of the SNARK.
+More precisely, given a CCA2 encryption scheme with (fully) homomorphic
+embedding E, we build an IND-vCCA secure FHE scheme as follows. The encryption algorithm is just the encryption algorithm of E. The evaluation algorithm
+uses the evaluation algorithm embedded in E, and uses the SNARK to prove
+that all the inputs where valid i.e. inputs that pass the validity check of E, or in
+the case of repeated evaluation, ciphertexts that have a valid proof attached to
+them. The decryption algorithm then checks the proof before using the decryption algorithm of E, if the proof is valid.
+6.1
+
+Constructions
+
+Designated verifier case. Let Π = (Π.Setup, Π.Prove, Π.Vfy, Π.Sim) be a
+SNARK and let E = (E.Gen, E.Enc, E.Dec) be a designated verifier encryption
+scheme with homomorphic embedding. Let Eval′ , Dec′ and Vf be the embedded
+evaluation algorithm, decryption algorithm and the canonical verification algorithm for E respectively. Let (pk′ , sk′ ) ← E.Gen(1λ ) be a key pair for the E. We
+define the language L1 as:
+
+L1 = ({ci }, ĉ) | ∃f ∈ F ′ , ĉ = Eval′ (pk′ , f, {ci })
+We then define HEdesig = (Gen, Enc, Eval, Dec) as follows.
+
+28
+
+Mark Manulis, Jérôme Nguyen
+
+– Gen(1λ ): Draw (pk′ , sk′ ) ← E.Gen(1λ ), and σ ← Π.Setup(1λ , R1 ), where
+ R1 is
+the relation corresponding to L1 . Output (pk, sk) = (pk′ , σ), (sk′ , σ) .
+– Enc(pk, m): Output c ← E.Enc(pk′ , m).
+– Eval(pk, f, {ci }): Output (ĉ, π, {ci }) where ĉ ← Eval′ (pk′ , f, {ci }) and π ←
+Π.Prove(σ, f, {ci }, ĉ).
+– Dec(sk, ĉ, π, {ci }): If Π.Vfy(σ, f, {ci }, ĉ, π) = 1 and if for all i, Vf(sk′ , ci ) = 1,
+then output Dec′ (sk′ , ĉ). Otherwise output ⊥.
+The publicly verifiable variation of the construction is mostly the same as in
+the designated verifier case. The only difference is that we are able to make the
+evaluator do the validity check of the input ciphertexts. This allows the scheme
+to achieve better compactness as we do not need to send the fresh ciphertexts
+as part of the statement for the SNARK proof.
+Publicly verifiable case. Let Π = (Π.Setup, Π.Prove, Π.Vfy, Π.Sim) be a
+SNARK for the language L2 defined bellow. Let E = (E.Gen, E.Enc, E.Dec) be a
+publicly verifiable encryption scheme with homomorphic embedding. Let Eval′ ,
+Dec′ and Vf be the embedded evaluation algorithm, decryption algorithm and
+the verification algorithm for E respectively.
+
+
+ĉ = HE.Eval(pk′ , f, {ci })
+L2 = ĉ ∃(f, {ci })
+∀i Vf(pk′ , ci ) = 1
+We then define HEpub = (Gen, Enc, Eval, Dec) as follows.
+– Gen(1λ ): Draw (pk′ , sk′ ) ← E.Gen(1λ ), and σ ← Π.Setup(1λ , R2 ), where
+ R2 is
+the relation corresponding to L2 . Output (pk, sk) = (pk′ , σ), (sk′ , σ)
+– Enc(pk, m): Output c ← E.Enc(pk′ , m)
+– Eval(pk, f, {ci }): Output (ĉ, π), where ĉ ← Eval′ (pk′ , f, {ci }) and π ←
+Π.Prove(σ, f, {ci }, ĉ).
+– Dec(sk, ĉ, Π): If Π.Vfy(σ, ĉ, Π), then output Dec′ (sk, ĉ).
+Otherwise output ⊥.
+Remark 3. We write both constructions here for the case of a single homomorphic evaluation. In the case of repeated homomorphic evaluations, the evaluator
+has to prove that it is using either valid fresh ciphertexts, or valid evaluated
+ciphertexts, i.e. evaluated ciphertexts that have a valid proof attached to them.
+More precisely, consider a tree, where the evaluated ciphertext is the root, the
+edges are the consecutive evaluations, the nodes are the intermediate evaluated
+ciphertexts, and the leaves are the freshly encrypted ciphertexts. Then, in the
+designated-verifier case, the evaluator must prove that every node has a valid
+proof attached, and output every leaf for the decrypting party to verify the validity. The publicly verifiable case is the same, but the evaluator does not need to
+output the leaves. Instead it proves that they are valid ciphertexts with respect
+to E. This is similar to what is discussed in [14] for targeted malleability.
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+6.2
+
+29
+
+Security Proof
+
+We present the security of both constructions in Theorem 8. The security proofs
+for both are very similar. We give the security proof for HEdesig and explain
+afterwards the few differences regarding HEpub .
+Theorem 8. Let HE be a CPA secure homomorphic encryption scheme embedded in E = (E.Gen, E.Enc, E.Dec) with embedded evaluation and decryption
+algorithm Eval′ and Dec′ . Then, if E is CCA2-secure, and Π is a black-box weak
+SE SNARK for L1 (respectively for L2 ), then HEdesig (respectively HEpub ) is
+IND-vCCA-secure. More precisely, for every PPT adversary A, there exists a
+PPT adversary B such that,
+CCA2
+AdvIND-vCCA
+A,HEdesig (λ) ≤ AdvB,E (λ) + negl(λ)
+
+AdvIND-vCCA
+(λ) ≤ AdvCCA2
+A,HEpub
+B,E (λ) + negl(λ)
+Proof. We first construct the extraction algorithm for HEdesig . Let χ1 be the witness extraction algorithm of the underlying SNARK. Recall that the evaluation
+algorithm outputs messages of the form (ĉ, π, {ci }). Let aux be the extraction
+trapdoor τext . The extraction algorithm Extract1 (aux, ĉ, π, {ci }) uses the witness
+extraction χ1 to recover f and then outputs (f, {ci }).
+We now show that this is a sound extraction algorithm. The decryption
+algorithm Dec first checks the validity of the proof π before decrypting the
+ciphertext. It follows from the black-box weak SE of the SNARK that if the
+proof verifies:
+Pr[ĉ = Eval(f, {ci })] ≥ 1 − negl(λ)
+The correctness of E then implies that Dec′sk (ĉ) = f (Dec′sk (c1 ), . . . , Dec′sk (cl )).
+Furthermore, the decryption algorithm Dec returns ⊥ if one of the ciphertext ci
+is invalid; recall that in that case, f (Dec′sk (c1 ), . . . , Dec′sk (cl )) = ⊥. It follows that
+Decsk (ĉ) = f (Decsk (c1 ), . . . , Decsk (cl )) with overwhelming probability so Extract1
+is sound.
+Let A be a PPT adversary against the IND-vCCA security of HEdesig . We
+build an adversary B against the CCA2 security of E that uses A as a subroutine.
+Upon receiving the public-key pk′ for E, B runs σ ← Π.Setup(1λ , R1 ) and sets
+pk = (pk′ , σ). It then runs A(pk) and answers queries as follows.
+– In the first phase, when a decryption query c comes in, B computes (f, c1 ,
+. . . , cl ) ← Extract1 (c). It queries every ci ∈ (c1 , . . . , cl ) to its decryption
+oracle and receives answers mi . It then returns f (m1 , . . . , ml ), or ⊥ if there
+is a j such that mj = ⊥.
+– The challenge pair (m0 , m1 ) are forwarded to the challenger and B gives the
+response c∗ to A.
+– The second phase is handled as the first phase, but B returns ⊥ if c∗ ∈
+(c1 , . . . , cl ). Otherwise, it uses its decryption oracle as in the first phase to
+answer the queries.
+
+30
+
+Mark Manulis, Jérôme Nguyen
+
+Recall that Enc is the same algorithm as E.Enc, so no further work is required
+when transferring c∗ to A from the challenger. Additionally, since Extract1 is
+sound, B perfectly answers queries in the second phase with overwhelming probability. Therefore, when A outputs a guess b, B does the same. It follows that,
+CCA2
+AdvIND-vCCA
+A,HEdesig (λ) ≤ AdvB,E (λ) + negl(λ),
+
+where the second term comes from the black-box weak SE property of the
+SNARK.
+The security for HEpub is proven similarly. The extraction algorithm Extract2
+uses the witness extractor of the underlying SNARK to obtain (f, c1 , . . . , cl )
+directly. The soundness is then proven in the same way, but the argument is
+simpler as the validity check of fresh ciphertexts is already included in the proof.
+⊔
+⊓
+6.3
+
+CCA1 Security
+
+We also highlight that if CCA1 security is sufficient, our transformation would
+work from weaker assumptions. The encryption scheme with homomorphic embedding only needs to be CCA1 secure instead of CCA2, and, more importantly,
+it suffices that the SNARK is white-box extractable. This may be important in
+practice as such SNARKs are more efficient and significantly easier to achieve.
+Theorem 9. Let E = (E.Gen, E.Enc, E.Dec) be as defined in Theorem 8. Then,
+if E is CCA1-secure, and Π is a white-box weak SE SNARK for L1 (respectively
+for L2 ), then HEdesig (respectively HEpub ) is CCA1-secure. More precisely, for
+every PPT adversary A, there exists a PPT adversary B such that,
+CCA1
+AdvCCA1
+A,HEdesig (λ) ≤ AdvB,E (λ) + negl(λ)
+CCA1
+AdvCCA1
+A,HEpub (λ) ≤ AdvB,E (λ) + negl(λ)
+
+Proof. The proof is very similar to the proof of Theorem 8. The main difference
+is that we do not need to build the extraction algorithm for the IND-vCCA
+notion. Decryption queries are answered as in Theorem 8, but we use the witness
+extraction algorithm directly to obtain (f, c1 , . . . , cl ).
+
+7
+
+Conclusion and Future Work
+
+In this work, we introduce the new IND-vCCA security notion, which is strictly
+stronger than CCA1 security and show that it is achievable for FHE schemes.
+We give a general transformation that allows to build IND-vCCA secure schemes
+from any CPA secure FHE scheme. This also gives the first CCA1 secure FHE
+scheme based on bootstrapping techniques.
+We have also shown that to obtain CCA1 security, it is possible to relax the
+requirements of our transformation by embedding the FHE scheme into a CCA1
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+31
+
+secure encryption scheme and using only a white-box SE SNARK. Furthermore,
+consider circuit privacy [37], which asks that the homomorphic evaluation algorithm does not reveal information on the evaluated function. IND-vCCA as
+defined here seems to be a contradiction to circuit privacy. However, we expect
+that a CCA1 version of our transformation should be able to achieve some form
+of circuit privacy. It may also be interesting to explore definitions of circuit
+privacy for schemes that achieve security beyond CCA1.
+We have left our transformation fully generic. Another avenue would be to
+look at specific FHE schemes, embedding methods and SNARKs to select those
+that exhibit the best compatibility. Even further, Ganesh et al. [36] have designed
+a SNARK with the specific intention of allowing for better compatibility with
+FHE schemes. It would be interesting to do this for all three elements of our
+transformation together.
+Finally, while we have shown that vCCA is the strongest notion for FHE
+schemes among those that we have considered, we have not shown that it is the
+strongest possible. Is there a stronger and meaningful notion than vCCA that is
+achievable by FHE schemes?
+
+References
+1. Akavia, A., Gentry, C., Halevi, S., Vald, M.: Achievable CCA2 relaxation for homomorphic encryption. In: TCC. pp. 70–99. Springer (2022)
+2. Akavia, A., Vald, M.: On the privacy of protocols based on CPA-secure homomorphic encryption. Cryptology ePrint Archive (2021)
+3. An, J.H., Dodis, Y., Rabin, T.: On the security of joint signature and encryption.
+In: EUROCRYPT 2002. pp. 83–107. Springer (2002)
+4. Armknecht, F., Katzenbeisser, S., Peter, A.: Group homomorphic encryption: characterizations, impossibility results, and applications. Designs, codes and cryptography 67, 209–232 (2013)
+5. Atapoor, S., Baghery, K., Pereira, H.V., Spiessens, J.: Verifiable FHE via Latticebased SNARKs. Cryptology ePrint Archive (2024)
+6. Baghery, K., Kohlweiss, M., Siim, J., Volkhov, M.: Another look at extraction and
+randomization of Groth’s zk-SNARK. In: FC 2021. pp. 457–475. Springer (2021)
+7. Bellare, M., Desai, A., Pointcheval, D., Rogaway, P.: Relations among notions of
+security for public-key encryption schemes. In: CRYPTO’98. pp. 26–45. Springer
+(1998)
+8. Bellare, M., Namprempre, C.: Authenticated encryption: Relations among notions
+and analysis of the generic composition paradigm. In: ASIACRYPT 2000. pp. 531–
+545. Springer (2000)
+9. Bellare, M., Palacio, A.: Towards plaintext-aware public-key encryption without
+random oracles. In: ASIACRYPT 2004. pp. 48–62. Springer (2004)
+10. Biasse, J.F., Fieker, C.: Subexponential class group and unit group computation in
+large degree number fields. LMS Journal of Computation and Mathematics 17(A),
+385–403 (2014)
+11. Biasse, J.F., Song, F.: Efficient quantum algorithms for computing class groups and
+solving the principal ideal problem in arbitrary degree number fields. In: SODA16.
+pp. 893–902. SIAM (2016)
+
+32
+
+Mark Manulis, Jérôme Nguyen
+
+12. Bitansky, N., Canetti, R., Chiesa, A., Tromer, E.: From extractable collision resistance to succinct non-interactive arguments of knowledge, and back again. In:
+ITCS 2012. pp. 326–349 (2012)
+13. Bleichenbacher, D.: Chosen ciphertext attacks against protocols based on the RSA
+encryption standard PKCS# 1. In: CRYPTO’98. pp. 1–12. Springer (1998)
+14. Boneh, D., Segev, G., Waters, B.: Targeted malleability: homomorphic encryption
+for restricted computations. In: ITCS 2012. pp. 350–366 (2012)
+15. Boneh, D., Shen, E., Waters, B.: Strongly unforgeable signatures based on computational Diffie-Hellman. In: PKC 2006. pp. 229–240. Springer (2006)
+16. Boneh, D., Shoup, V.: A graduate course in applied cryptography. Draft 0.6 (2023)
+17. Brakerski, Z., Gentry, C., Vaikuntanathan, V.: (leveled) fully homomorphic encryption without bootstrapping. In: ITCS ’12. p. 309–325 (2012)
+18. Canetti, R., Chen, Y., Holmgren, J., Lombardi, A., Rothblum, G.N., Rothblum,
+R.D.: Fiat-Shamir from simpler assumptions. Cryptology ePrint Archive (2018)
+19. Canetti, R., Krawczyk, H., Nielsen, J.B.: Relaxing chosen-ciphertext security. In:
+CRYPTO 2003. pp. 565–582. Springer (2003)
+20. Canetti, R., Raghuraman, S., Richelson, S., Vaikuntanathan, V.: Chosen-ciphertext
+secure fully homomorphic encryption. In: PKC 2017. pp. 213–240. Springer (2017)
+21. de Castro, L., Peikert, C.: Functional Commitments for All Functions, with Transparent Setup and from SIS. In: EUROCRYPT 2023. pp. 287–320. Springer (2023)
+22. Checri, M., Sirdey, R., Boudguiga, A., Bultel, J.P.: On the practical cpad security
+of “exact” and threshold fhe schemes and libraries. Cryptology ePrint Archive,
+Paper 2024/116
+23. Chen, H., Laine, K., Rindal, P.: Fast private set intersection from homomorphic
+encryption. In: ACM SIGSAC 2017. pp. 1243–1255 (2017)
+24. Cheon, J.H., Kim, A., Kim, M., Song, Y.: Homomorphic encryption for arithmetic
+of approximate numbers. In: ASIACRYPT 2017. pp. 409–437. Springer (2017)
+25. Chillotti, I., Gama, N., Georgieva, M., Izabachène, M.: TFHE: fast fully homomorphic encryption over the torus. Journal of Cryptology 33(1), 34–91 (2020)
+26. Chillotti, I., Gama, N., Goubin, L.: Attacking FHE-based applications by software
+fault injections. Cryptology ePrint Archive (2016)
+27. Cramer, R., Ducas, L., Peikert, C., Regev, O.: Recovering short generators of principal ideals in cyclotomic rings. In: EUROCRYPT 2016. pp. 559–585. Springer
+(2016)
+28. Cramer, R., Shoup, V.: A practical public key cryptosystem provably secure against
+adaptive chosen ciphertext attack. In: CRYPTO’98. pp. 13–25. Springer (1998)
+29. Das, A., Dutta, S., Adhikari, A.: Indistinguishability against chosen ciphertext
+verification attack revisited: The complete picture. In: ProvSec 2013. pp. 104–120.
+Springer (2013)
+30. Dolev, D., Dwork, C., Naor, M.: Non-malleable cryptography. In: ACM STOC
+1991. pp. 542–552 (1991)
+31. Ducas, L., Micciancio, D.: Fhew: bootstrapping homomorphic encryption in less
+than a second. In: EUROCRYPT 2015. pp. 617–640. Springer (2015)
+32. ElGamal, T.: A public key cryptosystem and a signature scheme based on discrete
+logarithms. IEEE transactions on information theory 31(4), 469–472 (1985)
+33. Fauzi, P., Hovd, M.N., Raddum, H.: On the IND-CCA1 security of FHE schemes.
+Cryptography 6(1), 13 (2022)
+34. Fujisaki, E., Okamoto, T.: Secure integration of asymmetric and symmetric encryption schemes. Journal of cryptology 26, 80–101 (2013)
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+33
+
+35. Ganesh, C., Kondi, Y., Orlandi, C., Pancholi, M., Takahashi, A., Tschudi, D.:
+Witness-succinct universally-composable SNARKs. In: EUROCRYPT 2023. pp.
+315–346. Springer (2023)
+36. Ganesh, C., Nitulescu, A., Soria-Vazquez, E.: Rinocchio: Snarks for ring arithmetic.
+Journal of Cryptology 36(4), 41 (2023)
+37. Gentry, C.: Fully homomorphic encryption using ideal lattices. In: ACM STOC
+2009. p. 169–178. STOC ’09, Association for Computing Machinery, New York,
+NY, USA (2009). https://doi.org/10.1145/1536414.1536440
+38. Gentry, C., Sahai, A., Waters, B.: Homomorphic encryption from learning with
+errors: Conceptually-simpler, asymptotically-faster, attribute-based. In: CRYPTO
+2013. pp. 75–92. Springer (2013)
+39. Geva, R., Gusev, A., Polyakov, Y., Liram, L., Rosolio, O., Alexandru, A., Genise,
+N., Blatt, M., Duchin, Z., Waissengrin, B., et al.: Collaborative privacy-preserving
+analysis of oncological data using multiparty homomorphic encryption. Proceedings of the National Academy of Sciences 120(33), e2304415120 (2023)
+40. Groth, J.: Simulation-sound NIZK proofs for a practical language and constant
+size group signatures. In: ASIACRYPT 2006. pp. 444–459. Springer (2006)
+41. Groth, J.: On the size of pairing-based non-interactive arguments. In: EUROCRYPT 2016. pp. 305–326. Springer (2016)
+42. Krohn, M.N.: On the Definitions of Cryptographic Security: Chosen Ciphertext
+Attack Revisited. Ph.D. thesis, Citeseer (1999)
+43. Li, B., Micciancio, D.: On the security of homomorphic encryption on approximate
+numbers. In: EUROCRYPT 2021. pp. 648–677. Springer (2021)
+44. Loftus, J., May, A., Smart, N.P., Vercauteren, F.: On CCA-secure somewhat homomorphic encryption. In: SAC 2011. pp. 55–72. Springer (2012)
+45. Lu, W.j., Huang, Z., Hong, C., Ma, Y., Qu, H.: Pegasus: bridging polynomial and
+non-polynomial evaluations in homomorphic encryption. In: S&P 2021. pp. 1057–
+1073. IEEE (2021)
+46. Mukherjee, P., Wichs, D.: Two round multiparty computation via multi-key fhe. In:
+Fischlin, M., Coron, J.S. (eds.) EUROCRYPT 2016. pp. 735–763. Springer Berlin
+Heidelberg, Berlin, Heidelberg (2016)
+47. Naor, M., Yung, M.: Public-key cryptosystems provably secure against chosen ciphertext attacks. In: ACM STOC 1990. pp. 427–437 (1990)
+48. Paillier, P.: Public-key cryptosystems based on composite degree residuosity
+classes. In: EUROCRYPT ’99. pp. 223–238. Springer (1999)
+49. Prabhakaran, M., Rosulek, M.: Homomorphic encryption with cca security. In:
+ICALP. pp. 667–678. Springer (2008)
+50. Rackoff, C., Simon, D.R.: Non-interactive zero-knowledge proof of knowledge and
+chosen ciphertext attack. In: CRYPTO ’91. pp. 433–444. Springer (1991)
+51. Rivest, R.L., Adleman, L., Dertouzos, M.L., et al.: On data banks and privacy
+homomorphisms. Foundations of secure computation 4(11), 169–180 (1978)
+52. Sahai, A.: Non-malleable non-interactive zero knowledge and adaptive chosenciphertext security. In: FOCS 1999. pp. 543–553. IEEE (1999)
+53. Viand, A.: Useable Fully Homomorphic Encryption. Ph.D. thesis, ETH Zurich
+(2023)
+54. Viand, A., Knabenhans, C., Hithnawi, A.: Verifiable fully homomorphic encryption.
+arXiv preprint arXiv:2301.07041 (2023)
+55. Wang, B., Wang, X., Xue, R.: CCA1 secure FHE from PIO, revisited. Cybersecurity 1(1), 1–8 (2018)
+
+34
+
+Mark Manulis, Jérôme Nguyen
+
+56. Yasuda, S., Kitagawa, F., Tanaka, K.: Constructions for the IND-CCA1 secure fully
+homomorphic encryption. Mathematical Modelling for Next-Generation Cryptography: CREST Crypto-Math Project pp. 331–347 (2018)
+57. Zhang, Z., Plantard, T., Susilo, W.: Reaction attack on outsourced computing with
+fully homomorphic encryption schemes. In: ICISC 2011. pp. 419–436. Springer
+(2012)
+
+FHE beyond IND-CCA1 Security: Integrity through Verifiability
+
+A
+
+Further Proofs
+
+A.1
+
+Proof of Proposition 1
+
+35
+
+Proof. Recall that unlinkability [49, Definition 3] is defined as a distinguishing
+game. An adversary A that has access to the public-key and a decryption oracle, chooses a ciphertext c and a function f , and must distinguish between
+an encryption of c1 ← Encpk (f (Decsk (c))) and the evaluation of the ciphertext
+c2 ← Evalpk (f, c).
+If c1 is indistinguishable from c2 , then Extract(aux, c1 ) and Extract(aux, c2 )
+must be indistinguishable. It follows from the soundness of the extraction algorithm that the statement Φ1 ← Extract(aux, c1 ) is in Φ1 ∈ {⊥, (Id, c1 )} depending on the extraction algorithm. However, for Φ2 ← Extract(aux, c1 ), we
+have Φ2 = (f, c2 ) so they are trivially distinguishable. It follows that IND-vCCA
+security is a contradiction to the unlinkability.
+In [49, Section 5], Prabhakaran et al. give a construction and show that it is
+both HCCA and unlinkable. The above contradiction implies that the construction cannot be IND-vCCA and the proposition follows.
+⊔
+⊓
+A.2
+
+Proof of Proposition 2
+
+We revisit a construction given in [29] that is proven to be CCA1.5 and prove
+that it is not IND-vCCA secure.
+Let E = (Gen, Enc, Dec) be the Paillier encryption scheme [48]. Consider
+E ′ = (Gen′ , Enc′ , Dec′ ) as defined in Figure 5. Das et al. have shown E ′ to be
+CCA1.5 secure [29, Lemma 6]. We now show that it is not IND-vCCA secure.
+
+Gen′ (1λ )
+
+Enc′ (m)
+
+(pk, sk) ← Gen(1λ ) c ← Encpk (m)
+return (pk, sk)
+
+Dec′ (c′ )
+Parse c′ = (b∥c), b ∈ {0, 1}
+
+return c′ ← (0∥c) if b = 0, return Decsk (c)
+if b = 1, return ⊥
+
+Fig. 5. CCA1.5 construction from the Paillier encryption scheme.
+
+Proof. Let E ′ be the encryption scheme as defined in Figure 5. We show that
+E ′ is not IND-vCCA secure. To break the IND-vCCA security, it is sufficient
+that an adversary is able to homomorphically evaluate the challenge ciphertext
+without this being detectable. Recall that a ciphertext from the Paillier encryption scheme has the following form c = g m · rn mod n2 . A Paillier ciphertext
+can be re-randomized by multiplying it by r′n for some r′ ∈ N. In other words
+c′ = c · r′n mod n2 = g mb · (r · r′ )n mod n2 is another ciphertext encrypting m.
+Notice that (r · r′ ) mod n2 is uniformly distributed, therefore c′ has the same
+
+36
+
+Mark Manulis, Jérôme Nguyen
+
+distribution as c. It follows that for any polynomial-time algorithm Extract, and
+any ciphertext pair (c, c′ ) where c′ is obtained by re-randomizing c,
+Pr[c ← Extract(c′ )] ≤ negl(λ)
+
+(7)
+′
+
+An adversary A against the IND-vCCA security of E , upon receiving the
+challenge ciphertext c∗ , can re-randomize it as described above and query to
+its decryption oracle. It follows from Equation 7 that the oracle will send the
+decryption with overwhelming probability and A wins the IND-vCCA game. ⊔
+⊓
+A.3
+
+Proof of Proposition 3
+
+Proof. Akavia et al. [1] show that a sanitized version of a homomorphic encryption scheme, say FHEW [31] is FuncCPA. Now FHEW uses bootstrapping, i.e.
+an encryption of the secret key is released. It follows that sanitized FHEW cannot be IND-vCCA as an adversary can always query the bootstrapping key to
+trivially win the game.
+A.4
+
+Proof of Proposition 5
+
+We recall the definition of IND-RCCA from [19].
+Definition 12 (IND-RCCA [19]). An encryption scheme E = (Gen, Enc, Dec)
+is said to be IND-RCCA secure, if for any PPT adversary A, it has negligible
+advantage in the indistinguishability game from Definition 2, with the following
+oracles.
+– O1 (c): Return Decsk (c)
+– O2 (c): Compute m ← Decsk (c). If m ∈ {m0 , m1 } return a predefined value
+Test. Otherwise, return m.
+Proof. Let E = (Gen, Enc, Dec, Eval) be an IND-RCCA secure homomorphic encryption scheme. We show that it is also IND-vCCA secure. It follows from the
+IND-RCCA security of E, that Eval can only re-randomize ciphertexts. Indeed,
+any further homomorphism allows to trivially win the IND-RCCA game. It follows that we can simply build an extraction algorithm using the O2 oracle. More
+precisely, let A be an adversary against the IND-vCCA security of E. We build
+an adversary B against the IND-RCCA notion.
+Upon receiving the public-key pk, B runs A(pk) and answers decryption
+queries as follows. In the first phase, it just uses O1 . In the second phase, the
+extraction algorithm simply queries the O2 oracle and returns (Id, c∗ ) if the answer is Test and the symbol for fresh ciphertext otherwise. Hence, B uses O2 to
+obtain either m or the predetermined value Test. It then either returns m or the
+special symbol ⊥ depending on the case.
+When A outputs a guess b, B does the same. The soundness of the extraction
+algorithm is clear, therefore B perfectly simulates the IND-vCCA game for A.
+The theorem follows.
+⊔
+⊓
+
+
