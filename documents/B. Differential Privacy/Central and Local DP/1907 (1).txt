@@ -1,0 +1,2378 @@
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+Collecting and Analyzing Multidimensional Data
+with Local Differential Privacy
+Ning Wang1 , Xiaokui Xiao2 , Yin Yang3 , Jun Zhao4 , Siu Cheung Hui4 , Hyejin Shin5 , Junbum Shin5 , Ge Yu6
+
+arXiv:1907.00782v1 [cs.CR] 28 Jun 2019
+
+1
+
+School of Information Science and Engineering, Ocean University of China
+2
+School of Computing, National University of Singapore, Singapore
+3
+Division of Information and Computing Techologies, College of Science and Engineering, Hamad Bin Khalifa University, Qatar
+4
+School of Computer Science and Engineering, Nanyang Technological University, Singapore
+5
+Samsung Research, Samsung Electronics, Korea
+6
+School of Computer Science and Engineering, Northeastern University, China
+1
+
+wangning8687@ouc.edu.cn, 2 xkxiao@nus.edu.sg, 3 yyang@hbku.edu.qa, 4 {junzhao, asschui}@ntu.edu.sg,
+5
+{hyejin1.shin, junbum.shin}@samsung.com, 6 yuge@mail.neu.edu.cn
+
+e.g., the proportion of users running a particular operating
+system. Compared with traditional privacy standards such
+as differential privacy in the centralized setting [16], which
+typically assume a trusted data curator who possesses a set of
+sensitive records, LDP provides a stronger privacy assurance
+to users, as the true values of private records never leave their
+local devices. Meanwhile, LDP also protects the aggregator
+against potential leakage of users’ private information (which
+happened to AOL1 and Netflix2 with serious consequences),
+since the aggregator never collects exact private information
+in the first place. In addition, LDP satisfies the strong and
+rigorous privacy guarantees of differential privacy; i.e., the
+adversary (which includes the aggregator in LDP) cannot infer
+sensitive information of an individual with high confidence,
+regardless of the adversary’s background knowledge.
+Although LDP has attracted much attention in recent years,
+the majority of existing solutions focus on applying LDP to
+complex data types and/or data analysis tasks, as reviewed in
+Section VII. Notably, the fundamental problem of collecting
+numeric data has not been addressed sufficiently. As we
+explain in Section III-A, in order to release a numeric value
+in the range [−1, 1] under LDP, currently the user has only
+two options: (i) the classic Laplace mechanism [16], which
+injects unbounded noise to the exact data value, and (ii) a
+recent proposal by Duchi et al. [14], which releases a perturbed
+value that always falls outside the original data domain, i.e.,
+[−1, 1]. Further, it is non-trivial to extend these methods to
+handle multidimensional data. As elaborated in Section IV,
+a straightforward extension of a single-attribute mechanism,
+using the composition property of differential privacy, leads to
+suboptimal result accuracy. Meanwhile, the multidimensional
+version of [14], though asymptotically optimal in terms of
+worst-case error, is complicated and involves a large constant.
+Finally, to our knowledge, there is no existing solution that
+
+Abstract—Local differential privacy (LDP) is a recently proposed privacy standard for collecting and analyzing data, which
+has been used, e.g., in the Chrome browser, iOS and macOS. In
+LDP, each user perturbs her information locally, and only sends
+the randomized version to an aggregator who performs analyses,
+which protects both the users and the aggregator against private
+information leaks. Although LDP has attracted much research
+attention in recent years, the majority of existing work focuses
+on applying LDP to complex data and/or analysis tasks. In this
+paper, we point out that the fundamental problem of collecting
+multidimensional data under LDP has not been addressed
+sufficiently, and there remains much room for improvement
+even for basic tasks such as computing the mean value over
+a single numeric attribute under LDP. Motivated by this, we
+first propose novel LDP mechanisms for collecting a numeric
+attribute, whose accuracy is at least no worse (and usually better)
+than existing solutions in terms of worst-case noise variance.
+Then, we extend these mechanisms to multidimensional data
+that can contain both numeric and categorical attributes, where
+our mechanisms always outperform existing solutions regarding
+worst-case noise variance. As a case study, we apply our solutions
+to build an LDP-compliant stochastic gradient descent algorithm
+(SGD), which powers many important machine learning tasks.
+Experiments using real datasets confirm the effectiveness of our
+methods, and their advantages over existing solutions.
+Index Terms—Local differential privacy, multidimensional
+data, stochastic gradient descent.
+
+I. I NTRODUCTION
+Local differential privacy (LDP), which has been used in
+well-known systems such as Google Chrome [18], Apple iOS
+and macOS [36], and Microsoft Windows Insiders [12], is a
+rigorous privacy protection scheme for collecting and analyzing sensitive data from individual users. Specifically, in LDP,
+each user perturbs her data record locally to satisfy differential
+privacy [16], and sends only the randomized, differentially
+private version of the record to an aggregator. The latter then
+performs computations on the collected noisy data to estimate
+statistical analysis results on the original data. For instance,
+in [18], Google as an aggregator collects perturbed usage
+information from users of the Chrome browser, and estimates,
+
+1 https://en.wikipedia.org/wiki/AOL search data leak
+2 https://www.wired.com/2009/12/netflix-privacy-lawsuit/
+
+1
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+TABLE I: Main theoretical results comparing the proposed
+mechanisms PM and HM, as well as Duchi et al.’s solution [14]. The terms MaxVarPM , MaxVarHM , and MaxVarDu
+denote the worst-case noise variance of these three methods,
+respectively, for perturbing a d-dimensional numeric tuple
+under -local differential privacy √
+(elaborated in Section II).
+√
+√
+7+4 7+2 20+14 7
+#
+In addition,  = ln
+≈ 1.29 and
+9
+
+
+√
+√
+√
+√
+3
+3
+−5+2 6353−405 241 + 2 6353+405 241
+∗
+≈ 0.61.
+ = ln
+27
+Setting
+d>1
+d=1
+
+>0
+ > #
+ = #
+∗ <  < #
+0 <  ≤ ∗
+
+II. P RELIMINARIES
+In the problem setting, an aggregator collects data from
+a set of users, and computes statistical models based on the
+collected data. The goal is to maximize the accuracy of these
+statistical models, while preserving the privacy of the users.
+Following the local differential privacy model [5], [14], [18],
+we assume that the aggregator already knows the identities
+of the users, but not their private data. Formally, let n be the
+total number of users, and ui (1 ≤ i ≤ n) denote the i-th user.
+Each user ui ’s private data is represented by a tuple ti , which
+contains d attributes A1 , A2 , . . . , Ad . These attributes can be
+either numeric or categorical. Without loss of generality, we
+assume that each numeric attribute has a domain [−1, 1], and
+each categorical attribute with k distinct values has a discrete
+domain {1, 2, . . . , k}.
+To protect privacy, each user ui first perturbs her tuple ti
+using a randomized perturbation function f . Then, she sends
+the perturbed data f (ti ) to the aggregator instead of her true
+data record ti . Given a privacy parameter  > 0 that controls
+the privacy-utility tradeoff, we require that f satisfies -local
+differential privacy (-LDP) [18], defined as follows:
+
+Result
+MaxVarHM < MaxVarPM < MaxVarDu
+MaxVarHM < MaxVarPM < MaxVarDu
+MaxVarHM < MaxVarPM = MaxVarDu
+MaxVarHM < MaxVarDu < MaxVarPM
+MaxVarHM = MaxVarDu < MaxVarPM
+
+can perturb multidimensional data containing both numeric
+and categorical data with optimal worst-case error.
+This paper addresses the above challenges and makes
+several major contributions. First, we propose two novel
+mechanisms, namely Piecewise Mechanism (PM) and Hybrid
+Mechanism (HM), for collecting a single numeric attribute
+under LDP, which obtain higher result accuracy compared to
+existing methods. In particular, HM is built upon PM, and
+has a worse-case noise variance that is at least no worse (and
+usually better) than existing solutions. Then, we extend both
+PM and HM to multidimensional data with both numeric and
+categorical attributes with an elegant technique that achieves
+asymptotic optimal error, while remaining conceptually simple
+and easy to implement. Further, our fine-grained analysis
+reveals that although both [14] and the proposed methods obtain asymptotically optimal error bound on multidimensional
+numeric data, the former involves a larger constant than our
+solutions. Table I summarizes the main theoretical results in
+this paper, which are confirmed in our experiments.
+As a case study, using the proposed mechanisms as building
+blocks, we present an LDP-compliant algorithm for stochastic
+gradient descent (SGD), which can be applied to train a broad
+class of machine learning models based on empirical risk
+minimization, e.g., linear regression, logistic regression and
+SVM classification. Specifically, SGD iteratively updates the
+model based on gradients of the objective function, which
+are collected from individuals under LDP. Experiments using
+several real datasets confirm the high utility of the proposed
+methods for various types of data analysis tasks.
+In the following, Section II provides the necessary background on LDP. Sections III presents the proposed fundamental mechanisms for collecting a single numeric attribute
+under LDP, while Section IV describes our solution for collecting and analyzing multidimensional data with both numeric
+and categorical attributes. Section V applies our solution to
+common data analytics tasks based on SGD, including linear
+regression, logistic regression, and support vector machines
+(SVM) classification. Section VI contains an extensive set
+of experiments. Section VII reviews related work. Finally,
+Section VIII concludes the paper.
+
+Definition 1 (-local differential privacy). A randomized function f satisfies -local differential privacy if and only if for
+any two input tuples t and t0 in the domain of f , and for any
+output t∗ of f , we have:
+
+
+
+
+Pr f (t) = t∗ ≤ exp() · Pr f (t0 ) = t∗ .
+
+(1)
+
+The notation Pr[·] means probability. If f ’s output is continuous, Pr[·] in (1) is replaced by the probability density
+function. Basically, local differential privacy is a special case
+of differential privacy [17] where the random perturbation is
+performed by the users, not by the aggregator. According to the
+above definition, the aggregator, who receives the perturbed
+tuple t∗ , cannot distinguish whether the true tuple is t or
+another tuple t0 with high confidence (controlled by parameter
+), regardless of the background information of the aggregator.
+This provides plausible deniability to the user [9].
+We aim to support two types of analytics tasks under -LDP:
+(i) mean value and frequency estimation and (ii) machine
+learning models based on empirical risk minimization. In the
+former, for each numerical attribute Aj , P
+we aim to estimate the
+n
+mean value of Aj over all n users, n1 i=1 ti [Aj ]. For each
+0
+categorical attribute Aj , we aim to estimate the frequency of
+each possible value of A0j . Note that value frequencies in a
+categorical attribute A0j can be transformed to mean values
+once we expand A0j into k binary attributes using one-hot
+encoding. Regarding empirical risk minimization, we focus
+on three common analysis tasks: linear regression, logistic
+regression, and support vector machines (SVM) [11].
+Unless otherwise specified, all expectations in this paper are
+taken over the random choices made by the algorithms considered. We use E[·] and Var[·] to denote a random variable’s
+expected value and variance, respectively.
+
+2
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+III. C OLLECTING A S INGLE N UMERIC ATTRIBUTE
+
+Algorithm 1: Duchi et al.’s Solution [14]
+One-Dimensional Numeric Data.
+input : tuple ti ∈ [−1,
+and privacy
+n 1]
+o parameter .
+e +1
+e +1
+∗
+output: tuple ti ∈ − e −1 , e −1 .
+1 Sample a Bernoulli variable u such that
+
+This section focuses on the problem of estimating the mean
+value of a numeric attribute by collecting data from individuals
+under -LDP. Section III-A reviews two existing methods,
+Laplace Mechanism [16] and Duchi et al.’s solution [14],
+and discusses their deficiencies. Then, Section III-B describes
+a novel solution, called Piecewise Mechanism (PM), that
+addresses these deficiencies and usually leads to higher (or
+at least comparable) accuracy than existing solutions. Section
+III-C presents our main proposal, called Hybrid Mechanism
+(HM), whose worst-case result accuracy is no worse than PM
+and existing methods, and is often better than all of them.
+
+Pr[u = 1] =
+2
+3
+
+A. Existing Solutions
+Laplace mechanism and its variants. A classic mechanism
+for enforcing differential privacy is the Laplace Mechanism
+[16], which can be applied to the LDP setting as follows. For
+simplicity, assume that each user ui ’s data record ti contains
+a single numeric attribute whose value lies in range [−1, 1]. In
+the following, we abuse the notation by using ti to denote this
+attribute value. Then, we define a randomized
+ function that
+outputs a perturbed record t∗i = ti + Lap 2 , where Lap(λ)
+denotes a random variable that follows a Laplace distribution
+of scale λ, with the following
+probability density function:
+
+|x|
+1
+pdf(x) = 2λ exp − λ .
+∗
+Clearly, this estimate
+ ti is ∗unbiased, since the injected
+2
+Laplace noise Lap  in each ti has zero mean. In addition,
+the variance in t∗i is 82 . Once the aggregator receives
+Pn all
+perturbed tuples, it simply computes their average n1 i=1 t∗i
+as an estimate of the mean with error scale O √1 n .
+Soria-Comas and Domingo-Ferrer [35] propose a more
+sophisticated variant of Laplace mechanism, hereafter referred to as SCDF, that obtains improved result accuracy
+for multi-dimensional data. Later, Geng et al. [21] propose
+Staircase mechanism, which achieves optimal performance for
+unbounded input values (e.g., from a domain of (−∞, +∞)).
+Specifically, for a single attribute value ti , both methods inject
+random noise ni drawn from the following piece-wise constant
+probability distribution:
+
+e − 1
+1
+· ti + ;
+2e + 2
+2
+
+if u = 1 then
+
++1
+t∗i = ee −1
+;
+
+5
+
+else
+
++1
+;
+t∗i = − ee −1
+
+6
+
+return t∗i
+
+4
+
+for
+
+Section IV.) In particular, given a tuple ti ∈ [−1, 1], the
+
++1
+algorithm returns a perturbed tuple t∗i that equals either ee −1
+
+e +1
+or − e −1 , with the following probabilities:
+ 
+
+e −1
+1
++1
+if x = ee −1
+,
+∗
+  2e +2 · ti + 2 ,
+Pr ti = x | ti =
+(3)
+
+
+− e −1 · t + 1 , if x = − e +1 .
+
+
+i
+2e +2
+2
+e −1
+Duchi et al. prove that t∗i is an unbiased estimator of the input
+value ti . In addition, the variance of t∗i is:
+
+
+Var[t∗i ] = E (t∗i )2 − (E[t∗i ])2
+
+
+
+
+
+
+
+
+
+
+
+
++1 2 −ti ·(e −1)+e +1
++1 2 ti ·(e −1)+e +1
+) ·
++ (− ee −1
+) ·
+− ti 2
+= ( ee −1
+2e +2
+2e +2
+  2
++1
+− ti 2 .
+(4)
+= ee −1
+
+  2
++1
+Therefore, the worst-case variance of t∗i equals ee −1
+, and
+it occurs when ti = 0. Upon receiving the perturbed tuples
+output by Algorithm 1, the aggregator simply computes the
+average value of the attribute over all users to obtain an
+estimated mean.
+
+Deficiencies of existing solutions. Fig. 1 illustrates the
+worst-case variance of the noisy values returned by the
+ a(m)
+Laplace mechanism and Duchi et al.’s solution, when  varies.
+if x ∈ [−m − 2(j + 1), −m − 2j] , j ∈ N,
+
+j ,
+
+Duchi et al.’s solution offers considerably smaller variance
+ e
+pdf(ni = x) = a(m), if x ∈ [−m, m],
+than the Laplace mechanism when  ≤ 2, but is significantly
+
+
+ a(m)
+outperformed by the latter when  is large. To explain, recall
+
+, if x ∈ [m + 2j, m + 2(j + 1)] , j ∈ N.
++1
+ej
+that
+Duchi et al.’s solution returns either t∗i = ee −1
+or
+(2)
+
+e
++1
+∗
+1−exp(−)− exp(−)
+
+t
+=
+−
+,
+even
+when
+the
+input
+tuple
+t
+=
+0.
+As
+such,
+In SCDF, m = 2·
+and a(m) = 4 ; in Stairi
+i
+e −1
+− exp(−)
+∗
+the
+noisy
+value
+t
+output
+by
+Duchi
+et
+al.’s
+solution always
+2
+1−e−
+i
+case mechanism, m = 1+e/2 and a(m) = 2m+4e− −2me− .
+e +1
+has
+an
+absolute
+value
+>
+1,
+due
+to
+which
+t∗i ’s variance
+e −1
+Note that the optimality result in [21] does not apply to the
+case with bounded inputs. We experimentally compare the is always larger than 1 when ti = 0, regardless of how large
+the Laplace mechanism
+proposed solutions with both SCDF and Staircase in Section the privacy budget  is. In contrast,
+2
+incurs
+a
+noise
+variance
+of
+8/
+,
+which
+decreases quadratically
+VI.
+with the increase of , due to which it is preferable when  is
+Duchi et al.’s solution. Duchi et al. [14] propose a method large. However, when  is small, the relatively “fat” tail of the
+to perturb multidimensional numeric tuples under LDP. Al- Laplace distribution leads to a large noise variance, whereas
+gorithm 1 illustrates Duchi et al.’s solution [14] for the one- Duchi et al.’s solution does not suffer from this
+since it
+ issue
+
++1 e +1
+dimensional case. (We discuss the multidimensional case in confines t∗i within a relatively small range − ee −1
+, e −1 .
+
+3
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+Algorithm 2: Piecewise Mechanism for One-Dimensional
+Numeric Data.
+input : tuple ti ∈ [−1, 1] and privacy parameter .
+output: tuple t∗i ∈ [−C, C] .
+1 Sample x uniformly at random from [0, 1];
+e/2
+2 if x < /2
+then
+e
++1
+3
+Sample t∗i uniformly at random from [`(ti ), r(ti )];
+
+6
+5
+4
+3
+2
+1
+0
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+5
+
+else
+Sample t∗i uniformly at random from
+[−C, `(ti )) ∪ (r(ti ), C];
+
+6
+
+return t∗i
+
+4
+
+Fig. 1: Different mechanisms’ worst-case noise variances for
+one-dimensional numeric data versus the privacy budget .
+Our Piecewise Mechanism and Hybrid Mechanism will be
+discussed in Sections III-B and III-C, respectively.
+
+B. Piecewise Mechanism
+
+of the rightmost piece (i.e., t∗i ∈ (r(ti ), C]) decreases, and is
+reduced to 0 when ti = 1. The case when ti < 0 can be
+illustrated in a similar manner.
+Algorithm 2 shows the pseudo-code of PM, assuming the
+input domain is [−1, 1]. In general, when the input domain
+is ti ∈ [−r, r], r > 0, the user (i) computes t0i = ti /r, (ii)
+perturbs t0i using PM, since t0i ∈ [−1, 1], and (iii) submits
+r · t∗i to the server, where t∗i denotes the noisy value output
+by Algorithm 2. It can be verified that r · t∗i is an unbiased
+estimator of ti . The above method requires that the user knows
+r, which is a common assumption in the literature, e.g., in
+Duchi et al.’s work [14].
+The following lemmas establish the theoretical guarantees
+of Algorithm 2.
+
+Our first proposal, referred to as the Piecewise Mechanism
+(PM), takes as input a value ti ∈ [−1, 1], and outputs a
+perturbed value t∗i in [−C, C], where
+
+Lemma 1. Algorithm 2 satisfies -local differential privacy.
+In addition, given an input value ti , it returns a noisy value
+t∗i with E[t∗i ] = ti and
+
+SCDF and Staircase mechanism suffer from the same issue as
+the Laplace mechanism, as demonstrated in our experiments
+in Section VI.
+A natural question is: can we design a perturbation method
+that combines the advantages of the Laplace mechanism and
+Duchi et al.’s solution to minimize the variance of t∗i across a
+wide spectrum of ? Intuitively, such a method should confine
+t∗i to a relatively small domain (as Duchi et al.’s solution
+does), and should allow t∗i to be close to ti with reasonably
+large probability (as the Laplace mechanism does). In what
+follows, we will present a new perturbation method based on
+this intuition.
+
+C=
+
+exp(/2) + 1
+.
+exp(/2) − 1
+
+Var[t∗i ] =
+
+The probability density function (pdf) of t∗i is a piecewise
+constant function as follows:
+
+p,
+if x ∈ [`(ti ), r(ti )],
+pdf(t∗i = x | ti ) =
+p
+
+exp() , if x ∈ [−C, `(ti )) ∪ (r(ti ), C].
+(5)
+where
+exp() − exp(/2)
+p=
+,
+2 exp(/2) + 2
+`(ti ) =
+
+ti 2
+e/2 + 3
++
+.
+e/2 − 1 3(e/2 − 1)2
+
+The proof appears in the full version [2].
+By Lemma 1, PM returns a noisy value t∗i whose variance
+is at most
+1
+e/2 − 1
+
++
+
+e/2 + 3
+4e/2
+=
+.
+/2
+2
+/2
+3(e − 1)
+3(e − 1)2
+
+The purple line in Fig. 1 illustrates this worst-case variance of
+PM as a function of . Observe that PM’s worst-case variance
+is considerably smaller than that of Duchi et al.’s solution
+when  ≥ 1.29, and is only slightly larger than the latter when
+ < 1.29, where 1.29 is x-coordinate of the point that the
+Duchi et al.’ solution curve intersects that of PM in Fig. 1.
+Furthermore, it can be proved that PM’s worst-case variance
+is strictly smaller than Laplace mechanism’s, regardless of the
+value of . This makes PM be a more preferable choice than
+both the Laplace mechanism and Duchi et al.’s solution.
+Furthermore, Lemma 1 also shows that the variance of
+t∗i in PM monotonically decreases with the decrease of |ti |,
+which makes PM particularly effective when the distribution
+of the input data is skewed towards small-magnitude values.
+(In Section VI, we show that |ti | tends to be small in a large
+
+C +1
+C −1
+· ti −
+, and
+2
+2
+
+r(ti ) = `(ti ) + C − 1.
+Let pdf(t∗i ) be short for pdf(t∗i
+pdf(t∗i ) for the cases of ti =
+
+= x | ti ). Fig. 2 illustrates
+0, ti = 0.5, and ti = 1.
+Observe that when ti = 0, pdf(t∗i ) is symmetric and consists of three “pieces”, among which the center piece (i.e.,
+t∗i ∈ [`(ti ), r(ti )]) has a higher probability than the other two.
+When ti increases from 0 to 1, the length of the center piece
+remains unchanged (since r(ti )−`(ti ) = C −1), but the length
+
+4
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+pdf(ti )
+
+-C
+
+pdf(ti )
+
+pdf(ti )
+
+0
+
+(a) ti = 0
+
+C
+
+ti
+
+-C
+
+0.5
+
+C
+
+ti
+
+-C
+
+(b) ti = 0.5
+
+C ti
+
+1
+
+(c) ti = 1
+
+Fig. 2: The noisy output t∗i ’s probability density function pdf(t∗i ) in the Piecewise Mechanism.
+class of applications.) In contrast, Duchi et al.’s solution incurs
+a noise variance that increases with the decrease of |ti |, as
+shown in Equation 4.
+Pn
+Now consider the estimator n1 i t∗i used by the aggregator
+to infer the mean value of all ti . The variance of this estimator
+is 1/n of the average variance of t∗i . Based on this, the
+Pnfollowing lemma establishes the accuracy guarantee of n1 i t∗i .
+Pn
+Pn
+Lemma 2. Let Z = n1 i=1 t∗i and X = n1 i=1 ti . With
+at least 1 − β probability,
+!
+p
+log(1/β)
+√
+.
+Z −X =O
+ n
+
+(resp. tail), then we invoke PM (resp. Duchi et al.’s solution)
+to perturb ti . Given ti and , the noise variance incurred by
+HM is
+2
+2
+σH
+(ti , ) = α · σP2 (ti , ) + (1 − α) · σD
+(ti , ),
+2
+where σP2 (ti , ) and σD
+(ti , ) denote the noise variance incurred by PM and Duchi et al.’s solution, respectively, when
+given ti and  as input. We have the following lemma.
+
+Lemma 3. Let ∗ be defined as:
+
+
+√
+√
+√
+√
+3
+3
++ 2 6353+405 241
+≈ 0.61.
+∗ = ln −5+2 6353−405 241
+27
+(6)
+
+We omit the proof of Lemma 2 as it is a special case of
+Lemma 5 to be presented in Section IV-B.
+
+2
+(ti , ) is minimized when
+The term maxti ∈[−1,1] σH
+
+(
+
+Remark. PM bears some similarities to SCDF [35] and
+Staircase mechanism [21] described in Section III-A, in the
+sense that the added noise in PM also follows a piecewise constant distribution, as in SCDF and Staircase. On the
+other hand, there are two crucial differences between PM and
+SCDF/Staircase. First, SCDF and Staircase mechanism assume
+an unbounded input, and produce an unbounded output (i.e.,
+with range (−∞, +∞)) accordingly. In contrast, PM has both
+bounded input (with domain [−1, 1]) and output (with range
+[−C, C]). Second, the noise distribution of SCDF/Staircase
+consists of an infinite number of “pieces” that are data
+independent, whereas the output distribution of the piecewise
+mechanism consists of up to three “pieces” whose lengths and
+positions depend on the input data.
+
+α=
+
+1 − e−/2 , for  > ∗ ,
+0,
+for  ≤ ∗ .
+
+(7)
+
+The proof appears in the full version [2].
+By Lemma 3, when α satisfies Equation 7, the worst-case
+noise variance of HM is:
+
+(e +1)2
+e/2 +3
+
++ e/2
+, for  > ∗ ,
+ 3e/2
+(e/2 −1)
+(e −1)2
+2
+max σH (ti , ) =   2
+
+ti ∈[−1,1]
+ e +1 ,
+for  ≤ ∗ .
+e −1
+(8)
+Based on Equation 8, Lemma 1, and Equation 4, which present
+2
+2
+σH
+(ti , ), σP2 (ti , ), and σD
+(ti , ), respectively, we can show
+that HM often dominates both PM and Duchi et al.’s solution
+in minimizing the worst-case noise variance. The detailed
+results are summarized under d = 1 (meaning one dimension)
+in Table I of Section I, where ∗ follows from Equation 6 and
+# is derived by solving  which makes maxti ∈[−1,1] σP2 (ti , )
+2
+and maxti ∈[−1,1] σD
+(ti , ) equal. We highlight some results as
+follows.
+
+C. Hybrid Mechanism
+As discussed in Section III-B, the worst-case result accuracy
+of PM dominates that of the Laplace mechanism, and yet it can
+still be (slightly) worse than Duchi et al’s solution, since the
+noise variance incurred by the former (resp. latter) decreases
+(resp. increases) with the decrease of |ti |. Can we construct
+a method that that preserves the advantages of PM and is at
+the same time always no worse than Duchi et al’s solution?
+The answer turns out to be positive: that we can combine
+PM and Duchi et al’s solution into a new Hybrid Mechanism
+(HM). Further, the combination used in HM is non-trivial; as
+a result, the noise variance of HM is often smaller than both
+PM and Duchi et al’s solution, as shown in Fig. 1 on Page 4.
+In particular, given an input value ti , HM flips a coin whose
+head probability equals a constant α; if the coin shows a head
+
+Corollary 1. Suppose that α satisfies Equation 7. If  > ∗ ,
+
+
+2
+2
+max σH
+(ti , ) < min max σP2 (ti , ), max σD
+(ti , ) ;
+
+ti ∈[−1,1]
+
+ti ∈[−1,1]
+
+ti ∈[−1,1]
+
+otherwise,
+2
+2
+max σH
+(ti , ) = max σD
+(ti , ) < max σP2 (ti , ).
+
+ti ∈[−1,1]
+
+ti ∈[−1,1]
+
+ti ∈[−1,1]
+
+The red line in Fig. 1 on Page 4 shows the worst-case noise
+variance incurred by HM, which is consistently no higher than
+
+5
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+Algorithm 3: Duchi et al.’s Solution [14] for
+Multidimensional Numeric Data.
+input : tuple ti ∈ [−1, 1]d and privacy parameter .
+output: tuple t∗i ∈ {−B, B}d .
+d
+1 Generate a random tuple v ∈ {−1, 1} by sampling each
+v[Aj ] independently from the following distribution:
+
+ 1 + 1 ti [Aj ], if x = 1
+2
+2
+;
+Pr[v[Aj ] = x] =
+ 1 − 1 t [A ], if x = −1
+j
+2
+2 i
+
+Algorithm 4: Our Method for Multiple Numeric
+Attributes.
+input : tuple ti ∈ [−1, 1]d and privacy parameter .
+output: tuple t∗i ∈ [−C · d, C · d]d .
+∗
+1 Let ti = h0, 0, . . . , 0i;
+
+   
+2 Let k = max 1, min d, 2.5
+;
+3 Sample k values uniformly without replacement from
+{1, 2, . . . , d};
+4 for each sampled value j do
+5
+Feed ti [Aj ] and k as input to PM or HM, and obtain
+a noisy value xi,j ;
+6
+t∗i [Aj ] = kd xi,j ;
+
+Let T + (resp. T − ) be the set of all tuples
+t∗ ∈ {−B, B}d such that t∗ · v ≥ 0 (resp. t∗ · v ≤ 0);
+3 Sample a Bernoulli variable u that equals 1 with
+e /(e + 1) probability;
+4 if u = 1 then
+5
+return a tuple uniformly at random from T + ;
+2
+
+7
+
+else
+7
+return a tuple uniformly at random from T − ;
+
+return t∗i
+
+6
+
+ d−1
+2
+
+
+ ( d−1 ) ,
+
+if d is odd,
+
+(d−1)/2
+
+Cd =
+
+d
+2d−1 + 12 (d/2
+
+)
+
+
+, otherwise.
+d−1
+( d/2 )
+
+(9)
+
+Then, B is calculated by:
+
+those of all other three methods (HM reduces to Duchi et al.’s
+solution for  ≤ ∗ ). In addition, observe that PM’s accuracy
+is close to HM’s, which demonstrates the effectiveness of PM.
+
+exp() + 1
+· Cd .
+(10)
+exp() − 1
+Pn
+Duchi et al. show that n1 i=1 t∗i [Aj ] is an unbiased estimator
+of the mean of Aj , and
+#
+"
+√
+
+n
+n
+1X
+1X ∗
+d log d
+√
+ti [Aj ] −
+ti [Aj ] = O
+E max
+,
+n i=1
+ n
+j∈[1,d] n
+i=1
+(11)
+which is asymptotically optimal [14].
+Although Duchi et al’s method can provide strong privacy
+assurance and asymptotic error bound, it is rather sophisticated, and it cannot handle the case that a tuple contains
+numeric attributes as well as categorical attributes. To address
+this issue, we present extensions of PM and HM that (i)
+are much simpler than Duchi et al.’s solution but achieve
+the same privacy assurance and asymptotic error bound, and
+(ii) can handle any combination of numeric and categorical
+attributes. For ease of exposition, we first extend PM and HM
+for the case when each ti contains only numeric attributes in
+Section IV-B, and then discuss the case of arbitrary attributes
+in Section IV-C.
+B=
+
+IV. C OLLECTING M ULTIPLE ATTRIBUTES
+We now consider the case where each user’s data record
+contains d > 1 attributes. In this case, a straightforward
+solution is to collect each attribute separately using a singleattribute perturbation algorithm, such that every attribute is
+given a privacy budget /d. Then, by the composition theorem [17], the collection of all attributes satisfies -LDP. This
+solution, however, offers inferior data utility. For example,
+suppose that all d attributes are numeric, and we process each
+attribute using PM, setting the privacy budget to /d. Then, by
+Lemma 2, theamount
+of noise in the estimated mean of each
+√
+log d
+d √
+attribute is O  n , which is super-linear to d, and hence,
+can be excessive when d is large. To address the problem, the
+first and only existing solution that we are aware of is by
+Duchi et al. [14] for the case of multiple numeric attributes,
+presented in Section IV-A.
+A. Existing Solution for Multiple Numeric Attributes
+Algorithm 3 shows the pseudo-code of Duchi et al.’s solution for multidimensional numeric data. It takes as input
+a tuple ti ∈ [−1, 1]d of user ui and a privacy parameter ,
+and outputs a perturbed vector t∗i ∈ {−B, B}d , where B is
+a constant decided by d and . Upon receiving the perturbed
+tuples, the aggregator simply computes the average value for
+each attribute over all users, and outputs these averages as the
+estimates of the mean values for their corresponding attributes.
+Next, we focus on the calculation of B, which is rather
+complicated.
+Essentially, B is a scaling factor to ensure that the expected
+value of a perturbed attribute is the same as that of the exact
+attribute value. First, we compute:
+
+B. Extending PM and HM for Multiple Numeric Attributes
+Algorithm 4 shows the pseudo-code of our extension of PM
+and HM for multidimensional numeric data. Given a tuple
+ti ∈ [−1, 1]d , the algorithm returns a perturbed tuple t∗i that
+has non-zero value on k attributes, where
+n
+n j  koo
+.
+(12)
+k = max 1, min d,
+2.5
+In particular, each Aj of those k attributes is selected uniformly at random (without replacement) from all d attributes
+of ti , and t∗i [Aj ] is set to kd · x, where x is generated by PM
+or HM given ti [Aj ] and k as input.
+
+6
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+Corollary 2. For any d > 1 and  > 0, both PM and HM
+outperform Duchi et al.’s solution in minimizing the worst-case
+noise variance; more specifically, for any d > 1 and  > 0,
+
+
+
+
+max
+VarH t∗i [Aj ] <
+max
+VarP t∗i [Aj ]
+ti [Aj ]∈[−1,1]
+ti [Aj ]∈[−1,1]
+
+
+<
+max
+VarD t∗i [Aj ] . (16)
+
+The intuition of Algorithm 4 is as follows. By requiring
+each user to submit k (instead of d) attributes, it increases the
+privacy budget for each attribute from /d to /k, which in turn
+reduces the noise variance incurred. As a trade-off, sampling
+k out of d attributes entails additional estimation error, but this
+trade-off can be balanced by setting k to an appropriate value,
+which is shown in Equation 12. We derive the setting of k
+by minimizing the worst-case noise variance of Algorithm 4
+when it utilizes PM (resp. HM)3 .
+
+ti [Aj ]∈[−1,1]
+
+To illustrate Corollary 2, Fig. 3 shows the worst-case
+variance of PM (resp. HM) as a fraction of the worst-case
+variance of Duchi et al.’s solution, for various d and privacy
+budget . Observe that for d = 5, 10, 20, 40, the wort-case
+variance of HM is at most 77% of that of Duchi et al.’s
+solution, and PM’s worst-case variance is also smaller than
+the latter. In our experiments, we demonstrate that both HM
+and PM outperform Duchi et al.’s solution in terms of the
+empirical accuracy for multidimensional numeric data.
+
+Lemma 4. Algorithm 4 satisfies -local differential privacy.
+In addition, given an input tuple ti , it outputs a noisy tuple
+t∗i , such that for any j ∈ [1, d], E [t∗i [Aj ]] = ti [Aj ].
+The proof appears in the full version [2]. P
+n
+By Lemma 4, the aggregator can use n1 i=1 t∗ [Aj ] as
+an unbiased estimator of the mean of Aj . The following
+lemma shows that the accuracy guarantee of this estimator
+matches that of Duchi et al.’s solution for multidimensional
+numeric data (see Equation 11), which has been proved to be
+asymptotically optimal [14]. This indicates that Algorithm 4’s
+accuracy guarantee is also optimal in the asymptotic sense.
+Pn
+Lemma 5. For P
+any j ∈ [1, d], let Z[Aj ] = n1 i=1 t∗i [Aj ]
+n
+1
+and X[Aj ] = n i=1 ti [Aj ]. With at least 1 − β probability,
+!
+p
+d log(d/β)
+√
+.
+max Z[Aj ] − X[Aj ] = O
+ n
+j∈[1,d]
+
+C. Handling Categorical Attributes
+So far our discussion is limited to numeric attributes. Next
+we extend Algorithm 4 to handle data with both numeric
+and categorical attributes. Recall from Section II that for
+each categorical attribute A, our objective is to estimate the
+frequency of each value v in A over all users. We note
+that most existing LDP algorithms (e.g., [5], [18], [38]) for
+categorical data are designed for this purpose, albeit limited
+to a single categorical attribute.
+Formally, we assume that we are given an algorithm f
+that takes an input a privacy budget  and a one-dimensional
+tuple ti with a categorical attribute A, and outputs a perturbed
+tuple t∗i while ensuring -LDP. In addition, we assume there
+is a function g(x, y) that g(x, y) = 1 P
+if x = y; and 0,
+otherwise. Then for any value v ∈ A, n1 i∈S g(t∗i , v) is an
+estimator of the frequency of v over all users, where S is
+the set of {1, 2, . . . n}. Then, for the general case when ti
+contains d (numeric or categorical) attributes A1 , A2 , . . . , Ad ,
+the extended version of Algorithm 4 would request each user
+to perform the following:
+
+The proof appears in the full version [2].
+Lemma 6 discusses the noise variances induced by
+Duchi et al.’s solution, PM and HM, respectively.
+Lemma 6. For a d-dimensional numeric tuple ti which is
+perturbed as t∗i under -LDP, and for each Aj of the d
+attributes, the variance of t∗i [Aj ] induced by Duchi et al.’s
+solution is
+
+   +1 2 2
+2
+VarD t∗i [Aj ] = ee −1
+Cd − (ti [Aj ]) ,
+(13)
+where Cd is defined by Equation 9. Meanwhile, the variance
+of t∗i [Aj ] induced by PM is
+h
+i
+
+
+2
+d(e/(2k) +3)
+d·e/(2k)
+VarP t∗i [Aj ] = 3k(e
++
+−
+1
+(ti [Aj ]) ;
+/(2k) −1)2
+k(e/(2k) −1)
+(14)
+
+1) Sample k values uniformly at random from {1, 2, . . . , d},
+where k is as defined in Equation 12;
+2) For each sampled j, if Aj is a numerical attribute, then
+submit a noisy version of t[Aj ] computed as in Lines
+3–5 of Algorithm 4; otherwise (i.e., Aj is a categorical
+attribute), submit f (t[Aj ], /k), where f can be any existing solution for perturbing a single categorical attribute
+under -LDP;
+
+and the variance of t∗i [Aj ] induced by HM is
+
+
+VarH t∗i [Aj ] =
+i
+ h
+
+2
+(e/k +1)2
+d
+e/(2k) +3
+
++ kd − 1 (ti [Aj ]) ,
+/(2k) (e/(2k) −1) + e/(2k) (e/k −1)2
+
+k
+3e
+
+for /k > ∗ ,
+ /k 2
+
+
+
+ d e +1 + d − 1 (t [A ])2 , for /k ≤ ∗ ,
+(15)
+k
+
+e/k −1
+
+k
+
+i
+
+Once the aggregator collects data from all users, she can
+estimate the mean of each numeric attribute A in the same way
+as in Algorithm 4. In addition, for any categorical attribute
+A0 and any value v in the domain of A0 , P
+she can estimate
+d
+∗
+the frequency of v among all users as kn
+v ∗ ∈V ∗ g(v , v),
+∗
+0
+where V denotes the set of perturbed A values submitted by
+users. The accuracy of this estimator depends on both d and
+the accuracy of single-attribute perturbation algorithm used
+for A0 . In our experiments, we apply the optimized unary
+
+j
+
+where ∗ is defined by Equation 6.
+From Equations 13, 14, and 15, we can prove the following:
+3 We discuss how to obtain the value of k in the full version [2].
+
+7
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+Piecewise Mechanism
+
+Hybrid Mechanism
+
+1
+
+1
+
+1
+
+1
+
+0.8
+
+0.8
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0.2
+
+0.2
+
+0
+
+0
+
+0
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+(a) d = 5
+
+6
+
+7
+
+8
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+0
+0
+
+(b) d = 10
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+0
+
+(c) d = 20
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+(d) d = 40
+
+Fig. 3: The worst-case variance of PM (resp. HM) as a fraction of the worst-case variance of Duchi et al.’s solution, for various
+privacy budget  and data dimensionality d.
+however, ∇`0 is not directly available to the aggregator, and
+needs to be collected in a private manner. Towards this end,
+existing studies [14], [22] have suggested that the aggregator
+asks the selected user in each iteration to submit a noisy version of ∇`0 , by using the Laplace mechanism or Duchi et al.’s
+solution (i.e., Algorithm 3). Our baseline approach is based on
+this idea, and improves these existing methods by perturbing
+∇`0 using Algorithm 4. In particular, in each iteration, we
+involve a group G of users, and ask each of them to submit a
+noisy version of the gradient using Algorithm 4. Here, if any
+entry of ∇`i is greater than 1 (resp. smaller than −1), then the
+user should clip it to 1 (resp. −1) before perturbation, where
+∇`i is the gradient generated by the i-th user in group G. That
+is a common technique referred to as “gradient clipping” in the
+deep learning literature. After that, we update the parameter
+vector βt with the mean of the noisy gradients, i.e.,
+P|G|
+1
+∗
+βt+1 = βt − γt · |G|
+i=1 ∇`i ,
+
+encoding (OUE) protocol of Wang et al. [38] to perturb a
+single categorical attribute, which is the current state of the
+art to our knowledge.
+V. S TOCHASTIC G RADIENT D ESCENT UNDER
+L OCAL D IFFERENTIAL P RIVACY
+This section investigates building a class of machine learning models under -LDP that can be expressed as empirical
+risk minimization, and solved by stochastic gradient descent
+(SGD). In particular, we focus on three common types of learning tasks: linear regression, logistic regression, and support
+vector machines (SVM) classification.
+Suppose that each user ui has a pair hxi , yi i, where xi ∈
+[−1, 1]d and yi ∈ [−1, 1] (for linear regression) or yi ∈
+{−1, 1} (for logistic regression and SVM classification). Let
+`(·) be a loss function that maps a d-dimensional parameter
+vector β into a real number, and is parameterized by xi and
+yi . We aim to identify a parameter vector β ∗ such that
+!
+#
+"
+n
+λ
+1 X
+2
+∗
+`(β; xi , yi ) + kβk2 ,
+β = arg min
+β
+n i=1
+2
+
+where ∇`∗i is the noisy gradient submitted by the i-th user
+in group G. This helps
+ the amount of noise in the
+ because
+√
+
+average gradient is O
+
+where λ > 0 is a regularization parameter. We consider three
+specific loss functions:
+1) Linear regression: `(β; xi , yi ) = (xTi β − yi )2 ;
+
+
+T
+2) Logistic regression: `(β; xi , yi ) = log 1 + e−yi xi β ;
+
+3) SVM (hinge loss): `(β; xi , yi ) = max 0, 1 − yi xTi β .
+For convenience, we define
+λ
+`0 (β; xi , yi ) = `(β; xi , yi ) + kβk22 .
+2
+The proposed approach solves β ∗ using SGD, which starts
+from an initial parameter vector β0 , and iteratively updates it
+into β1 , β2 , . . . based on the following equation:
+
+d log d
+√
+, which could be acceptable
+
+ |G|
+if |G| = Ω d(log d)/2 .
+Note that in the non-private case, the aggregator often allows
+each user to participate in multiple iterations (say m iterations)
+to improve the accuracy of the model. But it does not work in
+the local differential privacy setting. To explain this, suppose
+that the i-th (i ∈ [1, m]) gradient returned by the user
+satisfies i -differential privacy. By the composition property
+of differential privacy [29], if we enforce
+Pm -differential privacy
+for the user’s data, we should have i=1 i ≤ . Consider that
+we set i =/m.
+Then,
+ the amount of noise in each gradient
+√
+becomes O m dlog d ; accordingly, the group size becomes
+
+|G| = Ω m2 d log d/2 , which is m2 times larger compared
+to the case where each user only participates in at most one
+iteration. It then follows that the total number of iterations
+in the algorithm is inverse proportional to 1/m; i.e., setting
+m > 1 only degrades the performance of the algorithm.
+
+βt+1 = βt − γt · ∇`0 (βt ; x, y),
+where hx, yi is the data record of a randomly selected user,
+∇`0 (βt ; x, y) is the gradient of `0 at βt , and γt is called the
+learning rate at the t-th iteration. The learning rate γt is
+commonly set by a function (called the learning schedule)
+of the iteration
+number t; a popular learning schedule is
+√
+γt = O(1/ t).
+In the non-private setting, SGD terminates when the difference between βt+1 and βt is sufficiently small. Under -LDP,
+
+
+
+VI. E XPERIMENTS
+We have implemented the proposed methods and evaluated
+them using two public datasets extracted from the Integrated
+Public Use Microdata Series [1], BR and MX, which contains
+
+8
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+1e-005
+
+0.0001
+
+0.0001
+1e-005
+
+1e-006
+0.5
+
+1
+2
+privacy budget ε
+
+(a) BR-Numeric
+
+1e-005
+
+1
+2
+privacy budget ε
+
+OUE
+Proposed solution
+
+1e-007
+0.5
+
+4
+
+(b) MX-Numeric
+
+0.0001
+1e-005
+
+1e-006
+
+1e-006
+0.5
+
+4
+
+0.001
+
+MSE
+
+0.0001
+
+0.001
+
+Laplace
+SCDF
+Duchi
+PM
+HM
+
+0.001
+MSE
+
+0.001
+MSE
+
+0.01
+
+Laplace
+Staircase
+Duchi
+PM
+HM
+
+MSE
+
+0.01
+
+OUE
+
+1
+2
+privacy budget ε
+
+1e-006 Proposed solution
+0.5
+1
+2
+privacy budget ε
+
+4
+
+(c) BR-Categorical
+
+4
+
+(d) MX-Categorical
+
+Fig. 4: Result accuracy for mean estimation (on numeric attributes) and frequency estimation (on categorical attributes).
+0.01
+
+0.01
+
+1e-005
+
+MSE
+
+0.001
+MSE
+
+MSE
+
+0.001
+0.0001
+
+1e-006
+0.5
+
+Duchi et al.
+
+SCDF
+
+0.0001
+
+(a) µ = 0
+
+4
+
+1e-006
+0.5
+
+HM
+
+0.01
+
+0.01
+
+0.001
+
+0.001
+
+0.0001
+
+1e-005
+1
+2
+privacy budget ε
+
+PM
+
+MSE
+
+Laplace
+
+1
+2
+privacy budget ε
+
+0.0001
+
+1e-005
+0.5
+
+4
+
+(b) µ = 1/3
+
+1
+2
+privacy budget ε
+
+1e-005
+0.5
+
+4
+
+(c) µ = 2/3
+
+1
+2
+privacy budget ε
+
+4
+
+(d) µ = 1
+
+Fig. 5: Result accuracy on synthetic datasets with 16 dimensions, each of which follows a Gaussian distribution N (µ, 1/16)
+truncated to [−1, 1].
+census records from Brazil and Mexico, respectively. BR
+contains 4M tuples and 16 attributes, among which 6 are
+numerical (e.g., age) and 10 are categorical (e.g., gender);
+MX has 4M records and 19 attributes, among which 5 are
+numerical and 14 are categorical. Both datasets contain a
+numerical attribute “total income”, which we use as the
+dependent attribute in linear regression, logistic regression,
+and SVM (explained further in Section VI-B). We normalize
+the domain of each numerical attribute into [−1, 1]. In all
+experiments, we report average results over 100 runs.
+
+Laplace
+
+Duchi et al.
+
+SCDF
+
+0.01
+
+MSE
+
+MSE
+
+HM
+
+0.01
+
+0.001
+0.0001
+
+0.001
+0.0001
+
+1e-005
+1e-006
+0.5
+
+PM
+
+1
+2
+privacy budget ε
+
+(a) Uniform distribution
+
+4
+
+1e-005
+0.5
+
+1
+2
+privacy budget ε
+
+4
+
+(b) Power law distribution
+
+Fig. 6: Result accuracy vs. privacy budget on different data
+distributions.
+
+A. Results on Mean Value / Frequency Estimation
+In the first set of experiments, we consider the task of
+collecting a noisy, multidimensional tuple from each user, in
+order to estimate the mean of each numerical attribute and
+the frequency of each categorical value. Since no existing
+solution can directly support this task, we take the following best-effort approach combining state-of-the-art solutions
+through the composition property of differential privacy [29].
+Specifically, let t be a tuple with dn numeric attributes and
+dc categorical attributes. Given total privacy budget , we
+allocate dn /d budget to the numeric attributes, and dc /d
+to the categorical ones, respectively. Then, for the numeric
+attributes, we estimate the mean value for each of them using
+either (i) Duchi et al.’s solution (i.e., Algorithm 3), which
+directly handles multiple numeric attributes, (ii) the Laplace
+mechanism or (iii) SCDF [35], which is applied to each
+numeric attribute individually using /d budget. The Staircase
+mechanism leads to similar performance as SCDF, and we
+omit its results for brevity. Regarding categorical attributes,
+since no previous solution addresses the multidimensional
+case, we apply the optimized unary encoding (OUE) protocol
+of Wang et al. [38], the state of the art for frequency estimation
+on a single categorical attribute, to each attribute independently
+
+with /d budget. Clearly, by the composition property of
+differential privacy [29], the above approach satisfies -LDP.
+We evaluate both the above best-effort approach using
+existing methods, and the proposed solution in Section IV,
+on the two real datasets BR and MX. For each method,
+we measure the mean square error (MSE) in the estimated
+mean values (for numeric attributes) and value frequencies
+(for categorical attributes). Fig. 4 plots the MSE results as a
+function of the total privacy budget . Overall, the proposed
+solution consistently and significantly outperforms the besteffort approach combining existing methods. One major reason is that the estimation error of the proposed solution is
+asymptotically optimal, which scales sublinearly to the data
+dimensionality d; in contrast, the best-effort combination of
+existing approaches involves privacy budget splitting, which is
+sub-optimal. For instance, on the categorical attributes,apply
+ing OUE [38] on each attribute individually leads to O √d n
+error (where n is the number of users), which grows linearly
+with data dimensionality d. This also explains the consistent
+performance gap between Duchi et al.’s solution [14] and the
+Laplace mechanism (SCDF mechanism) on numeric attributes.
+
+9
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+0.1
+
+0.001
+
+MSE
+
+0.01
+MSE
+
+0.01
+
+Laplace
+SCDF
+Duchi
+PM
+HM
+
+0.0001
+
+MSE with varying the number of users n and dimensionality
+d on the MX dataset. Observe that more users and lower
+dimensionality both lead to more accurate results, which
+agrees with the theoretical analysis in Lemma 5. Meanwhile,
+in all settings the proposed solutions consistently outperform
+their competitors by clear margins. In the next subsection, we
+omit the results for SCDF, which are comparable to that of
+the Laplace mechanism.
+
+OUE
+Proposed solution
+
+0.001
+0.0001
+
+1e-005
+0.25 0.5
+1
+2
+4
+Number of users (x106)
+
+1e-005
+1/16 1/8 1/4 1/2
+1
+Number of users (x106)
+
+(a) Numeric
+
+(b) Categorical
+
+0.001
+
+0.001
+
+0.0001
+
+0.0001
+
+Laplace
+SCDF
+Duchi
+PM
+HM
+
+1e-005
+1e-006
+
+MSE
+
+MSE
+
+Fig. 7: Result accuracy vs. number of users.
+
+5
+
+10
+15
+dimensionality
+
+(a) Numeric
+
+B. Results on Empirical Risk Minimization
+In the second set of experiments, we evaluate the accuracy
+performance of the proposed methods for linear regression,
+logistic regression, and SVM classification on BR and MX.
+For both datasets, we use the numeric attribute “total income”
+as the dependent variable, and all other attributes as independent variables. Following common practice, we transform
+each categorical attribute Aj with k values into k − 1 binary
+attributes with a domain {0, 1}, such that (i) the l-th (l < k)
+value in Aj is represented by 1 on the l-th binary attribute
+and 0 on each of the remaining k − 2 attributes, and (ii) the
+k-th value in Aj is represented by 0 on all binary attributes.
+After this transformation, the dimensionality of BR (resp. MX)
+becomes 90 (resp. 94). For logistic regression and SVM, we
+also covert “total income” into a binary attribute by mapping
+the values larger than the mean value to 1, and 0 otherwise.
+Since each user sends gradients to the aggregator, which
+are all numeric, the experiment involves the 4 competitors in
+Section VI-A for numeric data: PM, HM, Duchi et al. [14], and
+the Laplace mechanism applied to each attribute independently
+with equally split privacy budget (i.e., /d for each attribute).
+Additionally, we also include the result in the non-private
+setting. For all methods, we set the regularization factor
+λ = 10−4 . On each dataset, we use 10-fold cross validation 5
+times to assess the performance of each method.
+Fig. 9 and Fig. 10 show the misclassification rate of each
+method for logistic regression and SVM classification, respectively, with varying values of the privacy budget . Similar to
+the results in Section VI-A, the Laplace mechanism leads to
+significantly higher than the other three solutions, due to the
+fact that its error rate is sub-optimal. The proposed algorithms
+PM and HM consistently outperform Duchi et al.’s solution
+with clear margins, since (i) the former two have smaller
+constant as analyzed in Section IV, and (ii) the gradient of
+each user often consists of elements whose absolute values
+are small, for which PM and HM are particularly effective,
+as we mention in Section III-B. Further, in some settings
+such as SVM with  ≥ 2 on BR, the accuracy of PM and
+HM approaches that of the non-private method. Comparing
+the results with those in Section VI-A, we observe that
+the misclassification rates for logistic regression and SVM
+classification do not drop as quickly with increasing privacy
+budget  as in the case of MSE for mean values and frequency
+estimates. This is due to the inherent stochastic nature of
+SGD: that accuracy in gradients does not have a direct effect
+on the accuracy of the model. For the same reason, there is
+
+OUE
+Proposed solution
+
+1e-005
+
+19
+
+1e-006
+
+5
+
+10
+15
+dimensionality
+
+19
+
+(b) Categorical
+
+Fig. 8: Result accuracy vs. dimensionality.
+Meanwhile, on numeric attributes, the proposed solutions
+PM and HM outperform Duchi et al.’s solution in all settings.
+This is because (i) although all three methods are asymptotically optimal, Duchi et al.’s solution incurs a larger constant
+than the proposed algorithms and (ii) Duchi et al.’s solution
+cannot handle categorical attributes, and, thus, needs to be
+combined with OUE through privacy budget splitting, which
+is sub-optimal. To eliminate the effect of (ii), we run an
+additional set of experiments with only numeric attributes
+on several synthetic datasets. Specifically, the first synthetic
+data contains 16 numeric attributes (i.e., same number of
+attributes in BR), where each attribute value is generated
+from a Gaussian distribution with mean value u and standard
+deviation of 1/4, but discarding any value that fall out of
+[−1, 1]. Fig. 5 shows the results with varying privacy budget
+, and 4 different values for u. In all settings, PM and HM
+outperform Duchi et al.’s solution, and the performance gap
+slightly expands with increasing , which agrees with our
+analysis in Section IV. Finally, comparing PM and HM, the
+difference in their performance is small, and the relative
+performance of the two can be different in different settings.
+Note that the main advantage of HM over PM is that on a
+single numeric attribute, HM is never worse than Duchi et al.,
+whereas PM does not have this guarantee.
+We repeat the experiments on two additional synthetic
+datasets with the same properties as the first synthetic one,
+except that their attribute values are drawn from different
+distributions. One follows the uniform distribution where each
+attribute value is sampled from [−1, 1] uniformly; the other
+one follows the power law distribution where each attribute
+value x is sampled from [−1, 1] with probability proportional
+to c · (x + 2)−10 . Fig. 6 presents the results, which lead
+to similar conclusions as the results on real and Gaussiandistributed data.
+Lastly, Figs. 7 and 8 show the result accuracy in terms of
+
+10
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+PM
+
+Duchi et al.
+
+misclassification rate
+
+misclassification rate
+
+Laplace
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.5
+
+1
+2
+privacy budget ε
+
+4
+
+HM
+
+0.5
+0.45
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.5
+
+1
+2
+privacy budget ε
+
+(a) BR
+
+much attention has been shifted to the local differential privacy
+(LDP) model (e.g., [13], [25]), which eliminates the data
+curator and the collection of exact private information.
+LDP can be connected to the classical randomized response
+technique in surveys [41]. Erlingsson et al. [18] propose
+the RAPPOR framework, which is based on the randomized response mechanism for publishing a value for binary
+attributes under LDP. They use this mechanism with a Bloom
+filter, which intuitively adds another level of protection and
+increases the difficulty for the adversary to infer private
+information. A follow-up paper [19] extends RAPPOR to
+more complex statistics such as joint-distributions and association testing, as well as categorical attributes that contain
+a large number of potential values, such as a user’s home
+page. Wang et al. [38] investigate the same problem, and
+propose a different method: they transform k possible values
+into a noisy vector with k elements, and send the latter
+to curator. Bassily and Smith [5] propose an asymptotically
+optimal solution for building succinct histograms over a large
+categorical domain under LDP. Note that all of the above
+methods focus on a single categorical attribute, and, thus, are
+orthogonal to our work on multidimensional data including
+numeric attributes. Ren et al. [34] investigate the problem
+of publishing multiple attributes, and employ the idea of ksized vector, similar to [38]. This approach, however, incurs
+rather high communication costs between the aggregator and
+the users, since it involves the transmission of multiple k-sized
+vectors. Duchi et al. [13] propose the minimax framework for
+LDP based on information theory, prove upper and lower error
+bounds of LDP-compliant methods, and analyze the trade-off
+between privacy and accuracy. Besides, Kairouz et al. [24]
+propose the extremal mechanisms, which are a family of
+LDP mechanisms for data with discrete inputs, i.e., each
+input domain X contains a finite number of possible values.
+These mechanisms have an output distribution pdf with a key
+property: for any input x ∈ X and any output y, P r[y | x]
+has only two possible values that differ by a factor of exp().
+Kairouz et al. show that for any given utility measure, there
+exists an extremal mechanism with optimal utility under this
+measure, using a linear program with 2|X | variables. It is
+unclear how to apply extremal mechanisms to continuous input
+domains with an infinite number of possible values, which is
+the focus on this paper.
+Various data analytics and machine learning problems have
+been studied under LDP, such as probability distribution estimation [15], [23], [30], [32], [42], heavy hitter discovery [4],
+[7], [33], [39], frequent new term discovery [37], frequency
+estimation [5], [38], frequent itemset mining [40], marginal
+release [10], clustering [31], and hypothesis testing [20].
+Finally, a recent work [3] introduces a hybrid model that
+involves both centralized and local differential privacy. Bittau et al. [6] evaluate real-world implementations of LDP.
+Also, LDP has been considered in several applications including the collection of indoor positioning data [26], inference
+control on mobile sensing [28], and the publication of crowdsourced data [34].
+
+Non-private
+
+4
+
+(b) MX
+
+Fig. 9: Logistic Regression.
+PM
+
+Duchi et al.
+
+misclassification rate
+
+misclassification rate
+
+Laplace
+0.5
+0.45
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.5
+
+1
+2
+privacy budget ε
+
+4
+
+HM
+
+0.5
+0.45
+0.4
+0.35
+0.3
+0.25
+0.2
+0.15
+0.1
+0.5
+
+Non-private
+
+1
+2
+privacy budget ε
+
+(a) BR
+
+4
+
+(b) MX
+
+Fig. 10: Support Vector Machines (SVM).
+no clear trend for the performance gap between PM/HM and
+Duchi et al.’s solution.
+Fig. 11 demonstrates the mean squared error (MSE) of
+the linear regression model generated by each method with
+varying . We omit the MSE results for the Laplace mechanism, since they are far higher than the other three methods.
+The proposed solutions PM and HM once again consistently
+outperform Duchi et al.’s solution. Overall, our experimental
+results demonstrate the effectiveness of PM and HM for empirical risk minimization under local differential privacy, and their
+consistent performance advantage over existing approaches.
+VII. R ELATED W ORK
+Differential privacy [16] is a strong privacy standard that
+provides semantic, information-theoretic guarantees on individuals’ privacy, which has attracted much attention from various fields, including data management [8], [10], [27], machine
+learning [4], theory [5], [13], [25], and systems [6]. Earlier
+models of differential privacy [16], [17], [29] rely on a trusted
+data curator, who collects and manages the exact private
+information of individuals, and releases statistics derived from
+the data under differential privacy requirements. Recently,
+
+Laplace
+
+PM
+
+Duchi et al.
+
+1
+
+0.1
+
+0.01
+
+MSE
+
+MSE
+
+Non-private
+
+1
+
+0.1
+
+0.001
+
+0.01
+0.001
+
+0.0001
+1e-005
+0.5
+
+HM
+
+1
+2
+privacy budget ε
+
+(a) BR
+
+4
+
+0.0001
+0.5
+
+1
+2
+privacy budget ε
+
+4
+
+(b) MX
+
+Fig. 11: Linear Regression.
+11
+
+This full paper appears in the Proceedings of the IEEE 35th Annual International Conference on Data Engineering (ICDE),
+held in April 2019.
+
+VIII. C ONCLUSION
+
+[16] C. Dwork, F. McSherry, K. Nissim, and A. Smith. Calibrating noise to
+sensitivity in private data analysis. In TCC, pages 265–284, 2006.
+[17] C. Dwork and A. Roth. The algorithmic foundations of differential
+privacy. Foundations and Trends in Theoretical Computer Science, 9(34):211–407, 2014.
+[18] Ú. Erlingsson, V. Pihur, and A. Korolova. RAPPOR: Randomized
+aggregatable privacy-preserving ordinal response. In ACM CCS, pages
+1054–1067, 2014.
+[19] G. Fanti, V. Pihur, and Ú. Erlingsson. Building a RAPPOR with
+the unknown: Privacy-preserving learning of associations and data
+dictionaries. PoPETs, 2016(3):41–61, 2016.
+[20] M. Gaboardi and R. Rogers. Local private hypothesis testing: Chi-square
+tests. arXiv preprint arXiv:1709.07155, 2017.
+[21] Q. Geng, P. Kairouz, S. Oh, and P. Viswanath. The staircase mechanism
+in differential privacy. J. Sel. Topics Signal Processing, 9(7):1176–1184,
+2015.
+[22] J. Hamm, A. C. Champion, G. Chen, M. Belkin, and D. Xuan. CrowdML: A privacy-preserving learning framework for a crowd of smart
+devices. In IEEE ICDCS, pages 11–20, 2015.
+[23] P. Kairouz, K. Bonawitz, and D. Ramage. Discrete distribution estimation under local privacy. In ICML, 2016.
+[24] P. Kairouz, S. Oh, and P. Viswanath. Extremal mechanisms for local
+differential privacy. In NIPS, pages 2879–2887, 2014.
+[25] S. P. Kasiviswanathan, H. K. Lee, K. Nissim, S. Raskhodnikova, and
+A. Smith. What can we learn privately? In IEEE FOCS, pages 531–540,
+2008.
+[26] J. W. Kim, D.-H. Kim, and B. Jang. Application of local differential
+privacy to collection of indoor positioning data. IEEE Access, 6:4276–
+4286, 2018.
+[27] S. Krishnan, J. Wang, M. J. Franklin, K. Goldberg, and T. Kraska.
+PrivateClean: Data cleaning and differential privacy. In ACM SIGMOD,
+pages 937–951, 2016.
+[28] C. Liu, S. Chakraborty, and P. Mittal. DEEProtect: Enabling inferencebased access control on mobile sensing applications. arXiv preprint
+arXiv:1702.06159, 2017.
+[29] F. McSherry and K. Talwar. Mechanism design via differential privacy.
+In IEEE FOCS, pages 94–103, 2007.
+[30] T. Murakami, H. Hino, and J. Sakuma. Toward distribution estimation under local differential privacy with small samples. PoPETs,
+2018(3):84–104, 2018.
+[31] K. Nissim and U. Stemmer. Clustering algorithms for the centralized and
+local models. In Algorithmic Learning Theory (ALT), pages 619–653,
+Apr 2018.
+[32] A. Pastore and M. Gastpar. Locally differentially-private distribution
+estimation. In IEEE International Symposium on Information Theory
+(ISIT), pages 2694–2698, 2016.
+[33] Z. Qin, Y. Yang, T. Yu, I. Khalil, X. Xiao, and K. Ren. Heavy hitter
+estimation over set-valued data with local differential privacy. In ACM
+CCS, pages 192–203, 2016.
+[34] X. Ren, C. M. Yu, W. Yu, S. Yang, X. Yang, J. A. McCann, and P. S.
+Yu. LoPub: High-dimensional crowdsourced data publication with local
+differential privacy. IEEE Transactions on Information Forensics and
+Security, 13(9):2151–2166, Sept 2018.
+[35] J. Soria-Comas and J. Domingo-Ferrer. Optimal data-independent noise
+for differential privacy. Inf. Sci., 250:200–214, 2013.
+[36] J. Tang, A. Korolova, X. Bai, X. Wang, and X. Wang. Privacy loss in
+Apple’s implementation of differential privacy on macOS 10.12. arXiv
+preprint arXiv:1709.02753, 2017.
+[37] N. Wang, X. Xiao, Y. Yang, T. D. Hoang, H. Shin, J. Shin, and G. Yu.
+PrivTrie: Effective frequent term discovery under local differential
+privacy. In IEEE ICDE, 2018.
+[38] T. Wang, J. Blocki, N. Li, and S. Jha. Locally differentially private
+protocols for frequency estimation. In USENIX Security, 2017.
+[39] T. Wang, N. Li, and S. Jha. Locally differentially private heavy hitter
+identification. arXiv preprint arXiv:1708.06674, 2017.
+[40] T. Wang, N. Li, and S. Jha. Locally differentially private frequent itemset
+mining. In IEEE Symposium on Security and Privacy (S&P), 2018.
+[41] S. L. Warner. Randomized response: A survey technique for eliminating
+evasive answer bias. Journal of the American Statistical Association,
+60(309):63–69, 1965.
+[42] M. Ye and A. Barg. Optimal schemes for discrete distribution estimation
+under local differential privacy. In IEEE International Symposium on
+Information Theory (ISIT), pages 759–763, 2017.
+
+This work systematically investigates the problem of collecting and analyzing users’ personal data under -local differential privacy, in which the aggregator only collects randomized data from the users, and computes statistics based on
+such data. The proposed solution is able to collect data records
+that contain multiple numerical and categorical attributes, and
+compute accurate statistics from simple ones such as mean
+and frequency to complex machine learning models such as
+linear regression, logistic regression and SVM classification.
+Our solution achieves both optimal asymptotic error bound
+and high accuracy in practice. In the next step, we plan to
+apply the proposed solution to more complex data analysis
+tasks such as deep neural networks.
+ACKNOWLEDGMENT
+This research was supported by National Natural Science
+Foundation of China (61672475, 61433008), by Samsung via
+a GRO grant, by the National Research Foundation, Prime
+Minister’s Office, Singapore under its Strategic Capability
+Research Centres Funding Initiative, by Qatar National Research Fund (NPRP10-0208-170408), and by Nanyang Technological University Startup Grant (M4082311.020). We thank
+T. Nguyen for his contributions to an earlier version of this
+work.
+R EFERENCES
+[1] Integrated public use microdata series, 2017. https://www.ipums.org.
+[2] Collecting
+and
+analyzing
+multidimensional
+data
+with
+local
+differential
+privacy
+(technical
+report),
+2018.
+https://sites.google.com/site/icde2019tr/tr.
+[3] B. Avent, A. Korolova, D. Zeber, T. Hovden, and B. Livshits.
+BLENDER: Enabling local search with a hybrid differential privacy
+model. In USENIX Security Symposium, pages 747–764, 2017.
+[4] R. Bassily, K. Nissim, U. Stemmer, and A. Thakurta. Practical locally
+private heavy hitters. In NIPS, pages 2285–2293, 2017.
+[5] R. Bassily and A. Smith. Local, private, efficient protocols for succinct
+histograms. In ACM STOC, pages 127–135, 2015.
+[6] A. Bittau, U. Erlingsson, P. Maniatis, I. Mironov, A. Raghunathan,
+D. Lie, M. Rudominer, U. Kode, J. Tinnes, and B. Seefeld. PROCHLO:
+Strong privacy for analytics in the crowd. In ACM SOSP, pages 441–
+459, 2017.
+[7] M. Bun, J. Nelson, and U. Stemmer. Heavy hitters and the structure of
+local privacy. In ACM PODS, pages 435–447, 2018.
+[8] R. Chen, H. Li, A. K. Qin, S. P. Kasiviswanathan, and H. Jin. Private
+spatial data aggregation in the local setting. In IEEE ICDE, pages 289–
+300, 2016.
+[9] G. Cormode, S. Jha, T. Kulkarni, N. Li, D. Srivastava, and T. Wang.
+Privacy at scale: Local differential privacy in practice. In ACM SIGMOD
+Tutorials, 2018.
+[10] G. Cormode, T. Kulkarni, and D. Srivastava. Marginal release under
+local differential privacy. In ACM SIGMOD, 2018.
+[11] C. Cortes and V. Vapnik. Support-vector networks. Machine Learning,
+20(3):273–297, 1995.
+[12] B. Ding, J. Kulkarni, and S. Yekhanin. Collecting telemetry data
+privately. In NIPS, pages 3574–3583, 2017.
+[13] J. C. Duchi, M. I. Jordan, and M. J. Wainwright. Local privacy and
+statistical minimax rates. In IEEE FOCS, pages 429–438, 2013.
+[14] J. C. Duchi, M. I. Jordan, and M. J. Wainwright. Minimax optimal
+procedures for locally private estimation. Journal of the American
+Statistical Association, 113(521):182–201, 2018.
+[15] J. C. Duchi, M. J. Wainwright, and M. I. Jordan. Local privacy and
+minimax bounds: Sharp rates for probability estimation. In NIPS, pages
+1529–1537, 2013.
+
+12
+
+

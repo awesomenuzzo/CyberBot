@@ -1,0 +1,5016 @@
+Journal of Machine Learning Research 17 (2016) 1-51
+
+Submitted 4/15; Published 4/16
+
+Extremal Mechanisms for Local Differential Privacy
+Peter Kairouz
+
+kairouz2@illinois.edu
+
+Department of Electrical and Computer Engineering
+University of Illinois at Urbana-Champaign
+Urbana, IL 61801, USA
+
+Sewoong Oh
+
+swoh@illinois.edu
+
+Department of Industrial and Enterprise Systems Engineering
+University of Illinois at Urbana-Champaign
+Urbana, IL 61820, USA
+
+Pramod Viswanath
+
+pramodv@illinois.edu
+
+Department of Electrical and Computer Engineering
+University of Illinois at Urbana-Champaign
+Urbana, IL 61801, USA
+
+Editor: Mehryar Mohri
+
+Abstract
+Local differential privacy has recently surfaced as a strong measure of privacy in contexts
+where personal information remains private even from data analysts. Working in a setting
+where both the data providers and data analysts want to maximize the utility of statistical
+analyses performed on the released data, we study the fundamental trade-off between local
+differential privacy and utility. This trade-off is formulated as a constrained optimization
+problem: maximize utility subject to local differential privacy constraints. We introduce a
+combinatorial family of extremal privatization mechanisms, which we call staircase mechanisms, and show that it contains the optimal privatization mechanisms for a broad class of
+information theoretic utilities such as mutual information and f -divergences. We further
+prove that for any utility function and any privacy level, solving the privacy-utility maximization problem is equivalent to solving a finite-dimensional linear program, the outcome
+of which is the optimal staircase mechanism. However, solving this linear program can be
+computationally expensive since it has a number of variables that is exponential in the size
+of the alphabet the data lives in. To account for this, we show that two simple privatization
+mechanisms, the binary and randomized response mechanisms, are universally optimal in
+the low and high privacy regimes, and well approximate the intermediate regime.
+Keywords: local differential privacy, privacy-preserving machine learning algorithms,
+information theoretic utilities, f -divergences, mutual information, statistical inference, hypothesis testing, estimation
+
+1. Introduction
+In statistical analyses involving data from individuals, there is an increasing tension between
+the need to share data and the need to protect sensitive information about the individuals.
+For example, users of social networking sites are increasingly cautious about their privacy,
+but still find it inevitable to agree to share their personal information in order to benefit
+c 2016 Peter Kairouz and Sewoong Oh and Pramod Viswanath.
+
+Kairouz, Oh and Viswanath
+
+from customized services such as recommendations and personalized search (Acquisti, 2004;
+Acquisti and Grossklags, 2007). There is a certain utility in sharing data for both data
+providers and data analysts, but at the same time, individuals want plausible deniability
+when it comes to sensitive information.
+For such applications, there is a natural core optimization problem to be solved. Assuming both the data providers and analysts want to maximize the utility of the released
+data, how can they do so while preserving the privacy of participating individuals? The
+formulation and study of a framework that addresses the fundamental tradeoff between
+utility and privacy is the focus of this paper.
+1.1 Local differential privacy
+The need for data privacy appears in two different contexts: the local privacy context, as
+in when individuals disclose their personal information (e.g., voluntarily on social network
+sites), and the global privacy context, as in when institutions release databases of information
+of several people or answer queries on such databases (e.g., US Government releases census
+data, companies like Netflix release proprietary data for others to test state of the art
+machine learning algorithms). In both contexts, privacy is achieved by randomizing the
+data before releasing it. We study the setting of local privacy, in which data providers do
+not trust the data collector (analyst). Local privacy dates back to Warner (1965), who
+proposed the randomized response method to provide plausible deniability for individuals
+responding to sensitive surveys.
+A natural notion of privacy protection is making inference of information beyond what
+is released hard. Differential privacy has been proposed in the global privacy context to
+formally capture this notion of privacy (Dwork, 2006; Dwork et al., 2006b; Dwork and Lei,
+2009). In a nutshell, differential privacy ensures that an adversary should not be able to
+reliably infer an individual’s record in a database, even with unbounded computational
+power and access to every other record in the database. Recently, Duchi et al. (2013)
+extended the notion of differential privacy to the local privacy context. Formally, consider
+a setting where there are n data providers each owning a data Xi defined on an input
+alphabet X . The Xi ’s are independently sampled from some distribution Pν parameterized
+by ν. A statistical privatization mechanism Q is a conditional distribution that maps Xi ∈ X
+stochastically to Yi ∈ Y, where Y is an output alphabet possibly larger than X . The Yi ’s
+are referred to as the privatized (sanitized) views of Xi ’s. In a non-interactive setting, the
+same privatization mechanism Q is used locally by all individuals. This setting is shown in
+Figure 1 for the special case of n = 2. For some non-negative ε, we follow the definition of
+Duchi et al. (2013) and say that a mechanism Q is ε-locally differentially private if
+sup
+S⊂Y,x,x0 ∈X
+
+Q(S|x)
+≤ eε ,
+Q(S|x0 )
+
+(1)
+
+where Q(S|x) = P(Yi ∈ S|Xi = x) represents the privatization mechanism. This ensures
+that for small values of ε, given a privatized data Yi , it is (almost) equally likely to have
+come from any data, i.e. x or x0 . A small value of ε means that we require a high level of
+privacy and a large value corresponds to a low level of privacy. At one extreme, for ε = 0,
+the privatized output must be independent of the private data, and on the other extreme,
+for ε = ∞, the privatized output can be made equal to the private data.
+2
+
+Extremal Mechanisms for Local Differential Privacy
+
+X1 ∼ Pν
+
+Privatization
+Q
+
+Y1
+
+∼
+
+M
+
+ν
+
+Data Analyst
+
+Clients
+
+X2 ∼ Pν
+
+Privatization
+Q
+
+Y2
+
+∼
+
+Mν
+
+Figure 1: Client i owns Xi sampled from Pν . Each Xi is privatized by the same ε-locally
+differentially private mechanism Q. The data analyst only observes the privatized
+data (Yi ’s) and makes an inference on the statistics of the original distribution of
+the data.
+
+1.2 Information theoretic utilities for statistical analysis
+In analyses of statistical databases, the analyst is interested in the statistics of the data as
+opposed to individual records. Naturally, the utility should also be measured in terms of the
+distribution rather than sample quantities. Concretely, consider a client-server setting where
+each client with data Xi releases Yi , a privatized version of the data, via a non-interactive εlocally differentially private privatization mechanism Q. Assume all the clients use the same
+privatization mechanism Q, and each client’s data is an i.i.d. sample from a distribution Pν
+for some parameter ν. Given the privatized views {Yi }ni=1 , the data analyst would like to
+make inferences based on the induced marginal distribution
+X
+
+Mν (S) ≡
+
+Q(S|x)Pν (x) ,
+
+(2)
+
+x∈X
+
+for S ⊆ Y. We consider a broad class of convex utility functions, and identify the class
+of optimal mechanisms, which we call staircase mechanisms, in Section 2. We apply this
+framework to two specific applications: (a) hypothesis testing where the utility is measured
+in Kullback-Leibler divergence (Section 3) and (b) information preservation where the utility
+is measured in mutual information (Section 4).
+In the binary hypothesis testing setting, ν ∈ {0, 1}; therefore, X can be generated by
+one of two possible distributions P0 and P1 . The power to discriminate data generated
+from P0 to data generated from P1 depends on the ‘distance’ between the marginals M0
+and M1 . To measure the ability of such statistical discrimination, our choice of utility of a
+particular privatization mechanism Q is an information theoretic quantity called Csiszár’s
+f -divergence defined as
+Df (M0 ||M1 ) =
+
+X  M0 (x) 
+f
+M1 (x) ,
+M1 (x)
+
+x∈X
+
+3
+
+(3)
+
+Kairouz, Oh and Viswanath
+
+for some convex function f such that f (1) = 0. The Kullback-Leibler (KL) divergence
+Dkl (M0 ||M1 ) is a special case with f (x) = x log x, and so is the total variation distance
+kM0 −M1 kTV with f (x) = (1/2)|x−1|. Such f -divergences capture the quality of statistical
+inference, such as minimax rates of statistical estimation or error exponents in hypothesis
+testing (Tsybakov and Zaiats, 2009; Cover and Thomas, 2012). As a motivating example,
+suppose a data analyst wants to test whether the data is generated from P0 or P1 based
+on privatized views Y1 , . . . , Yn . According to Chernoff-Stein’s lemma, for a bounded type
+I error probability, the best type II error probability scales as e−n Dkl (M0 ||M1 ) . Naturally,
+we are interested in finding a privatization mechanism Q that minimizes the probability of
+error by solving the following constraint maximization problem
+maximize
+Q
+
+Dkl (M0 ||M1 )
+,
+
+(4)
+
+subject to Q ∈ Dε
+where Dε is the set of all ε-locally differentially private mechanisms satisfying (1).
+In the information preservation setting, X is generated from an underlying distribution
+P . We are interested in quantifying how much information can be preserved when releasing
+a private view of the data. In other words, the data provider would like to release an εlocally differentially private view Y of X that preserves the amount of information in X as
+much as possible. The utility in this case is measured by the mutual information between
+X and Y
+
+
+XX
+Q (y|x)
+I (X; Y ) =
+P (x) Q (y|x) log P
+.
+(5)
+l∈X P (l) Q (y|l)
+X
+
+Y
+
+Mutual information, as the name suggests, measures the mutual dependence between two
+random variables. It has been used as a criterion for feature selection and as a measure of
+similarity between two different clusterings of a data set, in addition to many other applications in signal processing and machine learning. To characterize the fundamental tradeoff
+between privacy and mutual information, we solve the following constrained maximization
+problem
+maximize I(X; Y )
+Q
+,
+(6)
+subject to Q ∈ Dε
+where Dε is the set of all ε-locally differentially private mechanisms satisfying (1).
+Motivated by such applications in statistical analysis, our goal is to provide a general
+framework for finding optimal privatization mechanisms that maximize information theoretic utilities under local differential privacy. We demonstrate the power of our techniques
+in a very general setting that includes both hypothesis testing and information preservation.
+1.3 Our contributions
+We study the fundamental tradeoff between local differential privacy and a rich class of
+convex utility functions. This class of utilities includes several information theoretic quantities such as mutual information and f -divergences. The privacy-utility tradeoff is posed as
+a constrained maximization problem: maximize utility subject to local differential privacy
+constraints. This maximization problem is (a) nonlinear: the utility functions we consider
+4
+
+Extremal Mechanisms for Local Differential Privacy
+
+are convex in Q; (b) non-standard: we are maximizing instead of minimizing a convex
+function; and (c) infinite dimensional: the space of all differentially private mechanisms is
+infinite dimensional. We show, in Theorem 2, that for all utility functions considered and
+any privacy level ε, a finite family of extremal mechanisms (a finite subset of the corner
+points of the space of differentially private mechanisms), which we call staircase mechanisms, contains the optimal privatization mechanism. We further prove, in Theorem 4, that
+solving the original privacy-utility problem is equivalent to solving a finite dimensional linear program, the outcome of which is the optimal mechanism. However, solving this linear
+program can be computationally expensive because it has 2|X | variables. To account for
+this, we show that two simple staircase mechanisms (the binary and randomized response
+mechanisms) are optimal in the high and low privacy regimes, respectively, and well approximate the intermediate regime. This contributes an important progress in the differential
+privacy area, where the privatization mechanisms have been few and almost no exact optimality results are known. As an application, we show that the effective sample size reduces
+from n to ε2 n under local differential privacy in the context of hypothesis testing.
+We also study the fundamental tradeoff between utility and approximate differential
+privacy, a generalized notion of privacy that was first introduced in Dwork et al. (2006a).
+The techniques we develop for differential privacy do not generalize to approximate differential privacy. To account for this, we use an operational interpretation of approximate
+differential privacy (developed in Kairouz et al. (2014a)) to prove that a simple mechanism
+maximizes utility for all levels of privacy when the data is binary.
+1.4 Related work
+Our work is closely related to the recent work of Duchi et al. (2013) where an upper bound
+on Dkl (M0 ||M1 ) was derived under the same local differential privacy setting. Precisely,
+Duchi et. al. proved that the KL-divergence maximization problem in (4) is at most 4(eε −
+1)2 kP1 − P2 k2T V . This bound was further used to provide a minimax bound on statistical
+estimation using information theoretic converse techniques such as Fano’s and Le Cam’s
+inequalities. Such tradeoffs also provide tools for comparing various notions of privacy
+(Barber and Duchi, 2014).
+In a similar spirit, we are also interested in maximizing information theoretic quantities
+under local differential privacy. We generalize the results of Duchi et al. (2013), and provide
+stronger results in the sense that we (a) consider a broader class of information theoretic
+utilities; (b) provide explicit constructions for the optimal mechanisms; and (c) recover the
+existing result of (Duchi et al., 2013, Theorem 1) (with a stronger condition on ε).
+Our work also provides a formal connection to an information theoretic notion of privacy called information leakage (Chatzikokolakis et al., 2010; Sankar et al., 2013). Given
+a privatization mechanism Q, the information leakage is measured by the mutual information between the private data X and the released output Y , i.e. I(X; Y ). Information
+leakage has been widely studied as a practical notion of privacy. However, connections to
+differential privacy have been studied only indirectly through comparisons to how much
+distortion is incurred under the two notions of privacy (Sarwate and Sankar, 2014; Wang
+et al., 2014a). We show that under ε-local differential privacy, I(X; Y ) is upper bounded by
+5
+
+Kairouz, Oh and Viswanath
+
+0.5ε2 maxA⊆X P (A)P (Ac )+O(ε3 ) for small ε. Moreover, we provide an explicit privatization
+mechanism that achieves this bound.
+While there is a vast literature on differential privacy, exact optimality results are only
+known for a few cases. The typical recipe is to propose a differentially private mechanism
+inspired by the work of Dwork (2006); Dwork et al. (2006b); McSherry and Talwar (2007)
+and Hardt and Rothblum (2010), and then establish its near-optimality by comparing the
+achievable utility to a converse, for example in linear dynamical systems (Wang et al.,
+2014b), principal component analysis (Chaudhuri et al., 2012; Blocki et al., 2012; Hardt
+and Roth, 2012; Kapralov and Talwar, 2013), linear queries (Hardt and Talwar, 2010; Hardt
+et al., 2012), logistic regression (Chaudhuri and Monteleoni, 2008) and histogram release
+(Lei, 2011). In this paper, we take a different route and solve the utility maximization
+problem exactly.
+Optimal differentially private mechanisms are known only in a few cases. Ghosh et al.
+(2012) showed that the geometric noise adding mechanism is optimal (under a Bayesian
+setting) for monotone utility functions under count queries (sensitivity one). This was generalized by Geng et. al. (for a worst-case input setting) who proposed a family of mechanisms
+and proved its optimality for monotone utility functions under queries with arbitrary sensitivity (Geng and Viswanath, 2012, 2013a,b). The family of optimal mechanisms was called
+staircase mechanisms because for any y and any neighboring x and x0 , the ratio of Q(y|x)
+to Q(y|x0 ) takes one of three possible values eε , e−ε , or 1. Since the optimal mechanisms
+we develop also have an identical property, we retain the same nomenclature.
+1.5 Organization
+The remainder of the paper is organized as follows. In Section 2, we introduce the family of
+staircase mechanisms, prove its optimality for a broad class of convex utility functions, and
+study its combinatorial structure. In Section 3, we study the problem of private hypothesis
+testing and prove that two staircase mechanisms, the binary and randomized response
+mechanisms, are optimal for KL-divergence in the high and low privacy regimes, respectively,
+and (nearly) optimal the intermediate regime. We show, in Section 4, similar results for
+mutual information. In Section 5, we study approximate local differential privacy, a more
+general notion of local privacy. Finally, we conclude this paper in Section 6 with a few
+interesting and nontrivial extensions.
+
+2. Main Results
+In this section, we first present a formal definition for staircase mechanisms and prove that
+they are the optimal solutions to optimization problems of the form (8). We then provide
+a combinatorial representation for staircase mechanisms that allows us to reduce the infinite dimensional nonlinear program of (8) to a finite dimensional linear program with 2|X |
+variables. For any given privacy level ε and utility function U (·), one can solve this linear
+program to obtain the optimal privatization mechanism, albeit with significant computational challenges since the number of variables scales exponentially in the alphabet size. To
+address this issue, we prove, in Sections 3 and 4, that two simple staircase mechanisms,
+which we call the binary mechanism and the randomized response mechanism, are optimal
+6
+
+Extremal Mechanisms for Local Differential Privacy
+
+in the high and low privacy regimes, respectively, and well approximate the intermediate
+regime.
+2.1 Optimality of staircase mechanisms
+For an input alphabet X with |X | = k, we represent the set of ε-locally differentially private
+mechanisms that lead to output alphabets Y with |Y| = ` by
+
+
+Q (S|x)
+0
+Dε,` = Qk×` ∩ Q : ∀ x, x ∈ X , S ⊆ Y, ln
+≤ε ,
+Q (S|x0 )
+where Qk×` denotes the set of all k × ` dimensional conditional distributions. The set of all
+ε-locally differentially private mechanisms is given by
+Dε = ∪`∈N Dε,` .
+
+(7)
+
+The set of all conditional distributions acting on X is given by Q = ∪`∈N Qk,` .
+We consider two types of utility functions, one for the hypothesis testing setup and
+another for the information preservation setup. In the hypothesis testing setup, the utility
+is a function of the privatization mechanism and two priors defined on the input alphabet.
+Namely, U (P0 , P1 , Q) : Sk × Sk × Q → R+ , where P0 and P1 are positive priors defined
+on X , and Sk is the (k − 1)-dimensional probability simplex. Pν is said to be positive if
+Pν (x) > 0 for all x ∈ X . In the information preservation setup, the utility is a function of
+the privatization mechanism and a prior defined on the input alphabet. Namely, U (P, Q) :
+Sk × Q → R+ , where P is a positive prior defined on X . For notational convenience, we
+will use U (Q) to refer to both U (P, Q) and U (P0 , P1 , Q).
+Definition 1 (Sublinear Functions) A function µ (z) : Rk → R is said to be sublinear
+if the following two conditions are met
+1. µ (γz) = γµ (z) for all γ ∈ R+ .
+2. µ (z1 + z2 ) ≤ µ (z1 ) + µ (z2 ) for all z1 , z2 ∈ Rk .
+Let Qy be the column of Q corresponding to Q(y|·) and µ be any sublinear function.
+We are interested in utilities that can be decomposed into a sum of sublinear functions.
+We study the fundamental tradeoff between privacy and utility by solving the following
+constrained maximization problem
+X
+maximize U (Q) =
+µ(Qy )
+Q
+y∈Y
+.
+(8)
+subject to Q ∈ Dε
+This includes maximization over information theoretic quantities of interest in statistical estimation and hypothesis testing such as mutual information, total variation, KL-divergence,
+and χ2 -divergence (Tsybakov and Zaiats, 2009). Since sub-linearity implies convexity, (8)
+is in general a complicated nonlinear program: we are maximizing (instead of minimizing)
+a convex function in Q; further, the dimension of Q might be unbounded: the optimal
+7
+
+Kairouz, Oh and Viswanath
+
+privatization mechanism Q∗ might produce an infinite output alphabet Y. The following
+theorem proves that one never needs an output alphabet larger than the input alphabet in
+order to achieve the maximum utility, and provides a combinatorial representation for the
+optimal solution.
+Theorem 2 For any sublinear function µ and any ε ≥ 0, there exists an optimal mechanism
+Q∗ maximizing the utility in (8) over all ε-locally differentially private mechanisms, such
+that
+(a) the output alphabet size is at most the input alphabet size, i.e. |Y| ≤ |X |; and
+(b) for all y ∈ Y, and x, x0 ∈ X
+ln
+
+Q∗ (y|x)
+∈ {0, ε} .
+Q∗ (y|x0 )
+
+(9)
+
+The first claim of bounded alphabet size is more generally true for any general utility U (Q)
+that is convex in Q (not necessarily decomposing into a sum of sublinear functions as in (8)).
+The second claim establishes that there is an optimal mechanism with an extremal structure;
+the absolute value of the log-likelihood ratios can only take one of the two extremal values:
+0 or eε (see Figure 2 for example). We refer to such a mechanism as a staircase mechanism,
+and define the family of staircase mechanisms formally as
+Sε ≡ {Q | satisfying (9)} .
+P
+For all choices of U (Q) = Y µ(Qy ) and any ε ≥ 0, Theorem 2 implies that the family
+of staircase mechanisms includes the optimal solutions to maximization problems of the
+form (8). Notice that staircase mechanisms are ε-locally differentially private, since any Q
+satisfying (9) implies that Q(y|x)/Q(y|x0 ) ≤ eε .
+For global differential privacy, we can generalize the definition of staircase mechanisms to
+hold for all neighboring database queries x, x0 (or equivalently within some sensitivity), and
+recover all known existing optimal mechanisms. Precisely, the geometric mechanism shown
+to be optimal in Ghosh et al. (2012), and the mechanisms shown to be optimal in Geng
+and Viswanath (2012, 2013a) (also called staircase mechanisms) are special cases of the
+staircase mechanisms defined above. We believe that the characterization of these extremal
+mechanisms and the analysis techniques developed in this paper can be of independent
+interest to researchers interested in optimal mechanisms for global privacy and more general
+utilities.
+2.2 Combinatorial representation of the staircase mechanisms
+Now that we know that staircase mechanisms are optimal, we can try to combinatorially
+search for the best staircase mechanism for an instance of the function µ and a fixed ε. To
+this end, we give a simple representation for all staircase mechanisms, exploiting the fact
+that they are scaled copies of a finite number of patterns.
+Let Q ∈ R|X |×|Y| be a staircase mechanism, and k = |X | denote the size of the input
+alphabet. Then, from the definition of staircase mechanisms, Q(y|x)/Q(y|x0 ) ∈ {e−ε , 1, eε }
+and each column Q(y|·) must be proportional to one of the canonical staircase patterns we
+define next.
+8
+
+Extremal Mechanisms for Local Differential Privacy
+
+ ε ε
+
+e e
+1 eε 1
+1
+T
+Q = 1+eε
+1 1 eε 1 eε
+
+
+ ε
+e
+1 1 1
+
+eε 1 1 
+1 1
+
+QT = 3+e
+ε 
+1 1 eε 1 
+1 1 1 eε
+eε
+3+eε
+
+eε
+1+eε
+
+y=1
+
+1
+3+eε
+
+1
+1+eε
+
+y=1
+
+2
+3
+2
+4
+x=1
+
+2
+
+3
+
+4
+
+5
+
+x=1
+
+2
+
+3
+
+4
+
+Figure 2: Examples of staircase mechanisms: the binary (left) and the randomized response
+(right) mechanisms.
+
+Definition 3 (Staircase Pattern Matrix) Let bj be the k-dimensional binary vector cork
+responding to the binary representation of j for j ≤ 2k − 1. A matrix S (k) ∈ {1, eε }k×2 is
+(k)
+called a staircase pattern matrix if the j-th column of S (k) is Sj = (eε − 1) bj−1 + 1, for
+j ∈ {1, . . . , 2k }. Each column of S (k) is a staircase pattern.
+When k = 3, there are 2k = 8 staircase patterns and the staircase pattern matrix is given
+by
+
+
+1 1 1 1 eε eε eε eε
+S (3) = 1 1 eε eε 1 1 eε eε  .
+1 eε 1 eε 1 eε 1 eε
+For all values of k, there are exactly 2k such patterns, and any column Q(y|·) of Q, a
+staircase mechanism, is a scaled version of one of the columns of S (k) . Using this pattern
+matrix, we can show that any staircase mechanism Q can be represented as
+Q = S (k) Θ ,
+
+(10)
+
+where Θ = diag(θ) is a 2k ×2k diagonal matrix and θ is a 2k -dimensional vector representing
+the scaling of the columns of S (k) . We can now formulate the problem of maximizing the
+utility as a linear program and prove their equivalence.
+
+9
+
+Kairouz, Oh and Viswanath
+
+Theorem 4 For any sublinear function µ and any ε ≥ 0, the nonlinear program of (8) and
+the following linear program have the same optimal value
+k
+
+maximize
+θ∈R2k
+
+subject to
+
+2
+X
+
+(k)
+
+µ(Sj )θj = µT θ
+
+(11)
+
+j=1
+
+S (k) θ = 1
+θ≥0,
+
+and the optimal solutions are related by (10).
+Thus, the infinite dimensional nonlinear program of (8) is now reduced to a finite dimensional linear program. The constraints in (11) ensure that we get a valid probability matrix
+Q = S (k) Θ with rows that sum to one. One could potentially solve this LP with 2k variables
+but its computational complexity scales exponentially in the alphabet size k = |X |. For
+practical values of k this might not always be possible. However, in the following sections,
+we prove that in the high privacy regime (ε ≤ ε∗ for some positive ε∗ ), there is a single
+optimal mechanism, which we call the binary mechanism, which dominates over all other
+mechanisms in a very strong sense for all utility functions of practical interest.
+In order to understand the above theorem, observe that both the objective function
+and differential privacy constraints are invariant under permutations (or relabelling) of the
+columns of a privatization mechanism Q. In other words, shuffling the columns of an εlocally differentially private mechanism Q results in a new ε-locally differentially private
+mechanism Q0 that achieves the same utility. Similarly, both the objective function and
+differential privacy constraints are invariant under merging/splitting of outputs with the
+same pattern. To be specific, consider a privatization mechanism Q and suppose that
+there exist two outputs y and y 0 that have the same pattern, i.e. Q(y|·) = C Q(y 0 |·) for
+some positive constant C. Then, we can consider a new mechanism Q0 by merging the
+two columns corresponding to y and y 0 . Let y 00 denote this new output. It follows that
+Q0 satisfies the differential privacy constraints and the resulting utility is also preserved.
+Precisely, using the fact that Q(y|·) = C Q(y 0 |·), it follows that
+µ(Qy ) + µ(Qy0 ) = µ((1 + C)Qy ) = µ(Q0y00 ) ,
+by the homogeneity property of µ. Therefore, we can naturally define equivalence classes
+for staircase mechanisms that are equivalent up to a permutation of columns and merging/splitting of columns with the same pattern:
+[Q] = {Q0 ∈ Sε | ∃ a sequence of permutations and merge/split of columns from Q0 to Q} .
+To represent an equivalence class, we use a mechanism in [Q] that is ordered and merged to
+match the patterns of the pattern matrix S (k) . For any staircase mechanism Q, there exists
+a possibly different staircase mechanism Q0 ∈ [Q] such that Q0 = S (k) Θ for some diagonal
+matrix Θ with nonnegative entries. Therefore, to solve optimization problems of the form
+(8), we can restrict our attention to such representatives of equivalent classes. Further, for
+privatization mechanisms of the form Q = S (k) Θ, the objective function takes the form
+P
+(k)
+j µ(Sj )θj , a simple linear function of Θ.
+10
+
+Extremal Mechanisms for Local Differential Privacy
+
+3. Hypothesis Testing
+In this section, we study the fundamental tradeoff between local differential privacy and
+hypothesis testing. In this setting, there are n individuals each with data Xi sampled from
+a distribution Pν for a fixed ν ∈ {0, 1}. Let Q be a non-interactive privatization mechanism
+guaranteeing ε-local differential privacy. The output of the privatization mechanism Yi is
+distributed according to the induced marginal Mν defined in (2). With a slight abuse of
+notation, we will use Mν and Pν to represent both probability distributions and probability
+mass functions. The power to discriminate data sampled from P0 to data sampled from P1
+depends on the ‘distance’ between the marginals M0 and M1 . To measure the ability of
+such statistical discrimination, our choice of utility of a privatization mechanism Q is an
+information theoretic quantity called Csiszár’s f -divergence defined as
+Df (M0 ||M1 ) =
+
+X
+
+M1 (y)f
+
+ M (y) 
+
+Y
+
+0
+
+M1 (y)
+
+= U (P0 , P1 , Q) = U (Q) ,
+
+(12)
+
+for some convex function f such that f (1) = 0. The Kullback-Leibler (KL) divergence
+Dkl (M0 ||M1 ) is a special case of f -divergence with f (x) = x log x. The total variation
+distance kM0 − M1 kTV is also special case with f (x) = (1/2)|x − 1|. Note that in general,
+the f -divergence is not necessarily a distance metric since it need not be symmetric or
+satisfy triangular inequality. We are interested in characterizing the optimal solution to
+Df (M0 ||M1 )
+,
+subject to Q ∈ Dε
+
+maximize
+Q
+
+(13)
+
+where Dε is the set of all ε-locally differentially private mechanisms defined in (7).
+A motivating example for this choice of utility is the Neyman-Pearson hypothesis testing
+framework (Cover and Thomas, 2012). Given the privatized views {Yi }ni=1 , the data analyst
+wants to test whether they are generated from M0 or M1 . Let the null hypothesis be H0 :
+Yi ’s are generated from M0 , and the alternative hypothesis H1 : Yi ’s are generated from M1 .
+For a choice of rejection region R ⊆ Y n , the probability of false alarm (type I error) is
+α = M0n (R) and the probability of miss detection (type II error) is β = M1n (Y n \ R). Let
+∗
+β α = minR⊆Y n ,α<α∗ β denote the minimum type II error achievable while keeping the type
+I error rate at most α∗ . According to Chernoff-Stein lemma (Cover and Thomas, 2012), we
+know that
+lim
+
+1
+
+n→∞ n
+
+∗
+
+log β α = −Dkl (M0 ||M1 ) .
+
+Suppose the analyst knows P0 , P1 , and Q. Then in order to achieve optimal asymptotic
+error rate, one would want to maximize the KL divergence of the induced marginals, over
+all ε-locally differentially private mechanisms Q. The results we present in this section
+(Theorems 5 and 8 to be precise) provide an explicit construction of optimal mechanisms
+in high and low privacy regimes. Using these optimality results, we prove a fundamental
+limit on the achievable error rates under differential privacy. Precisely, with data collected
+from an ε-locally differentially privatization mechanism, one cannot achieve an asymptotic
+11
+
+Kairouz, Oh and Viswanath
+
+type II error smaller than
+1
+(1 + δ)(eε − 1)2
+(1 + δ)(eε − 1)2
+∗
+2
+log β α ≥ −
+kP
+−
+P
+k
+≥
+−
+Dkl (P0 ||P1 ) ,
+0
+1 TV
+n→∞ n
+(eε + 1)
+2(eε + 1)
+lim
+
+whenever ε ≤ ε∗ , where ε∗ is dictated by Theorem 5 and δ > 0 is some arbitrarily small
+but positive constant. In the equation above, the second inequality follows from Pinsker’s
+inequality. Since (eε − 1)2 = O(ε2 ) for small ε, the effective sample size is now reduced
+from n to ε2 n. This is the price of privacy. In the low privacy regime where ε ≥ ε∗ , for ε∗
+dictated by Theorem 8, one cannot achieve an asymptotic type II error smaller than
+1
+∗
+log β α ≥ −Dkl (P0 ||P1 ) + (1 − δ)G(P0 , P1 )e−ε .
+n→∞ n
+lim
+
+3.1 Optimality of staircase mechanisms
+From the definition of Df (M0 ||M1 ), we have that
+X
+X
+Df (M0 ||M1 ) =
+(P1T Qy )f (P0T Qy /P1T Qy ) =
+µ (Qy ) ,
+Y
+
+where PνT Qy =
+
+P
+
+Y
+
+T
+T
+T
+X Pν (x) Q (y|x) and µ (Qy ) = (P1 Qy )f (P0 Qy /P1 Qy ). For any γ > 0,
+
+
+
+P1T (γQy ) f P0T (γQy ) /P1T (γQy )
+
+
+= γ P1T Qy f P0T Qy /P1T Qy
+
+µ (γQy ) =
+
+= γµ (Qy ) .
+
+Moreover, since the function φ(z, t) = tf zt is convex in (z, t) for 0 ≤ z, t ≤ 1, then
+µ is convex in Qy . Convexity and homogeniety together imply sublinearlity. Therefore,
+Theorems 2 and 4 apply to Df (M0 ||M1 ) and we have that staircases are optimal.
+3.2 Optimality of the binary mechanism
+For a given P0 and P1 , the binary mechanism is defined as a staircase mechanism with only
+two outputs y ∈ {0, 1} satisfying (see Figure 2)
+
+
+eε
+eε
+
+
+
+
+if
+P
+(x)
+≥
+P
+(x)
+,
+if P0 (x) < P1 (x) ,
+0
+1
+1 + eε
+1 + eε
+Q(1|x)
+=
+(14)
+Q(0|x) =
+1
+1
+
+
+
+
+if
+P
+(x)
+<
+P
+(x)
+.
+if
+P
+(x)
+≥
+P
+(x)
+.
+0
+1
+0
+1
+1 + eε
+1 + eε
+Although this mechanism is extremely simple, perhaps surprisingly, we will establish that
+it is the optimal mechanism when a high level of privacy is required. Intuitively, the output
+should be very noisy in the high privacy regime, and we are better off sending just one bit
+of information that tells you whether your data is more likely to have come from P0 or P1 .
+Theorem 5 For any pair of distributions P0 and P1 , there exists a positive ε∗ that depends
+on P0 and P1 such that for any f -divergences and any positive ε ≤ ε∗ , the binary mechanism
+maximizes the f -divergence between the induced marginals over all ε-locally differentially
+private mechanisms.
+12
+
+Extremal Mechanisms for Local Differential Privacy
+
+This implies that in the high privacy regime, which is a typical setting studied in much
+of the differential privacy literature, the binary mechanism is universally optimal for all
+f -divergences. In particular this threshold ε∗ is universal, in that it does not depend on the
+particular choice of which f -divergence we are maximizing. It is only a function of P0 and
+P1 . This is established by proving a very strong statistical dominance using Blackwell’s celebrated result on comparisons of statistical experiments Blackwell (1953). In a nutshell, we
+prove that any ε-locally differentially private mechanism can be simulated from the output
+of the binary mechanism for sufficiently small ε. Hence, the binary mechanism dominates
+over all other mechanisms and at the same time achieves the maximum divergence. A similar idea has been used previously in (Kairouz et al., 2013) to exactly characterize how much
+privacy degrades under composition attacks.
+The optimality of binary mechanisms is not just for high privacy regimes. The next
+theorem shows that it is the optimal solution of (13) for all ε, when the objective function
+is the total variation distance: Df (M0 ||M1 ) = kM0 − M1 kTV .
+Theorem 6 For any pair of distributions P0 and P1 , and any ε ≥ 0, the binary mechanism
+maximizes the total variation distance between the induced marginals M0 and M1 among all
+ε-locally differentially private mechanisms.
+When maximizing the KL divergence between the induced marginals, we show that the
+binary mechanism still achieves good performance for ε ≤ C where C is a constant that
+does not depend on P0 and P1 . For the special case of KL divergence, let OPT denote the
+maximum value of (13) and BIN denote the KL divergence when the binary mechanism is
+used. The next theorem shows that
+BIN ≥
+
+1
+OPT .
+2(eε + 1)2
+
+Theorem 7 For any ε and any pair of distributions P0 and P1 , the binary mechanism is an
+1/(2(eε + 1)2 ) approximation of the maximum KL divergence between the induced marginals
+M0 and M1 among all ε-locally differentially private mechanisms.
+Observe that 2(eε + 1)2 ≤ 32 for ε ≤ 1. Therefore, for any ε ≤ 1, the simple binary
+mechanism is at most a constant factor away from the optimal mechanism.
+3.3 Optimality of the randomized response mechanism
+The randomized response mechanism (see Figure 2) is a staircase mechanism with Y = X
+satisfying
+eε
+|X | − 1 + eε
+Q(y|x) =
+1
+
+
+|X | − 1 + eε
+
+
+
+
+if y = x ,
+(15)
+if y 6= x .
+
+In other words, the randomized response is a simple randomization over the same alphabet
+where the true data is released with probability eε / (|X | − 1 + eε ). We view it as a multiple
+13
+
+Kairouz, Oh and Viswanath
+
+choice generalization to the randomized response method proposed by Warner (1965). We
+now establish that for the special case of optimizing the KL divergence between the induced
+marginals, the randomized response mechanism is the optimal solution of (13) in the low
+privacy regime (i.e., ε ≥ ε∗ for some threshold ε∗ that depends on P0 and P1 ).
+Theorem 8 There exists a positive ε∗ that depends on P0 and P1 such that for all P0
+and P1 , and all ε ≥ ε∗ , the randomized response mechanism maximizes the KL divergence
+between the induced marginals among all ε-locally differentially private mechanisms.
+The randomized response mechanism is particularly important because it does not depend
+on P0 or P1 . Thus, even if the data providers and analysts do not have access to the
+priors, they can still use the randomized response mechanism to achieve the optimal (or
+near-optimal) utility in the moderate to low privacy regimes.
+3.4 Numerical Experiments
+A typical approach for achieving ε-local differential privacy is to add geometric noise with
+appropriately chosen variance. For an input with alphabet size |X | = k, this amounts
+to relabelling the inputs as integers {1, . . . , k} and adding geometric noise, i.e., Q(y|x) =
+((1 − ε1/(k−1) )/(1 + ε1/(k−1) ))ε|y−x|/(k−1) for y ∈ Z. The output is then truncated at 1 and
+k to preserve the support.
+For 100 instances of randomly chosen P0 and P1 defined over an input alphabet of
+size |X | = 6, we compare the average performance of the binary, randomized response,
+and geometric mechanisms to the average performance of the optimal staircase mechanism
+for various values of ε. The optimal staircase mechanism is computed by solving the linear
+program in Equation (11) for each fixed pair (P0 , P1 ) and ε. The left panel of Figure 3 shows
+the average performance measured by the normalized divergence Dkl (M0 ||M1 )/Dkl (P0 ||P1 )
+for all 4 mechanisms. The average is taken over the 100 instances of P0 and P1 . In the
+low privacy (large ε) regime, the randomized response achieves optimal performance (which
+converges exponentially in ε to 1) as predicted. In the high privacy regime (small ε), the
+binary mechanism achieves optimal performance (which converges quadratically in ε to 0)
+as predicted. In all regimes, both the binary and randomized response mechanisms provide
+significant gains over the geometric mechanism.
+To illustrate how much worse the binary and the randomized response mechanisms
+can be relative to the optimal staircase mechanism, we plot in the right panel of Figure
+3 the divergence under each mechanism normalized by the divergence under the optimal
+mechanism. This is done for all 100 instances of P0 and P1 . In all instances, the binary
+mechanism is optimal for small ε and the randomized response mechanism is optimal for
+large ε. However, Dkl (M0 ||M1 ) under the randomized response mechanism can be as bad as
+10% of the optimal one (for small ε). Similarly, Dkl (M0 ||M1 )) under the binary mechanism
+can be as bad as 25% of the optimal one (for large ε). To overcome this issue, we propose the
+following simple strategy: use the better among these two mechanisms. The performance
+of this strategy is illustrated in Figure 4. For various input alphabet size |X | ∈ {3, 4, 6, 12},
+we plot the performance of this mixed strategy for each value of ε and each of the 100
+randomly generated instances of P0 and P1 . This mixed strategy achieves at least 70% for
+|X | = 6 (and 55% for |X | = 12) of the optimal divergence for all instances. Figure 4 shows
+14
+
+Extremal Mechanisms for Local Differential Privacy
+
+Dkl (M0 ||M1 )
+Dkl (P0 ||P1 )
+
+Dkl (M0 ||M1 )
+OP T
+
+1
+
+optimal mechanism
+binary mechanism
+randomized response
+0.8 geometric mechanism
+
+1
+
+0.9
+
+0.9
+0.8
+
+0.7
+
+0.7
+
+0.6
+0.5
+
+0.6
+
+0.4
+
+0.5
+
+0.3
+
+0.4
+
+0.2
+
+0.3
+
+0.1
+
+0.2
+
+0
+
+0.1
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+binary mechanism
+randomized response
+0
+
+ε
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+··
+
+9
+
+10
+
+ε
+
+Figure 3: The binary and randomized response mechanisms are optimal in the high-privacy
+(small ε) and low-privacy (large ε) regimes, respectively, and improve over the
+geometric mechanism significantly (left). When the regimes are mismatched,
+Dkl (M0 ||M1 ) under these mechanisms can be as bad as 10% of the optimal one
+(right).
+
+that this mixed strategy is not too sensitive to the size of the alphabet k. Therefore, this
+strategy provides a good mechanism that can be readily used in practice for any value of ε.
+3.5 Lower bounds
+In this section, we provide converse results on the fundamental limit of differentially private
+mechanisms; these results follow from our main theorems and are of independent interest
+in other applications where lower bounds in statistical analysis are studied (Beimel et al.,
+2008; Hardt and Talwar, 2010; Chaudhuri and Hsu, 2012; De, 2012). For example, a bound
+similar to (16) was used to provide converse results on the sample complexity for statistical
+estimation with differentially private data in Duchi et al. (2013).
+
+Corollary 9 For any ε ≥ 0, let Q be any conditional distribution that guarantees ε-local
+differential privacy. Then, for any pair of distributions P0 , P1 and any positive δ > 0,
+there exists a positive ε∗ that depends on P0 , P1 and δ such that for any ε ≤ ε∗ the induced
+marginals M0 and M1 satisfy the bound
+
+
+
+Dkl M0 ||M1 + Dkl M1 ||M0 ≤
+15
+
+2(1 + δ)(eε − 1)2
+2
+P0 − P1 TV .
+(eε + 1)
+
+(16)
+
+Kairouz, Oh and Viswanath
+
+Dkl (M0 ||M1 )
+OP T
+
+Dkl (M0 ||M1 )
+OP T
+
+|X | = 3
+
+1
+
+1
+
+0.9
+
+0.9
+
+0.8
+
+0.8
+
+0.7
+
+0.7
+
+0.6
+
+0.6
+
+0.5
+
+|X | = 4
+
+0.5
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+0
+
+1
+
+2
+
+3
+
+4
+
+ε
+Dkl (M0 ||M1 )
+OP T
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+7
+
+8
+
+9
+
+10
+
+ε
+Dkl (M0 ||M1 )
+OP T
+
+|X | = 6
+
+1
+
+1
+
+0.9
+
+0.9
+
+0.8
+
+0.8
+
+0.7
+
+0.7
+
+0.6
+
+0.6
+
+0.5
+
+|X | = 12
+
+0.5
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+0
+
+ε
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+ε
+
+Figure 4: For varying input alphabet size |X | ∈ {3, 4, 6, 12}, at least 55% of the optimal
+divergence can be achieved by taking the better one between the binary and the
+randomized response mechanisms.
+
+This follows from Theorem 5 and observing that the binary mechanism achieves
+
+Dkl M0 ||M1
+ 1 + (eε − 1)P (T ) 
+(eε − 1)P0 (T ) + 1
+0
+=
+log
+eε + 1
+1 + (eε − 1)P1 (T )
+ 1 + (eε − 1)P (T c ) 
+(eε − 1)P0 (T c ) + 1
+0
++
+log
+eε + 1
+1 + (eε − 1)P1 (T c )
+(eε − 1)2
+=
+(P0 (T ) − P1 (T )) + O(ε3 )
+eε + 1
+(eε − 1)2
+2
+=
+P0 − P1 TV + O(ε3 ) ,
+ε
+e +1
+where T ⊆ X is the set of x such that P0 (x) ≥ P1 (x). Compared to (Duchi et al., 2013,
+Theorem 1), we recover their bound of 4(eε − 1)2 kP0 − P1 k2TV with a smaller constant.
+16
+
+Extremal Mechanisms for Local Differential Privacy
+
+We want to note that Duchi et al.’s bound holds for all values of ε and uses a different
+technique of bounding the KL divergence directly, however no achievable mechanism has
+been provided. We instead provide an explicit mechanism, that is optimal in high privacy
+regime.
+Similarly, in the low privacy regime, we can show the following converse result.
+Corollary 10 For any ε ≥ 0, let Q be any conditional distribution that guarantees ε-local
+differential privacy. Then, for any pair of distributions P0 and P1 and any positive δ > 0,
+there exists a positive ε∗ that depends on P0 and P1 and δ such that for any ε ≥ ε∗ the
+induced marginals M0 and M1 satisfy the bound
+
+
+Dkl M0 ||M1 + Dkl M1 ||M0 ≤ Dkl (P0 ||P1 ) − (1 − δ)G(P0 , P1 )e−ε .
+where G(P0 , P1 ) =
+
+(17)
+
+P
+
+X (1 − P0 (x)) log(P1 (x)/P0 (x)).
+
+This follows directly from Theorem 8 and observing that the randomized response mechanism achieves Dkl (M0 ||M1 ) = Dkl (P0 ||P1 ) − G(P0 , P1 )e−ε + O(e−2ε ) .
+Figure 5 illustrates the gap between the divergence achieved by the geometric mechanism
+described in the previous section and the optimal mechanisms (the binary mechanism for the
+high privacy regime and the randomized response mechanism for the low privacy regime).
+For each instance of the 100 randomly generated P0 and P1 defined over input alphabets
+of size k = 6, we plot the resulting divergence Dkl (M0 ||M1 ) as a function of kP0 − P1 kTV
+for ε = 0.1, and as a function of Dkl (P0 ||P1 ) for ε = 10. The binary and the randomized
+response mechanisms exhibit the scaling predicted by Equation (16) and (17), respectively.
+Similarly, for total variation, we can get the following converse result.
+Dkl (M0 ||M1 )
+0.0035
+
+Dkl (M0 ||M1 )
+4
+
+binary mechanism
+Laplace mechanism
+
+0.003
+
+randomized response
+geometric mechanism
+
+3.5
+3
+
+0.0025
+
+2.5
+0.002
+2
+0.0015
+1.5
+0.001
+
+1
+
+0.0005
+
+0.5
+
+0
+
+0
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+0
+
+kP0 − P1 kTV
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+Dkl (P0 ||P1 )
+
+Figure 5: For small ε = 0.1 (left) the binary mechanism achieves the optimal KL divergence, which scales as Equation (16). For large ε = 10 (right) the randomized
+response achieves the optimal KL divergence, which scales as Equation (17). Both
+mechanisms improve significantly over the geometric mechanism.
+
+17
+
+Kairouz, Oh and Viswanath
+
+Corollary 11 For any ε ≥ 0, let Q be any conditional distribution that guarantees ε-local
+differential privacy. Then, for any pair of distributions P0 and P1 , the induced marginals
+M0 and M1 satisfy the bound M0 −M1 TV ≤ ((eε − 1)/(eε + 1)) P0 −P1 TV , and equality
+is achieved by the binary mechanism.
+This follows from Theorem 6 and explicitly computing the total variation achieved by the
+binary mechanism.
+
+4. Information Preservation
+In this section, we study the fundamental tradeoff between local privacy and mutual information. Consider a random variable X distributed according to P . The information
+content in X is captured by entropy
+X
+H (X) = −
+P (x) log P (x) .
+X
+
+We are interested in releasing a differentially private version of X represented by Y . The
+random variable Y should preserve the information content of X as much as possible while
+meeting the local differential privacy constraints. Similar to the hypothesis testing setting,
+we will show that a variant of the binary mechanism is optimal in the high privacy regime
+and the randomized response mechanism is optimal in the low privacy regime.
+Let Q be a non-interactive privatization mechanism guaranteeing ε-local differential
+privacy. The output of the privatization mechanism Y is distributed according to the
+induced marginal M given by
+X
+M (S) =
+Q(S|x)P (x) ,
+x∈X
+
+for S ⊆ Y. With a slight abuse of notation, we will use M and P to represent both
+probability distributions and probability mass functions. The information content in Y
+about X is captured by the well celebrated information theoretic quantity called mutual
+information. The mutual information between X and Y is given by
+
+
+XX
+Q (y|x)
+I (X; Y ) =
+P (x) Q (y|x) log P
+= U (P, Q) = U (Q) .
+l∈X P (l) Q (y|l)
+X
+
+Y
+
+Notice that I (X; Y ) ≤ H (X) and I (X; Y ) is convex in Q (Cover and Thomas, 2012). To
+preserve the information context in X, we wish to choose a privatization mechanism Q such
+that the mutual information between X and Y is maximized subject to differential privacy
+constraints. In other words, we are interested in characterizing the optimal solution to
+maximize
+Q
+
+I (X; Y )
+,
+
+(18)
+
+subject to Q ∈ Dε
+where Dε is the set of all ε-locally differentially private mechanisms defined in (7). The
+above mutual information maximization problem can be thought of as a conditional entropy
+minimization problem since I (X; Y ) = H (X) − H (X|Y ).
+18
+
+Extremal Mechanisms for Local Differential Privacy
+
+4.1 Optimal staircase mechanisms
+From the definition of I (X; Y ), we have that
+ X
+
+XX
+Q (y|x)
+=
+µ (Qy ) ,
+I (X; Y ) =
+P (x) Q (y|x) log
+P T Qy
+Y
+
+Y
+
+X
+
+
+where P T Qy = X P (x)Q (y|x) and µ (Qy ) = X P (x) Q (y|x) log Q (y|x) /P T Qy . Notice that µ (γQy ) = γµ (Qy ), and by the log-sum inequality, µ is convex. Convexity and
+homogeneity together imply sublinearity. Therefore, Theorems 2 and 4 apply to I (X; Y )
+and we have that staircase mechanisms are optimal.
+For a given P , the binary mechanism for mutual information is defined as a staircase
+mechanism with only two outputs y ∈ {0, 1} (see Figure 2). Let T ⊆ X be the set that
+partitions X into two partitions, T and T c , such that |P (T )−P (T c )| is minimized. Precisely,
+P
+
+P
+
+T
+
+∈ arg min P (A) −
+A⊆X
+
+1
+.
+2
+
+(19)
+
+Observe that there are always multiple choices for T . Indeed, for any minimizing set T , T c
+is also a minimizing set since |P (T ) − 1/2| = |P (T c ) − 1/2|. When there is only one such
+pair, the binary mechanism is uniquely defined as
+
+
+eε
+eε
+
+
+
+
+if
+x
+∈
+T
+,
+if x ∈
+/T ,
+1 + eε
+1 + eε
+Q(0|x) =
+Q(1|x)
+=
+(20)
+1
+1
+
+
+
+
+if
+x
+∈
+/
+T
+.
+if
+x
+∈
+T
+.
+1 + eε
+1 + eε
+When there are multiple pairs, any pair (T, T c ) can be chosen to define the binary mechanism. All resulting binary mechanisms are equivalent from a utility maximization perspective.
+In what follows, we will establish that this simple mechanism is the optimal mechanism in
+the high privacy regime. Intuitively, in the high privacy regime, we cannot release more than
+one bit of information, and hence, the input alphabet is reduced to a binary output alphabet.
+In this case we have to maximize the information contained in the
+ released bit by maximizing
+c
+c
+its entropy: T ∈ arg max − P (A) log P (A) − P (A ) log P (A ) = arg max|P (A) − 1/2| (see
+A⊆X
+
+A⊆X
+
+Section 9.1 for a proof).
+Theorem 12 For any distribution P , there exists a positive ε∗ that depends on P such that
+for any positive ε ≤ ε∗ , the binary mechanism maximizes the mutual information between
+the input and the output of a privatization mechanism over all ε-locally differentially private
+mechanisms.
+This implies that in the high privacy regime, the binary mechanism is the optimal solution
+for (18).
+Next, we show that the binary mechanism achieves near-optimal performance for all
+(X , P ) and ε ≤ 1 even when ε∗ < 1. Let OPT denote the maximum value of (18) and BIN
+denote the mutual information achieved by the binary mechanism given in (20). The next
+theorem shows that
+1
+BIN ≥
+OPT .
+1 + eε
+19
+
+Kairouz, Oh and Viswanath
+
+Theorem 13 For any ε ≤ 1 and any distribution P , the binary mechanism is an (1 + eε )approximation of the maximum mutual information between the input and the output of a
+privatization mechanism among all ε-locally differentially private mechanisms.
+Note that 1 + eε ≤ 4 for ε ≤ 1 which is a commonly studied regime in differential privacy
+applications. Therefore, we can always use the simple binary mechanism and the resulting
+mutual information is at most a constant factor away from the optimal.
+In the low privacy regime (ε ≥ ε∗ ), the randomized response mechanism defined in(15)
+is optimal.
+Theorem 14 There exists a positive ε∗ that depends on P such that for any distribution P
+and all ε ≥ ε∗ , the randomized response mechanism maximizes the mutual information between the input and the output of as privatization mechanism over all ε-locally differentially
+private mechanisms.
+4.2 Numerical Experiments
+For 100 instances of randomly chosen P defined over input alphabet of size |X | = 6, we
+compare the average performance of the binary, randomized response, and the geometric
+mechanisms to the optimal mechanism. We plot (in Figure 6, left) the average performance
+measured by the normalized mutual information I (X; Y )/H (X) for all 4 mechanisms. The
+average is taken over the 100 instances of P . In the low privacy (large ε) regime, the
+randomized response achieves optimal performance as predicted, which converges to one.
+In the high privacy regime (small ε), the binary mechanism achieves optimal performance
+as predicted. In all regimes, both mechanisms significantly improve over the geometric
+mechanism. To illustrate how much worse the binary and randomized response mechanisms
+can be (relative to the optimal staircase mechanism), we plot (in Figure 6, right) the mutual
+information under each mechanism normalized by the mutual information under the optimal
+staircase mechanism. This is done for all 100 instances of P . In all instances, the binary
+mechanism is optimal for small ε and the randomized response mechanism is optimal for
+large ε. However, I (X; Y ) under the randomized response mechanism can be as bad as
+35% of the optimal one (for small ε). Similarly, I (X; Y ) under the binary mechanism can
+be as bad as 40% of the optimal one (for large ε).
+For |X | ∈ {3, 4, 6, 12}, we plot (in Figure 7) the performance of better between the
+binary and randomized response mechanisms normalized by the optimal mechanism for all
+100 randomly generated instances of P . This mixed strategy achieves at least 75% for
+|X | = 6 (and 65% for |X | = 12) of the optimal mutual infirmation for all instances of P .
+Moreover, it is not sensitive to the size of the alphabet |X |.
+4.3 Lower bounds
+In this section, we provide converse results on the fundamental limit of locally differentially
+private mechanisms when utility is measured via mutual information.
+Corollary 15 For any ε ≥ 0, let Q be any conditional distribution that guarantees ε-local
+differential privacy. Then, for any distribution P and any positive δ > 0, there exists a
+20
+
+Extremal Mechanisms for Local Differential Privacy
+
+I(X;Y )
+H(X)
+
+I(X;Y )
+OP T
+
+1
+
+optimal mechanism
+binary mechanism
+randomized response
+0.8 geometric mechanism
+
+1
+
+0.9
+
+0.9
+
+0.7
+
+0.8
+
+0.6
+0.7
+
+0.5
+0.4
+
+0.6
+
+0.3
+
+0.5
+
+0.2
+0.4
+
+0.1
+
+0.3
+
+0
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+binary mechanism
+randomized response
+0
+
+1
+
+2
+
+3
+
+4
+
+ε
+
+5
+
+6
+
+7
+
+8
+
+··
+
+9
+
+10
+
+ε
+
+Figure 6: The binary and randomized response mechanisms are optimal in the high-privacy
+(small ε) and low-privacy (large ε) regimes, respectively, and improve over the
+geometric mechanism significantly (left). When the regimes are mismatched,
+I (X; Y ) under these mechanisms can each be as bad as 35% of the optimal one
+(right).
+
+positive ε∗ that depends on P and δ such that for any ε ≤ ε∗ the following bound holds
+1
+I (X; Y ) ≤ (1 + δ) P (T ) P (T c ) ε2 ,
+2
+
+(21)
+
+where T is defined in (19).
+This follows from Theorem 12 (optimality of the binary mechanism) and observing that the
+binary mechanism achieves
+
+
+1
+eε
+1
+c
+I (X; Y ) = ε
+P (T ) eε log
++
+P
+(T
+)
+log
+e +1
+P (T c ) + eε P (T )
+P (T c ) + eε P (T )
+
+
+1
+eε
+1
+c ε
++ ε
+P (T ) e log
++ P (T ) log
+e +1
+P (T ) + eε P (T c )
+P (T ) + eε P (T c )
+
+1
+=
+P (T ) P (T c ) ε2 + O ε3 .
+2
+Similarly, in the low privacy regime, we can show the following converse result.
+Corollary 16 For any ε ≥ 0, let Q be any conditional distribution that guarantees ε-local
+differential privacy. Then, for any distributions P and any positive δ > 0, there exists a
+positive ε∗ that depends on P and δ such that for any ε ≥ ε∗ the following bound holds
+I (X; Y ) ≤ H (X) − (1 − δ) (k − 1) εe−ε .
+This follows directly from Theorem 14 (optimality of the randomized response mechanism)
+and observing that the randomized response mechanism achieves
+I (X; Y ) = H (X) − (k − 1) εe−ε + O(e−2ε ).
+21
+
+(22)
+
+Kairouz, Oh and Viswanath
+
+I(X;Y )
+OP T
+
+I(X;Y )
+OP T
+
+|X | = 3
+
+1.05
+
+1.05
+
+1
+
+1
+
+0.95
+
+0.95
+
+0.9
+
+0.9
+
+0.85
+
+0.85
+
+0.8
+
+0.8
+
+0.75
+
+0.75
+
+0.7
+
+0.7
+
+0.65
+
+|X | = 4
+
+0.65
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+ε
+I(X;Y )
+OP T
+
+6
+
+7
+
+8
+
+9
+
+10
+
+7
+
+8
+
+9
+
+10
+
+ε
+I(X;Y )
+OP T
+
+|X | = 6
+
+1.05
+
+1.05
+
+1
+
+1
+
+0.95
+
+0.95
+
+0.9
+
+0.9
+
+0.85
+
+0.85
+
+0.8
+
+0.8
+
+0.75
+
+0.75
+
+0.7
+
+0.7
+
+0.65
+
+|X | = 12
+
+0.65
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+0
+
+1
+
+2
+
+3
+
+4
+
+ε
+
+5
+
+6
+
+ε
+
+Figure 7: For varying input alphabet size |X | ∈ {3, 4, 6, 12}, at least 65% of the maximum
+I (X; Y ) can be achieved by taking the better one between the binary and the
+randomized response mechanisms.
+
+Figure 8 illustrates the gap between the mutual information achieved by the geometric
+mechanism and the optimal mechanisms (the binary mechanism for the high privacy regime
+and the randomized response mechanism for the low privacy regime). For each instance
+of the 100 randomly generated P over input of size k = 6, we plot the resulting mutual
+information I (X; Y ) as a function of P (T ) P (T c ) for ε = 0.1, and as a function of H (X) for
+ε = 10. The binary and the randomized response mechanisms exhibit the scaling predicted
+by Equations (21) and (22), respectively.
+
+5. Generalizations to approximate differential privacy
+In this section, we generalize the results of the previous sections in the following ways.
+1. We consider the class of utility functions that obey the data processing inequality.
+Consider the composition of two privatization mechanisms QW = Q ◦ W where the
+22
+
+Extremal Mechanisms for Local Differential Privacy
+
+I (X; Y )
+0.002
+0.0018
+
+I (X; Y )
+2.6
+
+binary mechanism
+geometric mechanism
+
+randomized response
+geometric mechanism
+
+2.4
+2.2
+
+0.0016
+
+2
+
+0.0014
+
+1.8
+
+0.0012
+
+1.6
+
+0.001
+
+1.4
+
+0.0008
+
+1.2
+
+0.0006
+
+1
+
+0.0004
+
+0.8
+
+0.0002
+
+0.6
+
+0
+0.16 0.17 0.18 0.19 0.2 0.21 0.22 0.23 0.24 0.25
+
+0.4
+0.8
+
+1
+
+1.2
+
+P (T ) P (T c )
+
+1.4
+
+1.6
+
+1.8
+
+2
+
+2.2
+
+2.4
+
+2.6
+
+H (X)
+
+Figure 8: For ε = 0.1 (left) the binary mechanism achieves the maximum I (X; Y ), which
+scales as Equation (21). For ε = 10 (right) the randomized response mechanism
+achieves the optimal mutual information, which scales as Equation (22).
+
+output of the first mechanism Q is applied to another mechanism W . We say that a
+utility function U (·) obeys the data processing inequality if the following inequality
+holds for all Q and W
+U (QW ) ≤ U (Q) .
+The following proposition, proved in Section 10, shows that the class of utilities obeying the data processing inequality includes all the utility functions we studied in
+Section 2.
+Proposition
+17 Any utility function that can be written in the form of U (Q) =
+P
+µ(Q
+),
+where
+µ is any sublinear function, obeys the data processing inequality.
+y
+Y
+2. We consider (ε, δ)-differential privacy which generalizes the notion of ε-differential
+privacy. (ε, δ)-differential privacy is commonly referred to as approximate differential
+privacy and it was first introduced in Dwork et al. (2006a). For the release of a random
+variable X ∈ X , we say that a mechanism Q is (ε, δ)-locally differentially private if
+
+Q (S|x) ≤ eε Q S|x0 + δ,
+(23)
+for all S ⊆ Y and all x, x0 ∈ X . Note that ε-local differential privacy is a special case
+of (ε, δ)-local differential privacy where δ = 0.
+3. We prove that the quaternary mechanism, defined in Equation (24), is optimal for any
+ε and any δ. This is different from the treatment conducted in the previous sections
+where we proved the optimality of the binary (randomized response) mechanism for
+sufficiently small (large) ε and δ = 0.
+23
+
+Kairouz, Oh and Viswanath
+
+The treatment in this section, even though more general than the one in previous sections in
+the ways described above, holds only for binary alphabets (i.e., |X | = 2). Finding optimal
+privatization mechanisms under (ε, δ)-local differential privacy for larger input alphabets
+(i.e., |X | > 2) is an interesting open question. Unlike ε-local differential privacy, the privacy constraints under (ε, δ)-local differential privacy no longer decompose into separate
+constraints on each output y. This makes it difficult to generalize the techniques developed
+in previous sections of this paper. However, for the special case of binary input alphabets,
+we can prove the optimality of one mechanism for all values of (ε, δ) and all utility functions
+that obey the data processing inequality.
+For a binary random variable X ∈ X = {0, 1}, the quaternary mechanism maps X to a
+quaternary random variable Y ∈ Y = {0, 1, 2, 3} and is defined as
+
+
+δ if x = 0 ,
+0 if x = 0 ,
+QQT (0|x) =
+QQT (1|x) =
+(24)
+0 if x = 1 .
+δ if x = 1 .
+
+QQT (2|x) =
+
+1
+(1 − δ) 1+e
+ε
+eε
+(1 − δ) 1+eε
+
+if x = 0 ,
+if x = 1 .
+
+
+QQT (3|x) =
+
+ε
+
+e
+(1 − δ) 1+e
+ε
+1
+(1 − δ) 1+e
+ε
+
+if x = 0 ,
+if x = 1 .
+
+In other words, the quaternary mechanism passes X unchanged with probability δ and
+applies the binary mechanism (defined in previous sections) with probability 1 − δ. The
+main result of this section can be stated formally as follows.
+Theorem 18 If |X | = 2, then for any ε, any δ, and any U (Q) that obeys the data processing inequality, the quaternary mechanism maximizes U (Q) subject to Q ∈ D(ε,δ) , the set of
+all (ε, δ)-locally differentially private mechanism.
+The proof of Theorem 18 depends on an operational definition of differential privacy
+which we describe next. Consider a privatization mechanism Q that maps X ∈ {0, 1}
+stochastically to Y ∈ Y. Given Y , construct a binary hypothesis test on whether X = 0
+or X = 1. Any binary hypothesis test is completely described by a, possibly randomized,
+decision rule X̂ : Y → {0, 1}. The two types of error associated with X̂ are false alarm:
+X̂ = 1 when X = 0, and miss detection: X̂ = 0 when X = 1. The probability of false
+alarm is given by PFA = P(X̂ = 1|X = 0) while the probability of miss detection is given
+by PMD = P(X̂ = 0|X = 1). For a fixed Q, the convex hull of all pairs (PMD , PFA ) for all
+decision rules X̂ defines a two-dimensional error region where PMD is plotted against PFA .
+For example, the quaternary mechanism given in Figure 9a has an error region RQQT shown
+in Figure 9b.
+It turns out that (ε, δ)-local differential privacy imposes the following conditions on the
+error region of all (ε, δ)-locally differentially private mechanisms
+PFA + eε PMD ≥ 1 − δ ,
+
+and
+
+eε PFA + PMD ≥ 1 − δ ,
+
+for any decision rule X̂. These two conditions define an error region Rε,δ shown in Figure
+9b. Interestingly, the next theorem shows that the converse result is also true.
+Theorem 19 A mechanism Q is (ε, δ)-locally differentially private if and only if RQ ⊆
+Rε,δ .
+24
+
+Extremal Mechanisms for Local Differential Privacy
+
+y=0
+
+δ
+
+0
+
+y=1
+
+0
+
+δ
+
+y=2
+
+(1−δ)eε
+1+eε
+
+(1−δ)
+1+eε
+
+PFA
+1
+1
+
+0.5
+
+1
+1  e
+
+y=3
+
+(1−δ)
+1+eε
+
+(1−δ)eε
+1+eε
+
+RQQT = Rε,δ
+
+0
+
+0
+
+x=0 x=1
+(a) Privatization mechanism
+
+1
+1  e
+
+0.5
+
+1
+
+PMD
+1
+
+(b) Error region
+
+Figure 9: The quaternary mechanism
+The proof of the above theorem can be found in Kairouz et al. (2013). Notice that it is no
+coincidence that RQQT = Rε,δ . This property will be essential in proving the optimality of
+the quaternary mechanism.
+Theorem 19 allows us to benefit from the data processing inequality (DPI) and its
+converse, which follows from a celebrated result by Blackwell (1953). These inequalities,
+while simple by themselves, lead to surprisingly strong technical results. Indeed, there is a
+long line of such a tradition in the information theory literature (see Chapter 17 of Cover
+and Thomas (2012)). Consider two privatization mechanisms, Q(1) and Q(2) . Let Y and
+Z denote the output of the mechanisms Q(1) and Q(2) , respectively. We say that Q(1)
+dominates Q(2) if there exists a coupling of Y and Z such that X–Y –Z forms a Markov
+chain. In other words, we say Q(1) dominates Q(2) if there exists a stochastic mapping Q
+such that Q(2) = Q(1) ◦ Q.
+Theorem 20 A mechanism Q(1) dominates a mechanism Q(2) if and only if RQ(2) ⊆ RQ(1) .
+The proof of the above theorem can be found in Blackwell (1953). Observe that by Theorems
+20 and 19, and the fact that RQQT = Rε,δ , the quaternary mechanism dominates any other
+differentially private mechanism. In other words, for any differentially private mechanism
+Q, there exists a stochastic mapping W such that Q = W ◦ QQT . Therefore, for any
+(ε, δ) and any utility function U (.) obeying the data processing inequality, we have that
+U (Q) ≤ U (QQT ). This finishes the proof of Theorem 18.
+
+6. Discussion
+In this paper, we have considered a broad class of convex utility functions and assumed a
+setting where individuals cannot collaborate (communicate with each other) before releasing
+25
+
+Kairouz, Oh and Viswanath
+
+their data. It turns out that the techniques developed in this work can be generalized to find
+optimal privatization mechanisms in a setting where different individuals can collaborate
+interactively and each individual can be an analyst (Kairouz et al., 2014b).
+Binary hypothesis testing and information preservation are two canonical problems with
+a wide range of applications. However, there are a number of non-trivial and interesting
+extensions to our work.
+Correlation among data. In some scenarios the Xi ’s could be correlated (e.g., when
+different individuals observe different functions of the same random variable). In this case,
+the data analyst is interested in inferring whether the data was generated from P0n or P1n ,
+where Pνn is one of two possible joint priors on X1 , ..., Xn . This is a challenging problem because knowing Xi reveals information about Xj , j 6= i. Therefore, the utility maximization
+problems for different individuals are coupled in this setting.
+Robust and m-ary hypothesis testing. In some cases the data analyst need not have
+access to P0 and P1 , but rather two classes of prior distribution Pθ0 and Pθ1 for θ0 ∈ Λ0 and
+θ1 ∈ Λ1 . Such problems are studied under the rubric of universal hypothesis testing and
+robust hypothesis testing. One possible direction is to select the privatization mechanism
+that maximizes the worst case utility: Q∗ = arg maxQ∈Dε minθ0 ∈Λ0 ,θ1 ∈Λ1 Df (Mθ0 ||Mθ1 ),
+where Mθν is the induced marginal under Pθν .
+The more general problem of private m-ary hypothesis testing is also an interesting
+but challenging one. In this setting, the Xi ’s can follow one of m distributions P0 , P1 , ...,
+Pm−1 . Consequently, the Yi ’s can follow one of m distributions M0 , M1 , ..., Mm−1 . The
+utility
+P can be defined as the average f -divergence between any two distributions: 1/(m(m −
+1)) i6=j Df (Mi ||Mj ), or the worst case one: mini6=j Df (Mi ||Mj ).
+Non-exchangeable utility functions. The utility studied in this paper was measured by
+functions that are exchangeable, i.e. the utility did not depend on the naming (labelling) of
+the private and privatized data (X and Y ). This made sense for statistical learning applications that depend on information theoretic quantities such as f -divergences and mutual
+information. However, in some other applications, the utility might be defined over X ∪ Y
+in a metric space, where there exists a natural measure of distance (or distortion) between
+the data points. In this case, we can formulate the problem as a distortion minimization
+one
+minimizeQ∈Dε
+
+X
+
+d(x, y)P (x)Q(y|x) ,
+
+x,y
+
+where d(x, y) is some distortion metric. Wang et al. (2014a) studied this problem, and
+showed that the mechanism Q(y|x) ∝ eε(1−d(x,y)) /(k − 1 + eε ) achieves near optimal performance when ε is large enough, which is the low privacy regime. Notice that when Hamming
+distance is used, d(x, y) = I(x 6= y), this recovers the randomized response mechanism
+exactly. This provides a starting point for generalizing the search for optimal mechanisms
+under non-exchangeable utility functions.
+26
+
+Extremal Mechanisms for Local Differential Privacy
+
+7. Proof of Theorems 2 and 4
+We start the proof with a few definitions, a lemma, and a general result that applies to any
+convex utility function that obeys a mild assumption.
+Recall that for an input alphabet X with |X | = k, we represent the set of ε-locally
+differentially private mechanisms that lead to output alphabets Y with |Y| = ` by Dε,` . The
+set of all ε-locally differentially private mechanisms is given by Dε = ∪`∈N Dε,` . A utility
+
+function U (Q) is convex in Q if U λQ(1) + (1 − λ) Q(2) ≤ λU Q(1) + (1 − λ) U Q(2) for
+any λ ∈ (0, 1). Convex utility functions are ubiquitous in information theory and statistics.
+Assumption 1 If a k×` privatization mechanism Q(1) ∈ Dε,` is obtained by deleting
+an all
+
+zero column of a k × ` + 1 privatization mechanism Q(2) ∈ Dε,`+1 , then U Q(1) = U Q(2) .
+Naturally, one would expect that if we delete the zero columns of a privatization mechanism
+Q(2) to obtain a new privatization mechanism Q(1) , we would still get the same utility. This
+is because a “reasonable” utility function should not depend on output alphabets with zero
+probability.
+Theorem 21 If U (Q) is a convex utility function that satisfies Assumption 1, then the
+following holds
+max U (Q) = max U (Q) .
+Q∈Dε
+
+Q∈∪k`=1 Dε,`
+
+This theorem implies that among all ε-locally differentially private mechanisms, we only
+need to consider those that lead to output alphabets of size ` ≤ k. In other words, enlarging
+the input alphabet cannot further maximize the utility. The proof of Theorem 21 is given
+in Section 7.1.
+Lemma 22 A k × ` conditional distribution Q is ε-locally differentially private if and only
+if it can be written as Q = SΘ, where S is a k × ` matrix with Sij ∈ [1, eε ] and Θ =
+diag (θ1 , . . . , θ` ) with its diagonal entries in R+ .
+The proof of Lemma 22 is provided in Section 7.2. With the above results, we are now
+ready to prove Theorems
+2 and 4. By Lemma 22, for any Q ∈ Dε,` we have that Qj = θj Sj .
+P
+Suppose U (Q) = j∈[`] µ(Qj ), where µ is a sublinear function. Since µ is sublinear, it is
+convex and µ (θj Sj ) = θj µ (Sj ). U (Q) is convex in Q because
+
+
+
+X  (1) (1)
+(2) (2)
+U λQ(1) + (1 − λ) Q(2)
+=
+µ λθj Sj + (1 − λ) θj Sj
+j∈[`]
+
+≤
+
+X
+
+
+
+
+
+(1) (1)
+(2) (2)
+λµ θj Sj
++ (1 − λ) µ θj Sj
+
+j∈[`]
+
+
+
+
+
+= λU Q(1) + (1 − λ) U Q(2) ,
+
+(25)
+
+for any λ ∈ (0, 1). Furthermore, U (Q) satisfies Assumption 1 because µ (Qj ) = 0 whenever
+θj = 0. Let Q∗ = S ∗ Θ∗ ∈ arg maxQ∈∪k Dε,` U (Q) and note that by Theorem 21, U (Q∗ ) =
+`=1
+
+27
+
+Kairouz, Oh and Viswanath
+
+maxQ∈Dε U (Q). Suppose that Q∗ is of dimensions k ×`, where ` ≤ k. Each of the ` columns
+of Q∗ can be expressed as a convex combination of the columns of S (k) , the staircase pattern
+matrix. This is because the 2k columns of S (k) are the corner points of the cube [1, eε ]k
+Pk
+(k)
+and each Sj∗ ∈ [1, eε ]k . Therefore, Sj∗ = 2i=1 λij Si , where λij ≥ 0 for all i and j, and
+P2k
+P`
+∗
+k
+j=1 λij θj and
+i=1 λij = 1 for all j. Create the 2 -dimensional vector θ̃ such that θ̃i =
+let Q̃ = S (k) Θ̃.
+
+
+
+`
+2k
+`
+X
+X
+X
+
+(k)
+U (Q∗ ) − U (Q̃) =
+µ Sj∗ θj∗ −
+µ 
+λij θj∗  S 
+j
+
+j=1
+
+=
+
+`
+X
+
+j=1
+
+
+
+2k
+2k X
+`
+
+
+X
+X
+(k)
+(k)
+∗
+µ
+λij S  θj −
+λij θj∗ µ S
+i
+
+j=1
+
+=
+
+i=1
+
+`
+X
+j=1
+
+i=1
+
+j
+
+i=1 j=1
+
+ 
+
+
+2k
+2k
+
+
+
+X
+X
+(k)
+(k)
+θj∗ µ 
+λij Si  −
+λij µ Sj
+
+
+i=1
+
+i=1
+
+≤ 0,
+
+(26)
+
+by the convexity of µ (z) and the non-negativity of θj∗ ’s. Moreover, observe that since
+S (k) θ̃ = 1, θ̃ is a valid choice for the linear program of (11). This implies that
+max
+S (k) θ=1,θ≥0
+
+2k
+
+
+X
+(k)
+µ Sj
+θj ≥ U (Q̃) ≥ U (Q∗ ) = max U (Q)
+Q∈Dε
+
+j=1
+
+On the other hand, for any Q̃ = S (k) Θ̃, where θ̃ is valid for thelinear program of (11), we
+Pk
+(k)
+θj ≤ maxQ∈D U (Q).
+have that Q̃ ∈ Dε,2k ⊂ Dε and therefore, maxS (k) θ=1,θ≥0 2j=1 µ Sj
+
+
+P2k
+(k)
+θj = maxQ∈D U (Q). This proves Theorem 4.
+Thus, maxS (k) θ=1,θ≥0 j=1 µ Sj
+The polytope given by S (k) θ = 1 and θ ≥ 0 is a closed and bounded one. Thus, the
+linear program of (11) is bounded and has a solution, say θ∗ , at one of the corner points of
+the polytope. Since there are k equality constraints given by S (k) θ = 1 and 2k inequality
+constraints given by θ ≥ 0, any corner point, including θ∗ , cannot have more than k nonzero entries. Form S̃ by deleting the columns of S (k) corresponding to zero entries of θ∗ .
+Similarly, form θ̃ by deleting the zero entries of θ∗ and let Q̃ = S̃ Θ̃, where Θ̃ = diagθ̃.
+It is easy to verify that U (Q̃) = U (Q∗ ) = µT θ∗ ; hence, Q̃ solves linear program of (11).
+Moreover, Q̃ has at most k columns and S̃ij = {1, eε }. Therefore, Q̃ is a staircase mechanism
+of dimension k × `, where ` ≤ k.
+7.1 Proof of Theorem 21
+We start the proof of Theorem 21 with an important lemma the proof of which is presented
+in Section 7.3.
+Lemma 23 The set of all k × `, ε-locally differentially private mechanisms Dε,` forms a
+closed and bounded polytope in Rk`
++ . Moreover, let Q be a corner point of the polytope formed
+by Dε,` , then Q has at most k non-zero columns.
+28
+
+Extremal Mechanisms for Local Differential Privacy
+
+Fix an ` > k. Since U (Q) is convex in Q, it suffices to consider the corner points of
+Dε,` when maximizing U (Q) subject to Q ∈ Dε,` . By Lemma 23, any Q(1) , a k × ` corner
+point of Dε,` , has at most k non-zero columns. Therefore, the privatization mechanism
+Q(2) , obtained by deleting the all-zero columns of Q(1) , has at most k columns.
+Notice that
+
+(2)
+k
+(1)
+Q ∈ ∪i=1 Dε,i . Since U (Q) satisfies Assumption 1, we have that U Q
+= U Q(2) and
+k
+therefore, it suffices to consider Q ∈ ∪i=1 Dε,i when maximizing U (Q) subject to Q ∈ Dε,` .
+Thus,
+
+
+sup U (Q) = sup max U (Q)
+Q∈Dε
+
+Q∈Dε,`
+
+`∈N
+
+(
+= sup
+`∈N
+
+=
+
+)
+max
+
+Q∈∪ki=1 Dε,i
+
+max
+
+Q∈∪ki=1 Dε,i
+
+U (Q)
+
+U (Q) ,
+
+(27)
+
+which finishes the proof.
+7.2 Proof of Lemma 22
+Claim 1 Let Q ∈ Dε,` . If Qij = 0 for some j ∈ {1, ..., `} then Qij = 0 for all i ∈ {1, ..., k}.
+Proof Assume that Qi1 j = 0 and Qi2 j 6= 0 for some i1 , i2 ∈ {1, ..., k}. It is obvious that
+q (yj |xi2 ) ≤ q (yj |xi1 ) eε is not satisfied. Therefore, Q is not a locally differentially private
+mechanism.
+It is easy to check that any k × ` stochastic matrix Q = SΘ, where Θ is a diagonal
+matrix with non-negative entries and S is a k × ` matrix with Sij ∈ [1, eε ], satisfies the local
+differential privacy constraints. Thus, Q ∈ Dε,` . On the other hand, assume that Q ∈ Dε,` .
+If Qij = 0 for some j then by Claim 1 we have that Qij = 0 for all i and therefore, we
+can set θj = 0 and Sij = 1 for all i. If Qij > 0 then by Claim 1 we have that Qij > 0
+for all i. In this case, let θj = mini Qij and observe that θj > 0 since Qij > 0 for all i.
+Let Sij = Qij /θi , then it is clear (from the definition of θi ) that Sij ≥ 1. On the other
+hand, from the differential privacy constraints, we have that Qij ≤ Qkj eε for all k and thus,
+Qij ≤ mink Qkj eε which proves that Sij = Qij / mink Qkj ≤ eε . This establishes that any
+Q ∈ Dε,` can be written as Q = SΘ, where Θ is a diagonal matrix with non-negative entries
+and S is a k × ` matrix with Sij ∈ [1, eε ].
+7.3 Proof of Lemma 23
+We start by showing that Dε,` forms a closed and bounded polytope in Rk`
++ . We are interested
+in studying the corner points of the polytope formed by Dε,` because convex utility functions
+are maximized at one of these corner points whenever the space of privatization mechanisms
+is restricted to Dε,` .
+Claim 2 A privatization mechanism Q ∈ Dε,` if and only if for all x, x0 ∈ X and all y ∈ Y
+we have that Q (y|x) ≤ Q (y|x0 ) eε .
+29
+
+Kairouz, Oh and Viswanath
+
+Proof By definition, Q is differentially private if for all x, x0 ∈ X and all B ⊆ Y we have
+that Q (B|x) ≤ Q (B|x0 ) eε . By choosing B = {y} for some y ∈ Y the first direction of the
+above lemma is proven. In order to prove the other direction, assume that for all x, x0 ∈ X
+and all y ∈ Y we have that Q (y|x) ≤ Q (y|x0 ) eε . Then for any B ⊆ Y, the following holds
+X
+X
+
+Q (y|x) ≤
+Q y|x0 eε
+(28)
+y∈B
+
+y∈B
+
+
+⇔ Q (B|x) ≤ Q B|x0 eε .
+
+Let Q ∈ Dε,` , then by Claim 2, it is easy to see that Q must satisfy `k(k − 1) inequalities
+of the form Q (y|x) ≤ Q (y|x0 ) eε . These inequalities can be compactly represented by
+Ãq ≤ 0,
+where q = [Q (y1 |x1 ) , ..., Q (y1 |xk ) , ...., Q (y` |x1 ) , ..., Q (y` |xk )]T and Ã is a `k(k − 1) × k`
+matrix that contains all the local differential privacy linear constraints. Observe that there
+is a one-to-one mapping between Q and q. Here is an example for the case when k = ` = 2
+
+
+
+1 −eε
+0
+0
+Q (y1 |x1 )
+ −eε
+
+
+1
+0
+0 
+  Q (y1 |x2 )  ≤ 0.
+
+ε
+
+ 0
+
+0
+1 −e
+Q (y2 |x1 ) 
+ε
+Q (y2 |x2 )
+0
+0 −e
+1
+|
+{z
+}
+Ã
+
+Moreover, since Q is a row stochastic matrix (a conditional distribution) it satisfies Q1 = 1,
+where 1 represents the all ones vector of appropriate dimensions. This condition can be
+rewritten as
+Bq = 1,
+where B is a k × k` binary matrix. For the case when k = ` = 2, we have that
+
+
+
+ Q (y1 |x1 )
+ 
+
+1 0 1 0 
+ Q (y1 |x2 )  = 1 .
+0 1 0 1  Q (y2 |x1 ) 
+1
+|
+{z
+} Q (y |x )
+2
+
+B
+
+2
+
+Finally, observe that Q (y|x) ≥ 0 for all x ∈ X and y ∈ Y. These constraints can be
+h
+iT
+incorporated as follows. Let A = ÃT , −I`k , where I`k is the `k × `k identity matrix,
+then Aq ≤ 0. To summarize, Q ∈ Dε,` if and only if
+Aq ≤ 0
+
+(29)
+
+Bq = 1.
+Therefore, the set of all k ×`, ε-locally differentially private mechanisms Dε,` forms a convex
+polytope in Rk`
++.
+30
+
+Extremal Mechanisms for Local Differential Privacy
+
+We now proceed to proving that if Q is a corner point of the polytope formed by Dε,` ,
+then Q has at most k non-zero columns. This claim is obvious for all k × ` privatization
+mechanisms with ` ≤ k. Therefore, we restrict our attention to the case where ` > k. Let
+Aj be the matrix including all the inequality constraints imposed on the j th column of Q.
+Observe that the rows of Aj form a subset of the rows of A, defined in (29), and recall that
+there are k(k − 1) differential privacy and k non-negativity inequality constraints imposed
+on the j th column of Q. Therefore, Aj is a k 2 × k matrix and we have that Aj Qj ≤ 0, where
+Qj represents the j th column of Q. By Claim 1, we know that Qj is either equal to zero or
+contains non-zero entries.
+Claim 3 In what follows, the term linearly independent inequality constraints refers to
+linear independent rows of Aj .
+• If Qj = 0, then k linearly independent inequality constraints are achieved with equality.
+• If Qj 6= 0, then at most k−1 linearly independent inequality constraints can be achieved
+with equality.
+Proof In fact, the number of linearly independent inequality constraints (achieved or not)
+cannot exceed k because Aj has a rank less than or equal to k. If Qj = 0, then the k
+non-negativity inequality constraints are achieved with equality and it is easy to see that
+they are all linearly independent (in fact, they form an orthonormal basis to Rk ). This
+proves the first part of the claim. We now establish the second part of the claim by showing that if Qj 6= 0, we cannot have k linearly independent inequality constraints achieved
+with equality. Assume that Qj 6= 0 and let Ãj be the matrix including the largest collection of linearly independent rows of Aj corresponding to the inequality constraints that are
+achieved with equality. In other words, Ãj Qj = 0. If Ãj contains k rows, then its rank is
+equal to k. However, this implies that Qj = 0, a contradiction. Therefore, at most k − 1
+linearly independent inequality constraints can be achieved with equality when Qj 6= 0.
+Suppose that Q is a corner point of Dε,` and out of its ` columns, `>0 are non-zero and
+`=0 (`=0 = ` − `>0 ) are zero. Moreover, assume that the number of non-zero columns of Q is
+larger than k (i.e., `>0 > k). In this case, from Claim 3, we can see that Q achieves at most
+`>0 (k−1)+(`−`>0 )k linearly independent inequality constraints with equality. Furthermore,
+at most k additional linearly independent equality constraints (linearly independent rows
+of the matrix B defined in (29)) can be met by Q. Therefore, the total number of linearly
+independent constraints that Q achieves with equality is at most `>0 (k−1)+(`−`>0 )k+k =
+−`>0 + (` + 1)k < `k, where the last strict inequality follows from the fact that `>0 > k.
+This implies that Q cannot be a corner point of Dε,` . Therefore, any corner point of Dε,`
+must have at most k non-zero columns.
+
+8. Proofs for Hypothesis Testing
+8.1 Proof of Theorem 5
+Let T = {x : P0 (x) ≥ P1 (x)}. In other words, P0 (T ) − P1 (T ) = maxA⊆X P0 (A) − P1 (A).
+Recall that for a given P0 and P1 , the binary mechanism is defined as a staircase mechanism
+31
+
+Kairouz, Oh and Viswanath
+
+with only two outputs y ∈ {0, 1} satisfying
+
+Q(0|x) =
+
+eε
+1+eε
+1
+1+eε
+
+if P0 (x) ≥ P1 (x) ,
+if P0 (x) < P1 (x) .
+
+
+Q(1|x) =
+
+eε
+1+eε
+1
+1+eε
+
+if P0 (x) < P1 (x) ,
+if P0 (x) ≥ P1 (x) .
+
+(30)
+
+Lemma 24 For any pair of distributions P0 and P1 , there exists a positive ε∗ that depends
+on P0 and P1 such that for all y ∈ Y, all ` ∈ N, and all Q ∈ Dε,` with ε ≤ ε∗ , we have that
+(eε − 1) P0 (T c ) + 1
+M0 (y)
+(eε − 1) P0 (T ) + 1
+≤
+≤
+.
+(eε − 1) P1 (T c ) + 1
+M1 (y)
+(eε − 1) P1 (T ) + 1
+Moreover, the above upper and lower bounds are achieved by the binary mechanism given
+in (30).
+Observe that because P0 (T ) ≥ P1 (T ) and P0 (T c ) ≤ P1 (T c ), the direction of the above
+inequalities makes sense.
+Let M̃ν be the induced marginal for the binary mechanism when Pν is the original
+distribution. Following the analysis techniques developed in Kairouz et al. (2013), we define
+hypothesis testing region R(M̃0 , M̃1 ) as the convex hull of all achievable probabilities of
+missed detection and false alarm, when testing whether ν = 0 or ν = 1 based on Ybin
+distributed as M̃ν :
+
+
+R(M̃0 , M̃1 ) ≡ conv (M̃1 (S), M̃0 (S c )) : ∀S ⊆ Y
+,
+where S ∈ Y is the accept region for hypothesis ν = 0. For the binary mechanism, this
+ends up being a very simple triangular region. The slopes defining the two sides of the
+triangular region are: − maxS M̃0 (S)/M̃1 (S) = −((eε − 1)P0 (T ) + 1)/((eε − 1)P1 (T ) + 1)
+and − minS M̃0 (S c )/M̃1 (S c ) = −((eε − 1)P0 (T c ) + 1)/((eε − 1)P1 (T c ) + 1).
+For any other mechanism satisfying the ε-local differential privacy for ε ≤ ε∗ , the
+above lemma implies that for any choice of the rejection region S, the slopes satisfy
+−M0 (S)/M1 (S) ≥ −((eε − 1)P0 (T ) + 1)/((eε − 1)P1 (T ) + 1) and −M0 (S c )/M1 (S c ) ≤
+−((eε − 1)P0 (T c ) + 1)/((eε − 1)P1 (T c ) + 1). In the hypothesis testing region, this implies
+that
+R(M0 , M1 ) ⊆ R(M̃0 , M̃1 ) ,
+as in the following Figure 10.
+From Theorem 2.5 of Kairouz et al. (2013), we know that this implies a certain Markov
+property. Precisely, let Ybin denote the output of the binary mechanism, and Ydp denote the
+output of any ε-local differentially private mechanism. Then, it follows that there exists a
+coupling of Ybin and Ydp such that they form a Markov chain: ν–Ybin –Ydp , where ν is the
+hypothesis on Pν whether the data was generated from ν = 0 or ν = 1. Then, it follows
+from the data processing inequality of f -divergences that
+Df (M̃0 , M̃1 ) ≥ Df (M0 , M1 ) .
+It follows that there is no algorithm with larger f -divergence than the binary mechanism.
+32
+
+Extremal Mechanisms for Local Differential Privacy
+
+M̃0 (S c )
+
+R(M̃0 , M̃1 )
+
+R(M0 , M1 )
+
+M̃1 (S)
+
+Figure 10: Hypothesis testing regions for two mechanisms.
+8.2 Proof of Lemma 24
+We start by showing that the binary mechanism achieves the upper and lower bounds
+presented in the statement of the lemma. Let M0B and M1B denote the induced marginals
+under the binary mechanism given in (30). For ν ∈ {0, 1}, we have that
+MνB (0) =
+
+X
+
+P0 (x) Q(0|x) =
+
+x∈X
+
+MνB (1) =
+
+X
+
+P0 (x) Q(1|x) =
+
+x∈X
+
+1
+((eε − 1) Pν (T ) + 1)
+eε + 1
+1
+eε + 1
+
+((eε − 1) Pν (T c ) + 1) .
+
+(31)
+
+Computing M0B (0) /M1B (0) and M0B (1) /M1B (1) we see that the binary mechanism achieves
+the upper and lower bounds for all values of ε.
+As in Lemma 22, for any ` ∈ N, Q ∈ Dε,` can be represented as Q = SΘ, where
+S ∈ [1, eε ]k×` and Θ = diag (θ1 , ..., θ` ) with its diagonal entries in R+ . We now show that
+for any ` ∈ N and any Q ∈ Dε,` , the following upper bound holds
+P
+M0 (y)
+(eε − 1) P0 (T ) + 1
+i∈[k] P0 (xi ) Sij
+=P
+≤ ε
+,
+M1 (y)
+(e − 1) P1 (T ) + 1
+i∈[k] P1 (xi ) Sij
+33
+
+Kairouz, Oh and Viswanath
+
+for all y ∈ Y and sufficiently small ε. The above expression can be alternatively written as
+X
+(Sij − 1) (P0 (T ) P1 (xi ) − P1 (T ) P0 (xi ))
+(eε − 1) (P0 (T ) − P1 (T )) + (eε − 1)
+i∈[k]
+
+−
+
+X
+
+(Sij − 1) (P0 (xi ) − P1 (xi )) ≥ 0,
+
+(32)
+
+i∈[k]
+
+where Sj ∈ [1, eε ]k . Equation (32) is linear in Sj and is therefore minimized (and maximized)
+at the corner points of [1, eε ]k×` , a cube in Rk×`
++ . The corner points of this cube are given
+ε
+k
+by the staircase patterns: Sj ∈ {1, e } . To begin with, let Sj be a staircase pattern with
+Tj = {xi : Sij = eε } =
+6 T . Then Equation (32) is equivalent to
+(eε − 1) {(P0 (T ) − P1 (T )) − (P0 (Tj ) − P1 (Tj ))}
++ (eε − 1)2 {P0 (T ) P1 (Tj ) − P1 (T ) P0 (Tj )} ≥ 0. (33)
+Using the fact that P0 (T ) − P1 (T ) > P0 (Tj ) − P1 (Tj ) for all Tj 6= T , the inequality
+in (32) holds true for all ε whenever P0 (T ) P1 (Tj ) ≥ P1 (T ) P0 (Tj ). If P0 (T ) P1 (Tj ) <
+P1 (T ) P0 (Tj ), then the inequality in (32) holds true for all ε ≤ ε(j), where
+
+
+(P0 (T ) − P1 (T )) − (P0 (Tj ) − P1 (Tj ))
+ε(j) = log
++ 1 > 0.
+P1 (T ) P0 (Tj ) − P0 (T ) P1 (Tj )
+On the other hand, it is easy to verify that when Tj = T , we have that
+(eε − 1) {(P0 (T ) − P1 (T )) − (P0 (Tj ) − P1 (Tj ))
++ (eε − 1) (P0 (T ) P1 (Tj ) − P1 (T ) P0 (Tj ))} = 0, (34)
+for all ε. In this case, set ε(j) = 0 and ε1 = minj∈[2k ] ε(j). Therefore, for any ` ∈ N and
+any Q ∈ Dε,` , the upper bound in the statement of the lemma holds for all ε ≤ ε1 .
+We now show that for for any ` ∈ N and any Q ∈ Dε,` , the following lower bound holds
+P
+(eε − 1) P0 (T c ) + 1
+M0 (y)
+i∈[k] P0 (xi ) Sij
+P
+≤
+=
+,
+(eε − 1) P1 (T c ) + 1
+M1 (y)
+i∈[k] P1 (xi ) Sij
+for all y ∈ Y and sufficiently small ε. The above expression can be alternatively written as
+X
+(eε − 1) (P0 (T ) − P1 (T )) + (eε − 1)
+(Sij − 1) (P0 (T ) P1 (xi ) − P1 (T ) P0 (xi ))
+i∈[k]
+
++eε
+
+X
+
+(Sij − 1) (P0 (xi ) − P1 (xi )) ≥ 0,
+
+(35)
+
+i∈[k]
+
+where Sj ∈ [1, eε ]k . Equation (35) is linear in Sj and is therefore minimized at the corner
+points of [1, eε ]k , a cube in Rk+ . The corner points of this cube are given by staircase
+patterns: Sj ∈ {1, eε }k . To begin with, let Sj be a staircase pattern with Tj = {xi : Sij =
+eε } =
+6 T c , then Equation (35) is equivalent to
+(eε − 1) {(P0 (T ) − P1 (T )) + eε (P0 (Tj ) − P1 (Tj ))}
++ (eε − 1)2 {P0 (T ) P1 (Tj ) − P1 (T ) P0 (Tj )} ≥ 0.(36)
+34
+
+Extremal Mechanisms for Local Differential Privacy
+
+Using the fact that P0 (T ) − P1 (T ) > P1 (Tj ) − P0 (Tj ) for all Tj 6= T c , then for sufficiently
+small ε, Equation (35) can be written as
+
+ε {(P0 (T ) − P1 (T )) − (P1 (Tj ) − P0 (Tj ))} + O ε2 > 0.
+This proves that there exists a positive ε(j) such that the left hand side of Equation (36)
+is positive for all ε ≤ ε(j). On the other hand, it is easy to verify that when Tj = T c , we
+have that
+(eε − 1) {(P0 (T ) − P1 (T )) + eε (P0 (Tj ) − P1 (Tj ))
++ (eε − 1) (P0 (T ) P1 (Tj ) − P1 (T ) P0 (Tj ))} = 0, (37)
+for all ε. In this case, let ε(j) = 0 and let ε2 = minj∈[2k ] ε(j). Therefore, for any ` ∈ N
+and any Q ∈ Dε,` , the lower bound in the statement of the lemma holds for all ε ≤ ε2 . To
+conclude, let ε∗ = min(ε1 , ε2 ). Then both, the upper and lower bounds, hold for all ε ≤ ε∗ .
+8.3 Proof of Theorem 6
+The total variation (TV) distance kM0 −M1 kTV is a special case of f -divergence Df (M0 ||M1 )
+with f (x) = 21 |x − 1|. Therefore, by Theorem 4, we have that
+max M0 − M1 TV =
+
+maximize
+
+Q∈Dε
+
+θ
+
+µT θ
+
+subject to S (k) θ = 1
+
+(38)
+
+θ ≥ 0,
+
+
+(k)
+
+where µj = µ Sj
+
+
+
+= 21
+
+(k)
+i∈[k] (P0 (xi ) − P1 (xi )) Sij
+
+P
+
+for j ∈ {1, . . . , 2k } and S (k) is the
+
+k × 2k staircase pattern matrix given in Definition 3.
+The polytope given by S (k) θ = 1 and θ ≥ 0 is a closed and bounded one. Thus, there is
+no duality gap and solving the above linear program is equivalent to solving its dual
+minimize
+α
+
+1T α
+T
+
+(39)
+
+subject to S (k) α ≥ µ.
+Note that any satisfiable solution α∗ to (39) provides an upper bound to (38) since max µT θ =
+(k)
+min 1T α ≤ 1T α∗ . Let T = {x : P0 (x) ≥ P1 (x)} and Tj = {xi : Sij = eε } for j ∈ [2k ]. Consider the following choice of dual variable
+αi∗ =
+
+1 eε − 1
+P0 (xi ) − P1 (xi ) ,
+2 eε + 1
+
+for i ∈ [k]. Observe that
+1T α ∗ =
+
+1 eε − 1 X
+P0 (xi ) − P1 (xi )
+2 eε + 1
+i∈[k]
+
+=
+=
+
+1 eε − 1
+
+P0 − P1 1
+2 eε + 1
+eε − 1
+P0 − P1 TV .
+eε + 1
+35
+
+(40)
+
+Kairouz, Oh and Viswanath
+
+We claim that α∗ is a feasible dual variable for all values of ε. In order to prove that α∗ is
+T
+a feasible dual variable, we show that S (k) j α∗ − µj ≥ 0 for all j ∈ [2k ] and all ε. For all
+j ∈ [2k ], we have that
+
+
+T
+gj = 2 S (k) j α∗ − µj
+=
+
+=
+
+X
+eε − 1 X
+(k)
+(k)
+|P
+(x
+)
+−
+P
+(x
+)|
+S
+−
+(P0 (xi ) − P1 (xi )) Sij
+0
+i
+1
+i
+ij
+ε
+e +1
+i∈[k]
+i∈[k]
+
+
+
+
+ε
+X
+X
+e −1
+(k)
+(k)
+(P0 (xi ) − P1 (xi )) Sij +
+(P1 (xi ) − P0 (xi )) Sij
+
+eε + 1 
+c
+xi ∈T
+
+X
+
+−
+
+xi ∈T
+
+(k)
+
+X
+
+(P0 (xi ) − P1 (xi )) Sij −
+
+(k)
+
+(P1 (xi ) − P0 (xi )) Sij
+
+.
+
+(41)
+
+xi ∈T c
+
+xi ∈T
+
+Notice that we have arranged the equation such that all the summands are non-negative.
+Without loss of generality, we will assume that
+X
+X
+(k)
+(k)
+(P0 (xi ) − P1 (xi )) Sij ≥
+(P1 (xi ) − P0 (xi )) Sij .
+xi ∈T c
+
+xi ∈T
+
+From the equality
+
+P
+
+xi ∈T (P0 (xi ) − P1 (xi )) =
+
+P
+
+xi ∈T c (P1 (xi ) − P0 (xi )) and the fact that
+
+(k)
+Sij ∈ {1, eε } for all i and j, it follows that
+
+e−ε
+
+X
+
+(k)
+
+X
+
+(P0 (xi ) − P1 (xi )) Sij ≤
+
+(k)
+
+(P1 (xi ) − P0 (xi )) Sij .
+
+(42)
+
+xi ∈T c
+
+xi ∈T
+
+(k)
+
+This is true because the right-hand side is minimized when the Sij ’s for xi ∈ T c are all
+(k)
+
+equal to 1 and the left-hand side is maximized when the Sij ’s for xi ∈ T are all equal to
+eε . Now, (41) can be written as
+
+
+
+
+X
+X
+1
+(k)
+(k)
+gj = ε
+−2
+(P0 (xi ) − P1 (xi )) Sij + 2eε
+(P1 (xi ) − P0 (xi )) Sij
+
+e +1
+c
+xi ∈T
+
+xi ∈T
+
+≥ 0,
+where the last inequality follows from (42).
+This establishes the satisfiability of α∗ for all ε which, in turn, shows that (40) is indeed
+an upper bound to the primal problem. It remains to show that this upper bound can be
+achieved via the binary mechanism. To this extent, recall that for a given P0 and P1 , the
+binary mechanism is defined as a staircase mechanism with only two outputs y ∈ {0, 1}
+satisfying
+ eε
+ eε
+if P0 (x) ≥ P1 (x) ,
+if P0 (x) < P1 (x) ,
+ε
+1+e
+1+eε
+Q(0|x) =
+Q(1|x) =
+(43)
+1
+1
+if
+P
+(x)
+<
+P
+(x)
+.
+if P0 (x) ≥ P1 (x) .
+0
+1
+1+eε
+1+eε
+36
+
+Extremal Mechanisms for Local Differential Privacy
+
+Computing the TV distance between M0 and M1 under (43), we get that
+M0 − M1 TV =
+
+eε − 1
+P0 − P1 TV .
+eε + 1
+
+Hence, the binary mechanism in (43) achieves the upper bound in (40). This proves the
+optimality of the binary mechanism for all ε.
+8.4 Proof of Theorem 8
+The Kullback-Leibler (KL) divergence Dkl (M0 ||M1 ) is a special f -divergence Df (M0 ||M1 )
+with f (x) = x log x. Therefore, by Theorem 4, we have that
+max Dkl (M0 ||M1 ) =
+
+µT θ
+
+maximize
+
+Q∈Dε
+
+θ
+
+subject to S (k) θ = 1
+
+(44)
+
+θ ≥ 0,
+
+where µj = µ
+
+
+
+(k)
+Sj
+
+
+
+=
+
+P
+
+(k)
+i∈[k] P0 (xi )Sij log
+
+P
+
+(k)
+i∈[k] P0 (xi )Sij
+P
+(k)
+i∈[k] P1 (xi )Sij
+
+
+
+for j ∈ {1, . . . , 2k } and S (k)
+
+is the k × 2k staircase pattern matrix given in Definition 3.
+The polytope given by S (k) θ = 1 and θ ≥ 0 is a closed and bounded one. Thus, there is
+no duality gap and solving the above linear program is equivalent to solving its dual
+minimize
+α
+
+1T α
+
+subject to S
+
+(k) T
+
+(45)
+α ≥ µ.
+
+Note that any satisfiable solution α∗ to (45) provides an upper bound to (44) since max µT θ =
+(k)
+min 1T α ≤ 1T α∗ . Let T = {x : P0 (x) ≥ P1 (x)} and Tj = {xi : Sij = eε } for j ∈ [2k ]. Set
+ji = {j : Tj = xi } for i ∈ [k], and consider the following choice of dual variable
+
+
+
+
+
+
+
+
+X
+1
+(k)
+(k)
+ε
+αi∗ = ε
+(e
++
+k
+−
+2)
+µ
+S
+−
+µ
+S
+,
+ji
+jl
+
+(e − 1) (eε + k − 1) 
+l∈[k],l6=i
+
+for i ∈ [k]. Observe that since Tji = xi we have that Pν (Tji ) = Pν (xi ) and since
+P
+
+µj
+
+
+(k)
+P
+(x
+)S
+i∈[k] 0 i ij 
+(k)
+=
+P0 (xi )Sij log  P
+(k)
+i∈[k] P1 (xi )Sij
+i∈[k]
+X
+
+= (P0 (Tj ) (eε − 1) + 1) log
+37
+
+(P0 (Tj ) (eε − 1) + 1)
+(P1 (Tj ) (eε − 1) + 1)
+
+(46)
+
+Kairouz, Oh and Viswanath
+
+we have that
+1T α∗ =
+
+=
+
+=
+=
+
+
+
+
+
+
+
+
+
+X
+X
+1
+(k)
+(k)
+ε
+µ Sjl
+(e + k − 2) µ Sji −
+
+
+(eε − 1) (eε + k − 1)
+l∈[k],l6=i
+i∈[k]
+
+
+
+
+
+
+
+
+X
+X
+X
+1
+(k)
+(k)
+ε
+(e
++
+k
+−
+2)
+µ
+S
+−
+µ
+S
+ji
+jl
+
+(eε − 1) (eε + k − 1) 
+i∈[k]
+i∈[k] l∈[k],l6=i
+
+
+
+X  (k) 
+X  (k) 
+1
+µ S ji
+µ Sji − (k − 1)
+(eε + k − 2)
+
+(eε − 1) (eε + k − 1) 
+i∈[k]
+i∈[k]
+X  (k) 
+1
+µ Sji
+(eε + k − 1)
+i∈[k]
+
+=
+
+X
+1
+(P0 (xi ) (eε − 1) + 1)
+ε
+(P
+(x
+)
+(e
+−
+1)
++
+1)
+log
+.
+0
+i
+(eε + k − 1)
+(P1 (xi ) (eε − 1) + 1)
+
+(47)
+
+i∈[k]
+
+We claim that α∗ is a feasible dual variable for sufficiently large ε. In order to prove that
+T
+α∗ is a feasible dual variable, we show that S (k) j α∗ − µj ≥ 0 for all j ∈ [2k ] for all ε ≥ ε∗ ,
+where ε∗ is a positive quantity that depends on the priors P0 and P1 . Using the facts that
+
+log (a + eε b) = ε + log b + O e−ε
+
+1
+(48)
+= e−ε + O e−2ε ,
+ε
+e +k−1
+for large ε, we get that
+µj
+
+(P0 (Tj ) (eε − 1) + 1)
+= (P0 (Tj ) (eε − 1) + 1) log
+(P1 (Tj ) (eε − 1) + 1)
+
+
+
+P0 (Tj )
+P0 (Tj ) ε
+e + (1 − P0 (Tj )) log
++ O e−ε .
+=
+P0 (Tj ) log
+P1 (Tj )
+P1 (Tj )
+
+(49)
+
+On the other hand,
+T
+
+S (k) j α∗
+
+
+X
+
+
+
+
+1
+P0 (xi ) ε
+(k)
+=
+Sij (eε + k − 2) P0 (xi ) log
+e + O (1)
+ε
+ε
+
+(e − 1) (e + k − 1) 
+P1 (xi )
+i∈[k]
+
+
+
+
+X X
+1
+P0 (xl ) ε
+(k)
+− ε
+e + O (1)
+Sij P0 (xl ) log
+
+(e − 1) (eε + k − 1) 
+P1 (xl )
+i∈[k] l∈[k],l6=i
+
+
+
+X
+
+1
+P0 (xi )  3ε
+2ε 
+
+=
+P
+(x
+)
+log
+e
++
+O
+e
+0
+i
+(eε − 1) (eε + k − 1)
+P1 (xi )
+xi ∈Tj
+
+
+X
+P0 (xi )  ε
+= 
+P0 (xi ) log
+e + O (1) .
+(50)
+P1 (xi )
+xi ∈Tj
+
+38
+
+Extremal Mechanisms for Local Differential Privacy
+
+Assume, to begin with, that j 6= {j1 , j2 , ..., jk }. Then
+
+
+X
+P0 (Tj )
+P0 (xi )  ε
+T
+S (k) j α∗ − µj = P0 (Tj ) log
+−
+P0 (xi ) log
+e + O (1) .
+P1 (Tj )
+P1 (xi )
+xi ∈Tj
+
+P (T )
+
+P0 (xi )
+xi ∈Tj P0 (xi ) log P1 (xi ) by the logT
+sum inequality. Therefore, there exists a ε(j) > 0 such that S (k) j α∗ −µj ≥ 0 for all ε ≥ ε(j).
+T
+If j ∈ {j1 , j2 , ..., jk }, it is not hard to check that S (k) j α∗ − µj = 0 for all ε. In this case,
+set ε(j) = 0. This establishes the satisfiability of α∗ for all ε ≥ ε∗ = maxj∈[2k ] ε(j). The
+satisfiability of α∗ , in turn, shows that (47) is indeed an upper bound to the primal problem.
+
+Notice that for j 6= {j1 , j2 , ..., jk }, P0 (Tj ) log P10 (Tjj ) >
+
+P
+
+It remains to show that this upper bound can be achieved via the randomized response. To
+this extent, recall that the randomized response is given by
+(
+eε
+if y = x ,
+|X |−1+eε
+Q(y|x) =
+(51)
+1
+if y 6= x .
+|X |−1+eε
+Computing the KL divergence between M0 and M1 under (51), we get that
+X
+1
+(P0 (xi ) (eε − 1) + 1)
+Dkl (M0 ||M1 ) = ε
+.
+(P0 (xi ) (eε − 1) + 1) log
+(e + k − 1)
+(P1 (xi ) (eε − 1) + 1)
+i∈[k]
+
+Hence, the randomized response in (51) achieves the upper bound in (47). This proves the
+optimality of the randomized response for all ε ≥ ε∗ .
+8.5 Proof of Theorem 7
+We start the proof with a fundamental bound on the symmetrized KL divergence between
+the M0 and M1 .
+Lemma 25 For any ε ≥ 0, let Q be any conditional distribution that guarantees ε differential privacy. Then for any pair of distributions P0 and P1 , the induced marginals M0 and
+M1 must satisfy the bound
+
+
+2
+Dkl M0 ||M1 + Dkl M1 ||M0 ≤ 4 (eε − 1)2 P0 − P1 TV .
+The above lemma appears as Theorem 1 in Duchi et al. (2013). By Lemma 25, we have
+that
+
+2
+OPT = max Dkl M0 ||M1 ≤ 4 (eε − 1)2 P0 − P1 TV .
+(52)
+Q∈Dε
+
+Let M0B and M1B be the marginals obtained by using the binary mechanism given in (14).
+ε −1
+kP0 − P1 TV . Consequently, by
+By Corollary 11, we have that kM0B − M1B kTV = eeε +1
+applying Pinsker’s inequality to the KL divergence between M0B and M1B we get that
+
+BIN = Dkl M0B ||M1B
+2
+≥ 2 M0B − M1B TV
+ ε
+
+e −1 2
+2
+= 2 ε
+P0 − P1 TV .
+(53)
+e +1
+Combining (52) and (53) we get that BIN ≥ 2(eε1+1)2 OPT which was to be shown.
+39
+
+Kairouz, Oh and Viswanath
+
+9. Proofs for Information Preservation
+9.1 Proof of Theorem 12
+By Theorem 4, we have that
+max I (X; Y ) =
+
+µT θ
+
+maximize
+
+Q∈Dε
+
+θ
+
+subject to S (k) θ = 1
+
+(54)
+
+θ ≥ 0,
+
+
+ P
+(k)
+(k)
+where µj = µ Sj
+= i∈[k] P (xi ) Sij log P
+
+
+
+(k)
+
+Sij
+
+(k)
+
+i∈[k] P (xi )Sij
+
+for j ∈ {1, . . . , 2k } and S (k)
+
+is the k × 2k staircase pattern matrix given in Definition 3. The polytope given by S (k) θ = 1
+and θ ≥ 0 is a closed and bounded one. Thus, there is no duality gap and solving the above
+linear program is equivalent to solving its dual
+minimize
+α
+
+1T α
+T
+
+(55)
+
+subject to S (k) α ≥ µ.
+Note that any satisfiable solution α∗ to (55) provides an upper bound to (54) since max µT θ =
+(k)
+min 1T α ≤ 1T α∗ . Let Tj = {xi : Sij = eε } and set j1 = {j : Tj = T } and j2 = {j : Tj =
+T c }. Consider the following choice of dual variable
+  (k)   (k) 
+ε
+
+ e µ Sj1 −µ Sj2
+∀i ∈ T
+1
+|T
+
+| 
+
+αi∗ = ε
+.
+ε µ S (k) −µ S (k)
+ε
+e
+(e + 1) (e − 1) 
+j2
+j1
+
+c
+∀i ∈ T
+|T c |
+Observe that since Tj1 = T , Tj2 = T c , and
+µj
+
+= P (Tj ) eε log
+
+1
+eε
++ P (Tj c ) log
+,
+c
+ε
+P (Tj ) + e P (Tj )
+P (Tj ) + eε P (Tj )
+c
+
+(56)
+
+we have that
+1T α∗ =
+=
+=
+=
+
+1
+ε
+(e + 1) (eε − 1)
+
+(
+X 1 
+i∈T
+
+|T |
+
+
+
+
+
+(k)
+(k)
+eε µ Sj1 − µ Sj2
+
+)
+
+
+
+
+X 1 
+(k)
+(k)
++
+eε µ Sj2 − µ Sj1
+|T c |
+c
+i∈T
+ 
+
+
+
+1
+(k)
+(k)
+µ
+S
++
+µ
+S
+j1
+j1
+(eε + 1)
+
+
+1
+1
+eε
+ε
+c
+P
+(T
+)
+e
++
+P
+(T
+)
+log
++
+log
+eε + 1
+P (T c ) + eε P (T )
+P (T c ) + eε P (T )
+
+
+1
+eε
+1
+c ε
+P (T ) e log
++ P (T ) log
+. (57)
+eε + 1
+P (T ) + eε P (T c )
+P (T ) + eε P (T c )
+40
+
+Extremal Mechanisms for Local Differential Privacy
+
+We claim that α∗ is a feasible dual variablefor sufficiently
+small ε. In order to prove that
+
+T ∗
+∗
+(k)
+α is a feasible dual variable, we show that S
+α
+− µj ≥ 0 for all j ∈ {1, . . . , 2k } and
+j
+
+all ε ≤ ε∗ , where ε∗ is a positive quantity that depends on P . Using the following facts
+
+1
+eε = 1 + ε + ε + O ε3
+2
+
+b(1 − b) 2
+log (a + eε b) = bε +
+ε + O ε3
+2
+
+1 1
+1
+=
+− ε + O ε2 ,
+(58)
+ε
+1+e
+2 4
+for small ε, we get that
+eε
+1
++ P (Tj c ) log
+c
+c
+ε
+P (Tj ) + e P (Tj )
+P (Tj ) + eε P (Tj )
+= P (Tj ) eε ε − (P (Tj ) (eε − 1) + 1) log (P (Tj ) (eε − 1) + 1)
+
+
+1
+=
+P (Tj ) P Tjc ε2 + O ε3 .
+(59)
+2
+On the other hand,
+
+
+T
+(k) T
+S (k) α∗
+= Sj α ∗
+j
+(
+(k) 
+
+
+
+
+X Sij
+1
+(k)
+(k)
+ε
+=
+e
+µ
+S
+−
+µ
+S
+j1
+j2
+(eε + 1) (eε − 1)
+|T |
+i∈T
+)
+(k) 
+
+
+
+
+X Sij
+(k)
+(k)
++
+eε µ Sj2 − µ Sj1
+c|
+|T
+i∈T c
+
+
+
+
+
+  |T ∩ T |
+|Tjc ∩ T |
+1
+j
+(k)
+(k)
+ε
+ε
+e µ Sj1 − µ Sj2
+e +
+=
+(eε + 1) (eε − 1)
+|T |
+|T |
+
+
+
+
+
+
+
+c
+|Tj ∩ T | ε |Tjc ∩ T c |
+1
+(k)
+(k)
+ε
++ ε
+e µ Sj2 − µ Sj1
+e +
+(e + 1) (eε − 1)
+|T c |
+|T c |
+
+
+c
+c
+
+|Tj ∩ T c | |Tj ∩ T |
+1
+1
+c 2
+3
+=
+P
+(T
+)
+P
+(T
+)
+ε
++
+O
+ε
++
+(eε + 1) 2
+|T c |
+|T c |
+
+c
+|Tj ∩ T | |Tj ∩ T |
++
++ O (ε)
++
+|T |
+|T |
+
+1
+=
+P (T ) P (T c ) ε2 + O ε3 ,
+(60)
+2
+where we have used the facts that Tj1 = T , Tj2 = T c , and
+
+
+
+1
+(k)
+P (T ) P (T c ) ε2 + O ε3
+µ Sj1
+=
+2
+
+
+
+1
+(k)
+µ Sj2
+=
+P (T ) P (T c ) ε2 + O ε3 .
+(61)
+2
+µj
+
+= P (Tj ) eε log
+
+Let f (z) = |z − 12 |, g(z) = −z log z − (1 − z) log(1 − z), and h(z) = z(1 − z) for 0 ≤ z ≤ 1.
+On the one hand, g and h are monotonically increasing over 0 ≤ z ≤ 21 and monotonically
+41
+
+Kairouz, Oh and Viswanath
+
+decreasing over 12 ≤ z ≤ 1 but on the other hand, f is monotonically decreasing over
+0 ≤ z ≤ 12 and monotonically increasing over 12 ≤ z ≤ 1. Therefore,
+T ∈ arg min P (A) −
+A⊆X
+
+1
+2
+
+⇔ T ∈ arg max − P (A) log P (A) − P (Ac ) log P (Ac )
+A⊆X
+
+⇔ T ∈ arg max P (A)P (Ac ).
+
+(62)
+
+A⊆X
+
+Since thesetT was chosen so that it maximizes P (T ) P (T c ), we have that P (T ) P (T c ) ≥
+P (Tj ) P Tjc for all j ∈ {1, . . . , 2k }. Assume, to begin with, that j 6= {j1 , j2 }. Then by the
+c
+uniqueness
+ ofthe maximizer assumption stated in the theorem, we have that P (T ) P (T ) >
+P (Tj ) P Tjc .
+
+
+
+1
+P (T ) P (T c ) − P (Tj ) P Tjc ε2 + O ε3 ,
+S T α∗ j − µj =
+2
+
+
+T ∗
+∗
+(k)
+and thus, there exists an ε that depends on P such that S
+α
+− µj ≥ 0 for all ε ≤ ε∗ .
+j
+
+
+T
+If j = {j1 , j2 }, it is not hard to check that S (k) α∗ − µj = 0 for all ε. This establishes
+j
+
+the satisfiability of α∗ for all ε ≤ ε∗ which proves an upper bound on the primal problem
+(given in (57)). It remains to show that the upper bound can be indeed achieved via the
+binary mechanism. To this extent, recall that the binary mechanism is given by
+
+Q(0|x) =
+
+eε
+1+eε
+1
+1+eε
+
+if x ∈ T ,
+if x ∈
+/T .
+
+
+Q(1|x) =
+
+eε
+1+eε
+1
+1+eε
+
+if x ∈
+/T ,
+if x ∈ T .
+
+(63)
+
+Computing the I (X; Y ) under (63), we get that
+
+
+1
+eε
+1
+c
+I (X; Y ) = ε
+P (T ) eε log
++
+P
+(T
+)
+log
++
+e +1
+P (T c ) + eε P (T )
+P (T c ) + eε P (T )
+
+
+1
+eε
+1
+c ε
+P (T ) e log
++ P (T ) log
+.(64)
+eε + 1
+P (T ) + eε P (T c )
+P (T ) + eε P (T c )
+Hence, the binary mechanism in (63) achieves the upper bound in (57). This proves the
+optimality of the binary mechanism for all ε ≤ ε∗ .
+9.2 Proof of Theorem 13
+We start by proving an upper bound on maxQ∈Dε I (X; Y ) which is tight for ε ≤ 1. Recall
+that by Theorem 4, we have that
+k
+
+OPT =
+
+max I (X; Y ) =
+
+Q∈Dε
+
+maximize
+θ
+
+2
+X
+
+µj θj
+
+j=1
+
+subject to S (k) θ = 1
+θ ≥ 0,
+42
+
+Extremal Mechanisms for Local Differential Privacy
+
+where
+µj
+
+
+
+(k)
+= µ Sj
+
+=
+
+X
+i∈[k]
+
+
+
+(k)
+Sij
+
+(k)
+
+P (xi ) Sij log  P
+
+(k)
+
+i∈[k] P (xi ) Sij
+
+
+
+= P (Tj ) eε ε − (P (Tj ) (eε − 1) + 1) log (P (Tj ) (eε − 1) + 1) ,
+
+(65)
+
+(k)
+
+Tj = {i : Sij = eε }, and S (k) is the k × 2k staircase pattern matrix given in Definition 3.
+Lemma 26 For all distributions P and all ε, the following bound holds
+
+
+k
+.
+OPT = max I (X; Y ) ≤ max µj
+ε
+j
+Q∈Dε
+e +k−1
+The proof of this lemma is given in Section 9.3. In what follows, we will make the dependency
+of µj on P (Tj ) and ε explicit by writing µj (P (Tj ) , ε) for µj . From the proof of Theorem
+12, we have that the partition set T defined in (19) is given by T ∈ arg maxA⊆X P (A)P (Ac ).
+It is easy to check that the binary mechanism given in (20) achieves the following utility
+BIN =
+
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+.
+eε + 1
+
+Lemma 27 For all distributions P and all ε ≤ 1, the following bound holds
+maxj µj
+≤ 1.
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+The proof of the above lemma is given in Section 9.4. Combining the results of lemmas 26
+and 27 we get that
+OPT
+BIN
+
+maxj µj
+k
+(eε + 1)
+c
+ε
+µ (P (T ) , ε) + µ (P (T ) , ε) e + k − 1
+k
+≤ ε
+(eε + 1)
+e +k−1
+≤ eε + 1,
+
+≤
+
+(66)
+
+for all ε ≤ 1. This concludes the proof.
+9.3 Proof of Lemma 26
+(k)
+
+(k)
+
+To begin with, since S1 = 1 = e1ε S2k and µ is homogenous, we have that θ1 µ1 + θ2k µ2k =
+
+1
+eε θ1 + θ2k µ2k . Therefore, the following two maximization problems are equivalent
+k
+
+maximize
+θ
+
+2
+X
+
+µj θj
+
+j=1
+
+maximize
+θ
+
+=
+
+subject to S (k) θ = 1
+
+k −1
+2X
+
+µ̃j θj
+
+j=1
+
+subject to S̃ (k) θ = 1
+
+θ≥0
+
+θ ≥ 0,
+43
+
+Kairouz, Oh and Viswanath
+
+where µ̃j = µj+1 and S̃ (k) is obtained by deleting the first column of S (k) . Moreover, using
+the fact that maxj∈[2k −1] µ̃j ≤ maxj∈[2k ] µj and weak duality, we get that
+maximize
+θ
+
+
+max µ̃j maximize
+
+
+
+µ̃T θ
+
+≤
+
+j∈[2k −1]
+
+subject to S̃ (k) θ = 1
+
+θ
+
+1T θ
+
+subject to S̃ (k) θ = 1
+
+θ≥0
+
+θ≥0
+
+≤
+
+
+max µj minimize
+
+j∈[2k ]
+
+α
+
+1T α
+T
+
+subject to S̃ (k) α ≥ 1.
+
+(67)
+
+1
+Consider the following choice of dual variable αi∗ = eε +k−1
+. We claim that α∗ is satisfiable.
+This can be easily verified by noting that
+
+
+
+T
+
+S̃ (k) α∗
+
+(k)T
+
+
+j
+
+= S̃j
+
+α∗ =
+
+|Tj |eε + (k − |Tj |)
+|Tj |(eε − 1) + k
+=
+≥1
+eε + k − 1
+eε + k − 1
+
+where the last inequality holds since |Tj | ≥ 1 (this is true because we have deleted the first
+k
+column of S (k) ). Therefore, OPT ≤ (maxj µj ) 1T α∗ = (maxj µj ) eε +k−1
+which was to be
+shown.
+9.4 Proof of Lemma 27
+Let µ (z, ε) be the function obtained by replacing P (Tj ) by the continuous variable z ∈ [0, 1]
+in µj (P (Tj ) , ε). Taking the derivative of µ (z, ε) with respect to z we get
+µ0 (z, ε) = eε ε − (eε − 1) − (eε − 1) log (z(eε − 1) + 1) .
+Observe that µ0 (z, ε) > 0 for all
+z < z ∗ (ε) =
+
+1
+eε − 1
+
+ n ε
+
+o
+e ε
+−1
+e eε −1
+−1 ,
+
+µ0 (z, ε) < 0 for all z > z ∗ (ε), and µ0 (z, ε) = 0 for z = z ∗ (ε). Combining this with the fact
+that µ (0, ε) = µ (1, ε) = 0 we get that µ (z, ε) ≥ 0 for all z ∈ [0, 1] and for any fixed ε,
+µ (z, ε) is maximized at z ∗ (ε).
+Set x∗ ∈ arg maxx∈X P (x) and fix an ε ≤ 1. We will treat the following three cases
+separately.
+Case 1: P (x∗ ) ∈ [1 − z ∗ (ε), 1].
+Claim 4 Let T = {x∗ }. Then {T, T c } = arg maxA⊆X P (A)P (Ac ) and maxA⊆X µ(P (A), ε) =
+max (µ(P (T ), ε), µ(P (T c ), ε)).
+Proof Observe that z ∗ (ε) ≤ 12 for all ε and T c = X \ {x∗ }. The function f (z) = z(1 − z)
+decreases over the range [ 21 , 1] ⊇ [1 − z ∗ (ε), 1]. Thus, for all A ⊃ T , P (T )P (T c ) >
+44
+
+Extremal Mechanisms for Local Differential Privacy
+
+P (A)P (Ac ) because P (T ) ≥ 1 − z ∗ (ε). This proves that T ∈ arg maxA⊆X P (A)P (Ac ) and
+for all A ⊃ T , A ∈
+/ arg maxA⊆X P (A)P (Ac ). Using a similar approach, we can show that
+T c ∈ arg maxA⊆X P (A)P (Ac ) and for all A ⊂ T c , A ∈
+/ arg maxA⊆X P (A)P (Ac ). Therec
+c
+fore, {T, T } = arg maxA⊆X P (A)P (A ). This proves the first part of the claim. The
+function µ (z, ε) increases over the range [0, z ∗ (ε)]. Thus, for all A ⊆ T c , µ(P (A), ε) ≤
+µ(P (T c ), ε) because P (T c ) ≤ z ∗ (ε). On the other hand, note that µ (z, ε) decreases
+over the range [z ∗ (ε), 1] which includes the range [1 − z ∗ (ε), 1]. Thus, for all A such
+that A ⊇ T , µ(P (A), ε) ≤ µ(P (T ), ε) because P (T ) ≥ 1 − z ∗ (ε). This proves that
+max (µ(P (T ), ε), µ(P (T c ), ε)) = maxA⊆X µ(P (A), ε).
+Using the above claim, we can conclude that the partition set T defined in (19) is equal to
+{x∗ } and
+maxj µj
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+
+maxA⊆X µ(P (A), ε)
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+maxA⊆X µ(P (A), ε)
+≤
+max (µ(P (T ), ε), µ(P (T c ), ε))
+= 1.
+
+=
+
+(68)
+
+Case 2: P (x∗ ) ∈ [ 12 , 1 − z ∗ (ε)]. Using the first part of the proof of Claim 4, we can show
+that if T = {x∗ }, then {T, T c } = arg maxA⊆X P (A)P (Ac ). Therefore, the partition set T
+defined in (19) is equal to {x∗ } and
+maxj µj
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+
+maxA⊆X µ(P (A), ε)
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+µ(z ∗ (ε), ε)
+≤
+µ (P (x∗ ) , ε) + µ (1 − P (x∗ ) , ε)
+≤ 1.
+
+=
+
+(69)
+
+Case 3: P (x∗ ) ∈ [0, 21 ].
+Claim 5 There exists a set A ⊂ X such that 21 − P (x∗ ) ≤ P (A) ≤ 21 .
+Proof Without loss of generality, assume
+P (xi ), i ∈ [k], is sorted
+Pl that the sequence
+1
+P
+(x
+)
+≥
+in increasing order. Let l∗ = min{l :
+}.
+From
+the definition of l∗ ,
+i
+i=1
+2
+1
+1
+P ({x1 , . . . , xl∗ −1 }) < 2 and P ({x1 , . . . , xl∗ }) ≥ 2 . Further,
+P ({x1 , . . . , xl∗ −1 }) = P ({x1 , . . . , xl∗ }) − P (xl∗ )
+and since x∗ ∈ arg maxx∈X P (x), P (xl∗ ) ≤ P (x∗ ). Therefore, if A = {x1 , . . . , xl∗ −1 }, then
+1
+1
+∗
+2 − P (x ) ≤ P (A) ≤ 2 .
+Let P (T ) = min{P (B) : B ∈ arg maxA⊆X P (A)P (Ac )}. We claim that 41 ≤ P (T ) ≤ 12 .
+The upper bound on P (T ) follows immediately from its definition. To prove the lower
+bound on P (T ), consider the set A given in Claim 5 and observe that
+P (T ) ≥ max(P (x∗ ), P (A))
+1
+≥ max(P (x∗ ), − P (x∗ ))
+2
+1
+≥
+.
+4
+45
+
+(70)
+
+Kairouz, Oh and Viswanath
+
+All the inequalities follow from Claim 5 and the fact that P (x∗ ) ∈ [0, 21 ].
+Since 41 ≤ P (T ) ≤ 12 , we have that 12 ≤ P (T c ) ≤ 34 . Moreover, the function µ (z, ε)
+decreases over the range
+[z ∗ (ε), 1] ⊃ [ 12 , 34 ] and increases over therange [ 14 , z ∗ (ε)]. Therefore,
+
+µ (P (T c ), ε) ≥ µ 43 , ε and µ (P (T ), ε) ≥ min µ 21 , ε , µ 14 , ε . Putting it all together,
+we have that
+maxj µj
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+
+maxA⊆X µ(P (A), ε)
+µ (P (T ) , ε) + µ (P (T c ) , ε)
+µ(z ∗ (ε), ε)
+
+
+
+≤
+min µ 21 , ε , µ 41 , ε + µ 34 , ε
+≤ 1.
+
+=
+
+(71)
+
+9.5 Proof of Theorem 14
+By Theorem 4, we have that
+max I (X; Y ) =
+
+Q∈Dε
+
+µT θ
+
+maximize
+θ
+
+subject to S (k) θ = 1
+
+(72)
+
+θ ≥ 0,
+
+where µj = µ
+
+
+
+(k)
+Sj
+
+
+
+=
+
+(k)
+i∈[k] P (xi ) Sij log
+
+
+
+(k)
+
+Sij
+
+P
+
+P
+
+(k)
+i∈[k] P (xi )Sij
+
+
+
+for j ∈ {1, . . . , 2k } and S (k)
+
+is the k × 2k staircase pattern matrix given in Definition 3. The polytope given by S (k) θ = 1
+and θ ≥ 0 is a closed and bounded one. Thus, there is no duality gap and solving the above
+linear program is equivalent to solving its dual
+minimize
+α
+
+1T α
+(73)
+
+T
+
+subject to S (k) α ≥ µ.
+Note that any satisfiable solution α∗ to (73) provides an upper bound to (72) since max µT θ =
+(k)
+min 1T α ≤ 1T α∗ . Let Tj = {xi : Sij = eε } and set ji = {j : Tj = i} for i ∈ {1, . . . , k}.
+Consider the following choice of dual variable
+
+
+
+
+
+
+
+
+X
+1
+(k)
+(k)
+ε
+αi∗ = ε
+(e
++
+k
+−
+2)
+µ
+S
+−
+µ
+S
+,
+ji
+jl
+
+(e − 1) (eε + k − 1) 
+l∈[k],l6=i
+
+for i ∈ {1, . . . , k}. Observe that since Tji = i we have that P (Tji ) = P (xi ) and since
+µj
+
+= P (Tj ) eε log
+
+eε
+1
++ P (Tj c ) log
+,
+c
+c
+ε
+P (Tj ) + e P (Tj )
+P (Tj ) + eε P (Tj )
+46
+
+(74)
+
+Extremal Mechanisms for Local Differential Privacy
+
+we have that
+
+1T α∗ =
+
+=
+
+=
+=
+=
+
+
+
+
+
+
+
+X
+X
+1
+(k)
+(k)
+(eε + k − 2) µ Sji −
+µ Sjl
+
+
+(eε − 1) (eε + k − 1)
+i∈[k]
+l∈[k],l6=i
+
+
+
+
+
+
+
+
+X
+X
+X
+1
+(k)
+(k)
+ε
+µ
+S
+µ
+S
+−
+(e
++
+k
+−
+2)
+jl
+ji
+
+(eε − 1) (eε + k − 1) 
+i∈[k] l∈[k],l6=i
+i∈[k]
+
+
+
+
+
+
+
+
+X
+X
+1
+(k)
+(k)
+ε
+µ
+S
+µ
+S
+−
+(k
+−
+1)
+(e
++
+k
+−
+2)
+ji
+ji
+
+(eε − 1) (eε + k − 1) 
+i∈[k]
+i∈[k]
+X  (k) 
+1
+µ Sji
+(eε + k − 1)
+i∈[k]
+X
+1
+eε
+ε
+P
+(x
+)
+e
+log
+i
+(eε + k − 1)
+P (xi ) (eε − 1) + 1
+i∈[k]
+
+1
++ (1 − P (xi )) log
+. (75)
+P (xi ) (eε − 1) + 1
+
+We claim that α∗ is a feasible dual variablefor sufficiently
+large ε. In order to prove that
+
+T ∗
+∗
+(k)
+α is a feasible dual variable, we show that S
+α
+− µj ≥ 0 for all j ∈ {1, . . . , 2k } and
+j
+
+all ε ≥ ε∗ , where ε∗ is a positive quantity that depends on P . Using the fact that
+
+
+log (a + eε b) = ε + log b + O e−ε ,
+
+for large ε, we get that
+
+µj
+
+1
+eε
++ P (Tj c ) log
+c
+c
+ε
+P (Tj ) + e P (Tj )
+P (Tj ) + eε P (Tj )
+= P (Tj ) eε ε − (P (Tj ) (eε − 1) + 1) log (P (Tj ) (eε − 1) + 1)
+
+= P (Tj ) eε ε − (P (Tj ) (eε − 1) + 1) ε + log P (Tj ) + O e−ε
+= P (Tj ) eε log
+
+= − (P (Tj ) log P (Tj )) eε + O (ε) .
+47
+
+(76)
+
+Kairouz, Oh and Viswanath
+
+On the other hand,
+
+
+T
+(k) T
+= Sj α∗
+S (k) α∗
+j
+X
+X
+= eε
+αi∗ +
+αi∗
+i∈Tj
+
+= −
+
+i∈Tjc
+
+
+X
+
+1
+
+(eε − 1) (eε + k − 1) 
+i∈[k]
+
+(k)
+
+Sij (eε + k − 2) (P (xi ) log P (xi ) eε
+)
++O (ε))
+
+
+X
+
+
+
+1
+(k)
+ε
++ ε
+S
+((P
+(x
+)
+log
+P
+(x
+))
+e
++
+O
+(ε))
+l
+l
+ij
+
+(e − 1) (eε + k − 1) 
+i∈[k] l∈[k],l6=i
+
+
+
+X
+
+1
+
+P (xi ) log P (xi ) e3ε + O e2ε ε 
+= − ε
+(e − 1) (eε + k − 1)
+i∈Tj
+
+
+X
+P (xi ) log P (xi ) eε + O (ε) .
+(77)
+= −
+X
+
+i∈Tj
+
+Assume, to begin with, that j 6= {j1 , j2 , ..., jk }. Then
+
+
+
+
+X
+T
+P (xi ) log P (xi ) eε + O (ε) .
+S (k) α∗ − µj = P (Tj ) log P (Tj ) −
+j
+
+i∈Tj
+
+P
+Notice that for j 6= {j1 , j2 , ..., jk }, P (Tj ) log P (Tj ) > i∈Tj P (xi ) log P (xi ). Therefore,
+
+
+T
+there exists an ε∗ > 0 such that S (k) α∗ − µj ≥ 0 for all ε ≥ ε∗ . If j ∈ {j1 , j2 , ..., jk }, it
+j
+
+
+T ∗
+(k)
+is not hard to check that S
+α
+− µj = 0 for all ε. This establishes the satisfiability
+j
+
+of α∗ for all ε ≥ ε∗ . It remains to show that the upper bound can be indeed achieved via
+the randomized response mechanism. To this extent, recall that the randomized response
+is given by
+
+eε
+
+if y = x ,
+
+|X | − 1 + eε
+Q(y|x) =
+(78)
+1
+
+
+if
+y
+=
+6
+x
+.
+|X | − 1 + eε
+Computing the I (X; Y ) under (78), we get that
+X
+1
+eε
+I (X; Y ) = ε
+P (xi ) eε log
+e +k−1
+P (xi ) (eε − 1) + 1
+i∈[k]
+
+1
++ (1 − P (xi )) log
+.
+P (xi ) (eε − 1) + 1
+48
+
+(79)
+
+Extremal Mechanisms for Local Differential Privacy
+
+Hence, the randomized response mechanism achieves the upper bound (75). This proves
+the optimality of the randomized response for all ε ≥ ε∗ .
+
+10. Proof of Proposition 17
+P
+Let U (Q) be a utility mechanism of the form U (Q) = Y µ(Qy ), where µ is a sublinear
+function. Consider a stochastic mapping W of dimensions ` × m and let QW be the
+stochastic mapping obtained by first applying Q to X ∈ X to obtain Y ∈ Y and then
+applying W to Y to obtain Z ∈ Z.
+X
+U (QW ) =
+µ ((QW )z )
+Z
+
+!
+=
+
+X
+
+µ
+
+X
+
+Qy Wy,z
+
+Z
+
+Y
+
+≤
+
+X
+
+Wy,z µ (Qy )
+
+=
+
+X
+
+Y,Z
+
+µ(Qy )
+
+Y
+
+= U (Q) ,
+
+(80)
+
+where the inequality follows from sublinearity and the second to last equality follows from
+the row stochastic property of W . Therefore, U (Q) obeys the data processing inequality.
+
+Acknowledgments
+This research is supported in part by NSF CISE award CCF-1422278, NSF SaTC award
+CNS-1527754, NSF CMMI award MES-1450848 and NSF ENG award ECCS-1232257.
+
+References
+A. Acquisti. Privacy in electronic commerce and the economics of immediate gratification.
+In Proceedings of the 5th ACM conference on Electronic commerce, pages 21–29. ACM,
+2004.
+A. Acquisti and J. Grossklags. What can behavioral economics teach us about privacy.
+Digital Privacy, page 329, 2007.
+R. F. Barber and J. C. Duchi. Privacy and statistical risk: Formalisms and minimax bounds.
+arXiv preprint arXiv:1412.4451, 2014.
+A. Beimel, K. Nissim, and E. Omri. Distributed private data analysis: Simultaneously solving how and what. In Advances in Cryptology–CRYPTO 2008, pages 451–468. Springer,
+2008.
+D. Blackwell. Equivalent comparisons of experiments. The Annals of Mathematical Statistics, 24(2):265–272, 1953.
+49
+
+Kairouz, Oh and Viswanath
+
+J. Blocki, A. Blum, A. Datta, and O. Sheffet. The Johnson-Lindenstrauss transform itself
+preserves differential privacy. In Foundations of Computer Science, 2012 IEEE 53rd
+Annual Symposium on, pages 410–419. IEEE, 2012.
+K. Chatzikokolakis, T. Chothia, and A. Guha. Statistical measurement of information
+leakage. In Tools and Algorithms for the Construction and Analysis of Systems, pages
+390–404. Springer, 2010.
+K. Chaudhuri and D. Hsu. Convergence rates for differentially private statistical estimation.
+arXiv preprint arXiv:1206.6395, 2012.
+K. Chaudhuri and C. Monteleoni. Privacy-preserving logistic regression. In NIPS, volume 8,
+pages 289–296, 2008.
+K. Chaudhuri, A. D. Sarwate, and K. Sinha. Near-optimal differentially private principal
+components. In NIPS, pages 998–1006, 2012.
+T. M. Cover and J. A. Thomas. Elements of information theory. John Wiley & Sons, 2012.
+A. De. Lower bounds in differential privacy. In Theory of Cryptography, pages 321–338.
+Springer, 2012.
+J. C Duchi, M. I. Jordan, and M. J. Wainwright. Local privacy and statistical minimax
+rates. In Foundations of Computer Science, 2013 IEEE 54th Annual Symposium on,
+pages 429–438. IEEE, 2013.
+C. Dwork. Differential privacy. In Automata, languages and programming, pages 1–12.
+Springer, 2006.
+C. Dwork and J. Lei. Differential privacy and robust statistics. In Proceedings of the 41st
+annual ACM symposium on Theory of computing, pages 371–380. ACM, 2009.
+C. Dwork, K. Kenthapadi, F. McSherry, I. Mironov, and M. Naor. Our data, ourselves:
+Privacy via distributed noise generation. In Advances in Cryptology-EUROCRYPT 2006,
+pages 486–503. Springer, 2006a.
+C. Dwork, F. McSherry, K. Nissim, and A. Smith. Calibrating noise to sensitivity in private
+data analysis. In Theory of Cryptography, pages 265–284. Springer, 2006b.
+Q. Geng and P. Viswanath. The optimal mechanism in differential privacy. arXiv preprint
+arXiv:1212.1186, 2012.
+Q. Geng and P. Viswanath. The optimal mechanism in (,δ)-differential privacy. arXiv
+preprint arXiv:1305.1330, 2013a.
+Q. Geng and P. Viswanath. The optimal mechanism in differential privacy: Multidimensional setting. arXiv preprint arXiv:1312.0655, 2013b.
+A. Ghosh, T. Roughgarden, and M. Sundararajan. Universally utility-maximizing privacy
+mechanisms. SIAM Journal on Computing, 41(6):1673–1693, 2012.
+50
+
+Extremal Mechanisms for Local Differential Privacy
+
+M. Hardt and A. Roth. Beating randomized response on incoherent matrices. In Proceedings
+of the 44th symposium on Theory of Computing, pages 1255–1268. ACM, 2012.
+M. Hardt and G. N. Rothblum. A multiplicative weights mechanism for privacy-preserving
+data analysis. In Foundations of Computer Science, 2010 51st Annual IEEE Symposium
+on, pages 61–70. IEEE, 2010.
+M. Hardt and K. Talwar. On the geometry of differential privacy. In Proceedings of the
+42nd ACM symposium on Theory of computing, pages 705–714. ACM, 2010.
+M. Hardt, K. Ligett, and F. McSherry. A simple and practical algorithm for differentially
+private data release. In NIPS, pages 2348–2356, 2012.
+P. Kairouz, S. Oh, and P. Viswanath. The composition theorem for differential privacy.
+arXiv preprint arXiv:1311.0776, 2013.
+P. Kairouz, S. Oh, and P. Viswanath. Extremal mechanisms for local differential privacy.
+arXiv preprint arXiv:1407.1338, 2014a.
+P. Kairouz, S. Oh, and P. Viswanath. Differentially private multi-party computation: Optimality of non-interactive randomized response. arXiv preprint arXiv:1407.1546, 2014b.
+M. Kapralov and K. Talwar. On differentially private low rank approximation. In SODA,
+volume 5, page 1. SIAM, 2013.
+J. Lei. Differentially private m-estimators. In NIPS, pages 361–369, 2011.
+F. McSherry and K. Talwar. Mechanism design via differential privacy. In Foundations of
+Computer Science, 2007. 48th Annual IEEE Symposium on, pages 94–103. IEEE, 2007.
+L. Sankar, S. R. Rajagopalan, and H. V. Poor. Utility-privacy tradeoffs in databases: An
+information-theoretic approach. Information Forensics and Security, IEEE Transactions
+on, 8(6):838–852, 2013.
+A. D. Sarwate and L. Sankar. A rate-disortion perspective on local differential privacy. In
+Communication, Control, and Computing (Allerton), 2014 52nd Annual Allerton Conference on, pages 903–908. IEEE, 2014.
+A. B. Tsybakov and V. Zaiats. Introduction to nonparametric estimation, volume 11.
+Springer, 2009.
+W. Wang, L. Ying, and J. Zhang. On the relation between identifiability, differential privacy
+and mutual-information privacy. arXiv preprint arXiv:1402.3757, 2014a.
+Y. Wang, Z. Huang, S. Mitra, and G.E. Dullerud. Entropy-minimizing mechanism for
+differential privacy of discrete-time linear feedback systems. In Decision and Control
+(CDC), 2014 IEEE 53rd Annual Conference on, pages 2130–2135, Dec 2014b. doi: 10.
+1109/CDC.2014.7039713.
+S. L. Warner. Randomized response: A survey technique for eliminating evasive answer
+bias. Journal of the American Statistical Association, 60(309):63–69, 1965.
+51
+
+

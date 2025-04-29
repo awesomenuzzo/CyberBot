@@ -1,0 +1,1333 @@
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+Amplification by Shuffling:
+From Local to Central Differential Privacy via Anonymity
+Úlfar Erlingsson∗
+
+Vitaly Feldman∗
+
+Ilya Mironov∗
+
+Ananth Raghunathan∗
+
+Kunal Talwar∗
+
+Abhradeep Thakurta†
+Abstract
+
+Apple, and Microsoft [EPK14, App17, DKY17].
+The popularity and practical adoption of LDP monitorSensitive statistics are often collected across sets of users,
+with repeated collection of reports done over time. For ing mechanisms stems largely from their simple trust model:
+example, trends in users’ private preferences or software for any single LDP report that a user contributes about one
+usage may be monitored via such reports. We study the of their sensitive attributes, the user will benefit from strong
+collection of such statistics in the local differential privacy differential privacy guarantees even if the user’s report be(LDP) model, and describe an algorithm whose privacy cost comes public and all other parties collude against them.
+However, this apparent simplicity belies the realities of
+is polylogarithmic in the number of changes to a user’s value.
+most
+monitoring applications. Software monitoring, in parMore fundamentally—by building on anonymity of the
+ticular,
+near always involves repeated collection of reports
+users’ reports—we also demonstrate how the privacy cost of
+over
+time,
+either on a regular basis or triggered by speour LDP algorithm can actually be much lower when viewed
+cific
+software
+activity; additionally, not just one, but mulin the central model of differential privacy. We show, via
+tiple,
+software
+attributes may be monitored, and these ata new and general privacy amplification technique, that any
+tributes
+may
+all
+be correlated, as well as sensitive, and may
+permutation-invariant algorithm
+p satisfying ε-local differenalso
+change
+in
+a
+correlated fashion. Hence, a user’s actial privacy will satisfy (O(ε log(1/δ)/n), δ)-central differential
+privacy. By this, we explain how the high noise and tual LDP privacy guarantees may be dramatically lower than
+√
+n overhead of LDP protocols is a consequence of them they might appear, since LDP guarantees can be exponenbeing significantly more private in the central model. As a tially reduced by multiple correlated reports (see Tang et
++
+practical corollary, our results imply that several LDP-based al. [TKB 17] for a case study). Furthermore, less accuindustrial deployments may have much lower privacy cost racy is achieved by mechanisms that defend against such prithan their advertised ε would indicate—at least if reports are vacy erosion (e.g., the memoized backstop in Google’s RAPPOR [EPK14]). Thus, to square this circle, and make good
+anonymized.
+privacy/utility tradeoffs, practical deployments of privacypreserving monitoring rely on additional assumptions—in
+1 Introduction
+particular, the assumption that each user’s reports are anonyA frequent task in data analysis is the monitoring of the stamous at each timestep and unlinkable over time.
+tistical properties of evolving data in a manner that requires
+In this work, we formalize how the addition of
+repeated computation on the entire evolving dataset. Softanonymity guarantees can improve differential-privacy proware applications commonly apply online monitoring, e.g.,
+tection. Our direct motivation is the Encode, Shuffle, Anto establish trends in the software configurations or usage
+alyze (ESA) architecture and P ROCHLO implementation of
+patterns. However, such monitoring may impact the priBittau et al. [BEM+ 17], which relies on an explicit intermevacy of software users, as it may directly or indirectly exdiary that processes LDP reports from users to ensure their
+pose some of their sensitive attributes (e.g., their location,
+anonymity. The ESA architecture is designed to ensure a
+ethnicity, gender, etc.), either completely or partially. To
+sufficient number of reports are collected at each timestep so
+address this, recent work has proposed a number of mechathat any one report can “hide in the crowd” and to ensure that
+nisms that provide users with strong privacy-protection guarthose reports are randomly shuffled to eliminate any signal in
+antees in terms of of differential privacy [DMNS06, Dwo06,
+their order. Furthermore, ESA will also ensure that reports
+KLN+ 08] and, specifically, mechanisms that provide local
+are disassociated and stripped of any identifying metadata
+differential privacy (LDP) have been deployed by Google,
+(such as originating IP addresses) to prevent the linking of
+any two reports to a single user, whether over time or within
+∗ Google Research – Brain, {ulfar, vitalyfm, mironov, kunal,
+the collection at one timestep. Intuitively, the above steps
+pseudorandom}@google.com.
+taken to preserve anonymity will greatly increase the uncer† UC Santa Cruz and Google Research – Brain, aguhatha@ucsc.edu.
+
+2468
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+tainty in the analysis of users’ reports; however, when introducing ESA, Bittau et al. [BEM+ 17] did not show how that
+uncertainty could be utilized to provide a tighter upper bound
+on the worst-case privacy loss.
+Improving on this, this paper derives results that account
+for the benefits of anonymity to provide stronger differential
+privacy bounds. First, inspired by differential privacy under
+continual observation, we describe an algorithm for highaccuracy online monitoring of users’ data in the LDP model
+whose total privacy cost is polylogarithmic in the number
+of changes to each user’s value. This algorithm shows how
+LDP guarantees can be established in online monitoring,
+even when users report repeatedly, over multiple timesteps,
+and whether they report on the same value, highly-correlated
+values, or independently-drawn values.
+Second, and more fundamentally, we show how—when
+each report is properly anonymized—any collection of LDP
+reports (like those at each timestep of our algorithm above)
+with sufficient privacy (ε < 1) is actually subject to much
+stronger privacy guarantees in the central model of differential privacy. This improved worst-case privacy guarantee is a
+direct result of the uncertainty induced by anonymity, which
+can prevent reports from any single user from being singled
+out or linked together, whether in the set of reports at each
+timestep, or over time.
+
+based on the ideas of cryptographic onion routing or mixnets,
+often trading off latency to offer much stronger guarantees [vdHLZZ15, TGL+ 17, LGZ18]. Some, like those of
+P ROCHLO [BEM+ 17], are based on oblivious shuffling, with
+trusted hardware and attestation used to increase assurance.
+Others make use of the techniques of secure multi-party
+computation, and can simultaneously aggregate reports and
+ensure their anonymity [CGB17, BIK+ 17]. Which of these
+mechanisms is best used in practice is dictated by what trust
+model and assumptions apply to any specific deployment.
+Central differential privacy. The traditional, central
+model of differential privacy applies to a centrally-held
+dataset for which privacy is enforced by a trusted curator
+that mediates upon queries posed on the dataset by an untrusted analyst—with curators achieving differential privacy
+by adding uncertainty (e.g., random noise) to the answers
+for analysts’ queries. For differential privacy, answers to
+queries need only be stable with respect to changes in the
+data of a single user (or a few users); these may constitute
+only a small fraction of the whole, central dataset, which
+can greatly facilitate the establishment of differential privacy
+guarantees. Therefore, the central model can offer much better privacy/utility tradeoffs than the LDP setting. (In certain
+cases, the noise introduced by the curator may even be less
+than the uncertainty due to population sampling.)
+Longitudinal privacy. Online monitoring with privacy
+1.1 Background and related work. Differential privacy was formalized by Dwork et al. as the problem of differential
+is a quantifiable measure of the stability of the output of a privacy under continual observation [DNPR10]. That work
+randomized mechanism in the face of changes to its input proposed a privacy-preserving mechanisms in the central
+data—specifically, when the input from any single user is model of differential privacy, later extended and applied by
+changed. (See Section 2 for a formal definition.)
+Chan et al. [CSS11] and Jain et al. [JKT12].
+Local differential privacy (LDP). In the local difContinual observations constitute a powerful attack vecferential privacy model, formally introduced by Ka- tor. For example, Calandrino et al. [CKN+ 11] describe an atsiviswanathan et al. [KLN+ 08], the randomized mecha- tack on a collaborative-based recommender system via pasnism’s output is the transcript of the entire interaction be- sive measurements that effectively utilizes differencing between a specific user and a data collector (e.g., a monitor- tween a sequence of updates.
+ing system). Even if a user arbitrarily changes their priIn the local model, Google’s RAPPOR [EPK14] provately held data, local differential privacy guarantees will posed a novel memoization approach as a backstop against
+ensure the stability of the distribution of all possible tran- privacy erosion over time: A noisy answer is memorized by
+scripts. Single-round protocol LDP mechanisms instantiate the user and repeated in response to the same queries about
+randomized response, a disclosure control technique from a data value. To avoid creating a trackable identifier, RAPthe 1960s [War65]. Due to their attractive trust model, POR additionally randomizes those responses, which may
+LDP mechanisms have recently received significant indus- only improve privacy. (See Ding et al. [DKY17] for alternatrial adoption for the privacy-preserving collection of heavy tive approach to memoization.) Although memoization prehitters [EPK14, App17, DKY17], as well as increased aca- vents a single data value from ever being fully exposed, over
+demic attention [BS15, BNST17, QYY+ 16, WBLJ17].
+time the privacy guarantees will weaken if answers are given
+Anonymous data collection. As a pragmatic means about correlated data or sequences of data values that change
+for reducing privacy risks, reports are typically anonymized in a non-independent fashion.
+and often aggregated in deployments of monitoring by
+More recently, Tang et al. [TKB+ 17] performed a decareful operators (e.g., RAPPOR [EPK14])—even though tailed analysis of one real-world randomized response mechanonymity is no privacy panacea [DSSU17, Dez18].
+anisms and examined its longitudinal privacy implications.
+To guarantee anonymity of reports, multiple mechanisms have been developed, Many, like Tor [DMS04], are
+
+2469
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+1.2 Our contributions Spurred on by the gap in accuracy
+between central and local differential privacy under continual observations, we describe a general technique for obtaining strong central differential privacy guarantees from (relatively) weak privacy guarantees in the local model.
+Specifically, our main technical contribution demonstrates how a simple pre-processing step—random shuffling
+of data reports—ensures that the reports from any LDP protocol will also satisfy central differential√privacy at a perreport privacy-cost bound that is a factor N lower than the
+LDP privacy bound established in the local model. Here,
+N is the total number of reports, which can reach into the
+billions in practical deployments; therefore, the privacy amplification can be truly significant.
+Privacy amplification by shuffling. An immediate
+corollary of our amplification result is that composing clientside local differential privacy with server-side shuffling allows one to claim strong central differential privacy guarantees without any explicit server-side noise addition.
+For this corollary to hold, the LDP reports must be
+amenable to anonymization via shuffling: the reports cannot
+have any discriminating characteristics and must, in particular, all utilize the same local randomizer (since the distribution of random values may be revealing). However, even
+if this assumption holds only partially—e.g., due to faults,
+software mistakes, or adversarial control of some reports—
+the guarantees degrade gracefully. Each set of N 0 users for
+which the corollary is applicable (e.g., that utilize the
+√ same
+local randomizer) will still be guaranteed a factor N 0 reduction in their worst-case privacy cost in the central model.
+(See Section 4.1 for a more detailed discussion.)
+It is instructive to compare our technique with privacy
+amplification by subsampling [KLN+ 08]. As in the case of
+subsampling, we rely on the secrecy of the samples that are
+used in nested computations. However, unlike subsampling,
+shuffling, by itself, does not offer any differential privacy
+guarantees. Yet its combination with a locally differentially
+private mechanism has an effect that is essentially as strong
+as that achieved via known applications of subsampling
+[BST14, ACG+ 16, BBG18]. An important advantage of
+our reduction over subsampling is that it can include all the
+data reports (exactly once) and hence need not modify the
+underlying statistics of the dataset.
+In concurrent and independent work, Cheu et
+al. [CSU+ 18] have also examined an augmented local
+model of differential privacy that includes an anonymous
+channel. In this model they demonstrate privacy amplification by the same factor for one-bit randomized response.
+The analysis in this case relies on a direct estimation of
+(ε, δ)-divergence between two binomial distributions and is
+unrelated to our general approach.
+We also remark that another recent privacy amplification
+technique, via contractive iteration [FMTT18] relies on ad-
+
+ditional properties of the algorithm and is not directly comparable to results in this work.
+Lower bounds in the local model. Our amplification
+result can be viewed, conversely, as giving a lower bound
+for the local model. Specifically, our reduction means√that
+lower bounds in the central model translate—with a Ω( N )
+penalty factor in the privacy parameter—to the local model.
+In particular, it means that local differential privacy under
+continual observations achieves worse accuracy than the
+central model for the same settings of the privacy parameter.
+Monitoring with longitudinal privacy guarantees.
+Our amplification by shuffling applies only to LDP report
+data, and there are few monitoring techniques that utilize
+LDP reports and offer longitudinal privacy guarantees. We
+introduce an online monitoring protocol that guarantees longitudinal privacy to users that report over multiple timesteps,
+irrespective of whether their report are about independent
+or correlated values. By utilizing our protocol, users need
+not worry about revealing too much over time, and if they
+are anonymous, their reports may additionally “hide in the
+crowd” and benefit by amplification-by-shuffling, at least at
+each timestep.
+As a motivating task, we can consider the collection
+of global statistics from users’ mobile devices, e.g., about
+users’ adoption of software apps or the frequency of users’
+international long-distance travel. This task is a natural fit for
+a continual-observations protocol with LDP guarantees—
+since both software use and travel can be highly privacy
+sensitive—and can be reduced to collecting a boolean value
+from each user (e.g., whether they are in a country far
+from home). However, our protocol can be extended to
+the collection of multi-valued data or even data strings by
+building on existing techniques [EPK14, App17, BNST17].
+Concretely, we consider the collection of user statistics
+across d time periods (e.g., for d days) with each user
+changing their underlying boolean value at most k times for
+some k ≤ d. This is the only assumption we place on the
+data collection task. For software adoption and international
+travel, the limit on the number of changes is quite natural.
+New software is adopted, and then (perhaps) discarded,
+with only moderate frequency; similarly, speed and distance
+limit the change rate for even the most ardent travelers.
+Formally, we show the following: Under the assumption
+stated above, one can estimate all the d frequency
+statistics
+√
+from n users with error at most O((log(d))2 kn/ε) in the
+local differential privacy model.
+Motivated by similar issues, in a recent work Joseph et
+al. [JRUW18] consider the problem of tracking a distribution
+that changes only a small number of times. Specifically, in
+their setting each user at each time step t receives a random
+and independent sample from a distribution Pt . It is assumed
+that Pt changes at most k times and they provide utility
+guarantees that scale logarithmically with the number of time
+
+2470
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+steps. The key difference between this setting and ours is
+the assumption of independence of each user’s inputs across
+time steps. Under this assumption even a fixed unbiased coin
+flip would result in each user receiving values that change in
+most of the steps. Therefore the actual problems addressed
+in this work are unrelated to ours and we rely on different
+algorithmic techniques.
+
+can be chosen adaptively depending on the outputs of
+A1 , . . . , Ai−1 .
+
+A straightforward corollary implies that for ε, ε0 < 1,
+a k-fold
+composition of (ε, δ)-DP algorithms
+leads to an
+p
+p
+O( k log(1/δ)) overhead, i.e., ε0 = 2ε 2k log(1/δ). In
+Section 3, we assume that δ = no(1) , and for the ease of
+presentation, hide δ’s dependency on k in applications of
+1.3 Organization of the paper Section 2 introduces our advanced composition when appropriate.
+It will also be convenient to work with the notion of
+notation and recalls the definition of differential privacy.
+distance
+between distributions on which (ε, δ)-DP is based
+Section 3 provides an algorithm for collecting statistics and
+proves its accuracy and privacy in the local model under more directly. We define it below and describe some of the
+continual observations. Section 4 contains the derivation of properties we will use. Given two distributions µ and µ0 , we
+our amplification-by-shuffling result. Section 5 concludes will say that they are (ε, δ)-DP close, denoted by µ u(ε,δ) µ0 ,
+if for all measurable A, we have
+with a discussion.
+2
+
+exp(−ε)(µ0 (A) − δ) ≤ µ(A) ≤ exp(ε)µ0 (A) + δ.
+
+Technical Preliminaries and Background
+
+Notation: For any n ∈ N, [n] denotes the set {1, . . . , n}. For
+a vector ~x, x[j] denotes the value of its j’th coordinate. For
+an indexed sequence of elements a1 , a2 , . . . and two indices
+i, j we denote by ai:j the subsequence ai , aP
+i+1 , . . . , aj (or
+empty sequence if i > j). k~xk1 denotes
+|x[j]|, which
+is also the Hamming weight of ~x when ~x has entries in
+{−1, 0, 1}. All logarithms are meant to be base e unless
+r
+stated otherwise. For a finite set X, let x ← X denote a
+sample from X drawn uniformly at random.
+
+For random variables X, X 0 , we write X u(ε,δ) X 0 to
+mean that their corresponding distributions µ, µ0 are (ε, δ)DP close. We use X u X 0 to mean that the random variables
+are identically distributed.
+For distributions µ1 , µ2 and a ∈ [0, 1], we write aµ1 +
+(1 − a)µ2 to denote the mixture distribution that samples
+from µ1 with probability a and from µ2 with probability
+(1 − a). The following properties are well-known properties
+of (ε, δ)-DP.
+
+Differential privacy: The notion of differential privacy was
+introduced by Dwork et al. [DMNS06, Dwo06]. We are L EMMA 3. The notion of (ε, δ)-DP satisfies the following
+using the (standard) relaxation of the definition that allows properties:
+for an additive term δ.
+Monotonicity Let µ u(ε,δ) µ0 . Then for ε0 ≥ ε and δ 0 ≥ δ,
+µ u(ε0 ,δ0 ) µ0 .
+D EFINITION 1. ((ε, δ)-DP [DKM+ 06]) A randomized algorithm A : Dn → S satisfies (ε, δ)-differential privacy Triangle inequality Let µ u
+1
+(ε1 ,δ1 ) µ2 and µ2 u(ε2 ,δ2 ) µ3 .
+(DP) if for all S ⊂ S and for all adjacent D, D0 ∈ D it
+Then µ1 u(ε1 +ε2 ,δ1 +δ2 ) µ3 .
+holds that
+Quasi-convexity Let µ1 u(ε,δ) µ01 and µ2 u(ε,δ) µ02 , then
+ε
+0
+Pr[A(D) ∈ S] ≤ e Pr[A(D ) ∈ S] + δ.
+for any a ∈ [0, 1], it holds that (1 − a)µ1 + aµ2 u(ε,δ)
+(1 − a)µ01 + aµ02 .
+The notion of adjacent inputs is application-dependent, and
+The following lemma is a reformulation of the standard
+it is typically taken to mean that D and D0 differ in one of the
+n elements (that corresponds to the contributions of a single privacy amplification-by-sampling result [KLN+ 08] (with
+individual). We will also say that an algorithm satisfies the tighter analysis from [Ull17]).
+differential privacy at index 1 if the guarantees hold only for
+1
++
+datasets that differ in the element at index i. We assume L EMMA 4. ([KLN 08, U LL 17]) Let q < 2 and let µ0 , µ1
+µ = (1−q)µ0 +
+the ε parameter to be a small constant, and δ is set to be be distributions such that µ1 u(ε,δ) µ0 . For
+0
+0
+qµ
+,
+it
+holds
+that
+µ
+u
+µ
+,
+where
+ε
+=
+log(q(eε − 1) +
+1
+(ε ,qδ) 0
+much smaller than 1/|D|. We repeatedly use the (advanced)
+ε
+1) ≤ q(e − 1).
+composition property of differential privacy.
+T HEOREM 2. (A DVANCED COMPOSITION [DRV10, DR14]) 3 Locally Private Protocol for Longitudinal Data
+If A1 , . . . , Ak are randomized algorithms satisfying (ε, δ)- Recall the motivation for collecting statistics from user deDP, then their composition, defined as (A1 (D), . . . , Ak (D)) vices with the intent of tracking global trends. We remain
+for D ∈pD satisfies (ε0 , kδ + δ 0 ) differential privacy where in the local differential privacy model, but our protocol adε0 = ε 2k log(1/δ 0 ) + kε(exp(ε) − 1). Moreover, Ai dresses the task of collecting reports from users into global
+
+2471
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+statistics that are expected to change across time. We consider the simplified task of collecting a boolean value from
+each user, e.g., their device being at an international location, far from the user’s home. However, our protocol can be
+straightforwardly extended to collecting richer data, such as
+strings, by building on existing techniques [EPK14, App17,
+BNST17].
+In what follows, we consider a natural model of collecting user statistics across time periods. We make two minimal
+assumptions: we are given the time horizon d, or the number of time periods (or days) ahead of time, and each user
+changes their underlying data at most k ≤ d times.
+Our approach is inspired by the work on privacy under
+continual observations by Dwork et al. [DNPR10]. In the
+continual observations setting the central mechanism maintains a counter that is incrementally updated in response to
+certain user-driven events. Its (central) differential privacy is
+defined in respect to a single increment, the so-called eventlevel privacy. The naı̈ve solution of applying
+additive noise
+√
+to all partial sums introduces error Θ( d), proportional to
+the square root of the time horizon. The key algorithmic contribution of Dwork et al. is an elegant aggregation scheme
+that reduces the problem of releasing partial sums to the
+problem of maintaining a binary tree of counters. By carefully correlating noise across updates, they reduce the error to O(polylog d). (In related work Chan et al. [CSS11]
+describe a post-processing procedure that guarantees output
+consistency; Xiao et al. [XWG11] present a conceptually
+similar algorithm framed as a basis transformation.)
+We adapt these techniques to the local setting by pushing
+the tree-of-counters to the client (Algorithm 1 below). The
+server aggregates clients’ reports and computes the totals
+(Algorithm 2).
+Setup. We more formally define the problem of collecting global statistics based on reports from users’ devices.
+Given a time horizon d, we consider a population of n users
+reporting a boolean value about their state at each time period j ∈ [d]. (Without loss of generality, we assume that
+d is a power of 2.) Let s~ti = [sti [1], . . . , sti [d]] denote the
+states of the i’th user across the d time periods with at most k
+changes. The task ofPcollecting statistics requires the server
+to compute the sum i∈[n] sti [j] across the time periods j.
+For the reason that will become clear shortly, it is
+convenient to consider the setup where users report only
+changes to their state, i.e., a finite derivative of s~ti . Let
+~xi = [xi [1], . . . , xi [d]] ∈ {−1, 0, 1}d denote the changes
+in the i’th user’s state between consecutive time periods.
+Our assumption implies that each
+P ~xi has at most k non-zero
+entries. It holds that sti [j] = `∈[j] xi [`] for all j ∈ [d]. Let
+Pn
+fj = i=1 xi [j]. For the collection task at hand, it suffices
+to estimate “running counts” or marginal sums {fj }j∈[d] .
+An online client-side algorithm for reporting statistics
+runs on each client device and produces an output for each
+
+time period. Correspondingly, the online server-side algorithm receives reports from n clients and outputs estimates
+for the marginal fj at each time period j.
+Outline. To demonstrate the key techniques in the design of our algorithm, consider a version of the data collection task with every client’s data known ahead of time. Given
+~xi for user i, the client-side algorithm produces (up to) d
+reports and the server computes estimates of the marginal
+sum fj for all j ∈ [d]. Our algorithm is based on the treebased aggregation scheme [DNPR10, CSS11] used previously for releasing continual statistics over longitudinal data
+in the central model. Each client maintains a binary tree over
+the d time steps to track the (up to) k changes of their state.
+The binary tree ensures that each change affects only log(d)
+nodes of the tree. We extend the construction of Dwork et
+al. [DNPR10] in a natural manner to the local model by having each client maintain and report values in this binary tree
+with sub-sampling as follows.
+In the beginning, the client samples uniformly from [k]
+the i∗ ’th change they would like to report on. Changes
+preceding the i∗ ’th one are ignored. The client builds a
+tree with leaves corresponding to an index vector capturing
+the i∗ ’th change (0 everywhere except ±1 at the change).
+The rest of the nodes are populated with the sums of their
+respective subtrees. The client then chooses a random level
+of the tree to report on. Then, the client runs randomized
+response on each node of the selected level (with bias
+determined by ε) and reports the level of the tree along
+with the randomized response value for each node. In
+actual implementations and our presentation of the protocol
+(Algorithm 1) the tree is never explicitly constructed. The
+state maintained by the client consists of just four integer
+values (i∗ , the level of the tree, and two counters).
+The server accumulates reports from clients to compute
+an aggregate tree comprising sums of reports from all clients.
+To compute the marginal estimate f˜j for the time step j, the
+server sums up the respective internal nodes whose subtrees
+form a disjoint cover of the interval [1, j] and scales it up
+by the appropriate factor (to compensate for the client-side
+sampling).
+Notation. To simplify the description of what follows,
+for a given d (that is a power of two), we let h ∈ [log2 (d)+1]
+(and variants such as hi and h∗ ) denote the h’th level of
+a balanced binary tree with 2d nodes where leaves have
+level 1. Also, we let H (resp., Hi and H ∗ ) denote the
+value d/2h−1 , the number of nodes at level h. We let
+[h, j] for h ∈ [log2 (d) + 1] and j ∈ [H] denote the
+j’th node at level h of the binary tree T , and T [h, j] as
+the corresponding value stored at the node. Algorithm 1
+describes the client-side algorithm to generate differentiallyprivate reports and Algorithm 2 describes the server-side
+algorithm that collects these reports and estimates marginals
+
+2472
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+f˜j for each time period. Theorems 5 and 6 state the privacy (randomized) values at the nodes output in Step 16, and (2)
+and utility guarantees of the algorithms.
+the timing of the report. The latter entirely depends on the
+choice of h∗ which is independent of the client’s underlying
+Algorithm 1 (Aclient ) : Locally differentially private reports. data record and hence does not affect the privacy analysis.
+Furthermore, i∗ is also independently sampled and for the
+1: procedure S ETUP(d, k)
+∗
+∗
+Input: Time bound d; bound on the number of non-zero rest of the proof, we fix i and h and focus only on the
+randomized values output in Step 16.
+entries in ~x: k ≥ k~xk0
+∗ r
+∗ r
+By construction, the client chooses only the i∗ ’th change
+2:
+Sample i ← [k] and h ← [log2 (d) + 1]
+to report on. This would imply that two inputs would
+3:
+Initialize counters i ← 0 and c ← 0
+affect at most two nodes at level h∗ with each of the values
+changing by at most one.
+4: procedure U PDATE (t, xt , ε)
+This bound on the sensitivity of the report enables us
+Input: Time t ≤ d, xt ∈ {−1, 0, 1}, privacy budget ε.
+to
+use
+standard arguments for randomized response mechaEffects: Modifies counters i and c.
+nisms
+[EPK14]
+to Steps 13 and 14 to show that the noisy val5:
+if xt 6= 0 then
+∗
+ues
+T
+[h
+,
+1],
+.
+.
+. , T [h∗ , H ∗ ] satisfy ε-local differential pri6:
+i←i+1
+. i tracks the number of changes
+vacy.
+7:
+if i = i∗ then
+c ← xt
+T HEOREM 6. (U TILITY ) For ε ≤ 1, with probability at
+if t is divisible by 2h∗−1 then
+least 2/3 over the randomness of Aclient run on n data
+if c = 0 then
+records, the outputs f˜1 , . . . , f˜d of Aserver satisfy:
+r
+11:
+u ← {−1, 1}
+
+√ 
+12:
+else
+ ε/2 
+2
+˜
+r
+max
+f
+−
+f
+=
+O
+c
+(log
+d)
+nk ,
+t
+t
+ε
+e
+13:
+b ← 2B 1+e
+− 1 . B—Bernoulli r.v.
+t∈[d]
+ε/2
+14:
+u←b·c
+ε/2
++1
+.
+15:
+c←0
+. c will never be non-zero again where cε = eeε/2 −1
+∗
+16:
+report (h , t, u)
+Proof. The leaves of the binary tree with nodes T [h, t] in
+Algorithms 1 and 2 comprise events in each of the time
+periods [1, d]. The marginal counts ft and f˜t comprise the
+Algorithm 2 (Aserver ) : Aggregation of locally differentially exact (resp., approximate) number of events observed by all
+private reports (server side)
+clients in the time period [1, t].
+Input: For every t ∈ [d], reports (hi,t , t, ui,t ) from the
+Consider the set C constructed in Steps 6–9 of Algoi’th client running Aclient . (Some of these reports can be rithm 2. We observe that C satisfies the following properties:
+empty.) Privacy budget ε, bound k.
+• The set C is uniquely defined, i.e., it is independent of
+1: Create a balanced binary tree Tsum with d leaves.
+the order in which pairs of intervals are selected in the
+2: for t in [d] do
+h−1
+while loop.
+3:
+for h s.t. 2
+divides t do
+. Accumulate all reports
+P from level h and time t:
+• The size of the set |C| is at most log2 (d).
+4:
+Tsum [h, t/2h−1 ] ← i : hi,t =h ui,t
+• The leaf nodes of the subtrees [h, i] in C partition [1, t].
+5: for t in [d] do
+6:
+Initialize C ← {[1, 1], [1, 2], . . . , [1, t]}.
+The marginal counts ft totaling events in the inter7:
+while h and odd i exist s.t. [h, i], [h, i + 1] ∈ C do
+val [1, t] can be computed by adding the corresponding
+8:
+Remove [h, i], [h, i + 1] from C.
+log2 (d) nodes in the tree whose subtrees partition the inter9:
+Add [h + 1, (i + 1)/2] to C.
+val [1, t].
+P
+ε/2
++1
+k log2 (d) · [h,i]∈C Tsum [h, i]
+10:
+f˜t ← eeε/2 −1
+More generally, the counts in nodes higher up the tree
+11:
+return privately estimated marginal f˜t
+correspond to values in time intervals grouped by the subtrees rooted at that level. We proceed by analyzing the accuracy (with respect to the `∞ -norm) of the counts at each
+T HEOREM 5. (P RIVACY ) The sequence of d outputs of level of the tree.
+For the i’th client consider the single non-zero value
+Aclient (Algorithm 1) satisfies ε-local differential privacy.
+xi,t randomly selected from at most k candidates (Step 2 of
+(j)
+Proof. To show the local differential privacy of the outputs, Algorithm 1). Further, for all j ∈ [log2 (d) + 1] let µ
+~ i ∈ Z∗
+we consider two aspects of the client’s reports: (1) the be the sequence of reports sent by the client if h∗ = j. By
+8:
+
+9:
+10:
+
+2473
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+(j)
+our construction, it holds that µ
+~ i has values in {−1, 0, 1} 4 Privacy Amplification via Shuffling
+and has Hamming weight of at most one.
+Local differential privacy holds against a strictly more pown P
+k
+P
+(j)
+~
+Define S as
+µ
+~ i and consider the following. erful adversary than central differential privacy, namely one
+that can examine all communications with a particular user.
+i=1 j=1
+(j)
+Let ~yi denote a vector of random variables constructed by What can we say about central DP guarantees of a proto(j)
+replacing 0 values in µ
+~ i with −1 and +1 with probability 12 col that satisfies ε-local DP? Since local DP implies central
+DP, this procedure satisfies ε-central DP. Moreover, withn k
+~1 = P P ~y (j) be the corresponding sum with out making additional assumptions, we cannot make any
+each. Let S
+i
+i=1 j=1
+stronger statement than that. Indeed, the central mechanism
+(j)
+~1 ] = S.
+~
+the ~yi . We have E[S
+may release the entire transcripts of its communications with
+Applying the Chernoff-Hoeffding inequality, for all its users annotated with their identities, leaving their local
+any β1 ∈ [0, 1] and coordinate t ∈ [d], we have that differential privacy as the only check on information leakage
+with probability at least 1 − β1 /d
+ we have the error via the mechanism’s outputs.
+p
+~1 [t] − S[t]
+~
+We show that, at a modest cost and with little changes to
+S
+=O
+nk log(d/β1 ) . A union bound over
+its data collection pipeline, the analyst can achieve much bett ∈ [d] shows that with probability at least 1 − β1 ,
+ter central DP guarantees than those suggested by this conp
+
+~1 − S
+~
+servative analysis. Specifically, by shuffling (applying a ranS
+=O
+nk log(d/β1 ) .
+∞
+dom permutation),
+√ the analyst may amplify local differential
+(j)
+Fix the outcomes of the random variables ~yi ’s and con- privacy by a Θ( n) factor.
+To make the discussion more formal we define the folsider the following random variables for every i ∈ [n]: (1)
+(1)
+(k)
+lowing
+general form of locally differentially private algo~ai = [ai , . . . , ai ] is sampled uniformly at random from
+(1)
+(k)
+rithms
+that
+allows picking local randomizers sequentially on
+{0, 1}k subject to k~ai k0 = 1; (2) ci , . . . , ci are boolean
+the
+basis
+of
+answers from the previous randomizers (Algo(j)
+values sampled such that Pr[ci = 1] = 1/ log2 (d) for all j; rithm 3).
+(j)
+(3) bi ∈ {−1, 1} is the local differential privacy randomization variable sampled as in Step 14 of Algorithm 1. These Algorithm 3 : A : Local Responses
+local
+random variables capture aspects of Aclient that involve sam(i)
+Input: Dataset D = x1:n . Algorithms Aldp : S (1) ×
+pling a random change of state to report on, reporting a ran· · · × S (i−1) × D → S (i) for i ∈ [n].
+dom level of the tree, and randomized response respectively.
+n k
+1: for i in [n] do
+~2 = cε k log2 (d) P P a(j) c(j) b(j) ~y (j) and
+Consider S
+(i)
+i
+i
+i
+i
+2:
+zi ← Aldp (z1:i−1 ; xi ).
+i=1 j=1
+observe that by our construction of the random variables,
+3: return sequence z1:n
+~2 corresponds to the sum that is reconstructed by Aserver .
+S
+~2 ] = S
+~1 and applying a conIt is easy to see that E[S
+Our main amplification result is for Algorithm 4 that
+centration bound below (Claim 7), it follows that for evapplies
+the local randomizers after randomly permuting the
+~
+~
+ery β2 , with probability at least 1 − β2 , S2 − S1
+=
+∞
+elements of the dataset. For algorithms that use a single fixed
+ p
+
+O cε nk log2 (d) log(d/β2 ) . Choosing β2 = β1 = 1/6 local randomizer it does not matter whether the data elements
+are shuffled before or after the application of the randomizer.
+and absorbing constant factors, we getthat with probability
+√ 
+~2 − S
+~1 k∞ = O cε log(d) nk . We However the amplification may only hold partially if the
+at least 2/3, we have kS
+randomizers are applied before shuffling, since the choice
+complete the proof by noting that the marginals are estimated
+of the randomizer may reveal the identity of the user. We
+by computing the sums over at most log2 (d) levels.
+will discuss the corollaries of this result for algorithms that
+~
+~
+C LAIM 7. Let {b1 , . . . , bn } be a set of d-dimensional vec- shuffle the responses later in this section.
+n
+~ = P ~bi be their sum. Let
+tors with k~bi k∞ ≤ λ, and let S
+Algorithm 4 : Asl : Local Responses with Shuffling
+i=1
+{v1 , . . . , vn } be the set of i.i.d. sampled bits with expectation
+(i)
+Input: Dataset D = x1:n . Algorithms Aldp : S (1) ×
+µ > 0. With probability at least 1 − β, we have:
+· · · × S (i−1) × D → S (i) for i ∈ [n].
+s
+!
+n
+X
+n log(d/β)
+1: Let π be a uniformly random permutation of [n].
+~− 1
+S
+vi · ~bi
+=O λ
+.
+2: π(D) ← (xπ(1) , xπ(2) , . . . , xπ(n) )
+µ i=1
+µ
+∞
+3: return Alocal (π(D))
+The proof of this claim follows from standard use of the
+Chernoff bound and the union bound.
+
+2474
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+T HEOREM 8. (A MPLIFICATION BY SHUFFLING ) For a doWe now provide the full details of the proof starting with
+(i)
+main D, let Aldp : S (1) × · · · × S (i−1) × D → S (i) for i ∈ [n] the description and analysis of Aswap .
+(i)
+
+(where S (i) is the range space of Aldp ) be a sequence of algoDownloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+(i)
+
+rithms such that Aldp is ε0 -differentially private for all values
+of auxiliary inputs in S (1) × · · · × S (i−1) . Let Asl : Dn →
+S (1) × · · · × S (n) be the algorithm that given a dataset
+x1:n ∈ Dn , samples a uniform random permutation π over
+[n], then sequentially computes zi = Aldp (z1:i−1 , xπ(i) ) for
+i = 1, 2, . . . , n and outputs z1:n (see Algorithm 4). For any
+n ≥ 1000, 0 < ε0 < 1/2 and 0 < δ < 1/100, Asl satisfies (ε, δ)-differential
+privacy in the central model, where
+q
+ε = 12ε0
+
+log(1/δ)
+.
+n
+
+Algorithm 5 : Aswap : Local responses with one swap
+(i)
+
+Input: Dataset D = x1:n . Algorithms Aldp : S (1) ×
+· · · × S (i−1) × D → S (i) for i ∈ [n].
+r
+1: Sample I ← [n]
+2: Let σI (D) ← (xI , x2 , . . . , xI−1 , x1 , xI+1 , . . . , xn )
+3: return Alocal (σI (D))
+T HEOREM 9. (A MPLIFICATION BY SWAPPING ) For a do(i)
+main D, let Aldp : S (1) × · · · × S (i−1) × D → S (i) for
+(i)
+
+We remark that while we state our amplification result for
+local randomizers operating on a single data element, the
+result extends immediately to arbitrary ε0 -DP algorithms
+that operate on disjoint batches of data elements.
+A natural approach to proving this result is to use privacy amplification via subsampling (Lemma 4). At step i in
+the algorithm, conditioned on the values of π(1), . . . , π(i −
+1), π(i) is uniform over the remaining (n − i + 1) indices.
+Thus the i’th step will be O((eε0 − 1)/(n − i + 1))-DP. The
+obvious issue with this argument is that it gives very little
+amplification for values of i that are close to n, falling short
+of our main goal. It also unclear how to formalize the intuition behind this argument.
+Instead our approach crucially relies on a reduction to
+analysis of the algorithm Aswap that swaps the first element in
+the dataset with a uniformly sampled element in the dataset
+before applying the local randomizers (Algorithm 5). We
+show that Aswap has the desired privacy parameters for the
+first element (that is, satisfies the guarantees of differential
+privacy only for pairs of datasets that differ in the first
+element). We then show that for every index i∗ , Asl can be
+decomposed into a random permutation that maps element i∗
+to be the first element followed by Aswap . This implies that
+the algorithm Asl will satisfy differential privacy at i∗ .
+To argue about the privacy properties of the Aswap we
+decompose it into a sequence of algorithms, each producing
+one output symbol (given the dataset and all the previous
+outputs). It is not hard to see that the output distribution
+of the i’th algorithm is a mixture µ = (1 − p)µ0 + pµ1 ,
+where µ does not depend on x1 (the first element of the
+dataset) and µ1 is the output distribution of the i’th local
+randomizer applied to x1 . We then demonstrate that the
+probability p is upper bounded by e2ε0 /n. Hence, using
+amplification by subsampling, we obtain that µ is close to
+µ0 . The distribution µ0 does not depend on x1 and therefore,
+by the same argument, µ0 (and hence µ) is close to the output
+distribution of the i’th algorithm on any dataset D0 that
+differs from D only in the first element. Applying advanced
+composition to the sequence of algorithms gives the claim.
+
+i ∈ [n] (where S (i) is the range space of Aldp ) be a se(i)
+
+quence of algorithms such that Aldp is ε0 -differentially private for all values of auxiliary inputs in S (1) × · · · × S (i−1) .
+Let Aswap : Dn → S (1) × · · · × S (n) be the algorithm that
+given a dataset D = x1:n ∈ Dn , samples a uniform index
+I ∈ [n], swaps element 1 with element I and then applies
+the local randomizers to the resulting dataset sequentially
+(see Algorithm 5). For any n ≥ 1000, 0 < ε0 < 1/2 and
+0 < δ < 1/100, Aswap satisfies (ε, δ)-differential
+q privacy at
+index 1 in the central model, where ε ≤ 12ε0
+
+log(1/δ)
+.
+n
+
+Proof. The algorithm Aswap defines a joint distribution between I and the corresponding output sequence of Aswap ,
+which we denote by Z1 , Z2 , . . . , Zn . We first observe that
+Z1:n can be seen as the output of a sequence of n algorithms
+with conditionally independent randomness: B (i) : S (1) ×
+· · · × S (i−1) × Dn → S (i) for i ∈ [n]. On input s1:i−1
+and D, B (i) produces a random sample from the distribution of Zi conditioned on Z1:i−1 = s1:i−1 . The outputs of
+B (1) , . . . , B (i−1) are given as the input to B (i) . By definition,
+this ensures that random bits used by B (i) are independent of
+those used by B (1) , . . . , B (i−1) conditioned on the previous
+outputs. Therefore in order to upper bound the privacy parameters of Aswap we can analyze the privacy parameters of
+B (1) , . . . , B (n) and apply the advanced composition theorem
+for differential privacy (Theorem 2).
+Next we observe that, by the definition of Aswap , conditioned on the value of I, Zi is independent of Z1:i−1 . In
+particular, for i ≥ 2, B (i) can equivalently be implemented
+as follows. First, sample an index T from the distribution
+of I conditioned on Z1:i−1 = s1:i−1 . Then, if T = i out(i)
+(i)
+put Aldp (s1:i−1 ; x1 ). Otherwise, output Aldp (s1:i−1 , xi ). To
+implement B (1) we sample T uniformly from [n] and then
+(1)
+output Aldp (xT ).
+We now prove that for every i ∈ [n], B (i) is
+ε0 ε0
+(2e (e − 1)/n, 0)-differentially private at index 1. Let
+D = x1:n and D0 = (x01 , x2:n ) be two datasets that
+differ in the first element. Let s1:i−1 denote the input
+
+2475
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+to B (i) . We denote by µ the probability distribution of
+B (i) (s1:i−1 , D), denote by µ0 (or µ1 ) the probability distribution of B (i) (s1:i−1 , D) conditioned on T 6= i (T = i,
+respectively) and by p the probability that T = i (where
+T is sampled from the distribution of I conditioned on
+Z1:i−1 = s1:i−1 as described above). We also denote by
+µ0 , µ00 , µ01 and p0 the corresponding quantities when B (i) is
+run on D0 . By the definition, µ = (1 − p)µ0 + pµ1 and
+µ0 = (1 − p0 )µ00 + p0 µ01 .
+For i = 1, T is uniform over [n] and hence p =
+p0 = 1/n. Further, µ0 is equal to µ00 (since both are
+(1)
+equal to the output distribution of Aldp (xT ) conditioned
+
+get that Aswap satisfies (ε, δ)-DP at index 1 for
+p
+ε ≤ ε1 2n log(1/δ) + nε1 (eε1 − 1).
+
+Note that for ε0 ≤ 1/2 we get that ε1 ≤ 8ε0 /n and the first
+term
+r
+p
+2 log(1/δ)
+ε1 2n log(1/δ) ≤ 8ε0
+.
+n
+Using the fact that n ≥ 1000 we have that ε1 ≤ 1/250.
+This implies that eε1 − 1 ≤ 65
+64 ε1 and using n ≥ 1000 and
+δ ≤ 1/100, we get the following bound on the second term
+r
+65 2
+65ε20
+2
+log(1/δ)
+ε1
+(1)
+nε1 (e − 1) ≤
+nε1 ≤
+≤ ε0
+.
+on T 6= 1). By ε0 -local differential privacy of Aldp and
+64
+n
+3
+n
+quasi-convexity of (ε, δ)-DP we obtain that µ0 u(ε0 ,0) µ1 .
+Combining these terms gives the claimed bound.
+Therefore, privacy amplification by subsampling (Lemma 4)
+implies that µ0 u((eε0 −1)/n,0) µ. Similarly, we obtain that
+Finally, we describe a reduction of the analysis of Asl to
+µ00 u((eε0 −1)/n,0) µ0 and therefore, by the triangle inequality, the analysis of Aswap .
+µ u(2(eε0 −1)/n,0) µ0 . In other words, B (1) is (2(eε0 −
+Proof. [of Theorem 8] Let D and D0 be two datasets of
+1)/n, 0)-differentially private at index 1.
+length n that differ at some index i∗ ∈ [n]. The algorithm
+For i ≥ 2, we again observe that µ0 = µ00 since in
+Asl can be seen as follows. We first pick a random one-to(i)
+both cases the output is generated by Aldp (s1 , . . . , si−1 ; xi ). one mapping π ∗ from {2, . . . , n} → [n] \ {i∗ } and let
+(i)
+
+Similarly, ε0 -local differential privacy of Aldp implies that
+µ0 u(ε0 ,0) µ1 and µ00 u(ε0 ,0) µ01 .
+We now claim that p ≤ e2ε0 /n. To see this, we first
+observe that the condition Z1:i−1 = s1:i−1 is an event
+defined over the output space of Alocal . Conditioning on
+T = i reduces Aswap to running Alocal on σi (D). Note
+that for j 6= i, σi (D) differs from σj (D) in at most two
+positions. Therefore, by ε0 -differential privacy of Alocal and
+group privacy (e.g. [DR14]), we obtain that
+Pr [Z1:i−1 = s1:i−1 | T = i]
+≤ e2ε0 .
+Pr [Z1:i−1 = s1:i−1 | T = j]
+By quasi-convexity of (ε, δ)-DP we obtain that
+Pr [Z1:i−1 = s1:i−1 | T = i]
+≤ e2ε0 .
+Pr [Z1:i−1 = s1:i−1 ]
+This immediately implies our claim since
+Pr[T = i | Z1:i−1 = s1:i−1 ]
+Pr [Z1:i−1 = s1:i−1 | T = i] · Pr[T = i]
+Pr [Z1:i−1 = s1:i−1 ]
+1 2ε0
+≤ ·e .
+n
+=
+
+Privacy amplification by sampling implies that
+µ0 u(e2ε0 (eε0 −1)/n,0) µ. Applying the same argument
+to D0 and using the triangle inequality we get that
+µ u(2e2ε0 (eε0 −1)/n,0) µ0 .
+Applying the advanced composition theorem for differential privacy with ε1 = 2e2ε0 (eε0 − 1)/n and n steps we
+
+π ∗ (D) = (xi∗ , xπ∗ (2) , . . . , xπ∗ (n) ).
+Namely, we move xi∗ to the first place and apply a random
+permutation to the remaining elements. In the second step
+we apply Aswap to π ∗ (D). It is easy to see that for a
+randomly and uniformly chosen π ∗ and uniformly chosen
+I ∈ [n] the distribution of σI (π ∗ (D)) is exactly a random
+and uniform permutation of elements in D.
+For a fixed mapping π ∗ , the datasets π ∗ (D) and
+∗
+π (D0 ) differ only in the element with index 1. Therefore
+Aswap (π ∗ (D)) u(ε,δ) Aswap (π ∗ (D0 )) for ε and δ given in
+Theorem 9. Using the quasi-convexity of (ε, δ)-DP over a
+random choice of π ∗ we obtain that Asl (D) u(ε,δ) Asl (D0 ).
+4.1 Shuffling after local randomization The proof of
+Theorem 8 relies crucially on shuffling the data elements before applying the local randomizers. However implementing
+such an algorithm in a distributed system requires trusting
+a remote shuffler with sensitive user data, thus negating the
+key advantage of the LDP model. In the most general case,
+shuffling randomized LDP responses may not provide any
+additional privacy guarantees since the choice of a randomizer may directly reveal the identity of the user. Fortunately,
+in the common case where large sets of users use the same
+local randomizer, each such user will still have their privacy
+amplified (by a factor proportional to the square root of their
+set size). This follows immediately from the fact that shuffling the responses from the same local randomizers is equivalent to first shuffling the data points and then applying the
+local randomizers.
+We make this claim formal in the following corollary.
+
+2476
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+(i)
+
+C OROLLARY 4.1. For a domain D, let Aldp : S (1) × · · · ×
+S (i−1) × D → S (i) for i ∈ [n] (where S (i) is the range
+(i)
+(i)
+space of Aldp ) be a sequence of algorithms such that Aldp is
+ε0 -differentially private for all values of auxiliary inputs in
+S (1) × · · · × S (i−1) . Let Apost : Dn → S (1) × · · · × S (n) be
+the algorithm that given a dataset D ∈ Dn , computes z1:n =
+Alocal (D), samples a random and uniform permutation and
+outputs zπ(1) , . . . , zπ(n) . Let S ⊆ [n] be any set of indices
+(i)
+
+(j)
+
+such that for all i, j ∈ S, Aldp ≡ Aldp . Then for |S| ≥ 1000,
+0 < ε0 < 1/2 and 0 < δ < 1/100 and every i ∈ S, Apost
+satisfies (ε, δ)-differential
+q privacy at index i in the central
+model, where ε = 12ε0
+
+log(1/δ)
+|S| .
+
+We note that for the conclusion of this corollary to hold it
+is not necessary to randomly permute all the n randomized
+responses. It suffices to shuffle the elements of S. We also
+(i)
+(j)
+clarify that for i < j, by Aldp ≡ Aldp we mean that for
+all sequences z1:j−1 and x ∈ D, the output distributions
+(i)
+(j)
+of Aldp (z1:i−1 , x) and Aldp (z1:j−1 , x) are identical (and,
+(j)
+
+in particular, the output distribution Aldp does not depend
+on zi:j−1 ).
+
+cost can be dramatically lowered.
+Our result implies that industrial adoption of LDP-based
+mechanisms may have offered much stronger privacy guarantees than previously accounted for, since anonymization
+of telemetry reports is standard privacy practice in industry.
+This is gratifying, since the direct motivation for our work
+was to better understand the guarantees offered by one industrial privacy-protection mechanism: the Encode, Shuffle,
+Analyze (ESA) architecture and P ROCHLO implementation
+of Bittau et al. [BEM+ 17].
+However, there still remain gaps between our analysis and proposed practical, real-world mechanisms, such as
+those of the ESA architecture. In particular, our formalization assumes the user population to be static, which undoubtedly it is not. On a related note, our analysis assumes that
+(most) all users send reports at each timestep and ignores the
+privacy implications of timing or traffic channels, although
+both must be considered, since reports may be triggered by
+privacy-sensitive events on users’ devices, and it is infeasible
+to send all possible reports at each timestep. The ESA architecture addresses traffic channels using large-scale batching
+and randomized thresholding of reports, with elision, but any
+benefits from that mitigation are not included in our analysis.
+Finally, even though it is a key aspect of the ESA architecture, our analysis does not consider how users may
+fragment their sensitive information and at any timestep send
+multiple LDP reports, one for each fragment, knowing that
+each will be anonymous and unlinkable. The splitting of
+user data into carefully constructed fragments to increase
+users’ privacy has been explored for specific applications,
+e.g., by Fanti et al. [FPE16] which fragmented users’ string
+values into overlapping n-grams, to bound sensitivity while
+enabling an aggregator to reconstruct popular user strings.
+Clearly, such fragmentation should be able to offer significantly improved privacy/utility tradeoffs, at least in the central model. However, in both the local and central models of
+differential privacy, the privacy implications of users’ sending LDP reports about disjoint, overlapping, or equivalent
+fragments of their sensitive information remain to be formally understood, in general.
+
+4.2 Lower Bound for Local DP Protocols The results of
+this section give us a natural and powerful way to prove
+lower bounds for protocols in the local differential privacy
+model. We can apply Theorem 8 in the reverse direction to
+roughly state that for any given problem, lower bounds on
+the error of Ω(α/ε) (for some term α that might depend on
+the parameters of the system) of an ε-centrally
+differentially
+√
+private protocol translate to a Ω(α n/ε) lower bound on
+the error of any ε-locally differentially private protocol of
+the kind that our techniques apply to.
+√
+As an exercise, a lower bound of Ω( k polylog (d)/ε)
+for the problem of collecting frequency statistics from users
+across time in the central DP framework with privacy guarantee ε directly implies that the result in Theorem 6 is tight.
+We note here that the results of Dwork et al. [DNPR10] do
+show a lower bound of Ω(log(d)/ε) for the setting when
+k = 1 in the central DP framework. This strongly suggests that our bounds might be tight, but we cannot immediately use this lower bound as it is stated only for the pure References
+ε-differential privacy regime. It is an open problem to extend
+[ACG+ 16] Martı́n Abadi, Andy Chu, Ian J. Goodfellow,
+these results to the approximate differential privacy regime.
+H. Brendan McMahan, Ilya Mironov, Kunal
+Talwar, and Li Zhang. Deep learning with dif5 Discussion and Future Work
+ferential privacy. In Proc. of the 2016 ACM
+SIGSAC Conf. on Computer and CommuniOur amplification-by-shuffling result is encouraging, as it
+cations Security (CCS’16), pages 308–318,
+demonstrates that the formal guarantees of differential pri2016.
+vacy can encompass intuitive privacy-enhancing techniques,
+such as the addition of anonymity, which are typically part of
+existing, best-practice privacy processes. By accounting for
+[App17] Apple’s Differential Privacy Team. Learning
+the uncertainty induced by anonymity, in the central differenwith privacy at scale. Apple Machine Learning
+tial privacy model the worst-case, per-user bound on privacy
+Journal, 1(9), December 2017.
+
+2477
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+[BBG18] Borja Balle, Gilles Barthe, and Marco
+Gaboardi. Privacy amplification by subsampling: Tight analyses via couplings and divergences. CoRR, abs/1807.01647, 2018.
+
+[CSS11] T.-H. Hubert Chan, Elaine Shi, and Dawn
+Song. Private and continual release of statistics. ACM Trans. on Information Systems Security, 14(3):26:1–26:24, November 2011.
+
+[BEM+ 17] Andrea Bittau, Úlfar Erlingsson, Petros Maniatis, Ilya Mironov, Ananth Raghunathan,
+David Lie, Mitch Rudominer, Ushasree Kode,
+Julien Tinnes, and Bernhard Seefeld. Prochlo:
+Strong privacy for analytics in the crowd. In
+Proc. of the 26th ACM Symp. on Operating
+Systems Principles (SOSP’17), 2017.
+
+[CSU+ 18] Albert Cheu, Adam Smith, Jonathan Ullman, David Zeber, and Maxim Zhilyaev.
+Distributed differential privacy via mixnets.
+CoRR, abs/1808.01394, 2018.
+
+[BIK+ 17] Keith Bonawitz, Vladimir Ivanov, Ben
+Kreuter, Antonio Marcedone, H. Brendan
+McMahan, Sarvar Patel, Daniel Ramage,
+Aaron Segal, and Karn Seth. Practical secure
+aggregation for privacy-preserving machine
+learning. In Proc. of the 2017 ACM Conf.
+on Computer and Communications Security
+(CCS), pages 1175–1191, 2017.
+[BNST17] Raef Bassily, Kobbi Nissim, Uri Stemmer, and
+Abhradeep Thakurta. Practical locally private
+heavy hitters. In Advances in Neural Information Processing Systems (NIPS), pages 2288–
+2296, 2017.
+
+[Dez18] Ryan Dezember. Your smartphone’s location
+data is worth big money to Wall Street.
+The Wall Street Journal, November 2018.
+https://www.wsj.com/articles/yoursmartphones-location-data-isworth-big-money-to-wall-street1541131260.
+[DKM+ 06] Cynthia Dwork, Krishnaram Kenthapadi,
+Frank McSherry, Ilya Mironov, and Moni
+Naor. Our data, ourselves: Privacy via distributed noise generation. In Advances in
+Cryptology—EUROCRYPT, pages 486–503,
+2006.
+[DKY17] Bolin Ding, Janardhan Kulkarni, and Sergey
+Yekhanin. Collecting telemetry data privately.
+In Advances in Neural Information Processing
+Systems (NIPS), pages 3574–3583, 2017.
+
+[BS15] Raef Bassily and Adam Smith. Local, private,
+efficient protocols for succinct histograms. In
+Proc. of the Forty-Seventh Annual ACM Symp.
+on Theory of Computing (STOC’15), pages
+127–135, 2015.
+
+[DMNS06] Cynthia Dwork, Frank McSherry, Kobbi Nissim, and Adam Smith. Calibrating noise to
+sensitivity in private data analysis. In Proc.
+of the Third Conf. on Theory of Cryptography
+(TCC), pages 265–284, 2006.
+
+[BST14] Raef Bassily, Adam Smith, and Abhradeep
+Thakurta. Private empirical risk minimization:
+Efficient algorithms and tight error bounds. In
+Proc. of the 2014 IEEE 55th Annual Symp.
+on Foundations of Computer Science (FOCS),
+pages 464–473, 2014.
+
+[DMS04] Roger Dingledine, Nick Mathewson, and Paul
+Syverson. Tor: The second-generation onion
+router. In 13th USENIX Security Symp., pages
+21–21, 2004.
+
+[CGB17] Henry Corrigan-Gibbs and Dan Boneh. Prio:
+Private, robust, and scalable computation of
+aggregate statistics. In Proc. of the 14th
+USENIX Conf. on Networked Systems Design
+and Implementation (NSDI), pages 259–282,
+2017.
+[CKN+ 11] Joseph A. Calandrino, Ann Kilzer, Arvind
+Narayanan, Edward W. Felten, and Vitaly
+Shmatikov. “You might also like:” Privacy
+risks of collaborative filtering. In 32nd IEEE
+Symp. on Security and Privacy, pages 231–
+246, 2011.
+
+2478
+
+[DNPR10] Cynthia Dwork, Moni Naor, Toniann Pitassi,
+and Guy N. Rothblum. Differential privacy
+under continual observation. In Proc. of the
+Forty-Second ACM Symp. on Theory of Computing (STOC’10), pages 715–724, 2010.
+[DR14] Cynthia Dwork and Aaron Roth. The algorithmic foundations of differential privacy. Foundations and Trends in Theoretical Computer
+Science, 9(3–4):211–407, 2014.
+[DRV10] Cynthia Dwork, Guy N Rothblum, and Salil
+Vadhan. Boosting and differential privacy.
+In Proc. of the 51st Annual IEEE Symp. on
+Foundations of Computer Science (FOCS),
+pages 51–60, 2010.
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+Downloaded 04/28/25 to 128.59.178.190 . Redistribution subject to SIAM license or copyright; see https://epubs.siam.org/terms-privacy
+
+[DSSU17] Cynthia Dwork, Adam Smith, Thomas
+Steinke, and Jonathan Ullman. Exposed! A
+survey of attacks on private data. Annual Review of Statistics and Its Application, 4(1):61–
+84, 2017.
+[Dwo06] Cynthia Dwork. Differential privacy. In Proc.
+of the 33rd International Conf. on Automata,
+Languages and Programming—Volume Part II
+(ICALP), pages 1–12, 2006.
+[EPK14] Úlfar Erlingsson, Vasyl Pihur, and Aleksandra Korolova. RAPPOR: Randomized
+aggregatable privacy-preserving ordinal response. In Proc. of the 2014 ACM Conf.
+on Computer and Communications Security
+(CCS’14), pages 1054–1067. ACM, 2014.
+[FMTT18] Vitaly Feldman, Ilya Mironov, Kunal Talwar,
+and Abhradeep Thakurta. Privacy amplification by iteration. In 59th Annual IEEE Symp.
+on Foundations of Computer Science (FOCS),
+pages 521–532, 2018.
+
+[QYY+ 16] Zhan Qin, Yin Yang, Ting Yu, Issa Khalil, Xiaokui Xiao, and Kui Ren. Heavy hitter estimation over set-valued data with local differential privacy. In Proc. of the 2016 ACM
+Conf. on Computer and Communications Security (CCS’16), pages 192–203, 2016.
+[TGL+ 17] Nirvan Tyagi, Yossi Gilad, Derek Leung,
+Matei Zaharia, and Nickolai Zeldovich. Stadium: A distributed metadata-private messaging system. In Proc. of the 26th ACM Symp.
+on Operating Systems Principles (SOSP’17),
+pages 423–440, 2017.
+[TKB+ 17] Jun Tang, Aleksandra Korolova, Xiaolong
+Bai, Xueqiang Wang, and XiaoFeng Wang.
+Privacy loss in Apple’s implementation of differential privacy on macOS 10.12. CoRR,
+abs/1709.02753, 2017.
+[Ull17] Jonathan Ullman.
+CS7880. Rigorous approaches to data privacy, Spring
+2017. http://www.ccs.neu.edu/home/
+jullman/PrivacyS17/HW1sol.pdf, 2017.
+
+[FPE16] Giulia Fanti, Vasyl Pihur, and Úlfar Erlingsson. Building a RAPPOR with the unknown: [vdHLZZ15] Jelle van den Hooff, David Lazar, Matei Zaharia, and Nickolai Zeldovich. Vuvuzela:
+Privacy-preserving learning of associations
+Scalable private messaging resistant to trafand data dictionaries. Proc. on Privacy Enfic analysis. In Proc. of the 25th ACM Symp.
+hancing Technologies (PoPETS), 2016(3):41–
+on Operating Systems Principles (SOSP’15),
+61, 2016.
+pages 137–152, 2015.
+[JKT12] Prateek Jain, Pravesh Kothari, and Abhradeep
+[War65] Stanley L. Warner. Randomized response:
+Thakurta. Differentially private online learnA survey technique for eliminating evasive
+ing. In Proc. of the 25th Annual Conf. on
+answer bias. J. of the American Statistical
+Learning Theory (COLT), volume 23, pages
+Association, 60(309):63–69, 1965.
+24.1–24.34, June 2012.
+[JRUW18] Matthew Joseph, Aaron Roth, Jonathan Ullman, and Bo Waggoner. Local differential privacy for evolving data. In Advances in Neural Information Processing Systems (NIPS),
+2018.
+
+[WBLJ17] Tianhao Wang, Jeremiah Blocki, Ninghui Li,
+and Somesh Jha. Locally differentially private protocols for frequency estimation. In
+26th USENIX Security Symp., pages 729–745,
+2017.
+
+[KLN+ 08] Shiva Prasad Kasiviswanathan, Homin K.
+Lee, Kobbi Nissim, Sofya Raskhodnikova,
+and Adam D. Smith. What can we learn privately? In 49th Annual IEEE Symp. on Foundations of Computer Science (FOCS), pages
+531–540, 2008.
+
+[XWG11] Xiaokui Xiao, Guozhang Wang, and Johannes
+Gehrke. Differential privacy via wavelet transforms. IEEE Trans. on Knowledge and Data
+Engineering, 23(8):1200–1214, August 2011.
+
+[LGZ18] David Lazar, Yossi Gilad, and Nickolai Zeldovich. Karaoke: Distributed private messaging immune to passive traffic analysis. In 13th
+USENIX Symp. on Operating Systems Design
+and Implementation (OSDI’18), pages 711–
+725, 2018.
+
+2479
+
+Copyright © 2019 by SIAM
+Unauthorized reproduction of this article is prohibited
+
+

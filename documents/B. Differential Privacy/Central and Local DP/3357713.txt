@@ -1,0 +1,2616 @@
+The Power of Factorization Mechanisms in Local and Central
+Differential Privacy
+Alexander Edmonds
+
+Aleksandar Nikolov
+
+Jonathan Ullman
+
+University of Toronto
+Toronto, Canada
+edmonds@cs.toronto.edu
+
+University of Toronto
+Toronto, Canada
+anikolov@cs.toronto.edu
+
+Northeastern University
+Boston, USA
+jullman@ccs.neu.edu
+
+ABSTRACT
+We give new characterizations of the sample complexity of answering linear queries (statistical queries) in the local and central
+models of differential privacy: (1) In the non-interactive local model,
+we give the first approximate characterization of the sample complexity. Informally our bounds are tight to within polylogarithmic
+factors in the number of queries and desired accuracy. Our characterization extends to agnostic learning in the local model. (2) In the
+central model, we give a characterization of the sample complexity
+in the high-accuracy regime that is analogous to that of Nikolov,
+Talwar, and Zhang (STOC 2013), but is both quantitatively tighter
+and has a dramatically simpler proof.
+Our lower bounds apply equally to the empirical and population
+estimation problems. In both cases, our characterizations show that
+a particular factorization mechanism is approximately optimal, and
+the optimal sample complexity is bounded from above and below
+by well studied factorization norms of a matrix associated with the
+queries.
+
+CCS CONCEPTS
+• Theory of computation → Design and analysis of algorithms.
+
+KEYWORDS
+
+Can we characterize the amount of error required
+to estimate a given workload of linear queries
+subject to differential privacy in terms of natural properties of the workload, and can we achieve
+this error via computationally efficient algorithms?
+
+Differential privacy, local differential privacy, matrix factorization,
+matrix mechanism, factorization mechanism, statistical queries,
+PAC learning.
+ACM Reference Format:
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman. 2020. The
+Power of Factorization Mechanisms in Local and Central Differential Privacy.
+In Proceedings of the 52nd Annual ACM SIGACT Symposium on Theory of
+Computing (STOC ’20), June 22–26, 2020, Chicago, IL, USA. ACM, New York,
+NY, USA, 14 pages. https://doi.org/10.1145/3357713.3384297
+
+1
+
+[App17], Google [EPK14, BEM+ 17, WZL+ 19], Uber [JNS18], and
+the US Census Bureau [DLS+ 17].
+To compute statistics of the data with differential privacy—or
+any notion of privacy—we have to inject noise into the computation
+of these statistics [DN03]. The amount of noise is highly dependent
+on the particular statistic, and thus a central problem in differential
+privacy is to determine how much error is necessary to compute a
+given statistic.
+In this work we consider the class of linear queries (also called
+statistical queries [Kea93]). The simplest example of a linear query
+is “What fraction of individuals in the data have property 𝑃?” Workloads of linear queries capture a variety of statistical tasks: computing histograms and PDFs, answering range queries and computing
+CDFs, estimating the mean, computing correlations and higherorder marginals, and estimating the risk of a classifier.
+The power of differentially private algorithms for answering a
+worst-case workload of linear queries is well understood [BUV14],
+and known bounds are essentially tight as a function of the dataset
+size, the data domain, and the size of the workload. However, many
+workloads, such as those corresponding to computing PDFs or CDFs,
+have additional structure that makes it possible to answer them
+with less error than these worst-case workloads. Thus, a central
+question is
+
+In the central model, there has been dramatic progress on this
+question [HT10, BDKT12, NTZ16, Nik15, BBNS19], giving approximate characterizations for every workload of linear queries. We
+extend this line of work in two ways:
+(1) We give the first approximate characterization for noninteractive local differential privacy [DMNS06, KLN+ 08]. This
+result is also much sharper than analogous results for the
+central model of differential privacy.
+(2) We give a new approximate characterization for the central
+model of differential privacy in the high-accuracy regime
+(equivalently, in the large-dataset regime). This characterization is analogous to a result of [NTZ16], but it is quantitatively tighter and its proof is dramatically simpler. For ℓ22
+error, our characterization is tight up to a constant factor.
+
+INTRODUCTION
+
+Differential privacy [DMNS06] is a rigorous mathematical framework for protecting individual privacy that is well suited to statistical data analysis. In addition to a rich academic literature, differential privacy is now being deployed on a large scale by Apple
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a
+fee. Request permissions from permissions@acm.org.
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+© 2020 Association for Computing Machinery.
+ACM ISBN 978-1-4503-6979-4/20/06. . . $15.00
+https://doi.org/10.1145/3357713.3384297
+
+In particular, our results show that a natural and well studied
+type of factorization mechanism is approximately optimal in these
+settings. Factorization mechanisms capture a number of specialpurpose mechanisms from the theory literature [BCD+ 07, DNPR10,
+
+425
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+particular, the sample complexity of this mechanism is
+!
+p
+∥𝑊 ∥1→2 log(1/𝛿) log 𝑘
+𝑂
+.
+𝜀𝛼
+
+CSS11, TUV12, CTUW14], were involved in previous characterizations, and also roughly capture the matrix mechanisms [LHR+ 10,
+MMHM18] from the databases literature, which have been developed into practical algorithms for US Census Data.1
+Our characterization in the local model extends to agnostic PAC
+learning, and shows that the optimal learner for any family of
+queries is to use the optimal factorization mechanism to estimate
+the error of every concept. Our characterization is sharper than
+the previous characterization of [KLN+ 08], which loses polynomial
+factors in the SQ dimension [BFJ+ 94].
+
+1.1
+
+where ∥𝑊 ∥1→2 denotes the largest ℓ2 norm of any column of 𝑊 ,
+which is the ℓ2 -sensitivity.
+One can try to improve this mechanism by replacing 𝑊 with
+a simpler workload of queries 𝐴, and then attempting to reconstruct the answer to 𝑊 by applying a linear transform 𝑅 such that
+𝑊 = 𝑅𝐴. One can show that the overall mechanism has error
+∥𝑅∥2→∞ ∥𝐴∥1→2 , where ∥𝑅∥2→∞ denotes the maximum ℓ2 norm
+of any row of 𝑅. This quantity can be dramatically smaller than
+∥𝑊 ∥1→∞ , for example if 𝑊 contains many copies of the same query.
+The factorization mechanism chooses the optimal factorization
+𝑊 = 𝑅𝐴, giving error proportional to the factorization norm
+
+Background: Linear Queries and
+Factorization Mechanisms
+
+We start by briefly introducing the relevant concepts and definitions necessary to state our results. See Section 2 for a more
+thorough treatment of the necessary background.
+
+𝛾 2 (𝑊 ) = min{∥𝑅∥2→∞ ∥𝐴∥1→2 : 𝑊 = 𝑅𝐴}.
+
+Linear Queries. Suppose we are given a dataset 𝑋 = (𝑥 1, . . . , 𝑥𝑛 ) ∈
+X𝑛 , where each entry 𝑥𝑖 is the data of one individual and X is
+some data universe. We will treat the size of the dataset 𝑛 as public
+information. A linear query is specified by a bounded function 𝑞 :
+Í
+X → R and (abusing notation) its answer is 𝑞(𝑋 ) = 𝑛1 𝑛𝑖=1 𝑞(𝑥𝑖 ).
+A workload is a set of linear queries 𝑄 = {𝑞 1, . . . , 𝑞𝑘 }, and we use
+𝑄 (𝑋 ) = (𝑞 1 (𝑋 ), . . . , 𝑞𝑘 (𝑋 )) to denote the answers.
+Given a workload of queries, we can associate a workload matrix
+𝑊 ∈ R𝑄×X , defined by 𝑊𝑞,𝑥 = 𝑞(𝑥). The convention of calling
+the above queries “linear” stems from the fact that they can be
+written as the product of the workload matrix with the histogram
+vector of the dataset. As such, we will sometimes use 𝑄 and 𝑊
+interchangeably.
+
+The sample complexity of this mechanism is thus
+!
+p
+𝛾 2 (𝑊 ) log(1/𝛿) log |𝑄 |
+ℓ∞
+sc (M𝛾2 , 𝑄, 𝛼) = 𝑂
+.
+𝜀𝛼
+We note that that the factorization norm 𝛾 2 (𝑊 ) and an optimal
+factorization 𝑊 = 𝑅𝐴 can be computed in time polynomial in the
+size of 𝑊 via semidefinite programming [LS09].
+Finally, we can try to further improve the mechanism using an
+approximate factorization mechanism that approximates the worke that is entrywise close to 𝑊 ,
+load 𝑊 with a simpler workload 𝑊
+e . The error of this
+and applying the factorization mechanism to 𝑊
+mechanism is proportional to the approximate factorization norm
+e ) : ∥𝑊 − 𝑊
+e ∥1→∞ ≤ 𝛼/2},
+𝛾 2 (𝑊 , 𝛼) = min{𝛾 2 (𝑊
+
+Error and Sample Complexity. Our goal is to design an (𝜀, 𝛿)differentially private mechanism M that takes a dataset 𝑋 and
+accurately estimates 𝑄 (𝑋 ) for an appropriate measure of accuracy.
+In this work we primarily consider accuracy in the ℓ∞ norm, and
+define
+
+e ∥1→∞ is the maximum absolute difference between
+where ∥𝑊 − 𝑊
+e . The sample complexity of this mechanism is
+entries of 𝑊 and 𝑊
+thus
+!
+p
+𝛾 2 (𝑊 , 𝛼/2) log(1/𝛿) log |𝑄 |
+ℓ∞
+sc (M𝛾2 ,𝛼 , 𝑄, 𝛼) = 𝑂
+.
+𝜀𝛼
+
+errℓ∞ (M, 𝑄, 𝑛) = max𝑛 E [∥M (𝑋 ) − 𝑄 (𝑋 )∥∞ ],
+𝑋 ∈X M
+ℓ∞
+err𝜀,𝛿 (𝑄, 𝑛) =
+min
+errℓ∞ (M, 𝑄, 𝑛).
+(𝜀, 𝛿)-DP M
+
+The Local Model. Although we have discussed the factorization
+mechanism in the context of central differential privacy, these ideas
+can all be adapted to (non-interactive) local differential privacy. In
+this model, each user will apply a separate (𝜀, 𝛿)-differentially private mechanism M1, . . . , M𝑛 to their own data, and the output
+can then be postprocessed using an arbitrary algorithm A, so the
+mechanism can be expressed as
+
+Privacy becomes easier to achieve as the dataset size 𝑛 grows. We
+are interested in the sample complexity, which is the smallest size
+of dataset on which it is possible to achieve a specified error 𝛼 for
+given privacy parameters 𝜀 and 𝛿:
+n
+o
+ℓ∞
+ℓ∞
+sc𝜀,𝛿
+(𝑄, 𝛼) = min 𝑛 : err𝜀,𝛿
+(𝑄, 𝑛) ≤ 𝛼 .
+
+M (𝑋 ) = A (M1 (𝑋 1 ), . . . , M𝑛 (𝑋𝑛 ))
+The Approximate Factorization Mechanisms. One of the most
+basic tools in the central-model of differential privacy is the Gaussian mechanism (see e.g. [DR14]). This mechanism computes the
+vector of answers to the queries 𝑄 (𝑋 ) and perturbs it with spherical Gaussian noise scaled to the ℓ2 -sensitivity of the workload. In
+
+ℓ∞ ,loc
+ℓ∞ ,loc
+We define err𝜀,𝛿
+, and sc𝜀,𝛿
+analogously to the central model,
+
+but with the minimum taken over mechanisms that are (𝜀, 𝛿)-DP
+in the local model.
+Since the queries are linear, we can simply have each user apply
+the approximate factorization mechanism to their own data and average the results. One can show that randomizing each individual’s
+data independently increases the variance of the noise by a factor of
+√
+𝑛 compared to the central model version of the mechanism. One
+can also achieve (𝜀, 0)-differential privacy by replacing Gaussian
+
+1 In a nutshell, the matrix mechanism is a particular factorization mechanism designed
+
+for the special case of ℓ22 error, and combined with various optimizations and postprocessing techniques to improve computational efficiency and utility. Usually the
+matrix mechanism is presented in the special case of pure differential privacy.
+
+426
+
+The Power of Factorization Mechanisms in Local and Central Differential Privacy
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+(2) Parity queries, which capture the covariance and higherorder moments of the data.
+(3) Marginal queries, also known as conjunctions, which capture
+the marginal distribution on subsets of the attributes.
+
+noise with a different subgaussian noise distribution. Putting it
+together, the resulting sample complexity becomes
+
+
+𝛾 2 (𝑊 , 𝛼/2) 2 log |𝑄 |
+scℓ∞ (M𝛾loc
+,
+𝑄,
+𝛼)
+=
+𝑂
+.
+(1)
+2 ,𝛼
+𝜀 2𝛼 2
+
+cdf
+
+1.2.1 Linear Queries in the Local Model. Our main result in the
+local model shows that the approximate factorization mechanism
+described above is approximately optimal among all non-interactive
+locally differentially private mechanisms.
+
+Corollary 4 (Thresholds / CDFs). Let 𝑄𝑇 be the family of
+statistical queries over the domain X = [𝑇 ] that, for every 1 ≤ 𝑡 ≤ 𝑇 ,
+contains the statistical query 𝑞𝑡 (𝑥) = I{𝑥 ≤ 𝑡 }. Then for every 𝑇 ∈ N
+and 𝜀, 𝛼 smaller than an absolute constant,
+
+
+ℓ∞ ,loc cdf
+sc𝜀,0
+(𝑄𝑇 , 𝛼) = Ω log2 𝑇 .
+
+Theorem 1 (Informal). Let 𝛼, 𝜀, 𝛿 > 0 be smaller than some
+absolute constants and let 𝑄 be a workload of linear queries with
+workload matrix 𝑊 . Then, for some 𝛼 ′ = Ω(𝛼/log(1/𝛼)),
+
+
+𝛾 2 (𝑊 , 𝛼/2) 2
+ℓ∞ ,loc
+sc𝜀,0
+(𝑄, 𝛼 ′ ) = Ω
+.
+𝜀 2𝛼 2
+
+We obtain this corollary by combining Theorem 1 with results
+from [FSSS03]. Corollary 4 should be compared to the upper bound
+of 𝑂 (log3 𝑇 ) that can be obtained from the local analogue of the
+binary tree mechanism [DNPR10, CSS11]. Ours is the first lower
+bound to go beyond the easy Ω(log𝑇 ) lower bound for this problem,
+which follows easily via a so-called packing argument.
+
+1.2
+
+Our Results
+
+parity
+
+To interpret the theorem, it helps to start by imagining that
+𝛾 2 (𝑊 , 𝛼 ′ /2) = 𝛾 2 (𝑊 , 𝛼/2), in which case the theorem would show
+that the sample complexity of answering queries up to error 𝛼 ′ is
+
+
+𝛾 2 (𝑊 , 𝛼 ′ /2) 2
+Ω
+,
+𝜀 2𝛼 2
+
+Corollary 5 (Parities). Let 𝑄𝑑,𝑤
+
+be the family of statistical
+
+queries over the domain X = {±1}𝑑 that, for every 𝑆 ⊆ [𝑑], |𝑆 | ≤ 𝑤,
+Î
+contains the statistical query 𝑞𝑆 (𝑥) = 𝑗 ∈𝑆 𝑥 𝑗 . Then for every 𝑘 ≤
+𝑑 ∈ N and 𝜀, 𝛼 smaller than an absolute constant,
+parity
+
+ℓ∞ ,loc
+sc𝜀,0
+(𝑄𝑑,𝑤 , 𝛼) = Ω((𝑑/𝑤) 𝑤 ).
+
+which differs from the sample complexity of the local approximate factorization mechanism, given in (1), by a factor of just
+𝑂 (log(1/𝛼 ′ ) 2 log |𝑄 |). The fact that we take 𝛼 ′ < 𝛼 means that
+𝛾 2 (𝑊 , 𝛼/2) can be much smaller than 𝛾 2 (𝑊 , 𝛼 ′ /2).2 Nevertheless,
+for many natural families of queries and choices of 𝛼, 𝛾 2 (𝑊 , 𝛼/2)
+will be relatively stable to small changes in 𝛼, in which case our
+lower bound will be tight up to this 𝑂 (log(1/𝛼) 2 log |𝑄 |) factor. In
+contrast, existing characterizations for the central model [HT10,
+BDKT12, NTZ16, Nik15, BBNS19] lose a poly(1/𝛼) factor, or else
+they lose a polylog|X| factor that is typically large.
+
+Corollary 5 says that adding independent Gaussian noise to
+each query is optimal up to a 𝑂 (𝑤 log(𝑑/𝑤)) factor. Using similar
+techniques, one can also obtain a direct proof that gives a tight
+lower bound up to constant factors, even for the simpler problem
+of finding the subset 𝑆 of size at most 𝑤 that maximizes 𝑞𝑆 (𝑋 ).
+marginal
+
+Corollary 6 (Marginals). Let 𝑄𝑑,𝑤
+
+be the family of statisti-
+
+cal queries over the domain X = {0, 1}𝑑 that, for every 𝑆 ⊆ [𝑑], |𝑆 | ≤
+Î
+𝑤, contains the statistical query 𝑞𝑆 (𝑥) = 𝑗 ∈𝑆 𝑥 𝑗 . Then for every
+𝑘 ≤ 𝑑 ∈ N and 𝜀, 𝛼 smaller than an absolute constant,
+
+Remark 2. Our proof of Theorem 1, in fact, shows that the lower
+bound holds in the distributional setting where 𝑋 is sampled i.i.d. from
+an unknown distribution 𝜇, and the goal is to estimate the quantity
+𝑞(𝜇) = E [𝑞(𝑥)] for every query 𝑞 ∈ 𝑄 up to error at most 𝛼.
+
+marginal
+
+ℓ∞ ,loc
+sc𝜀,0
+(𝑄𝑑,𝑤
+
+√
+
+, 𝛼) = (𝑑/𝑤) Ω ( 𝑤) .
+
+Marginal queries have been extremely well studied in differential privacy [BCD+ 07, KRSU10, GHRU11, HRS12, TUV12, CTUW14,
+DNT15]. Corollary 6 shows that a natural local analogue of the algorithm of [TUV12] is optimal for answering marginal queries up
+to the hidden constant factor in the exponent.
+
+𝑥∼𝜇
+
+Remark 3. Theorem 1 crucially assumes that the error is bounded
+in the ℓ∞ metric. If we consider the less stringent ℓ22 error metric
+(appropriately scaled to reflect the error per query), then one can
+achieve sample complexity 𝑂 (log |X|/𝜀 2 𝛼 4 ) for any workload of
+queries [BBNS19], which can be exponentially smaller than the lower
+bound we prove for ℓ∞ error. In many applications, such as releasing the PDF, CDF, or marginals of the data, the ℓ∞ error metric is
+standard in the literature on these problems, and is more practical,
+since, for natural datasets, the weaker ℓ22 guarantee can be achieved
+by mechanisms that ignore the data.
+
+1.2.2 Agnostic Learning in the Local Model. Theorem 1 extends to
+characterizing agnostic PAC learning [KSS94] in the local model. In
+agnostic PAC learning, the dataset consists of labeled examples 𝑋 =
+((𝑥 1, 𝑦1 ), . . . , (𝑥𝑛 , 𝑦𝑛 )), where 𝑥𝑖 ∈ X, and 𝑦𝑖 ∈ {±1}, and each pair
+(𝑥𝑖 , 𝑦𝑖 ) is sampled independently from an unknown distribution 𝜇.
+The goal is to find a concept 𝑐 : X → {±1} in a concept class C
+that approximately maximizes E (𝑥,𝑦)∼𝜇 [𝑐 (𝑥)𝑦].
+The correlation of each concept 𝑐 with the labels in the data is a
+linear query, and one natural approach to agnostic PAC learning
+is to estimate all these linear queries, and output the concept that
+corresponds to the largest query value. Thus, we can apply the local
+approximate factorization mechanism to the family of queries C
+to obtain the same sample complexity upper bound in (1). Interestingly, the proof of our lower bound in Theorem 1 shows that the
+same lower bound also applies to this a priori easier problem of
+
+Using Theorem 1, we obtain new lower bounds for three well studied families of queries:
+(1) Threshold queries, which are also known as range queries,
+and equivalent to computing the CDF of the data.
+2 For example, if every entry of 𝑊 is at most 𝛼 in absolute value, then 𝛾 (𝑊 , 𝛼) = 0
+2
+whereas 𝛾 2 (𝑊 , 𝛼 ′ ) can be arbitrarily large for 𝛼 ′ < 𝛼 , but this behavior typically
+does not happen for “non-trivial” values of 𝛼 .
+
+427
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+agnostic PAC learning, showing that the local approximate factorization mechanism gives an approximately optimal way to learn
+any concept class C.
+Prior results of Kasisiviswanathan et al. [KLN+ 08] connecting
+learning algorithms in the local model with the SQ model, together
+with characterizations of sample complexity in the SQ model [BFJ+ 94,
+Szö09], give upper and lower bounds on sample complexity of
+learning in the local model in terms of SQ dimension. These results, however, are only tight up to polynomial factors in the SQ
+dimension—which can be polynomial in |C|—whereas our results
+are sharper. We remark that, technically, the results are not comparable, since the the characterization via the SQ model holds for
+sequentially interactive, rather than non-interactive, mechanisms.
+1.2.3 Linear Queries in the Central Model. Our second set of results
+quantitatively strengthens—and simplifies the proof of—the central
+model characterization of [NTZ16]. In contrast to the local model,
+the sample complexity of answering many natural workloads of
+linear queries exhibits two distinct regimes, depending on the desired accuracy. For example, for a worst-case workload of linear
+queries, the sample complexity is at most
+)
+(
+log1/2 |X| log |𝑄 | |𝑄 | 1/2
+.
+min
+,
+𝜀𝛼
+𝜀𝛼 2
+Thus, the sample complexity behaves very differently when 𝛼 goes
+below some critical value. Our results concern this high-accuracy
+regime where 𝛼 is quite small. In these results, we consider the ℓ22
+error (scaled to be directly comparable to the ℓ∞ error), which is
+h
+i 1/2
+2
+errℓ2 (M, 𝑄, 𝑛) = max𝑛 E |𝑄1 | ∥M (𝑋 ) − 𝑄 (𝑋 )∥22
+
+In addition to being sharper, our proof of Theorem 7 is dramatically simpler than the lower bounds in [NTZ16, NT15].
+Remark 8. By a trivial reduction, Theorem 1, in fact, gives lower
+bounds for the distributional setting where 𝑋 is sampled i.i.d. from
+an unknown distribution 𝜇, and the goal is to estimate the quantity
+𝑞(𝜇) = E [𝑞(𝑥)] for every query 𝑞 ∈ 𝑄 up to error at most 𝛼.
+𝑥∼𝜇
+
+Data-Independent Mechanisms. Along the way, we prove a simple result that this sample complexity bound holds for every choice
+of 𝛼, provided we restrict attention to data-independent mechanisms.
+These mechanisms can be written in the form M (𝑋 ) = 𝑄 (𝑋 ) +𝑍 /𝑛
+for some fixed random variable 𝑍 that depends only on 𝑄 and not
+on the data.
+For such mechanisms we show that the sample complexity is
+always Ω(𝛾 𝐹 (𝑊 )/𝜀𝛼), regardless of 𝛼.3
+Data-independent mechanisms are interesting on their own,
+since the fact that we add noise from a known distribution makes
+them simpler to implement, and also means that we can give precise
+confidence intervals on the error of the mechanism. One application of our lower bound for data-independent mechanisms is an
+Ω(log𝑇 ) lower bound on the sample complexity of any mechanism
+for answering threshold queries over [𝑇 ] in ℓ22 error, which matches
+the data-independent binary tree mechanism.
+
+1.3
+
+Techniques
+
+Below we give a brief overview of the techniques used to prove
+Theorems 1 and 7.
+
+𝑋 ∈X M
+
+with the related quantities defined analogously. Notice that we have
+2
+scaled the ℓ22 error so that errℓ2 (M, 𝑄, 𝑛) ≤ errℓ∞ (M, 𝑄, 𝑛). For ℓ22
+error, the natural factorization norm that describes the error of the
+factorization mechanisms is
+o
+n
+𝛾 𝐹 (𝑊 ) = |𝑄1| 1/2 ∥𝑅∥𝐹 ∥𝐴∥1→2 : 𝑊 = 𝑅𝐴 ,
+qÍ
+2
+where ∥𝑅∥𝐹 =
+𝑖,𝑗 𝑅𝑖,𝑗 is the Frobenius norm of 𝑅.
+In this high-accuracy regime, a combination of [NTZ16] and [NT15]
+(see also the thesis [Nik14]) shows that, for every workload of linear
+queries, there is some 𝛼 ∗ such that
+𝛾 𝐹 (𝑊 )
+ℓ22
+≤ sc𝜀,𝛿
+(𝑄, 𝛼)
+𝜀𝛼
+𝛾 𝐹 (𝑊 )
+≤ 𝑂 (1) ·
+· log(1/𝛿).
+𝜀𝛼
+Note that the upper and lower bound differ by a factor of 𝑂 (log |𝑄 | ·
+log(1/𝛿)). The upper bound above is precisely what is given by
+the factorization mechanism. Our next theorem closes the gap
+between the upper and lower bounds in terms of |𝑄 |, and thus gives
+a characterization up to 𝑂 (log(1/𝛿)) for ℓ22 .
+∀𝛼 ≤ 𝛼 ∗ Ω(log−1 |𝑄 |) ·
+
+Theorem 7. Let 𝜀, 𝛿 > 0 be smaller than some absolute constants
+and let 𝑄 be a workload of linear queries with workload matrix 𝑊 .
+There exists some 𝛼 ∗ > 0 such that for every 𝛼 ≤ 𝛼 ∗ ,
+
+
+𝛾 𝐹 (𝑊 )
+ℓ22
+sc𝜀,𝛿
+(𝑄, 𝛼) = Ω
+.
+𝜀𝛼
+
+Lower bound in the local model. As mentioned above, Theorem 1 is proved in the distributional setting, where the dataset 𝑋
+consists of 𝑛 i.i.d. samples from some distribution 𝜇, and the goal
+is to estimate the expectation of each query 𝑞 ∈ 𝑄 on 𝜇. Our approach is to design two families of hard distributions {𝜆1, . . . , 𝜆𝑘 }
+and {𝜇 1, . . . , 𝜇𝑘 } with the following properties: first, any locally
+differentially private mechanism requires many samples to distinguish these two families; second, the two families give very different
+answers to the queries.
+To show that the distributions are hard to distinguish, we prove
+an upper bound on the KL-divergence between: (1) the transcript
+of a private mechanism in the local model when run on 𝑛 samples
+from a random distribution in {𝜆1, . . . , 𝜆𝑘 }, and (2) the same, but
+for a random distribution in {𝜇 1, . . . , 𝜇𝑘 }. Intuitively, the bound
+shows that the KL-divergence between transcripts is small when
+no bounded test function can simultaneously distinguish between
+𝜆𝑣 and 𝜇 𝑣 on average over a random choice of 𝑣 ∈ [𝑘]. This bound
+is a slight extension of a similar bound from [DJW18]. In particular,
+the upper bound on the KL-divergence is in terms of the ∞ → 2
+operator norm of a matrix 𝑀 derived from the two families of
+distributions.
+Thus, what remains is to find families distributions {𝜆1, . . . , 𝜆𝑘 }
+and {𝜇1, . . . , 𝜇𝑘 }, for which the ∞ → 2 operator norm of 𝑀 is small,
+but the expectations of the queries in 𝑄 are sufficiently different
+on the two families. Recall that our goal is to prove a lower bound
+3 Technically, we require 𝛼
+
+∥𝑊 ∥1→∞ = 1.
+
+428
+
+≤ ∥𝑊 ∥1→∞ , but in nearly all applications of interest
+
+The Power of Factorization Mechanisms in Local and Central Differential Privacy
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+in terms of the approximate norm 𝛾 2 (𝑊 , 𝛼), where 𝑊 is the workload matrix. Since 𝛾 2 (𝑊 , 𝛼) is the value of a convex minimization
+problem, it admits a dual characterization, showing that 𝛾 2 (𝑊 , 𝛼) is
+equal to the value of a maximization problem over matrices 𝑈 . We
+take an optimal dual solution 𝑈 , and use it to derive distributions
+{𝜆1, . . . , 𝜆𝑘 } and {𝜇 1, . . . , 𝜇𝑘 }. The objective function of the dual
+problem guarantees that these distributions are such that the expectation of any query 𝑞 ∈ 𝑄 on any 𝜆𝑣 is small, yet the expectation of
+the query 𝑞 𝑣 on 𝜇 𝑣 is large. Moreover, the dual objective, together
+with classical arguments in functional analysis, also guarantees an
+upper bound on the ∞ → 2 norm of the appropriate matrix 𝑀,
+giving us both ingredients for our lower bound.
+
+largest entries of 𝑀, ∥𝑀 ∥1→2 , which corresponds to the maximum
+ℓ2 -norm of a column of 𝑀, and ∥𝑀 ∥2→∞ , which corresponds to the
+maximum ℓ2 -norm of a row of 𝑀.
+′
+The inner product of two matrices 𝑀 and 𝑁 in R S×S is defined
+Í
+⊤
+by 𝑀 • 𝑁 = Tr(𝑀 𝑁 ) = 𝑢 ∈S,𝑣 ∈S′ 𝑚𝑢,𝑣 𝑛𝑢,𝑣 . The Frobenius norm
+√
+′
+of 𝑀 ∈ R S×S is given by ∥𝑀 ∥𝐹 = 𝑀 • 𝑀.
+Lastly, the factorization norms 𝛾 𝐹 and 𝛾 2 central to this work are
+′
+given for 𝑀 ∈ R S×S by
+o
+n
+𝛾 𝐹 (𝑀) = min |S1| 1/2 ∥𝑅∥𝐹 ∥𝐴∥1→2 : 𝑅𝐴 = 𝑀 ,
+
+Lower bound in the central model. The main ingredient of the
+proof of Theorem 7 is a lower bound of Ω(𝛾 𝐹 (𝑊 )/𝜀𝛼) on the sample
+complexity of data-independent mechanisms. Recall that a mechanism M is data-independent if M (𝑋 ) = 𝑄 (𝑋 ) + 𝑛1 𝑍 for a random
+variable 𝑍 ∈ R𝑄 . Our key observation is that, if Σ is the covariance
+matrix of 𝑍 , then the mechanism
+𝑂 (log(1/𝛿))
+𝑄 (𝑋 ) +
+· N (0, Σ)
+𝑛
+that uses Gaussian noise in place of 𝑍 is also (𝜀, 𝛿)-differentially
+private. Moreover, the ℓ22 error of M is equal to Tr(Σ)/|𝑄 | 1/2 , so,
+up to a factor of 𝑂 (log(1/𝛿)), the optimal data-independent mechanism with respect to ℓ22 -error can be assumed to use correlated
+Gaussian noise. It is easy to see that the class of all such mechanism is equivalent to the class of all factorization mechanisms, and,
+hence, the optimal achievable ℓ22 -error is 𝑂 (𝛾 𝐹 (𝑊 )/𝜀𝑛).
+To give a lower bound for arbitrary mechanisms in the highaccuracy regime, we use a clever transformation from [BDKT12]
+that turns a data-dependent mechanisms that is accurate for large
+datasets into a data-independent mechanism.
+
+2.2
+
+𝛾 2 (𝑀) = min{∥𝑅∥2→∞ ∥𝐴∥1→2 : 𝑅𝐴 = 𝑀 }.
+
+Differential Privacy
+
+Let X denote the data universe. A generic element from X will be
+denoted by 𝑥. We consider datasets of the form 𝑋 = (𝑥 1, . . . , 𝑥𝑛 ) ∈
+X𝑛 , each of which is identified with its histogram ℎ ∈ Z X
+≥0 where,
+for every 𝑥 ∈ X, ℎ𝑥 = |{𝑖 : 𝑥𝑖 = 𝑥 }|, so that ∥ℎ∥1 = 𝑛. To refer
+to a dataset, we use 𝑋 and ℎ interchangeably. A pair of datasets
+𝑋 = (𝑥 1, . . . , 𝑥𝑖 , . . . , 𝑥𝑛 ) and 𝑋 ′ = (𝑥 1, . . . , 𝑥𝑖′, . . . , 𝑥𝑛 ) are called
+adjacent if 𝑋 ′ is obtained from 𝑋 by replacing an element 𝑥𝑖 of 𝑋
+with a new universe element 𝑥𝑖′ .
+For parameters 𝜀, 𝛿 > 0, an (𝜀, 𝛿)-differentially private mechanism [DMNS06] (or (𝜀, 𝛿) − 𝐷𝑃 for short) is a randomized function
+M : X𝑛 → Ω which, for all adjacent datasets 𝑋 and 𝑋 ′ , for all
+outcomes 𝑆 ⊆ Ω, satisfies
+Pr [M (𝑋 ) ∈ 𝑆] ≤ 𝑒 𝜀 Pr [M (𝑋 ′ ) ∈ 𝑆] + 𝛿.
+M
+
+M
+
+For a set S, the ℓ1 , ℓ2 and ℓ∞ norms on R S are given respectively
+
+A mechanism which is (𝜀, 0)-differentially private will be referred
+to as being simply 𝜀-differentially private (or 𝜀-DP for short).
+Of special interest are (𝜀, 𝛿)-differentially private mechanisms
+M𝑖 : X → Ω̄ which take a singleton dataset 𝑋 = {𝑥 } as input.
+These are referred to as local randomizers. A sequence of (𝜀, 𝛿)differentially private local randomizers M1, . . . , M𝑛 together with
+a post-processing function A : Ω̄𝑛 → Ω specify a (non-interactive)
+locally (𝜀, 𝛿)-differentially private mechanism M : X𝑛 → Ω [EGS03,
+DMNS06, KLN+ 08]. In short, we say that such mechanisms are
+(𝜀, 𝛿)-LDP, or 𝜀-LDP when 𝛿 = 0. When the local mechanism M is
+applied to a dataset 𝑋 , we refer to
+
+sÕ
+
+TM (𝑋 ) = (M1 (𝑥 1 ), . . . , M𝑛 (𝑥𝑛 ))
+
+2
+
+PRELIMINARIES
+
+In this section we recount basic notation and definitions used
+throughout the paper.
+
+2.1
+
+Norms
+
+by
+∥𝑎∥1 =
+
+Õ
+
+|𝑎 𝑣 |,
+
+∥𝑎∥2 =
+
+𝑣 ∈S
+
+(𝑎 𝑣 ) 2,
+
+∥𝑎∥∞ = max |𝑎 𝑣 |.
+𝑣 ∈S
+
+𝑣 ∈S
+
+as the transcript of the mechanism. Then the output of the mechanism is given by M (𝑋 ) = A (TM (𝑋 )).
+
+Given a probability distribution 𝜋 on S, we consider the norms
+∥ · ∥𝐿1 (𝜋 ) and ∥ · ∥𝐿2 (𝜋 ) on R S , given by
+sÕ
+Õ
+∥𝑎∥𝐿1 (𝜋 ) =
+𝜋 (𝑣)|𝑎 𝑣 |, ∥𝑎∥𝐿2 (𝜋 ) =
+𝜋 (𝑣)(𝑎 𝑣 ) 2 .
+
+2.3
+
+𝑣 ∈S
+
+𝑣 ∈S
+
+We also take advantage of a number of matrix norms. For norms
+′
+∥ · ∥𝜁 and ∥ · ∥𝜉 on R S and R S respectively, we consider the matrix
+′
+operator norm of 𝑀 ∈ R S×S given by
+∥𝑀 ∥𝜁 →𝜉 =
+
+𝑥∼𝜇
+
+workload is a set of linear queries 𝑄 = {𝑞 1, . . . , 𝑞𝑘 }, and 𝑄 (𝑋 ) =
+(𝑞 1 (𝑋 ), . . . , 𝑞𝑘 (𝑋 )) is used to denote their answers. The answers
+on a distribution 𝜇 on X are denoted by 𝑄 (𝜇) = (𝑞 1 (𝜇), . . . , 𝑞𝑘 (𝜇)).
+We will often represent 𝑄 by its workload matrix 𝑊 ∈ R𝑄×X with
+entries 𝑤𝑞,𝑥 = 𝑞(𝑥). In this notation, the answers to the queries are
+given by 𝑛1 𝑊 ℎ. We will often use 𝑄 and 𝑊 interchangeably.
+
+∥𝑀𝑥 ∥𝜉
+max
+𝑥 ∈RS \{0}
+
+∥𝑥 ∥𝜁
+
+Linear Queries
+
+A linear query is specified by a bounded function 𝑞 : X → R.
+Abusing notation slightly, its answer on a dataset 𝑋 is given by
+Í
+𝑞(𝑋 ) = 𝑛1 𝑛𝑖=1 𝑞(𝑥𝑖 ). We also extend this notation to distributions:
+if 𝜇 is a distribution on X, then we write 𝑞(𝜇) for E [𝑞(𝑥)]. A
+
+.
+
+For the special case of ∥𝑀 ∥ℓ𝑠 →ℓ𝑡 , we will simply write ∥𝑀 ∥𝑠→𝑡 .
+Of particular importance are ∥𝑀 ∥1→∞ which corresponds to the
+
+429
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+2.4
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+Error and Sample Complexity
+
+Analogously, we can show that
+
+The ℓ∞ and ℓ22 -error of a mechanism M, which takes a dataset
+of size 𝑛, on the query workload 𝑄 are given by
+
+!
+p
+|𝑄 | −1/2 ∥𝑅∥𝐹 ∥𝐴∥1→2 log(1/𝛿)
+err (M𝑅,𝐴 , 𝑄, 𝑛) = 𝑂
+.
+𝜀𝑛
+ℓ22
+
+errℓ∞ (M, 𝑄, 𝑛) = max𝑛 E [∥M (𝑋 ) − 𝑄 (𝑋 )∥∞ ],
+𝑋 ∈X M
+
+ℓ22
+
+err
+
+h
+
+(M, 𝑄, 𝑛) = max𝑛 E |𝑄1 | ∥M (𝑋 ) − 𝑄 (𝑋 )∥22
+𝑋 ∈X M
+
+Optimizing this error bound over the choice of 𝑅 and 𝐴 gives error
+proportional to the factorization norm
+
+i 1/2
+.
+
+𝛾 𝐹 (𝑊 ) = min{|𝑄 | −1/2 ∥𝑅∥𝐹 ∥𝐴∥1→2 : 𝑊 = 𝑅𝐴},
+
+We can then define the sample complexity of a mechanism M for a
+given ℓ∞ error 𝛼 by
+
+and the mechanism M𝛾𝐹 that runs M𝑅,𝐴 with the 𝑅 and 𝐴 achieving 𝛾 𝐹 (𝑊 ) has sample complexity
+!
+p
+𝛾 𝐹 (𝑊 ) log(1/𝛿)
+ℓ22
+sc𝜀,𝛿 (𝑄, 𝛼) = 𝑂
+.
+𝛼
+
+ℓ∞
+sc𝜀,𝛿
+(M, 𝑄, 𝛼) = min{𝑛 : errℓ∞ (M, 𝑄, 𝑛) ≤ 𝛼 }.
+ℓ2
+
+2
+The sample complexity with respect to ℓ22 error sc𝜀,𝛿
+(𝑄, 𝛼) is defined
+analogously.
+Having defined error and sample complexity for a fixed mechanism, we can define the optimal error and sample complexity
+by
+
+ℓ∞
+err𝜀,𝛿
+(𝑄, 𝑛) =
+
+min
+
+This factorization mechanism is equivalent to the Gaussian noise
+matrix mechanism in [LHR+ 10].
+
+3
+
+errℓ∞ (M, 𝑄, 𝑛),
+
+M is (𝜀, 𝛿)-DP
+
+NON-INTERACTIVE LOCAL DP: LINEAR
+QUERIES
+
+2
+2
+The analogous quantities err𝜀,𝛿
+(𝑄, 𝑛) and sc𝜀,𝛿
+(𝑄, 𝛼) for ℓ22 -error
+are defined similarly. The optimal error and sample complexity for
+ℓ∞ ,loc
+ℓ∞ ,loc
+the local model are denoted err𝜀,𝛿
+(𝑄, 𝑛) and sc𝜀,𝛿
+(𝑄, 𝛼), and
+are defined in the same way but with the minimum taken over
+(𝜀, 𝛿)-LDP mechanisms.
+
+In this section we give details about our results for answering
+linear queries in the local model. We first present the local approximate factorization mechanism. Then we give an information
+theoretic lemma that bounds the KL-divergence between the transcripts of mechanisms in the local model on inputs drawn from
+mixtures of product distributions. We then use a dual formulation
+of the approximate 𝛾 2 norm to construct distributions to use with
+the information theoretic lemma in order to prove the lower bound
+in Theorem 1.
+
+2.5
+
+3.1
+
+ℓ∞
+sc𝜀,𝛿
+(𝑄, 𝛼) =
+
+min
+
+scℓ∞ (M, 𝑄, 𝑛).
+
+M is (𝜀, 𝛿)-DP
+ℓ2
+
+ℓ2
+
+Factorization Mechanisms
+
+The Gaussian mechanism [DN03, DN04, DMNS06] is defined as
+!
+
+
+𝜎𝜀,𝛿 ∥𝑊 ∥1→2 2
+1
+·𝐼 ,
+MGauss (𝑊 , ℎ) = 𝑊 ℎ + 𝑍, 𝑍 ∼ N 0,
+𝑛
+𝑛
+p
+where 𝜎𝜀,𝛿 = 𝑂 ( log(1/𝛿)/𝜀) depends only on the privacy parameters. Given a factorization 𝑊 = 𝑅𝐴, we consider the mechanism
+
+e ) : ∥𝑊 − 𝑊
+e ∥1→∞ ≤ 𝛼/2},
+𝛾 2 (𝑊 , 𝛼) = min{𝛾 2 (𝑊
+e ) = min{∥𝑅∥2→∞ ∥𝐴∥1→2 : 𝑊 = 𝑅𝐴}. Matrices 𝑊
+e , 𝑅,
+where 𝛾 2 (𝑊
+and 𝐴 achieving the minimum to any degree of accuracy can be
+computed in polynomial time via semidefinite programming, as
+shown in [LS09]. Our main positive result shows that the sample
+complexity of the corresponding approximate factorization mechanism is bounded above by the approximate 𝛾 2 norm. As sketched
+in the introduction, this can be achieved via a local version of the
+Gaussian noise mechanism, which can then be transformed into a
+purely private mechanism using the results of [BNS18]. This gives,
+however, a slightly suboptimal bound, and, instead, we use the local
+randomizer from [BBNS19], which is a variant of a local randomizer
+from [DJW18]. The relevant properties of this local randomizer are
+captured by the next lemma. We recall that a random variable 𝑍
+over R is 𝜎-subgaussian if E exp(𝑍 2 /𝜎 2 ) ≤ 2, and a random variable 𝑍 over R𝑑 is 𝜎-subgaussian if 𝜃 ⊤𝑍 is 𝜎-subgaussian for every
+vector 𝜃 such that ∥𝜃 ∥2 = 1.
+
+M𝑅,𝐴 (ℎ) = 𝑅 MGauss (𝑊 , ℎ)
+1
+= 𝑊 ℎ + 𝑍,
+𝑛
+
+
+𝑍 ∼ N 0,
+
+Approximate Factorization
+
+Here we give details of the approximate factorization mechanism,
+which was sketched in the introduction. Recall that the approximate
+𝛾 2 norm is defined by
+
+!
+
+𝜎𝜀,𝛿 ∥𝐴∥1→2 2
+· 𝑅𝑅 ⊤ ,
+𝑛
+
+and, utilizing Gaussian tail bounds, one can show that the error is
+!
+p
+∥𝑅∥2→∞ ∥𝐴∥1→2 log(1/𝛿) log |𝑄 |
+ℓ∞
+err (M𝑅,𝐴 , 𝑄, 𝑛) = 𝑂
+.
+𝜀𝑛
+We define the factorization mechanism M𝛾2 to be the mechanism
+that chooses 𝑅, 𝐴 to minimize this expression, and its error is proportional to the factorization norm
+𝛾 2 (𝑊 ) = min{∥𝑅∥2→∞ ∥𝐴∥1→2 : 𝑊 = 𝑅𝐴}.
+The sample complexity of this mechanism is thus
+!
+p
+𝛾 2 (𝑊 ) log(1/𝛿) log |𝑄 |
+ℓ∞
+sc (M𝛾2 , 𝑄, 𝛼) = 𝑂
+.
+𝛼
+
+Lemma 9 ([BBNS19]). There exists an 𝜀-DP mechanism M which
+takes as input a single datapoint 𝑥 ∈ R𝑑 such that ∥𝑥 ∥2 ≤ 1, and
+outputs a random 𝑌𝑥 := M (𝑥) ∈ R𝑑 such that
+(1) 𝑌𝑥 can be sampled in time polynomial in 𝑑 on input 𝑥,
+(2) E[𝑌𝑥 ] = 𝑥,
+
+This mechanism is implicit in [NTZ16], and is stated in this form
+in [Nik14].
+
+430
+
+The Power of Factorization Mechanisms in Local and Central Differential Privacy
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+(3) 𝑌𝑥 − 𝑥 is 𝜎-subgaussian with 𝜎 = 𝑂 (𝜀 −1 ).
+
+Hence, our goal will be to define our distributions so that that
+∥𝑀 ∥ℓ2 →𝐿 (𝜋 ) is small while still meeting the requirement that
+∞
+2
+estimating the queries 𝑄 allows us to distinguish between 𝜆𝑛𝜋 and
+𝜇𝑛𝜋 .
+It is worth noting that Lemma 11 is not known to hold when
+the protocol is allowed to be sequentially interactive. Indeed, this
+is the bottleneck to generalizing our lower bound to the case of
+sequentially interactive local privacy. See the proof of Lemma 11
+for further discussion.
+
+Based on this local randomizer, and the approximate factorizations, we prove the following upper bound in Appendix A.
+Theorem 10 (Approximate Factorization Mechanism). There
+exists an 𝜀-LDP mechanism M𝛾loc
+such that, for any 𝑘 statistical
+2 ,𝛼
+queries 𝑄 with workload matrix 𝑊 , we have
+
+
+𝛾 2 (𝑊 , 𝛼/2) 2 log 𝑘
+scℓ∞ (M𝛾loc
+,
+𝑄,
+𝛼)
+=
+𝑂
+,
+2 ,𝛼
+𝜀 2𝛼 2
+
+3.3
+
+and the mechanism runs in time polynomial in 𝑛, 𝑘, and |X|.
+
+3.2
+
+Bounding KL-Divergence
+
+Our lower bound will rely on the construction, based on a workload 𝑄, of families {𝜆1, . . . , 𝜆𝑘 } and {𝜇 1, . . . , 𝜇𝑘 } of distributions on
+X. Together with these, we consider a distribution 𝜋 over [𝑘]. For
+any 𝑣 ∈ [𝑘], let 𝜆𝑛𝑣 be the product distribution induced by sampling 𝑛 times independently from 𝜆𝑣 , and let 𝜆𝑛𝜋 be the mixture
+Í𝑘
+𝑛
+𝑛
+𝑛
+𝑛
+𝑛
+𝑣=1 𝜋 (𝑣)𝜆𝑣 . Define 𝜇 𝑣 and 𝜇𝜋 analogously. Note that 𝜆𝜋 and 𝜇𝜋
+are not product distributions, but mixtures of such distributions.
+For a mechanism M in the local model, and a probability distribution 𝜈 on X𝑛 , we use TM (𝜈) to denote the distribution on random
+transcripts TM (𝑋 ) when 𝑋 is sampled from 𝜈. Similarly, if 𝜈 is a
+distribution on X, we use the notation M𝑖 (𝜈) for the distribution
+of M𝑖 (𝑥), when 𝑥 is sampled from 𝜈.
+We approach the task of showing that 𝜆1, . . . , 𝜆𝑘 and 𝜇 1, . . . , 𝜇𝑘
+are “hard” distributions on which to evaluate 𝑄 in two steps. On
+the one hand, we wish to argue that being able to estimate 𝑄 on
+the distributions 𝜆1, . . . , 𝜆𝑘 and 𝜇1, . . . , 𝜇𝑘 enables us to distinguish
+between 𝜆𝑛𝜋 and 𝜇𝑛𝜋 . On the other hand, we show a lower bound on
+the number of samples required for a locally private mechanism to
+distinguish between 𝜆𝑛𝜋 and 𝜇𝑛𝜋 . The second of these objectives will
+be met by way of the following bound on KL-divergence. Similar
+bounds were proved in [DJW18, DR18] when only one of the two
+distributions is a mixture of products, and our proof is similar to
+the proof of Theorem 2 in [DR18]. Our proof is in Appendix B.
+
+Lemma 12. For any 𝑘 × 𝑇 matrix 𝑊 and 𝛼,
+
+
+𝑊 • 𝑈 − 𝛼 ∥𝑈 ∥1
+𝑘×𝑇
+𝛾 2 (𝑊 , 𝛼) = max
+: 𝑈 ∈R
+, 𝑈 ≠0 ,
+𝛾 2∗ (𝑈 )
+where 𝛾 2∗ is the dual norm to 𝛾 2 given by
+𝛾 2∗ (𝑈 ) = max{𝑈 • 𝑉 : 𝑉 ∈ R𝑘×𝑇 , 𝛾 2 (𝑉 ) ≤ 1}
+
+where 𝑎 1, . . . , 𝑎𝑘 and 𝑏 1, . . . , 𝑏𝑇 range over vectors with unit ℓ2 norm
+in R𝑘+𝑇 .
+The expression
+𝛾 2∗ (𝑈 ) = max
+
+DKL (TM (𝜆𝑛𝜋 ) ∥TM (𝜇𝑛𝜋 ))
+
+𝑘 Õ
+𝑇
+Õ
+
+𝑢𝑖,𝑗 𝑎𝑖⊤𝑏 𝑗 ,
+
+𝑖=1 𝑗=1
+
+"
+max
+
+𝑘 Õ
+𝑇
+Õ
+
+𝑢𝑖,𝑗 𝑎𝑖⊤𝑏 𝑗 ,
+𝑎 1 ,...,𝑎𝑘
+𝑏 1 ,...,𝑏𝑇 𝑖=1 𝑗=1
+
+= max
+
+Lemma 11. Let 𝜀 ∈ (0, 1], and let M be an 𝜀-DP mechanism in
+the local model. Then, for families {𝜆1, . . . , 𝜆𝑘 } and {𝜇 1, . . . , 𝜇𝑘 } of
+distributions on X, together with a distribution 𝜋 over [𝑘],
+
+≤ 𝑂 (𝑛𝜀 2 ) ·
+
+Duality for 𝛾 2 (𝑊 , 𝛼) and the Dual Norm
+
+Recall that our goal is to prove a lower bound on the sample
+complexity of mechanisms in the local model in terms of the approximate 𝛾 2 norm. We will do so via Lemma 11, and the distributions
+{𝜆1, . . . , 𝜆𝑘 } and {𝜇 1, . . . , 𝜇𝑘 } will serve as a certificate of a lower
+bound on the sample complexity. On the other hand, convex duality
+can certify a lower bound on the approximate 𝛾 2 norm. In the proof
+of our lower bounds, we will show that these dual certificates for
+which the approximate 𝛾 2 norm is large can be turned into hard
+families of distributions to use in Lemma 11.
+The key duality statement follows. This dual formulation for
+the 𝛾 2 (𝑊 , 𝛼) was also given in [LS09] for the special case when 𝑊
+has entries in {−1, +1}.4 For completeness, here we rederive it in
+Appendix C by directly applying the hyperplane separator theorem.
+
+E [𝑓𝑥 ] − E [𝑓𝑥 ]
+
+E
+
+𝑓 ∈RX : ∥𝑓 ∥∞ ≤1 𝑉 ∼𝜋
+
+with the max over unit vectors 𝑎 1, . . . 𝑎𝑘 and 𝑏 1, . . . , 𝑏𝑇 can be easily
+formulated as a semidefinite program, and, in fact, is exactly the
+semidefinite program that appears in Grothendieck’s inequality
+(see, e.g., [KN12, Pis12]). It is straightforward to check (just take
+all the 𝑎𝑖 and 𝑏 𝑗 co-linear) that
+
+2#
+
+𝑥∼𝜆𝑉
+
+.
+
+𝑥∼𝜇𝑉
+
+In matrix notation, define the matrix 𝑀 ∈ R [𝐾 ]×X by 𝑚 𝑣,𝑥 =
+(𝜆𝑣 (𝑥) − 𝜇 𝑣 (𝑥)). Then
+
+𝛾 2∗ (𝑈 ) ≥ max{𝑦 ⊤𝑈 𝑧 : 𝑦 ∈ {−1, 1}𝑚 , 𝑧 ∈ {−1, 1}𝑁 } = ∥𝑈 ∥∞→1 .
+(2)
+Moreover, Grothendieck showed that this inequality is always tight
+up to a universal constant [Gro53], although this fact will not be
+used here. Instead, we will need the following lemma, which can
+be derived from SDP duality, and is also due to Grothendieck. For a
+proof using the Hahn-Banach theorem, see [Pis12].
+
+DKL (TM (𝜆𝑛𝜋 )∥TM (𝜇𝑛𝜋 )) ≤ 𝑂 (𝑛𝜀 2 ) · ∥𝑀 ∥ℓ2 →𝐿 (𝜋 ) .
+∞
+
+2
+
+Being able to distinguish between TM (𝜆𝑛𝜋 ) and TM (𝜇𝑛𝜋 ) with
+constant probability implies, by Pinsker’s inequality, that
+DKL (TM (𝜆𝑛𝜋 )∥TM (𝜇𝑛𝜋 )) ≥ Ω(1).
+Together with Lemma 11, this would imply
+!
+1
+𝑛=Ω
+.
+𝜀 2 · ∥𝑀 ∥ℓ2 →𝐿 (𝜋 )
+∞
+
+4 Note that in [LS09], Linial and Shraibman use the notation 𝛾 𝛼 (𝑊 ) = inf {𝛾 (𝑊
+2 f) :
+2
+1≤𝑤
+e𝑖 𝑗 𝑤𝑖 𝑗 ≤ 𝛼 ∀𝑖, 𝑗 }. For sign matrices 𝑊 this is equal to 𝛼2+1 𝛾 2 (𝑊 , (𝛼 − 1)/(𝛼 +
+1)) in our notation.
+
+2
+
+431
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+Lemma 13 ([Gro53]). For any 𝑘 × 𝑇 matrix 𝑈 , 𝛾 2∗ (𝑈 ) ≤ 𝑡 if and
+only if there exist diagonal matrices 𝑃 ∈ R𝑘×𝑘 and 𝑄 ∈ R𝑇 ×𝑇 , and
+a matrix 𝑈e ∈ R𝑘×𝑇 such that Tr(𝑃 2 ) = Tr(𝑄 2 ) = 1, 𝑈 = 𝑃 𝑈e𝑄, and
+∥𝑈e ∥2→2 ≤ 𝑡.
+
+Lemma 18. Let 𝛼 > 0 and let𝑊 ∈ R𝑄×X be a symmetric workload
+matrix with X + and 𝑊 + as given by Definition 16. Then it holds that
+𝛾 2 (𝑊 ) = 𝛾 2 (𝑊 + ) and 𝛾 2 (𝑊 , 𝛼) = 𝛾 2 (𝑊 +, 𝛼). Moreover, if, for some
++
+𝑈 + ∈ R𝑄×X ,
+
+By (2), the 𝛾 2∗ (·) norm is an upper bound on the ∥ · ∥∞→1 norm.
+We use Lemma 13 to show a similar upper bound on the ∥ · ∥∞→2 ,
+which allows projecting out some of the rows of the matrix, but is
+quantitatively stronger. The reason we are interested in the ∥ · ∥∞→2
+norm is that this is the norm that appears in the statement of
+Lemma 11.
+
+𝛾 2 (𝑊 +, 𝛼) =
+then
+
+𝛾 2 (𝑊 , 𝛼) =
+
+q
+
+𝑘 ∥Π 𝑈 ∥
+∗
+∞→2 ≤ 𝛾 2 (𝑈 ), where Π𝑆 is the
+𝑆
+2
+projection onto the subspace R𝑆 .
+
+3.5
+
+Lower Bound Based on Dual Solutions
+
+In this section we put together the different tools we have already
+set up – the KL-divergence lower bound, and the duality of the
+approximate 𝛾 2 norm – in order to prove our main lower bound
+result Theorem 1.
+For this section, it is convenient to consider the enumeration
+𝑞 1, . . . , 𝑞𝑘 of the queries of a symmetric workload 𝑄 with workload
+matrix 𝑊 ∈ R [𝑘 ]×X . Let 𝑈 be the dual witness to the lower bound
+on 𝛾 2 (𝑊 , 𝛼), as given by Lemma 12, so that
+
+The next lemma slightly strengthens Lemma 14 to allow for
+weights on the rows of the matrix. This is the key fact about the 𝛾 2∗
+norm that we need for our lower bounds.
+Lemma 15. Let 𝑈 and 𝑀 be 𝑘×𝑇 matrices, and let 𝜋 be a probability
+distribution on [𝑘] where, for any 𝑖 ∈ [𝑘], 𝑗 ∈ [𝑇 ], we have 𝑢𝑖,𝑗 =
+𝜋 (𝑖)𝑚𝑖,𝑗 . Then there exists a probability distribution 𝜋b on [𝑘], with
+support contained in the support of 𝜋, such that ∥𝑀 ∥ℓ∞ →𝐿2 ( 𝜋b) ≤
+4𝛾 2∗ (𝑈 ).
+
+𝛾 2 (𝑊 , 𝛼) =
+
+Lemmas 14 and 15 are proved in Appendix C.
+
+3.4
+
+𝑊 • 𝑈 − 𝛼 ∥𝑈 ∥1
+,
+𝛾 2∗ (𝑈 )
+
+where 𝑈 = 12 (𝑈 +, 𝑈 − ) is a matrix in R𝑄×X such that the submatrix
+−
++ for all 𝑥 ∈ X +
+𝑈 − is indexed by X − and has entries 𝑢𝑞,−𝑥
+= −𝑢𝑞,𝑥
+and 𝑞 ∈ 𝑄.
+
+Lemma 14. For any matrix 𝑈 ∈ R𝑘×𝑇 , there exists a set 𝑆 ⊆ [𝑘]
+of size |𝑆 | ≥ 𝑘2 such that
+
+𝑊 + • 𝑈 + − 𝛼 ∥𝑈 + ∥1
+,
+𝛾 2∗ (𝑈 + )
+
+𝑊 • 𝑈 − 𝛼 ∥𝑈 ∥1
+.
+𝛾 2∗ (𝑈 )
+
+(3)
+
+By Lemma 18, we may assume without loss of generality that 𝑈 is
+of the form (𝑈 +, 𝑈 − ) where each entry of 𝑈 − is the additive inverse
+of the corresponding entry of 𝑈 + . Furthermore, by dividing each
+entry of 𝑈 by ∥𝑈 ∥1 if necessary, then we may assume without loss
+of generality that ∥𝑈 ∥1 = 1. In this case,
+
+Symmetrization
+
+For our lower bound, it will be convenient to narrow our attention to the following restricted class of ‘symmetric’ query workloads.
+Definition 16. Let 𝑄 be a workload of statistical queries with
+workload matrix 𝑊 ∈ R𝑄×X . Suppose there exists a partition of X
+into sets X + and X − , |X + | = |X − |, where each element 𝑥 of X + is
+identified with a distinct element of X − , denoted −𝑥, such that, for
+all 𝑞 ∈ 𝑄, for all 𝑥 ∈ X, 𝑞(−𝑥) = −𝑞(𝑥). In other words, 𝑊 can be
++
+−
+expressed as (𝑊 +,𝑊 − ), where 𝑊 + ∈ R𝑄×X and 𝑊 − ∈ R𝑄×X are
+the restrictions of 𝑊 to 𝑄 × X + and 𝑄 × X − respectively, with each
++ of 𝑊 + and the corresponding entry 𝑤 −
+−
+entry 𝑤𝑞,𝑥
+𝑞,−𝑥 of 𝑊 satisfying
+− = −𝑤 + . Also write 𝑄 + to denote the collection of queries with
+𝑤𝑞,𝑥
+𝑞,−𝑥
+workload matrix 𝑊 + so that the queries 𝑞 + : X + → R of 𝑄 + are
+obtained by restricting queries 𝑞 : X → R of 𝑄 to the input space X + ;
+define 𝑄 − analogously. Then 𝑄, and also 𝑊 , are called symmetric.
+
+𝛾 2 (𝑊 , 𝛼) =
+
+𝑊 •𝑈 −𝛼
+.
+𝛾 2∗ (𝑈 )
+
+Let us make a first attempt at constructing our collection of “hard”
+distributions 𝜆1, . . . , 𝜆𝑘 and 𝜇 1, . . . , 𝜇𝑘 for 𝑄. Since ∥𝑈 ∥1 = 1, then
+Õ
+𝜋 (𝑣) =
+|𝑢 𝑣,𝑥 |
+(4)
+𝑥 ∈X
+
+defines a valid probability distribution over [𝑘]. For each 𝑣 ∈ [𝑘],
+we then define a pair of distributions 𝜆𝑣 and 𝜇 𝑣 given by
+∀𝑥 ∈ X + : 𝜆𝑣 (𝑥) = 𝜆𝑣 (−𝑥) = |𝑢 𝑣,𝑥 |/𝜋 (𝑣)
+(
+2|𝑢 𝑣,𝑥 |/𝜋 (𝑣) if 𝑢 𝑣,𝑥 ≥ 0
++
+∀𝑥 ∈ X : 𝜇 𝑣 (𝑥) =
+0
+if 𝑢 𝑣,𝑥 < 0
+(
+0
+if 𝑢 𝑣,𝑥 ≥ 0
+𝜇 𝑣 (−𝑥) =
+2|𝑢 𝑣,𝑥 |/𝜋 (𝑣) if 𝑢 𝑣,𝑥 < 0
+
+The following result will allow us to translate our lower bound
+for the symmetric query workloads into a lower bound for general
+query workloads. Its proof is given in Appendix D.
+Lemma 17. Let 𝛼, 𝜖 > 0. Let 𝑄 be a symmetric workload of statistical queries and take 𝑄 + as given by Definition 16. Suppose there
+exists a non-interactive locally 𝜀-LDP mechanism M + which takes
+𝑛 samples as input and achieves errℓ∞ (M +, 𝑄 +, 𝑛) ≤ 𝛼. Then there
+exists a local 3𝜀-LDP mechanism M which takes 𝑛 ′ = max{𝑛, 𝜀 21𝛼 2 }
+samples as input and achieves errℓ∞ (M, 𝑄, 𝑛 ′ ) ≤ 4𝛼.
+
+(5)
+(6)
+
+(7)
+
+Then, for all 𝑖, 𝑣 ∈ [𝑘], the symmetry of 𝜆𝑣 implies 𝑞𝑖 (𝜆𝑣 ) = 0.
+By contrast, it holds for all 𝑣 ∈ [𝑘] that
+Õ
+𝑞 𝑣 (𝜇 𝑣 ) =
+𝑞 𝑣 (𝑥)𝜇 𝑣 (𝑥)
+𝑥 ∈X
+
+=
+
+Õ
+𝑥 ∈X +
++
+
+Lemma 18 allows us to relate 𝛾 2 (𝑊 ) and 𝛾 2 (𝑊 + ) and their wit-
+
+𝑞 𝑣 (𝑥)(𝜇 𝑣 (𝑥) − 𝜇 𝑣 (−𝑥))
+
+= 2𝑊 • 𝑈 + = 𝑊 • 𝑈 .
+
+nesses. Its proof is also given in Appendix D.
+
+432
+
+The Power of Factorization Mechanisms in Local and Central Differential Privacy
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+e ∈ R [𝑘 ]×X with entries 𝑚
+Consider now the matrix 𝑀
+e𝑣,𝑥 =
+e
+e
+e of Lemma 19
+𝜆𝑣 (𝑥) − e
+𝜇 𝑣 (𝑥). Since 𝑀 is obtained from the matrix 𝑈
+e by 1 , it follows that
+by scaling each row 𝑣 of 𝑈
+2𝜋 (𝑣)
+
+Hence,
+
+E
+
+
+max 𝑞𝑖 (𝜇𝑉 ) ≥ E [𝑞𝑉 (𝜇𝑉 )] = 𝑊 • 𝑈 .
+
+𝑉 ∼𝜋 𝑖 ∈ [𝑘 ]
+
+𝑉 ∼𝜋
+
+Since 𝑊 • 𝑈 = 𝛾 2∗ (𝑈 )𝛾 2 (𝑊 , 𝛼) + 𝛼 ≥ 𝛼 by Lemma 12, then
+
+e ∥ℓ →𝐿 ( 𝜋e) =
+∥𝑀
+∞
+1
+
+E𝑉 ∼𝜋 [ max 𝑞𝑖 (𝜇𝑉 )] ≥ 𝛼 .
+𝑖 ∈ [𝑘 ]
+
+This is not quite the quantity
+
+If we could guarantee that 𝑞𝑉 (𝜇𝑉 ) was close to its expectation when
+𝑉 ∼ 𝜋, then estimating each of the queries 𝑞𝑖 of 𝑄 with error less
+than 𝛼 would allow us to distinguish the distributions 𝜆1, . . . , 𝜆𝑘
+from the distributions 𝜇 1, . . . , 𝜇𝑘 . The following result modifies our
+distributions in a way that resolves this issue.
+
+e∥2
+∥𝑀
+ℓ →𝐿 ( 𝜋
+e) =
+∞
+
+∞
+
+E
+
+𝑓 ∈RX : ∥𝑓 ∥∞ ≤1 𝑉 ∼𝜋
+
+E𝑥∼𝜆e [𝑓𝑥 ] − E𝑥∼e
+𝜇𝑉 [𝑓𝑥 ]
+
+2
+
+𝑉
+
+1
+
+e𝑉
+𝑓 ∈RX : ∥𝑓 ∥∞ ≤1 𝑉 ∼𝜋 𝑥∼𝜆
+
+𝑥∼e
+𝜇𝑉
+
+Since the trivial case of Holder’s inequality implies that the 𝐿1 (e
+𝜋 )norm is always bounded above by the 𝐿2 (e
+𝜋 )-norm, it holds that
+e ∥ℓ →𝐿 ( 𝜋e) ≤ ∥ 𝑀
+e ∥ℓ →𝐿 ( 𝜋e) . However, this inequality goes in
+∥𝑀
+∞
+1
+∞
+2
+the wrong direction for our requirements. This issue is remedied
+by taking advantage of Lemma 15.
+
+𝑊 •𝑈 −𝛼/4
+
+(2) for all 𝑣 in the support of 𝜋e, 𝑞 𝑣 (e
+𝜇 𝑣 ) ≥ 𝑂 (log(1/𝛼)) ;
+[𝑄
+]×X
+e ∈ R
+(3) the matrix 𝑈
+with entries 𝑢e𝑣,𝑥 = 𝜋e(𝑣)(𝜆e𝑣 (𝑥) −
+∗
+e
+e
+𝜇 𝑣 (𝑥)) satisfies 𝛾 (𝑈 ) ≤ 𝛾 ∗ (𝑈 ).
+
+Lemma 21. Let 𝑄 be a collection of symmetric queries with workload matrix 𝑊 ∈ R [𝑘 ]×X . Let 𝑈 ∈ R [𝑘 ]×X be the dual witness so that
+(3) is satisfied. Then there exist probability distributions 𝜆e1, . . . , 𝜆e𝑘
+and e
+𝜇1, . . . , e
+𝜇𝑘 over X, and a distribution 𝜋b over [𝑘] such that:
+e
+(1) 𝜆1, . . . , 𝜆e𝑘 , e
+𝜇1, . . . , e
+𝜇𝑘 and 𝜋b satisfy criteria 1. and 2. of Lemma 19;
+e with entries 𝑚
+(2) the matrix 𝑀
+e𝑣,𝑥 = 𝜆e𝑣 (𝑥) − e
+𝜇 𝑣 (𝑥) satisfies
+
+2
+
+The proof of Lemma 19 will take advantage of the following
+exponential binning lemma. A proof is given in Appendix E.
+Lemma 20. Suppose that 𝑎 1, . . . , 𝑎𝑘 ∈ [0, 1] and that 𝜋 is a probability distribution over [𝑘]. Then for any 𝛽 ∈ (0, 1], there exists a set
+Í𝑘
+
+2
+
+
+max
+
+which Lemma 11 would have us bound. For comparison, note
+"
+#
+e
+∥ 𝑀 ∥ℓ →𝐿 ( 𝜋e) =
+max
+E
+E [𝑓𝑥 ]] − E [𝑓𝑥 ] .
+
+Lemma 19. Let 𝑄 be a collection of symmetric queries with workload matrix 𝑊 ∈ R [𝑘 ]×X . Let 𝑈 ∈ R [𝑘 ]×X be the dual witness so that
+(3) is satisfied. Then there exist probability distributions 𝜆e1, . . . , 𝜆e𝑘
+and e
+𝜇1, . . . , e
+𝜇𝑘 over X, and a distribution 𝜋e over [𝑘] such that:
+e
+(1) 𝑞𝑖 (𝜆𝑣 ) = 0 for all 𝑖, 𝑣 ∈ [𝑘];
+
+2
+
+1 e
+e) ≤ 𝛾 ∗ (𝑈 ) = 𝑊 • 𝑈 − 𝛼 .
+∥𝑈 ∥∞→1 ≤ 𝛾 2∗ (𝑈
+2
+2
+𝛾 2 (𝑊 , 𝛼)
+
+𝜋 (𝑣)𝑎 −𝛽
+
+e ∥ℓ →𝐿 ( 𝜋b) ≤ 4𝛾 ∗ (𝑈 ) =
+∥𝑀
+2
+∞
+2
+
+𝑣
+.
+𝑆 ⊆ [𝑘] such that 𝜋 (𝑆) · min𝑣 ∈𝑆 𝑎 𝑣 ≥ 𝑂𝑣=1(log(1/𝛽))
+
+Proof of Lemma 19. Let 𝜆1, . . . , 𝜆𝑘 , 𝜇 1, . . . , 𝜇𝑘 , and 𝜋 be as given
+by equations (4) - (7). Since 𝑞 𝑣 (𝜇 𝑣 ) > 0 for all 𝑣, we may apply
+Lemma 20 with 𝑎 𝑣 = 𝑞 𝑣 (𝜇 𝑣 ) and 𝛽 = 𝛼/4 to obtain a subset 𝑆 ⊆ [𝑘]
+for which
+E𝑉 ∼𝜋 𝑞 𝑣 (𝜇 𝑣 ) − 𝛼/4 𝑊 • 𝑈 − 𝛼/4
+𝜋 (𝑆) · min 𝑞 𝑣 (𝜇 𝑣 ) ≥
+=
+.
+𝑂 (log(1/𝛼))
+𝑂 (log(1/𝛼))
+𝑣 ∈𝑆
+
+4(𝑊 • 𝑈 − 𝛼)
+𝛾 2 (𝑊 , 𝛼)
+
+𝜇1, . . . , e
+𝜇𝑘 and 𝜋e be the distributions guarProof. Let 𝜆e1, . . . , 𝜆e𝑘 , e
+e ∈ R [𝑘 ]×X be the correspondanteed to exist by Lemma 19, and let 𝑈
+ing matrix with entries 𝑢e𝑣,𝑥 = 𝜋e(𝑣)(𝜆e𝑣 (𝑥) − e
+𝜇 𝑣 (𝑥)). The entries of
+e satisfy 𝜋 (𝑣)𝑚
+the matrix 𝑀
+e𝑣,𝑥 = 𝑢e𝑣,𝑥 , so we may apply Lemma 15
+to obtain a distribution 𝜋b such that
+e ∥ℓ →𝐿 ( 𝜋b) ≤ 4𝛾 ∗ (𝑈
+e) ≤ 4𝛾 ∗ (𝑈 ) = 4(𝑊 • 𝑈 − 𝛼) .
+∥𝑀
+2
+2
+∞
+2
+𝛾 2 (𝑊 , 𝛼)
+
+Now define 𝜋e as 𝜋 conditional on 𝑆. In particular,
+(
+𝜋 (𝑣)/𝜋 (𝑆), if 𝑣 ∈ 𝑆
+𝜋e(𝑣) =
+0,
+otherwise.
+Then, for all 𝑣 ∈ [𝑘], define 𝜆e𝑣 = 𝜆𝑣 and e
+𝜇 𝑣 = 𝜋 (𝑆)𝜇 𝑣 + (1 − 𝜋 (𝑆))𝜆𝑣 .
+This implies
+
+Lemma 15 further guarantees that the support of 𝜋b lies within the
+˜ which together with the properties of the distributions
+support of 𝜋,
+𝜆e1, . . . , 𝜆e𝑘 , e
+𝜇1, . . . , e
+𝜇𝑘 and 𝜋e gives the first condition of our lemma.
+□
+
+∀𝑖, 𝑣 ∈ [𝑘] : 𝑞(𝜆e𝑣 ) = 𝑞(𝜆𝑣 ) = 0,
+
+At last, we have all the components needed to prove our lower
+bounds for symmetric workloads.
+
+∀𝑣 ∈ [𝑘] : 𝑞 𝑣 (e
+𝜇 𝑣 ) = 𝜋 (𝑆)𝑞 𝑣 (𝜇 𝑣 ) ≥
+
+𝑊 • 𝑈 − 𝛼/4
+,
+𝑂 (log(1/𝛼))
+
+Theorem 22. Let 𝛼, 𝜀 ∈ (0, 1]. Let 𝑄 be a symmetric workload
+of statistical queries with workload matrix 𝑊 ∈ R [𝑘 ]×X . Then, for
+
+∀𝑣 ∈ [𝑘] : e
+𝜇 𝑣 − 𝜆e𝑣 = 𝜋 (𝑆)(𝜇 𝑣 − 𝜆𝑣 ).
+
+some 𝛼 ′ = Ω(𝛼/log(1/𝛼)), if
+constant 𝐶, we have
+
+By the last of these facts, together with the definition of 𝜋e, it follows
+e satisfy
+that the entries 𝑢e𝑣,𝑥 = 𝜋e(𝑣)(𝜆e𝑣 (𝑥) − e
+𝜇 𝑣 (𝑥)) of the matrix 𝑈
+(
+𝑢 𝑣,𝑥 , if 𝑣 ∈ 𝑆
+𝑢e𝑣,𝑥 =
+0,
+otherwise.
+
+𝐶 log 2𝑘
+𝛾 2 (𝑊 ,𝛼) 2
+≥ (𝛼 ′ ) 2 for a large enough
+𝜀 2𝛼 2
+
+ℓ∞ ,loc
+sc𝜀,0
+(𝑄, 𝛼 ′ ) = Ω
+
+
+
+
+𝛾 2 (𝑊 , 𝛼) 2
+.
+𝜀 2𝛼 2
+
+Proof. Let 𝛼 ′ = Ω(𝛼/log(1/𝛼)) be a value that will be decided shortly, and 𝐶 ′ be a sufficiently
+large constant. If we
+n
+o run
+
+In other words, 𝑈e is obtained from 𝑈 by replacing some of its rows
+with the zero-vector. It is easy to see from the definition of 𝛾 2∗ that
+this implies 𝛾 2∗ (𝑈e) ≤ 𝛾 2∗ (𝑈 ).
+□
+
+𝐶 ′ log 2𝑘
+
+a 𝜀-DP mechanism M on 𝑛 = max scℓ∞ (M, 𝑄, 𝛼 ′ ), (𝛼 ′ ) 2 samples drawn i.i.d. from some distribution 𝜇 on X, then, by classical
+
+433
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+
+
+uniform convergence results, E 𝑛 ∥𝑄 (𝑋 ) − 𝑄 (𝜇)∥ ∞ ≤ 𝛼 ′, where
+
+and 𝜆b𝑣 = 𝜆e𝑣 , given for 𝑣 ∈ [𝑘]. We have
+
+𝑋 ∼𝜇
+
+DKL (TM (𝜆b𝑛𝜋b)∥TM (b
+𝜇𝑛𝜋b))
+
+𝑄 (𝜇) = (𝑞 1 (𝜇), . . . , 𝑞𝑘 (𝜇)). Therefore, the mechanism will satisfy
+
+
+E 𝑛 ∥M (𝑋 ) − 𝑄 (𝜇)∥ ∞ ≤ 2𝛼 ′ .
+
+! 2
+
+
+
+
+≤ 𝑂 (𝜀 𝑛) ·
+max
+E  E [𝑓𝑥 ] − E [𝑓𝑥 ] 
+b𝑉
+𝜋  𝑥∼𝜆
+𝑥∼b
+𝜇𝑉
+𝑓 ∈RX : ∥ 𝑓 ∥∞ ≤1 𝑉 ∼b
+
+
+
+! 2
+
+
+
+2
+2
+
+= 𝑂 (𝜀 𝑛) · 𝛽
+max
+E  E [𝑓𝑥 ] − E [𝑓𝑥 ] 
+e𝑉
+𝑥∼e
+𝜇𝑉
+𝜋  𝑥∼𝜆
+𝑓 ∈RX : ∥𝑓 ∥∞ ≤1 𝑉 ∼b
+
+
+
+2
+
+𝑊
+•
+𝑈
+−
+𝛼
+.
+≤ 𝑂 (𝜀 2𝑛) · 𝛽 2 ·
+𝛾 2 (𝑊 , 𝛼)
+2
+
+(8)
+
+𝑋 ∼𝜇
+
+We will show that for any 𝜀-LDP mechanism M such that (8) holds
+for an arbitrary 𝜇, we must have
+
+
+
+𝛾 2 (𝑊 , 𝛼) 2
+𝑛=Ω
+.
+𝜀 2𝛼 2
+
+(9)
+
+n
+o
+
+
+𝐶 ′ log 2𝑘
+𝛾 (𝑊 ,𝛼) 2
+Therefore, we get that max scℓ∞ (M, 𝑄, 𝛼 ′ ), (𝛼 ′ ) 2
+= Ω 2 𝜀 2𝛼 2 ,
+𝛾 (𝑊 ,𝛼) 2
+
+which implies the theorem by the assumption on 2 𝜀 2 𝛼 2 .
+e ∈
+Let 𝜆e1, . . . , 𝜆e𝑘 , e
+𝜇1, . . . , e
+𝜇𝑘 and 𝜋b be the distributions, and 𝑀
+[𝑘
+]×X
+R
+the matrix, guaranteed to exist by Lemma 21. The matrix
+e has entries 𝑚
+𝑀
+e𝑣,𝑥 = 𝜆e𝑣 (𝑥) − e
+𝜇 𝑣 (𝑥) and satisfies
+
+for all 𝑖 in the support of 𝜋b. In particular, if we set
+𝛼′ =
+
+Equivalently,
+! 2 
+
+
+
+
+4(𝑊 • 𝑈 − 𝛼) 2
+
+
+max
+E  E [𝑓𝑥 ] − E [𝑓𝑥 ]  ≤
+.
+𝛾 2 (𝑊 , 𝛼)
+e𝑉
+𝑥∼e
+𝜇𝑉
+𝜋  𝑥∼𝜆
+𝑓 ∈RX : ∥𝑓 ∥∞ ≤1 𝑉 ∼b
+
+
+
+
+samples are required for privacy 𝜀 and accuracy 𝛼 ′ . Indeed, by
+taking 𝛽 = 𝑈 •𝑊
+𝛼 , we get that
+
+ !
+𝛾 2 (𝑊 , 𝛼) 2
+𝑛=Ω
+𝜀𝛼
+
+By Lemma 11, this implies
+
+′
+samples are required for
+ privacy 𝜀 and accuracy 𝛼 which satisfies
+𝛽 (𝑊 •𝑈 −𝛼/4)
+
+𝛼
+𝛼 ′ ≥ 𝑂 (log(1/𝛼)) = Ω log(1/𝛼)
+.
+
+
+𝛾 2 (𝑊 ,𝛼) 2
+In both cases, 𝑛 = Ω 𝜀 2 𝛼 2
+samples are required for privacy
+
+
+𝛼
+𝜀 and accuracy 𝛼 ′ , where 𝛼 ′ = Ω log(1/𝛼)
+□
+
+(10)
+
+Lemma 21 guarantees further that 𝑞𝑖 (𝜆e𝑣 ) = 0 for all 𝑖, 𝑣 ∈ [𝑘],
+𝑊 •𝑈 −𝛼/4
+while 𝑞 𝑣 (e
+𝜇 𝑣 ) ≥ 𝑂 (log(1/𝛼)) for all 𝑣 in the support of 𝜋b. Let 𝛼 ′ =
+
+The symmetrization techniques of
+
+1
+𝜇 𝑣 ). Then a mechanism M satisfying (8) can distin8 min𝑣 ∈ [𝑘 ] 𝑞 𝑣 (e
+guish between the distributions 𝜆e𝑛𝜋b and e
+𝜇𝑛𝜋b with constant probability,
+and, by Pinsker’s inequality, DKL (TM (𝜆e𝑛𝜋b)∥TM (e
+𝜇𝑛𝜋b)) is bounded
+
+Theorem 23 (Formal version of Theorem 1). Let 𝛼, 𝜀 ∈ (0, 1].
+Let 𝑄 be a collection
+of queries with workload matrix 𝑊 . Then, for
+
+𝛾 (𝑊 ,𝛼) 2
+
+𝛼
+some 𝛼 ′ = Ω log(1/𝛼)
+, if 2 𝜀 2 𝛼 2
+enough constant 𝐶, we have
+
+from below by some constant 𝐶 > 0. By (10), this implies that
+𝑛=Ω
+
+
+
+2
+𝛾 2 (𝑊 , 𝛼)
+𝜀 · (𝑊 • 𝑈 − 𝛼)
+
+𝐶 log 2𝑘
+
+𝐶
+≥ (𝛼 ′ ) 2 + 𝜀 2 (𝛼
+′ ) 2 for a large
+
+
+
+𝛾 2 (𝑊 , 𝛼)
+ℓ∞ ,loc
+sc𝜀,0
+(𝑄, 𝛼 ′ ) = Ω
+𝜀 2𝛼 2
+
+3.6
+
+samples are required to obtain accuracy 𝛼 ′ /4 and privacy 𝜀.
+Case 1: 𝑊 • 𝑈 ≤ 2𝛼. Recall that 𝑊 •𝑈 ≥ 𝛼. Hence, if 𝑊 •𝑈 ≤ 2𝛼,
+
+
+𝛾 (𝑊 ,𝛼) 2
+and furthermore
+then 𝑛 = Ω 2 𝜀 2 𝛼 2
+𝛼′ ≥
+
+𝛽 (𝑊 • 𝑈 − 𝛼/4)
+1
+min 𝑞 𝑣 (b
+𝜇𝑣 ) ≥
+8 𝑣
+𝑂 (log(1/𝛼))
+
+and (8) holds for M and this value of 𝛼 ′ , then M can distinguish between 𝜆b𝑛𝜋b and b
+𝜇𝑛𝜋b. This implies DKL (TM (𝜆b𝑛𝜋b)∥TM (b
+𝜇𝑛𝜋b)) is bounded
+below by a constant, from which we obtain that
+
+
+𝛾 2 (𝑊 , 𝛼) 2
+𝑛=Ω
+𝜀𝛽 · (𝑊 • 𝑈 )
+
+e ∥ℓ →𝐿 ( 𝜋b) ≤ 4(𝑊 • 𝑈 − 𝛼) .
+∥𝑀
+∞
+2
+𝛾 2 (𝑊 , 𝛼)
+
+
+
+𝑊 •𝑈 −𝛼 2
+DKL (TM (𝜆e𝑛𝜋b)∥TM (e
+𝜇𝑛𝜋b)) ≤ 𝑂 (𝑛𝜀 2 ) ·
+𝛾 2 (𝑊 , 𝛼)
+
+Also, 𝑞𝑖 (𝜆b𝑣 ) = 0 for all 𝑖, 𝑣 ∈ [𝑘], while
+
+
+𝑊 • 𝑈 − 𝛼/4
+𝑞 𝑣 (b
+𝜇 𝑣 ) = 𝛽 · 𝑞 𝑣 (e
+𝜇𝑣 ) ≥ 𝛽 ·
+𝑂 (log(1/𝛼))
+
+2
+
+.
+
+Applications of the Lower Bounds
+
+In this subsection we apply Theorem 23 to several workloads
+of interest, and, using known bounds on the approximate 𝛾 2 norm,
+prove new lower bounds on the sample complexity of these workloads.
+We start with the threshold queries 𝑄𝑇cdf . Identifying 𝑞𝑡 with
+𝑡, we see that the corresponding workload matrix 𝑊 is a lower
+triangular matrix, with entries equal to 1 on and below the main
+diagonal. Let us consider a different matrix 𝑊 ′ = 2𝑊 − 𝐽 , where 𝐽
+is the all-ones 𝑇 × 𝑇 matrix. Forster et al. [FSSS03] showed a lower
+
+
+
+𝑊 • 𝑈 − 𝛼/4
+𝛼
+=Ω
+𝑂 (log(1/𝛼))
+log(1/𝛼)
+
+Case 2: 𝑊 • 𝑈 > 2𝛼. However, if 𝑊 •𝑈 > 2𝛼, then, for 𝛽 ∈ [0, 1],
+we may instead consider the distributions b
+𝜇 𝑣 = (1 − 𝛽) · 𝜆e𝑣 + 𝛽 · e
+𝜇𝑣
+
+434
+
+The Power of Factorization Mechanisms in Local and Central Differential Privacy
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+bound on the margin complexity of 𝑊 ′ , which implies that for any
+′ ≥ 1 holds for all 𝑡, 𝑥 ∈ [𝑇 ], we have
+b such that 𝑤
+𝑊
+b𝑡,𝑥 𝑤𝑡,𝑥
+b ) = Ω(log𝑇 ).
+𝛾 2 (𝑊
+
+an algorithm and lower bound for probably approximately correct
+learning in the local model.
+A concept 𝑐 : X + → {−1, +1} from a concept class C identifies
+each sample 𝑥 of X + with a label 𝑐 (𝑥). The labelled pair (𝑥, 𝑐 (𝑥)) =
+(𝑥, 1) may be identified with the sample 𝑥 of X + , while the labelled
+pair (𝑥, 𝑐 (𝑥)) = (𝑥, −1) may be identified with the sample −𝑥 of
+X − . Let 𝑞 : X → {−1, +1} be given by
+(
+𝑐 (𝑥),
+if 𝑥 ∈ X +
+𝑞(𝑥) =
+−𝑐 (−𝑥), if 𝑥 ∈ X −
+
+(11)
+
+e satisfies ∥𝑊
+e − 𝑊 ′ ∥1→∞ ≤ 1 , then we can take
+Note that, if 𝑊
+2
+b = 2𝑊
+e , and (11) implies 𝛾 2 (𝑊 ′, 1/2) = Ω(log𝑇 ). Finally, homo𝑊
+geneity and the triangle inequality for 𝛾 2 , and 𝛾 2 (𝐽 ) = 1 imply
+that 𝛾 2 (𝑊 , 1/2) ≥ 12 𝛾 2 (𝑊 ′, 1/2) − 21 = Ω(log𝑇 ). Together with
+Theorem 23, this gives Corollary 4.
+parity
+Next, we consider the parity queries 𝑄𝑑,𝑤 . Note that the work𝑑
+load matrix 𝑊 of these queries is a submatrix consisting of 𝑤
+
+𝑑
+rows of the 2𝑑 × 2𝑑 Hadamard matrix. Let 𝑠 = 2𝑑 𝑤
+be the number of entries in 𝑊 . To prove a lower bound on 𝛾 2 (𝑊 , 𝛼), we can
+use Lemma 12 with 𝑈 = 𝑊 . The rows of a Hadamard matrix are
+pairwise orthogonal and have ℓ2 norm 2𝑑/2 , and, so, Lemma 13,
+used with 𝑃 and 𝑄 set to appropriately scaled copies of the identity
+√
+matrices of the respective dimensions, implies that 𝛾 2∗ (𝑈 ) ≤ 𝑠2𝑑 .
+Moreover, 𝑊 • 𝑈 = ∥𝑈 ∥1 = 𝑠, and, by Lemma 12, we have
+  1/2 !
+√
+𝑠
+𝑑
+𝛾 2 (𝑊 , 1/2) ≥
+=Ω
+.
+𝑤
+2 (𝑑/2)+1
+
+Then the loss of the concept 𝑐 on a dataset 𝑋 = ((𝑥 1, 𝑦1 ), . . . , (𝑥𝑛 , 𝑦𝑛 )),
+denoted Λ𝑋 (𝑐), is
+𝑛
+
+Λ𝑋 (𝑐) =
+=
+
+𝑑𝑐,𝑥 = 𝑐 (𝑥)
+and takes advantage of the fact that the workload matrix 𝑊 of
+the corresponding query workload 𝑄 is obtained by extending 𝐷
+to C × X in the usual way with 𝑤𝑞,𝑥 = 𝑑𝑐,𝑥 and 𝑤𝑞,−𝑥 = −𝑑𝑐,𝑥
+for 𝑞 ∈ 𝑄 and 𝑥 ∈ X + when 𝑐 is the concept that corresponds to
+𝑞. In particular, the queries 𝑄 are symmetric, and, by Lemma 18,
+𝛾 2 (𝐷, 𝛼) = 𝛾 2 (𝑊 , 𝛼).
+In order to state our results for agnostic learning, we need to
+define notation for population loss, in addition to the empirical loss
+defined above. For a distribution 𝜇 over X + × {−1, +1}, we will use
+Λ 𝜇 (𝑐) to denote the loss of the concept 𝑐 on 𝜇, given by
+
+(2𝑑) 𝑤
+
+workload matrix 𝑊 for 𝑄𝑑,𝑤
+. Let 𝑠 = 2𝑑 𝑤 𝑤 be the number
+of entries in 𝑊 ′ . By Theorem 8.1. in [She11], we have that, for any
+𝛼 ≤ 16 ,
+
+
+  deg1/3 ( 𝑓 )/2
+1 e
+e − 𝑊 ′ ∥1→∞ ≤ 𝛼 = Ω 𝑑
+min √ ∥𝑊
+∥𝑡𝑟 : ∥𝑊
+,
+𝑤
+𝑠
+
+Λ 𝜇 (𝑐) =
+
+Pr
+(𝑥,𝑦)∼𝜇
+
+[𝑐 (𝑥) ≠ 𝑦].
+
+For 𝛼, 𝛽 > 0 we will say that the mechanism M (𝛼,𝛽)-learns C with
+𝑛 samples if, for all distributions 𝜇 over X + × {−1, +1}, given as
+input a dataset 𝑋 = ((𝑥 1, 𝑦1 ), . . . , (𝑥𝑛 , 𝑦𝑛 )) of 𝑛 samples drawn IID
+from 𝜇, M outputs a concept 𝑐 ∈ C and an estimate Λ such that
+
+e ∥𝑡𝑟 is the trace-norm, i.e., the sum of singular values of
+where ∥𝑊
+e
+𝑊 , and deg1/3 (𝑓 ) is the (1/3)-approximate degree of 𝑓 , which is
+√
+e ∥𝑡𝑟 is a lower bound on
+known to be Ω( 𝑤) [NS94]. Since √1 ∥𝑊
+
+Pr [Λ 𝜇 (𝑐) ≤ min
+Λ 𝜇 (𝑐 ′ ) + 𝛼 and |Λ − Λ 𝜇 (𝑐)| ≤ 𝛼] ≥ 1 − 𝛽.
+′
+
+𝑠
+
+e ) (see [LMSS07, Lemma 3.4]), this implies
+𝛾 2 (𝑊
+  Ω ( √𝑤)
+1 e
+𝑑
+𝛾 2 (𝑊 , 1/6) ≥ √ ∥𝑊 ∥𝑡𝑟 = Ω
+,
+𝑤
+𝑠
+
+M,𝑋
+
+𝑐 ∈C
+
+Typically, the learning problem does not require outputting an
+estimate of the loss Λ 𝜇 (𝑐), since it is usually easy to compute such
+an estimate with few additional samples, once a concept 𝑐 has been
+computed. In the local model, however, this would require an additional round of interactivity. Since we focus on the non-interactive
+local model, it is natural to make this additional requirement on
+the learning algorithm.
+Since we wish to bound population loss, it is necessary to assume that there are sufficiently many samples to guarantee uniform
+
+giving us Corollary 6.
+
+4
+
+𝑛
+𝑛
+1
+1 1
+1 Õ
+1 Õ
+1
+𝑓 (𝑥𝑖 )𝑦𝑖 = −
+𝑞(𝑥𝑖 · 𝑦𝑖 ) = − 𝑞(𝑋 )
+−
+2 2𝑛 𝑖=1
+2 2𝑛 𝑖=1
+2 2
+
+where 𝑋 is the dataset (𝑥 1 · 𝑦1, . . . , 𝑥𝑛 · 𝑦𝑛 ). In this way, estimating
+Λ𝑋 (𝑐) given the dataset 𝑋 is equivalent to estimating 𝑞(𝑋 ) given
+the dataset 𝑋 . More generally, if we consider the query workload
+𝑄 consisting of all such queries 𝑞 obtained from some concept 𝑐
+of C in this way, then estimating 𝑄 (𝑋 ) is equivalent to estimating
+Λ𝑋 (C) = (Λ𝑋 (𝑐))𝑐 ∈ C . This idea allows us to adapt the algorithm
+of Theorem 10 for estimating linear queries to an algorithm for
+learning. The result is stated in terms of the concept matrix 𝐷 ∈
++
+R C×X of C with entries given by
+
+This gives Corollary 5.
+Finally, we treat marginal queries. Let us define these queries
+slightly more generally than we did in the introduction, by allowing
+marginal
+for negation. We define 𝑄𝑑,𝑤
+to consist of the queries 𝑞𝑆,𝑦 (𝑋 ) =
+1 Í𝑛 Î
+I[𝑥
+=
+𝑦
+],
+with
+𝑆
+ranging over subsets of [𝑑] of
+𝑖,𝑗
+𝑗
+𝑗 ∈𝑆
+𝑛 𝑖=1
+size at most 𝑤, and 𝑦 ranging over {0, 1}𝑑 . These queries can be
+expressed in terms of the 𝑞𝑆 queries defined in the introduction by
+doubling the dimension 𝑑.
+marginal
+To prove a lower bound for 𝑄𝑑,𝑤
+, we use the pattern matrix method of Sherstov [She11]. We will omit a full definition of
+a pattern matrix here, and refer the reader to Sherstov’s paper.
+Instead, we remark that, denoting by 𝑓 the AND function on 𝑤
+(2𝑑) 𝑤
+bits, a (𝑑, 𝑤, 𝑓 )-pattern matrix 𝑊 ′ is a 𝑤 𝑤 × 2𝑑 submatrix of the
+marginal
+
+1Õ
+(1 − I[𝑓 (𝑥𝑖 ) = 𝑦𝑖 ])
+𝑛 𝑖=1
+
+NON-INTERACTIVE LOCAL DP:
+PAC LEARNING
+
+It turns out that we are able to translate our algorithm and
+lower bound for answering linear queries in the local model into
+
+435
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+5.1
+
+convergence. It suffices to assume, for some constant 𝐶, that the
+𝐶 log 2| C |
+number of samples is at least 𝑛 ≥
+to guarantee
+𝛼2
+Pr [∀𝑐 ∈ C, |Λ𝑋 (𝑐) − Λ 𝜇 (𝑐)| ≤ 𝛼] ≥ 1 −
+𝑋
+
+𝛽
+2
+
+when 𝑋 consists of 𝑛 IID samples drawn from 𝜇.
+Theorem 24. Let 𝛼, 𝛽 ∈ (0, 1), and let 𝜀 > 0. There exists an 𝜀LDP mechanism M such that, for any concept class C of size |C| = 𝑘
++
+with corresponding concept matrix 𝐷 ∈ R C×X , it suffices to have a
+dataset 𝑋 = ((𝑥 1, 𝑦1 ), . . . , (𝑥𝑛 , 𝑦𝑛 )) of
+ 
+ 
+
+𝛾 2 (𝐷, 𝛼) 2 log 𝑘
+log 𝑘
+𝑛 = max 𝑂
+,
+𝑂
+𝜀 2𝛼 2
+𝛼2
+
+where 𝑍 is a random variable over R𝑄 whose distribution does not
+depend on ℎ. Without loss of generality, we assume E[𝑍 ] = 0. Let
+Σ = E 𝑍𝑍 𝑇 be the covariance matrix of 𝑍 . Then the ℓ2 error of
+such a mechanism is
+v
+u
+#
+t "
+∥M (ℎ) − 𝑛1 𝑊 ℎ∥22
+ℓ22
+err (M,𝑊 , 𝑛) = max
+E
+|𝑄 |
+ℎ: ∥ℎ ∥1 =𝑛
+v
+u
+s
+"
+#
+t
+∥𝑍 ∥22
+Tr(Σ)
+= E
+=
+𝑛|𝑄 |
+𝑛|𝑄 |
+
+samples to guarantee that M (𝛼, 𝛽)-learns C.
+Applying the same ideas, we know that if we estimate the quantity min𝑐 ∈ C Λ𝑋 (𝑐), then we can estimate max𝑞 ∈𝑄 𝑞(𝑋 ). Similarly,
+estimating min𝑐 ∈ C Λ 𝜇 (𝑐) is equivalent to estimating max𝑞 ∈𝑄 𝑞(𝜇 ′ )
+where 𝜇 ′ is the distribution on X obtained from 𝜇 by associating
+samples of the forms (𝑥, 1) and (𝑥, −1) with 𝑥 and −𝑥, respectively.
+Since the matrix 𝑊 ∈ R C×X obtained from 𝐷 is symmetric, and
+estimating max𝑞 ∈𝑄 𝑞(𝜇 ′ ) is precisely what is required for the lower
+bound of Theorem 22, we the following lower bound for agnostic
+learning.
+
+In this section, we will show that, if M is (𝜀, 𝛿)-differentially private (for 𝜀, 𝛿 smaller than some absolute constants), then Tr(Σ) =
+|𝑄 |𝛾 (𝑊 ) 2
+
+Lemma 26 ([KRSU10]). For any single-query workload 𝑤 ∈ R |X | ,
+and any data-independent mechanism M (ℎ) = 𝑛1 𝑤 ⊤ℎ + 𝑛1 𝑧 that is
+(𝜀, 𝛿)-differentially
+private for 𝜀, 𝛿 smaller than some absolute con 
+1 ∥𝑤 ∥ for some absolute constant 𝐶 > 0.
+stants, E 𝑧 2 ≥ 𝐶𝜀
+∞
+
+𝐶 log 2𝑘
+𝛾 (𝑊 ,𝛼)
+For some 𝛼 ′ = Ω
+, if 2𝜀 2 𝛼 2 ≥ 𝛼 ′ for a large enough
+constant 𝐶 > 0, then any 𝜀-LDP mechanism M which (𝛼 ′, 𝛽)-learns
+𝛼
+log(1/𝛼)
+
+C requires
+
+
+𝛾 2 (𝑊 , 𝛼) 2
+𝜀 2𝛼 2
+
+|X |
+
+
+
+Next, we define the sensitivity polytope 𝐾 = 𝑊 𝐵 1 , where
+|X |
+𝐵1
+
+= {ℎ ∈ R |X | : ∥ℎ∥1 ≤ 1}. With this definition, we have
+that for any pair of neighboring datasets 𝑋, 𝑋 ′ with associated histograms ℎ, ℎ ′ , we have 𝑊 (ℎ − ℎ ′ ) ∈ 𝐾. The next lemma says that
+the covariance matrix Σ defines an ellipsoid that contains at least a
+constant multiple of the sensitivity polytope.
+
+samples as input.
+
+5
+
+𝛾 (𝑊 )
+
+𝐹
+Ω(
+), and thus err(M,𝑊 , 𝑛) = Ω( 𝐹 𝜀𝑛 ).
+𝜀2
+We start with the following basic lemma about differential privacy, which says that the variance of any differentially private
+algorithm for answering a single query 𝑤 must be proportional to
+the sensitivity of the query.
+
+Theorem 25. Let 𝛽 ∈ (0, 1) be a small enough constant, and let
++
+𝜀 > 0. Let C be a concept class with concept matrix 𝐷 ∈ R C×X .
+
+𝑛=Ω
+
+Data-Independent Mechanisms
+
+Let 𝑄 be a workload of linear queries over data universe X and
+let 𝑊 ∈ R𝑄×X be the matrix form of this workload. An instanceindependent mechanism M can be written (as a function of the
+histogram of the dataset) as,
+1
+M (ℎ) = (𝑊 ℎ + 𝑍 )
+𝑛
+
+CHARACTERIZING CENTRAL DP FOR
+LARGE DATASETS
+
+Lemma 27. Let 𝑊 be a workload matrix such that the sensitivity
+polytope 𝐾 is full dimensional. Let M be an (𝜀, 𝛿)-differentially private data-independent mechanism for 𝑊 that has covariance matrix
+Σ, for 𝜀, 𝛿 smaller than some absolute constants. Then Σ is invertible,
+and
+max ∥Σ−1/2𝑦 ∥22 = max 𝑦 ⊤ Σ−1𝑦 ≤ 𝐶 2𝜀 2
+
+The goal of this section is to show that the sample complexity of
+releasing a given set of linear queries with workload matrix 𝑊 is
+
+
+𝛾 𝐹 (𝑊 )
+ℓ22
+sc (𝑊 , 𝛼, 𝜀, 𝛿) = Θ
+𝛼𝜀
+when 𝛼 is sufficiently small (smaller than some 𝛼 ∗ (𝑄, 𝜀)). Or, equiv2
+𝛾 (𝑊 )
+alently, we show that errℓ2 (𝑊 , 𝑛, 𝜀, 𝛿) = Θ( 𝐹 𝜀𝑛 ), when 𝑛 is suffi∗
+ciently large (larger than some 𝑛 (𝑄, 𝜀)).
+The proof consists of two steps. First, we argue that error
+
+𝑦 ∈𝐾
+
+𝑦 ∈𝐾
+
+for some absolute constant 𝐶 > 0.
+Proof. By post-processing, for any 𝑢 ∈ R |X | ,
+1
+1
+𝑢 ⊤ M (ℎ) = 𝑢 ⊤𝑊 ℎ + 𝑢 ⊤𝑍
+𝑛
+𝑛
+is an (𝜀, 𝛿)-DP mechanism for the single query 𝑢 ⊤𝑊 . The sensitivity
+polytope of the workload 𝑢 ⊤𝑊 is the line [−ℎ𝐾 (𝑢), ℎ𝐾 (𝑢)], where
+ℎ𝐾 (𝑢) = max𝑦 ∈𝐾 𝑢 ⊤𝑦 is the support function. By Lemma 26, if M
+is an (𝜀, 𝛿)-differentially private mechanism, then for some constant
+𝐶,
+√
+ℎ (𝑢)
+∥Σ1/2𝑢 ∥2 = 𝑢 ⊤ Σ𝑢 ≥ 𝐾
+.
+(12)
+𝐶𝜀
+
+𝛾 𝐹 (𝑊 )
+)
+𝜀𝑛
+is necessary for every 𝑛 if we restrict attention only to mechanisms
+that are data-independent. That is, mechanisms that perturb the output with noise from a fixed distribution independent of the dataset.
+Then, we apply a lemma of Bhaskara et al. [BDKT12] that says,
+when 𝑛 is sufficiently large, any instance-dependent mechanism
+can be replaced with an instance-independent mechanism with the
+same error and similar privacy parameters.
+err(𝑊 , 𝑛, 𝜀, 𝛿) = Θ(
+
+436
+
+The Power of Factorization Mechanisms in Local and Central Differential Privacy
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+If 𝐾 is full dimensional, then in particular we have ℎ𝐾 (𝑒𝑖 ) > 0 for
+any standard basis vector 𝑒𝑖 , which implies that the matrix Σ is
+positive definite and invertible.
+By change of variables we can write 𝑣 = Σ1/2𝑢 and rewrite (12)
+as
+1
+1
+1
+∥𝑣 ∥2 ≥
+·ℎ𝐾 (Σ−1/2 𝑣) =
+·max (Σ−1/2 𝑣) ⊤𝑦 =
+·max 𝑣 ⊤ Σ−1/2𝑦
+𝐶𝜀
+𝐶𝜀 𝑦 ∈𝐾
+𝐶𝜀 𝑦 ∈𝐾
+
+Theorem 30. Let 𝑄 be linear queries with symmetric workload
+matrix 𝑊 ∈ R𝑄×X . Then for every 𝜀, 𝛿 smaller than some absolute
+constants, there exists 𝑛 ∗ ∈ N such that
+𝛾 𝐹 (𝑊 )
+ℓ22
+∀𝑛 ≤ 𝑛 ∗ err𝜀,𝛿
+(𝑄, 𝑛) ≥
+.
+𝐶𝜀𝑛
+By standard transformations (see e.g. [BUV14]), we can convert
+this to the following sample complexity lower bound,
+
+Since the above holds for any unit vector 𝑣 ∈ S | X |−1 , we have
+
+Corollary 31. Let 𝑄 be linear queries with symmetric workload
+matrix 𝑊 ∈ R𝑄×X . Then for every 𝜀, 𝛿 smaller than some absolute
+constants, there exists 𝛼 ∗ > 0 such that
+𝛾 𝐹 (𝑊 )
+ℓ22
+∀𝛼 ≤ 𝛼 ∗ sc𝜀,𝛿
+(𝑄, 𝛼) ≥
+𝐶𝜀𝛼
+We remark that our lower bounds may be extended to case
+of non-symmetric workloads by using the same technique which
+we used to obtain Lemma 17. An advantage of performing this
+reduction in the central model is that we may take advantage of
+the central model
+of the Laplace
+which will
+ version
+
+ mechanism,
+
+
+max ∥Σ−1/2𝑦 ∥2 = max max 𝑣 ⊤ Σ−1/2𝑦
+𝑦 ∈𝐾
+
+𝑦 ∈𝐾 𝑣 ∈S |X|−1
+
+= max max 𝑣 ⊤ Σ−1/2𝑦 ≤ 𝐶𝜀
+𝑣 ∈S |X|−1 𝑦 ∈𝐾
+
+where the first equality is the equality-case of Cauchy-Schwarz.
+
+□
+
+Recall that for a matrix 𝑊 ∈ R𝑄×X ,
+n
+o
+𝛾 𝐹 (𝑊 ) = inf |𝑄1| 1/2 ∥𝑅∥𝐹 ∥𝐴∥1→2 : 𝑅𝐴 = 𝑊 .
+We now prove our main result, which shows that the error of dataindependent private mechanisms must be proportional to 𝛾 𝐹 (𝑊 ).
+
+1 rather than 𝑛 = 𝑂
+1
+use only 𝑛 = 𝑂 𝛼𝜀
+samples. In this way,
+𝛼 2𝜀 2
+Theorem 28, Theorem 30, and Corollary 31 may be obtained under
+the additional assumption that 𝛾 𝐹 (𝑊 ) > 𝐷 for a sufficiently large
+constant 𝐷 > 0.
+We also note that Theorem 28, Theorem 30, and Corollary 31
+2 -error, defined by
+may be extended to ℓ∞
+
+2
+2  1/2
+errℓ∞ (M, 𝑄, 𝑛) = max𝑛 E ∥M (𝑋 ) − 𝑄 (𝑋 )∥∞
+,
+
+Theorem 28. Let 𝑊 be a workload matrix. Let M is a (𝜀, 𝛿)differentially private data-independent mechanism for 𝑊 with covariance matrix Σ, for 𝜀, 𝛿 smaller than some absolute constants. Then
+
+
+2
+𝛾 𝐹 (𝑊 )
+errℓ2 (M,𝑊 , 𝑛) = Ω
+.
+𝐶𝜀𝑛
+
+𝑋 ∈X M
+
+Proof. Let 𝑤 1, . . . , 𝑤 | X | be the columns of the workload matrix
+𝑊 . Let 𝐴 = Σ−1/2𝑊 with columns 𝑎 1, . . . , 𝑎 | X | and let 𝑅 = Σ1/2 so
+that 𝑅𝐴 = 𝑊 . By Lemma 27, the matrix 𝐴 is well defined, and for
+every 𝑖, ∥𝑎𝑖 ∥ = ∥Σ−1/2𝑤𝑖 ∥2 ≤ 𝐶𝜀. Hence ∥𝐴∥1→2 ≤ 𝐶𝜀. We also
+have
+
+2
+2
+ℓ∞
+ℓ∞
+with err𝜀,𝛿
+(𝑄, 𝑛), and sc𝜀,𝛿
+(𝑄, 𝛼) defined analogously, and 𝛾 𝐹 (𝑊 )
+replaced by 𝛾 2 (𝑊 ) in the lower bounds.
+
+ACKNOWLEDGMENTS
+
+∥𝑅∥𝐹 = Tr(𝑅 ⊤ 𝑅) 1/2 = Tr(Σ) 1/2 = |𝑄 | 1/2 · 𝑛 · errℓ2 (M,𝑊 , 𝑛).
+2
+
+Combining the inequalities, we get
+2
+1
+∥𝑅∥𝐹 ∥𝐴∥1→2 ≤ 𝐶𝜀 · 𝑛 · errℓ2 (M,𝑊 , 𝑛).
+𝛾 𝐹 (𝑊 ) ≤
+|𝑄 | 1/2
+The theorem follows from rearranging this inequality.
+
+5.2
+
+Part of this work was done while the authors were visiting the
+Simons Institute for Theory of Computing. We are grateful to Toniann Pitassi for many helpful discussions about local differential
+privacy. AE and AN were supported by an Ontario Early Researcher
+Award, and an NSERC Discovery Grant. JU was supported by NSF
+grants CNS-1718088, CCF-1750640 and CNS-1816028, and a Google
+Faculty Research Award.
+
+□
+
+From Data-Dependent to Data-Independent
+Mechanisms
+
+REFERENCES
+
+In this section we describe a reduction of Bhaskara et al. [BDKT12]
+showing, in the case of symmetric workloads, that any data-dependent
+mechanism with small error for datasets of arbitrary size can be
+converted into a data-independent mechanism with approximately
+the same error.
+Lemma 29 ([BDKT12]). Let 𝑊 ∈ R𝑄×X be a symmetric workload
+matrix. For every (𝜀, 𝛿)-differentially private mechanism M, there
+exists a (2𝜀, 2𝑒 𝜀 𝛿)-differentially private data-independent mechanism
+M ′ such that
+2
+2
+1
+errℓ2 (M ′,𝑊 , 𝑛) ≤ max (𝑚 · errℓ2 (M,𝑊 , 𝑚))
+𝑛 𝑚 ∈N
+As an immediate, corollary, lower bounds for data-independent
+mechanisms imply lower bounds for arbitrary data-dependent
+mechanisms for some dataset size 𝑛 ∗ . Thus we obtain the following
+theorem by combining Theorem 28 with Lemma 29.
+
+437
+
+[App17] Apple Differential Privacy Team. Learning with privacy at scale. Apple
+Machine Learning Journal, 2017.
+[BBNS19] Jaroslaw Blasiok, Mark Bun, Aleksandar Nikolov, and Thomas Steinke.
+Towards instance-optimal private query release. In SODA, pages 2480–
+2497. SIAM, 2019.
+[BCD+ 07] Boaz Barak, Kamalika Chaudhuri, Cynthia Dwork, Satyen Kale, Frank
+McSherry, and Kunal Talwar. Privacy, accuracy, and consistency too:
+a holistic solution to contingency table release. In Proceedings of the
+26th ACM Symposium on Principles of Database Systems, PODS ’07, pages
+273–282. ACM, 2007.
+[BDKT12] Aditya Bhaskara, Daniel Dadush, Ravishankar Krishnaswamy, and Kunal Talwar. Unconditional differentially private mechanisms for linear
+queries. In Proceedings of the 44th Annual ACM Symposium on Theory of
+Computing, STOC ’12, pages 1269–1284, 2012.
+[BEM+ 17] Andrea Bittau, Úlfar Erlingsson, Petros Maniatis, Ilya Mironov, Ananth
+Raghunathan, David Lie, Mitch Rudominer, Ushasree Kode, Julien Tinnes,
+and Bernhard Seefeld. Prochlo: Strong privacy for analytics in the crowd.
+In Proceedings of the 26th Symposium on Operating Systems Principles,
+SOSP ’17, pages 441–459. ACM, 2017.
+[BFJ+ 94] Avrim Blum, Merrick L. Furst, Jeffrey C. Jackson, Michael J. Kearns,
+Yishay Mansour, and Steven Rudich. Weakly learning DNF and characterizing statistical query learning using fourier analysis. In Proceedings
+
+STOC ’20, June 22–26, 2020, Chicago, IL, USA
+
+Alexander Edmonds, Aleksandar Nikolov, and Jonathan Ullman
+
+of the Twenty-Sixth Annual ACM Symposium on Theory of Computing,
+23-25 May 1994, Montréal, Québec, Canada, pages 253–262, 1994.
+[BNS18] Mark Bun, Jelani Nelson, and Uri Stemmer. Heavy hitters and the structure of local privacy. In Proceedings of the 37th ACM Symposium on
+Principles of Database Systems, PODS’18, pages 435–447. ACM, 2018.
+[BUV14] Mark Bun, Jonathan Ullman, and Salil Vadhan. Fingerprinting codes
+and the price of approximate differential privacy. In 46th Annual ACM
+Symposium on the Theory of Computing, STOC ’14, pages 1–10, New York,
+NY, USA, 2014.
+[CSS11] T-H Hubert Chan, Elaine Shi, and Dawn Song. Private and continual
+release of statistics. ACM Transactions on Information and System Security
+(TISSEC), 14(3):26, 2011.
+[CTUW14] Karthekeyan Chandrasekaran, Justin Thaler, Jonathan Ullman, and Andrew Wan. Faster private release of marginals on small databases. In
+Proceedings of the 5th ACM Conference on Innovations in Theoretical Computer Science, ITCS ’14, pages 287–402, Princeton, NJ, 2014. ACM.
+[DJW18] John C. Duchi, Michael I. Jordan, and Martin J. Wainwright. Minimax
+optimal procedures for locally private estimation. J. Amer. Statist. Assoc.,
+113(521):182–201, 2018.
++
+[DLS 17] Aref N. Dajani, Amy D. Lauger, Phyllis E. Singer, Daniel Kifer, Jerome P.
+Reiter, Ashwin Machanavajjhala, Simson L. Garfinkel, Scot A. Dahl,
+Matthew Graham, Vishesh Karwa, Hang Kim, Philip Lelerc, Ian M.
+Schmutte, William N. Sexton, Lars Vilhuber, and John M. Abowd. The
+modernization of statistical disclosure limitation at the U.S. census bureau, 2017. Presented at the September 2017 meeting of the Census
+Scientific Advisory Committee.
+[DMNS06] Cynthia Dwork, Frank McSherry, Kobbi Nissim, and Adam Smith. Calibrating noise to sensitivity in private data analysis. In Proceedings of
+the 3rd Conference on Theory of Cryptography, TCC ’06, pages 265–284,
+Berlin, Heidelberg, 2006. Springer.
+[DN03] Irit Dinur and Kobbi Nissim. Revealing information while preserving
+privacy. In Proceedings of the 22nd ACM Symposium on Principles of
+Database Systems, PODS ’03, pages 202–210. ACM, 2003.
+[DN04] Cynthia Dwork and Kobbi Nissim. Privacy-preserving datamining on
+vertically partitioned databases. In Annual International Cryptology
+Conference, pages 528–544. Springer, 2004.
+[DNPR10] Cynthia Dwork, Moni Naor, Toniann Pitassi, and Guy N. Rothblum.
+Differential privacy under continual observation. In Symposium on
+Theory of Computing (STOC), pages 715–724. ACM, 2010.
+[DNT15] Cynthia Dwork, Aleksandar Nikolov, and Kunal Talwar. Efficient algorithms for privately releasing marginals via convex relaxations. Discrete
+& Computational Geometry, 53(3):650–673, 2015.
+[DR14] Cynthia Dwork and Aaron Roth. The algorithmic foundations of differential privacy. Foundations and Trends in Theoretical Computer Science,
+9(3–4):211–407, 2014.
+[DR18] John C. Duchi and Feng Ruan. The right complexity measure in locally private estimation: It is not the fisher information. arXiv preprint
+arXiv:1806.05756, 2018.
+[EGS03] Alexandre V. Evfimievski, Johannes Gehrke, and Ramakrishnan Srikant.
+Limiting privacy breaches in privacy preserving data mining. In PODS,
+pages 211–222. ACM, 2003.
+[EPK14] Úlfar Erlingsson, Vasyl Pihur, and Aleksandra Korolova. RAPPOR: Randomized aggregatable privacy-preserving ordinal response. In Proceedings of the 2014 ACM Conference on Computer and Communications Security, CCS’14. ACM, 2014.
+[FSSS03] Jürgen Forster, Niels Schmitt, Hans Ulrich Simon, and Thorsten Suttorp.
+Estimating the optimal margins of embeddings in euclidean half spaces.
+Machine Learning, 51(3):263–281, 2003.
+[GHRU11] Anupam Gupta, Moritz Hardt, Aaron Roth, and Jonathan Ullman. Privately releasing conjunctions and the statistical query barrier. In Proceedings of the 43rd ACM Symposium on Theory of Computing, STOC ’11,
+pages 803–812, San Jose, CA, 2011.
+[Gro53] A. Grothendieck. Résumé de la théorie métrique des produits tensoriels
+topologiques. Bol. Soc. Mat. São Paulo, 8:1–79, 1953.
+
+[HRS12] Moritz Hardt, Guy N. Rothblum, and Rocco A. Servedio. Private data
+release via learning thresholds. In Proceedings of the Twenty-Third Annual
+ACM-SIAM Symposium on Discrete Algorithms, SODA, pages 168–187,
+2012.
+[HT10] Moritz Hardt and Kunal Talwar. On the geometry of differential privacy.
+In Proceedings of the 42nd ACM Symposium on Theory of Computing,
+STOC, 2010.
+[JNS18] Noah Johnson, Joseph P Near, and Dawn Song. Towards practical differential privacy for sql queries. Proceedings of the VLDB Endowment,
+11(5):526–539, 2018.
+[Kea93] Michael J. Kearns. Efficient noise-tolerant learning from statistical
+queries. In STOC, pages 392–401. ACM, May 16-18 1993.
+[KLN+ 08] Shiva Prasad Kasiviswanathan, Homin K. Lee, Kobbi Nissim, Sofya
+Raskhodnikova, and Adam Smith. What can we learn privately? In
+FOCS, pages 531–540. IEEE, Oct 25–28 2008.
+[KN12] Subhash Khot and Assaf Naor. Grothendieck-type inequalities in combinatorial optimization. Comm. Pure Appl. Math., 65(7):992–1035, 2012.
+[KRSU10] Shiva Prasad Kasiviswanathan, Mark Rudelson, Adam Smith, and
+Jonathan Ullman. The price of privately releasing contingency tables
+and the spectra of random matrices with correlated rows. In Proceedings
+of the 42nd ACM Symposium on Theory of Computing, STOC ’10, pages
+775–784. ACM, 2010.
+[KSS94] Michael J Kearns, Robert E Schapire, and Linda M Sellie. Toward efficient
+agnostic learning. Machine Learning, 17(2-3):115–141, 1994.
+[LHR+ 10] Chao Li, Michael Hay, Vibhor Rastogi, Gerome Miklau, and Andrew
+McGregor. Optimizing linear counting queries under differential privacy.
+In Proceedings of the 29th ACM Symposium on Principles of Database
+Systems, PODS’10, pages 123–134. ACM, 2010.
+[LMSS07] Nati Linial, Shahar Mendelson, Gideon Schechtman, and Adi Shraibman.
+Complexity measures of sign matrices. Combinatorica, 27(4):439–463,
+2007.
+[LS09] Nati Linial and Adi Shraibman. Lower bounds in communication
+complexity based on factorization norms. Random Struct. Algorithms,
+34(3):368–394, 2009.
+[MMHM18] Ryan McKenna, Gerome Miklau, Michael Hay, and Ashwin Machanavajjhala. Optimizing error of high-dimensional statistical queries under
+differential privacy. Proceedings of the VLDB Endowment, 11(10):1206–
+1219, 2018.
+[Nik14] Aleksandar Nikolov. New Computational Aspects of Discrepancy Theory.
+PhD thesis, Rutgers, The State University of New Jersey, 2014.
+[Nik15] Aleksandar Nikolov. An improved private mechanism for small databases.
+In Automata, Languages, and Programming - 42nd International Colloquium, ICALP, pages 1010–1021, 2015.
+[NS94] Noam Nisan and Mario Szegedy. On the degree of boolean functions as
+real polynomials. Computational Complexity, 4:301–313, 1994.
+[NT15] Aleksandar Nikolov and Kunal Talwar. Approximating hereditary discrepancy via small width ellipsoids. In Proceedings of the 26th Annual
+ACM-SIAM Symposium on Discrete Algorithms, SODA’15, pages 324–336.
+SIAM, 2015.
+[NTZ16] Aleksandar Nikolov, Kunal Talwar, and Li Zhang. The geometry of
+differential privacy: The small database and approximate cases. SIAM J.
+Comput., 45(2):575–616, 2016.
+[Pis12] Gilles Pisier. Grothendieck’s theorem, past and present. Bull. Amer. Math.
+Soc. (N.S.), 49(2):237–323, 2012.
+[She11] Alexander A. Sherstov. The pattern matrix method. SIAM J. Comput.,
+40(6):1969–2000, 2011.
+[Szö09] Balázs Szörényi. Characterizing statistical query learning: Simplified
+notions and proofs. In ALT, volume 5809 of Lecture Notes in Computer
+Science, pages 186–200. Springer, 2009.
+[TUV12] Justin Thaler, Jonathan Ullman, and Salil P. Vadhan. Faster algorithms
+for privately releasing marginals. In 39th International Colloquium on
+Automata, Languages, and Programming -, ICALP ’12, pages 810–821,
+Warwick, UK, 2012. Springer.
++
+[WZL 19] Royce J Wilson, Celia Yuxin Zhang, William Lam, Damien Desfontaines,
+Daniel Simmons-Marengo, and Bryant Gipson. Differentially private sql
+with bounded user contribution. arXiv preprint arXiv:1909.01917, 2019.
+
+438
+
+

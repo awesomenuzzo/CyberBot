@@ -1,0 +1,2172 @@
+Comparing Local and Central Differential Privacy Using
+Membership Inference Attacks
+Daniel Bernau, Jonas Robl, Philip W. Grassal, Steffen Schneider, Florian
+Kerschbaum
+
+To cite this version:
+Daniel Bernau, Jonas Robl, Philip W. Grassal, Steffen Schneider, Florian Kerschbaum. Comparing
+Local and Central Differential Privacy Using Membership Inference Attacks. 35th IFIP Annual Conference on Data and Applications Security and Privacy (DBSec), Jul 2021, Calgary, AB, Canada.
+pp.22-42, �10.1007/978-3-030-81242-3_2�. �hal-03677033�
+
+HAL Id: hal-03677033
+https://inria.hal.science/hal-03677033v1
+Submitted on 24 May 2022
+
+HAL is a multi-disciplinary open access
+archive for the deposit and dissemination of scientific research documents, whether they are published or not. The documents may come from
+teaching and research institutions in France or
+abroad, or from public or private research centers.
+
+L’archive ouverte pluridisciplinaire HAL, est
+destinée au dépôt et à la diffusion de documents
+scientifiques de niveau recherche, publiés ou non,
+émanant des établissements d’enseignement et de
+recherche français ou étrangers, des laboratoires
+publics ou privés.
+
+Distributed under a Creative Commons Attribution 4.0 International License
+
+This document is the original author manuscript of a paper submitted to an IFIP
+conference proceedings or other IFIP publication by Springer Nature. As such, there
+may be some differences in the official published version of the paper. Such
+differences, if any, are usually due to reformatting during preparation for publication or
+minor corrections made by the author(s) during final proofreading of the publication
+manuscript.
+
+Comparing local and central differential privacy
+using membership inference attacks
+Daniel Bernau1 , Jonas Robl1? , Philip W. Grassal2??? , Steffen Schneider3?? ,
+and Florian Kerschbaum4
+1
+
+SAP, Karlsruhe, Germany, firstname.lastname@sap.com
+2
+Heidelberg University, Heidelberg, Germany,
+philip-william.grassal@iwr.uni-heidelberg.de
+3
+Procure.AI, London, United Kingdom, steffen.schneider@procure.ai
+4
+University of Waterloo, Waterloo, Canada, florian.kerschbaum@uwaterloo.ca
+
+Abstract. Attacks that aim to identify the training data of neural networks represent a severe threat to the privacy of individuals in the training dataset. A possible protection is offered by anonymization of the
+training data or training function with differential privacy. However, data
+scientists can choose between local and central differential privacy, and
+need to select meaningful privacy parameters . A comparison of local
+and central differential privacy based on the privacy parameters furthermore potentially leads data scientists to incorrect conclusions, since the
+privacy parameters are reflecting different types of mechanisms.
+Instead, we empirically compare the relative privacy-accuracy trade-off of
+one central and two local differential privacy mechanisms under a whitebox membership inference attack. While membership inference only reflects a lower bound on inference risk and differential privacy formulates
+an upper bound, our experiments with several datasets show that the
+privacy-accuracy trade-off is similar for both types of mechanisms despite the large difference in their upper bound. This suggests that the
+upper bound is far from the practical susceptibility to membership inference. Thus, small  in central differential privacy and large  in local
+differential privacy result in similar membership inference risks, and local
+differential privacy can be a meaningful alternative to central differential
+privacy for differentially private deep learning besides the comparatively
+higher privacy parameters.
+Keywords: Anonymization · Membership Inference · Neural Networks.
+
+1
+
+Introduction
+
+Neural networks have successfully been applied to a wide range of learning tasks,
+each requiring its own specific set of training data, architecture and hyperparameters to achieve meaningful classification accuracy and foster generalization.
+?
+??
+
+Authors contributed equally to this research.
+This work was done during an internship at SAP.
+
+2
+
+D. Bernau et al.
+
+In some learning tasks data scientists have to deal with personally identifiable
+or sensitive information, which results in two challenges. First, legal restrictions
+might not permit collecting, processing or publishing certain data, such as National Health Service data [5]. Second, membership inference (MI) [20,31,38]
+and model inversion attacks [15,16] are capable of identifying and reconstructing training data based on information leakage from a trained, published neural
+network model. A mitigation to both challenges is offered by anonymized deep
+neural network training with differential privacy (DP). However, a data scientist
+can choose between two categories of DP mechanisms: local DP (LDP) [40] and
+central DP (CDP) [9]. LDP perturbs the training data before any processing
+takes place, whereas CDP perturbs the gradient update steps during training.
+The degree of perturbation, which affects the accuracy of the trained neural
+network on test data, is calibrated for both DP categories by adjusting their
+respective privacy parameter . Choosing  too large will unlikely mitigate privacy attacks such as MI, and setting  too small will significantly reduce model
+accuracy. Balancing the privacy-accuracy trade-off is a challenging problem especially for data scientists who are not experts in DP. Furthermore, data scientists
+might rule out LDP when designing differentially private neural networks due
+to concerns raised by the comparatively higher privacy parameter  in LDP. In
+this work, we compare the empirical privacy protection under the white-box MI
+attack of Nasr et al. [31] for LDP and CDP mechanisms for learning problems
+from diverse domains: consumer preferences, face recognition and health data.
+The MI attack indicates a lower bound on the inference risk whereas DP formulates an upper bound [24,43,44], but in practice even high privacy parameters
+such as experienced in LDP may already offer protection. This work makes the
+following contributions:
+– Comparing LDP and CDP by the average precision of their MI precisionrecall curve as privacy measure, and showing that under this measure LDP
+and CDP have similar privacy-accuracy trade-offs despite vastly different .
+– Showing that CDP mechanisms are not achieving a consistently better privacyaccuracy trade-off on various datasets and reference models. The trade-off
+rather depends on the specific dataset.
+– Analyzing the relative privacy-accuracy trade-off and showing that it is not
+constant over , but that for each data set there are ranges where the relative
+trade-off is greater for protection against MI than accuracy.
+Section 2 revisits differential privacy and Section 3 formulates our approach for
+comparing LDP and CDP under membership inference. We describe evaluation
+datasets in Section 4. Findings are presented in Section 5 and discussed in Section 6. Related work and conclusions are provided in Section 7 and Section 8.
+
+2
+
+Differential Privacy
+
+DP [8] anonymizes a dataset D = {d1 , . . . , dn } by perturbation and can be either
+enforced centrally to a function f (D), or locally to each entry d ∈ D.
+
+Comparing LDP and CDP using MI
+
+2.1
+
+3
+
+Central DP
+
+In central DP the aggregation function f (·) is evaluated and perturbed by a
+trusted server. Due to perturbation, it is no longer possible for an adversary to
+confidently determine whether f (·) was evaluated on D, or some neighboring
+dataset D0 differing in one element. Assuming that every participant is represented by one element, privacy is provided to participants in D as their impact on
+f (·) is limited. Mechanisms M fulfilling Definition 1 are used for perturbation of
+f (·) [9]. We refer to the application of a mechanism M to a function f (·) as central differential privacy. CDP holds for all possible differences kf (D) − f (D0 )k2
+by adapting to the global sensitivity of f (·) per Definition 2.
+Definition 1 ((, δ)-central differential privacy). A mechanism M gives
+(, δ)-central differential privacy if D, D0 ⊆ DOM differing in at most one element, and all outputs S ⊆ R
+Pr[M(D) ∈ S] ≤ e · Pr[M(D0 ) ∈ S] + δ
+Definition 2 (Global `2 Sensitivity). Let D and D0 be neighboring. The
+global `2 sensitivity of a function f , denoted by ∆f , is defined as
+∆f = maxD,D0 kf (D) − f (D0 )k2 .
+Definition 3 (Gaussian Mechanism [10]).
+Let  ∈ (0, 1) be arbitrary. For c2 > 2ln( 1.25
+δ ), the Gaussian mechanism with
+parameter σ ≥ c ∆f
+gives
+(,
+δ)-CDP,
+adding
+noise scaled to N (0, σ 2 ).
+
+For CDP in deep learning we use differentially private versions5 of two standard gradient optimizers: SGD and Adam [27]. We refer to these CDP optimizers as DP-SGD and DP-Adam. A CDP optimizer represents a differentially private training mechanism Mnn that updates the weight coefficients θt
+of a neural network per training step t ∈ T with θt ← θt−1 − α(g̃), where
+g̃ = Mnn (∂loss/∂θt−1 ) denotes a Gaussian perturbed gradient and α is some
+scaling function on g̃ to compute an update, i.e., learning rate or running moment
+estimations. Differentially private noise is added by the Gaussian mechanism
+of Definition 3 [1]. After T update steps, Mnn outputs a differentially private
+weight matrix θ which is used by the prediction function h(·) of a neural network.
+A CDP gradient optimizer bounds the sensitivity of the computed gradients by
+clipping norm C based on which the gradients get clipped before perturbation.
+Since weight updates are performed iteratively during training a composition of
+Mnn is required until the the training step T is reached and the final private
+weights θ are obtained. For CDP we measure privacy decay under composition
+by tracking σ of the Gaussian mechanism. After training we transform and compose σ under Renyi DP [29], and transform the aggregate again to CDP. We
+choose this accumulation method over other composition schemes [1,25] due to
+the tighter bound for heterogeneous mechanism invocations.
+5
+
+We used Tensorflow Privacy: https://github.com/tensorflow/privacy
+
+4
+
+2.2
+
+D. Bernau et al.
+
+Local DP
+
+We refer to the perturbation of entries d ∈ D as local differential privacy [40].
+LDP is the standard choice when the server which evaluates a function f (D) is
+untrusted. We adapt the definitions of Kasiviswanathan et al. [26] to achieve LDP
+by using local randomizers LR. In the experiments within this work we use a
+local randomizer to perturb each record d ∈ D independently. Since a record may
+contain multiple correlated features (e.g., items in a preference vector) a local
+randomizer must be applied sequentially which results in a linearly increasing
+privacy loss. A series of local randomizer executions per record composes a local
+algorithm according to Definition 5. -local algorithms are -local differentially
+private [26], where  is a summation of all composed local randomizer guarantees.
+We perturb low domain data with randomized response [41], a (composed) local
+randomizer. By Equation (1) randomized response yields  = ln(3) LDP for a
+one-time collection of values from binary domains (e.g., {yes, no}) with two fair
+coins [12]. That is, retention of the original value with probability ρ = 0.5 and
+uniform sampling with probability (1 − ρ) · 0.5.
+
+
+
+
+Pr[yes|yes]
+ρ + (1 − ρ) · 0.5
+= ln
+.
+(1)
+ = ln
+(1 − ρ) · 0.5
+Pr[yes|no]
+Definition 4 (Local differential privacy). A local randomizer (mechanism)
+LR : DOM → S is -local differentially private, if  ≥ 0 and for all possible
+inputs v, v 0 ∈ DOM and all possible outcomes s ∈ S of LR
+Pr[LR(v) = s] ≤ e · Pr[LR(v 0 ) = s]
+
+Definition 5 (Local Algorithm). An algorithm is -local if it accesses the
+database D via LR with the following restriction: for all i ∈ {1, . . . , |D|}, if
+LR1 (i), . . . , LRk (i) are the algorithms invocations of LR on index i, where each
+LRj is an j -local randomizer, then 1 + . . . + k ≤ .
+Definition 6 (Laplace Mechanism [10]). Given a numerical query function
+∆
+f : DOM → Rk , the Laplace mechanism with λ = f is an -differentially
+private mechanism, adding noise scaled to Lap(λ, µ = 0).
+In our evaluation we also look at image data for which we rely on the local
+randomizer by Fan [14] for LDP image pixelization. The randomizer applies
+the Laplace mechanism of Definition 6 with scale λ = 255·m
+b2 · to each pixel, thus
+fulfilling Definition 4. Parameter m represents the neighborhood in which LDP is
+provided. Full neighborhood for an image dataset would require that any picture
+can become any other picture. In general, providing DP or LDP within a large
+neighborhood will require high  values to retain meaningful image structure.
+High privacy will result in random black and white images. Within this work
+we consider the use of LDP and CDP for deep learning along a generic data
+
+Comparing LDP and CDP using MI
+
+5
+
+science process (e.g., CRISP-DM [42]). In such a processes the dataset D of a
+data owner DO is (i) transformed, and (ii) used to learn a model function h(·)
+(e.g., classification), which (iii) afterwards is deployed for evaluation by third
+parties. In the following h(·) will represent a neural network. DP is applicable at
+every stage in the data science process. In the form of LDP by perturbing each
+record d ∈ D, while learning h(·) centrally with a CDP gradient optimizer, or to
+the evaluation of h(·) by federated learning with voting. We leave learning with
+more than two parties, such as used in PATE [33] with CDP or amplification
+by shuffling for LDP [11] as future work. However, independent of the stage of
+application, the privacy-accuracy trade-off is of particular interest. We follow the
+evaluation of regularization techniques that apply noise to the training data to
+foster generalization [17,18,28] and measure utility by the test accuracy of h(·).
+
+3
+
+White-Box MI Attack
+
+Membership inference (MI) attacks aim at identifying the presence or absence
+of individual records in the training data of data owner DO. MI attacks are of
+particular importance for members of the training dataset when the nature of
+the training dataset is revealing sensitive information. For example, a medical
+training dataset containing patients with different types of cancer, or a training
+dataset that is used to predict the week of pregnancy based on the shopping
+cart [21]. A related attack building upon MI is attribute inference [44] where
+individual records are partially known and specific attribute values shall be inferred. In this work we solely consider MI since protection against MI offers
+protection against attribute inference. In specific, we consider white-box MI by
+Nasr et al. [31] which is stronger than previously suggested black-box MI attacks
+(e.g., Shokri et al. [38]). The MI attack assumes an honest-but-curious adversary A with access to a trained prediction function h(·), knowledge about the
+hyperparameters and DP mechanisms that were used for training. We refer to
+the trained prediction function as target model and the training data of DO as
+train
+. Given this accessible information A wants to learn a binary classifier,
+Dtarget
+the attack model, that allows to classify data into members and non-members
+w.r.t. the target model training dataset with high accuracy. The accuracy of an
+MI attack model is evaluated on a balanced dataset including all members (target
+model training data) and an equal number of non-members (target model test
+data), which simulates the worst case where A tests membership for all training
+records. White-box MI exploits that an ML classifier such as a neural network
+train
+(NN) tends to classify a record d = (x, y) from its training dataset Dtarget
+with
+different confidence p(x) given h(x) for features x and true label y than a record
+train
+d 6∈ Dtarget
+. White-box MI makes two assumptions about A. First, A is able to
+observe internal features of the ML model in addition to external features (i.e.,
+model outputs). The internal features comprise observed losses L(h(x; W )), graδL
+and the learned weights W of h(·). Second, A is aware of a portion of
+dients δW
+train
+test
+Dtarget and Dtarget
+. These portions were set to 50% by Nasr et al. [31] and will
+be the same within this work to allow comparison. Second, A extracts internal
+
+6
+
+D. Bernau et al.
+
+and external features of a balanced set of confirmed members and non-members.
+An illustration of the white-box MI attack is given in Figure 1. Again, A is astrain
+test
+sumed to know a portion of Dtarget
+and Dtarget
+and generates attack features by
+passing these records through the trained target model. A trains a binary classification attack model per target variable y ∈ Y to map p(x) to the indicator
+δL
+, p(x), y, in/out) serves as attack model
+“in” or “out”. The set (L(h(x; W )), δW
+train
+training data, i.e., Dattack . Thus, the MI attack model exploits the imbalance
+train
+train
+between predictions on d ∈ Dtarget
+and d 6∈ Dtarget
+. Attack model accuracy is
+computed on features extracted from the target model likewise.
+
+Dtarget
+train
+Dtarget
+
+test
+Dtarget
+
+tra
+ini
+n
+
+ere
+
+inf
+
+g
+
+target
+model
+
+Dattack
+
+nce
+in
+Dtarget
+
+out
+Dtarget
+
+train
+Dattack
+
+attack
+model
+
+test
+Dattack
+
+δL
+Fig. 1: White-box MI with attack features (y ∗ , p(x), L(h(x; W ), y), δW
+). LDP
+train
+perturbation on Dtarget (dotted) and CDP on target model training (dashed).
+Target model training is colored: training (violet) and validation (green).
+
+3.1
+
+Evaluating CDP and LDP under MI
+
+DP has been shown to formulate a theoretical upper bound on the accuracy of
+MI adversaries [44], and thus the use of DP should impact the classification accuracy of A. To illustrate the effect of the privacy parameter  on the MI attack
+we focus on two questions related to the identifiability of training data within
+this work: “How many records predicted as in are truly contained in the training
+dataset?” (precision), and “How many truly contained records are predicted as
+in?” (recall). For analysis we use precision-recall curves which depict the precision and recall for various classification thresholds, and thus reflect the possible
+MI attack accuracies of A. We compare the precision-recall curves by their average precision (AP) to assess the overall effect of DP on MI. The AP approximates
+the integral under the precision-recall curve as a a weighted mean of the precision P per threshold
+t and the increase in recall R from the previous threshold,
+P
+i.e.: AP = t (Rt − Rt−1 ) · Pt . We prefer this non-interpolated technique over
+interpolated calculations of the area under curve, since the precision-recall curve
+is not guaranteed to decline monotonically and thus the linear trapezoidal interpolation might yield an overoptimistic representation [7,13]. Good MI attack
+models will realize an AP of close to 1 while poor MI attack models will be close
+to the baseline of uniform random guessing, hence AP = 0.5. The data owner
+DO has two options to apply DP against MI within the data science process
+introduced in Section 2. Either in the form of LDP by applying a local randomtrain
+izer to the training data and using the resulting LR(Dtarget
+) for training, or
+
+Comparing LDP and CDP using MI
+
+7
+
+train
+CDP with a differentially private optimizer on Dtarget
+. A discussion and comparison of LDP and CDP purely based on the privacy parameter  likely falls
+short and potentially leads data scientists to incorrect conclusions, since the privacy parameters are reflecting different types of mechanisms. Furthermore, data
+scientists give up flexibility w.r.t. applicable learning algorithms, if ruling out
+the use of LDP due to comparatively greater  and instead solely investigating
+CDP (e.g., DP-SGD). We suggest to compare LDP and CDP by their concrete
+effect on the AP and the resulting privacy-accuracy trade-off. While we consider
+a specific MI attack our methodology is applicable to other MI attacks as well.
+Models that use CDP are represented by dashed lines in Figure 1. In the LDP
+setup, the target model is trained with perturbed records from a local randomtrain
+izer, i.e., LR(Dtarget
+). However, in order to increase his attack accuracy A needs
+to learn attack models with high accuracy on the original data from which the
+train
+. Perturbation with LDP is represented by
+perturbed records stem, i.e., Dtarget
+dotted lines in Figure 1.
+
+3.2
+
+Relative Privacy-Accuracy Trade-off
+
+We calculate the relative privacy-accuracy trade-off for LDP and CDP as the
+relative difference between A’s change in AP to DO’s change in test accuracy.
+Let APorig , AP be the MI APs and ACCorig , ACC be the test accuracies for
+the original and DP target model. Furthermore, let ACCbase be the baseline
+test accuracy of uniform random guessing 1/C, where C denotes the number of
+classes in the dataset, and APbase be the baseline AP at 0.5. We fix ACCbase ,
+APbase , since A or DO would perform worse than uniform random guessing at
+lower values. Rearranging and bounding the cases where AP and ACC increases
+over  yields:
+(APorig − AP )/(APorig − APbase )
+(ACCorig − ACC )/(ACCorig − ACCbase )
+max(0, APorig − AP ) · (ACCorig − ACCbase )
+ϕ=
+max(0, ACCorig − ACC ) · (APorig − APbase )
+
+
+max(0, (APorig − AP ) · (ACCorig − ACCbase ))
+ϕ = min 2,
+max(0, (ACCorig − ACC ) · (APorig − APbase ))
+ϕ=
+
+To avoid ϕ from approaching infinitely large values when the accuracy remains stable while AP decreases significantly, and the undefined case of ACCorig ≤
+ACC , we bound ϕ at 2. In consequence, when the relative gain in privacy
+(lower AP) exceeds the relative loss in accuracy, it applies that 1 < ϕ ≤ 2, and
+0 ≤ ϕ < 1 when the loss in test accuracy exceeds the gain in privacy. Hence,
+ϕ quantifies the relative loss in accuracy and the relative gains in privacy for a
+given privacy parameter  and captures the relative privacy-accuracy trade-off
+as a ratio which we seek to maximize.
+
+8
+
+4
+
+D. Bernau et al.
+
+Datasets and Learning Tasks
+
+We consider four datasets for experiments. The datasets have been used in related work on MI and face recognition. The reference datasets are mostly unbalanced w.r.t. the amount of training data per training label, a characteristic
+that we found to benefit MI attacks. Each dataset is also summarized in Table 1
+and the distributions for the two unbalanced datasets Texas Hospital Stays and
+Purchases Shopping Carts are provided in the appendix.
+
+Texas Hospital Stays. The Texas Hospital Stays dataset [38] is an unbalanced
+dataset and consists of high dimensional binary vectors representing patient
+health features. Each record within the dataset is labeled with a procedure. The
+learning task is to train a fully connected neural network for classification of
+patient features to a procedure and we do not try to re-identify a known individual, and fully comply with the data use agreement for the original public
+use data file. We train and evaluate models for a set of most common procedures C ∈ {100, 150, 200, 300}. Depending on the number of procedures the
+dataset comprises 67, 330 – 89, 815 records and 6, 170 – 6, 382 features. To allow
+comparison with related work [31,38], we train and test the target model on
+n = 10, 000 records respectively.
+
+Purchases Shopping Carts. This dataset is also unbalanced and consists of binary
+vectors with 600 features that represent customer shopping carts [38]. However,
+a significant difference to the Texas Hospital Stays dataset is that the number
+of features is almost 90% lower. Each vector is labeled with a customer group.
+The learning task is to classify shopping carts to customer groups by using a
+fully connected neural network. The dataset is provided in four variations with
+varying numbers of labels C ∈ {10, 20, 50, 100} and comprises 38, 551 – 197, 324
+records. We sample n = 8, 000 records each for training and testing the target
+model. Again, this methodology ensures comparability with related work [31,38].
+
+Labeled Faces in the Wild. The Labeled Faces in the Wild (LFW) dataset contains labeled images each depicting a specific person with a resolution of 250×250
+pixels (i.e., features) [22]. The dataset has a long distribution tail w.r.t. to the
+number of images per label. We thus focus on learning the topmost classes
+C ∈ {20, 50, 100} with 1906, 2773 and 3651 overall records respectively. We start
+our comparison of LDP and CDP from a pre-trained VGG-Very-Deep-16 CNN
+faces model [34] by keeping the convolutional core, exchanging the dense layer at
+the end of the model and training for LFW grayscale faces. For LDP,
+√ we apply
+differentially private image pixelization within neighborhood m = 250 × 250
+and avoid coarsening by setting b = 1. We transform all images to grayscale
+before LDP and CDP training.
+
+Comparing LDP and CDP using MI
+
+9
+
+Skewed Purchases. We specifically crafted this balanced dataset6 to mimic a
+transfer learning task, i.e., the application of a trained model to novel data
+which is similar to the training data w.r.t. format but following a different distribution. This situation arises for Purchases Shopping Carts, if for example not
+enough high-quality shopping cart data for a specific retailer are available yet.
+Thus, only few high-quality data (e.g., manually crafted examples) can be used
+for testing and large amounts of low quality data from potentially different distributions for training (e.g., from other retailers). In effect the distribution between
+train and test data varies for this dataset. Similar to Purchases Shopping Carts
+the dataset consists of 200, 000 records with 600 features and is analyzed for
+C ∈ {10, 20, 50, 100} labels. However, each vector x in the training dataset X is
+generated by using two independent random coins to sample a value from {0, 1}
+per position i = 1, . . . , 600. The first coin steers the probability Pr[xi = 1] for a
+fraction of 600 positions per record x. We refer to these positions as indicator
+bits (ind ) which indicate products frequently purchased together. The second
+coin steers the probability Pr[xi = 1] for a fraction of 600 − ( 600
+|C| ) positions per
+record. We refer to these positions as noise bits (noise) that introduce scatter in
+addition to ind. We let Prind [xi = 1] = 0.8 ∧ Prnoise [xi = 1] = 0.2, ∀x ∈ Xtrain
+and Prind [xi = 1] = 0.8 ∧ P rnoise [xi = 1] = 0.5, ∧x ∈ Xtest , 1 ≤ i ≤ 600. The
+difference in information entropy between test and train data is ≈ 0.3.
+
+5
+
+Experiments
+
+We perform an experiment which compares the privacy-accuracy trade-off for
+LDP and CDP by MI AP instead of privacy parameter  per dataset. The results of each experiment are visualized by three sets of figures. First, we compare
+the relative privacy-accuracy trade-off ϕ resulting from test accuracy and MI AP
+over . We present this information for CDP per dataset in Figures 2 to 5 a,b,c
+and for LDP in Figures 2 to 5 d,e,f. The obtained information serves as basis
+to identify privacy parameters at which the MI AP is converging towards the
+baseline. Second, we state the precision-recall curves from which MI AP was
+calculated to illustrate the slope with which precision and recall are diverging
+from the baseline for LDP and CDP in Figures 2 to 5 g,h. Third, we compare
+the absolute privacy-accuracy trade-offs per dataset for both LDP and CDP in a
+scatterplot. We present this information in Figures 2 to 5i. For each dataset the
+model training stops once the test data loss is stagnating (i.e., early stopping)
+or a maximum number of epochs is reached. This design avoids excessive overfitting and increases real-world relevance. For all executions of the experiment
+CDP noise is sampled from a Gaussian distribution (cf. Definition 3) with scale
+σ = noise multiplier z × clipping norm C. We evaluate increasing noise regimes
+per dataset by evaluating noise multipliers z ∈ {0.5, 2, 4, 6, 16} and calculate the
+resulting  at a fixed δ = n1 . However, since batch size, dataset size and number
+6
+
+We
+provide
+this
+dataset
+along
+with
+all
+evaluation
+code
+on
+GitHub:
+https://github.com/SAP-samples/
+security-research-membership-inference-and-differential-privacy
+
+10
+
+D. Bernau et al.
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.1000
+
+100
+
+10
+
+1
+
+= 100
+= 150
+
+0.2
+
+Average Precision
+
+Accuracy
+
+of epochs are also influencing the Renyi differential privacy accounting a fixed z
+will inevitably result in different composed  for different datasets. For LDP we
+use the same hyperparameters as in the original training and evaluate two local
+randomizers, namely randomized response and LDP image pixelization with the
+Laplace mechanism. For each randomizer we state the individual i per invocation (i.e., per anonymized value). We apply randomized response to all datasets
+except LFW with a range of privacy parameter values i ∈ {0.1, 0.5, 1, 2, 3} that
+reflect retention probabilities ρ from 5% – 90% (cf. Equation (1)). For LFW
+each pixel is perturbed with Laplace noise, and also investigate a wide range of
+resulting noise regimes by varying i .
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.1000
+
+= 200
+= 300
+
+2
+
+1
+
+0.5
+
+Accuracy
+
+0.2
+
+0.1
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.
+
+3
+
+2
+
+1
+
+= 200
+= 300
+
+(d) Accuracy (LDP)
+
+2.0
+1.5
+1.0
+0.5
+0.0
+
+0.1
+
+(e) MI AP (LDP)
+
+0.2
+
+= orig. (AP = 0.77)
+= 259.8 (AP = 0.62)
+= 7.4 (AP = 0.54)
+
+0.8
+
+1.0
+
+= 2.1 (AP = 0.51)
+= 1.1 (AP = 0.5)
+= 0.3 (AP = 0.5)
+
+Test Accuracy
+
+0.8
+
+MI Precision
+
+1.0
+
+0.6
+0.4
+0.2
+0.0
+0.0
+
+0.2
+
+0.4 0.6
+MI Recall
+
+i = orig. (AP = 0.77)
+i = 3.0 (AP = 0.52)
+i = 2.0 (AP = 0.52)
+
+0.8
+
+1.0
+
+i = 1.0 (AP = 0.51)
+i = 0.5 (AP = 0.5)
+i = 0.1 (AP = 0.5)
+
+1
+
+0.5
+
+0.1
+
+= 200
+= 300
+
+(f) Rel. trade-off ϕ (LDP)
+
+0.8
+
+0.4 0.6
+MI Recall
+
+2
+
+= 200
+= 300
+
+0.8
+
+0.2
+
+3
+
+i
+
+1.0
+
+0.4
+
+= 200
+= 300
+
+= 100
+= 150
+
+1.0
+0.6
+
+0.2
+
+(c) Rel. trade-off ϕ (CDP)
+
+0.5
+
+= 100
+= 150
+
+1
+
+= 100
+= 150
+
+i
+
+= 100
+= 150
+
+0.0
+0.0
+
+10
+
+= 200
+= 300
+
+i
+
+MI Precision
+
+1
+
+(b) MI AP (CDP)
+Average Precision
+
+3
+
+10
+
+= 100
+= 150
+
+(a) Accuracy (CDP)
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.
+
+100
+
+2.0
+1.5
+1.0
+0.5
+0.0
+222 100
+
+0.6
+0.4
+0.2
+0.0
+0.0
+
+0.2 0.4 0.6 0.8
+MI Average Precision
+
+CDP
+= 259.8
+= 7.4
+
+= 2.1
+= 1.1
+= 0.3
+
+LDP
+i = 3.0
+i = 2.0
+
+1.0
+i = 1.0
+i = 0.5
+i = 0.1
+
+(g) PR curve C = 300 (CDP) (h) PR curve C = 300 (LDP) (i) Abs. trade-off C = 300
+
+Fig. 2: Texas Hospital Stays accuracy and privacy (error bars lie within points)
+
+For sake of completeness we provide the resulting overall privacy parameters
+, z, hyperparameters and train accuracies for all datasets for LDP and CDP
+in Table 1 and 2 in the appendix. The experiment is repeated five times per
+
+Comparing LDP and CDP using MI
+
+11
+
+dataset to stabilize measurements and we report mean values with error bars
+unless otherwise stated. Precision-recall curves depict all experiment data.
+Texas Hospital Stays. For Texas Hospital Stays we observe that LDP and CDP
+are achieving very similar privacy-accuracy trade-offs under MI. The main difference in LDP and CDP is observable in a smoother decrease of target model
+accuracy for CDP in contrast to LDP, which are depicted in Figures 2a and 2d.
+The smoother decay also manifests in a slower drop of MI AP for CDP in comparison to LDP as stated in Figures 2b and 2e. Texas Hospital Stays represents
+an unbalanced high dimensional dataset and both factors foster MI. However,
+the increase in dataset imbalance by increasing C is negligible w.r.t. MI AP. The
+relative privacy-accuracy trade-off for LDP and CDP is also close and for example the baseline MI AP of 0.5 is reached at ϕ ≈ 1.5, as depicted in Figures 2c
+and 2f. In the example case of C = 300 DO might prefer to use CDP, since
+the space of achievable MI APs in LDP is narrow while CDP also yields APs
+in between original and baseline as illustrated in the precision-recall curves in
+Figures 2g and 2h, and the scatterplot in Figure 2i. This observation is similar,
+though weaker, for all other C.
+Purchases Shopping Carts. CDP and LDP are achieving similar target model
+test accuracies on the Purchases dataset as depicted in Figures 3a and 3d. However, LDP is allowing a slightly smoother decrease in test accuracy over . Figure 3b illustrates that the CDP MI AP is somewhat resistant to noise and
+remains above 0.5 until a small  ≈ 1. The LDP MI APs are significantly higher
+and decrease slower to the baseline as depicted by Figure 3e. A comparison of the
+relative privacy-accuracy trade-offs ϕ in Figures 3c and 3f underlines that CDP
+and LDP achieve similar trade-offs and LDP allows for smoother drops in the
+MI AP in contrast to CDP. Thus, LDP is the preferred choice for this dataset, if
+DO desires to lower the MI AP to a level between original and baseline. This is
+illustrated for example for C = 50 in the precision-recall curves in Figures 3g, 3h
+and the scatterplots in Figure 3i. It is noticeable that while the overall  for
+LDP and CDP differs by a magnitude of up to 10 times the relative and absolute privacy-accuracy trade-offs are close to each other. The observations also
+hold for other C.
+LFW. For LFW the target model reference architecture converges for both CDP
+and LDP towards the same test accuracy, which is reflecting the majority class.
+However, the target model test accuracy decay over  is much smoother for
+CDP when comparing Figures 4a and 4d. Furthermore, the structural changes
+caused by LDP image pixelization seem to lead to quicker losses in test accuracy. W.r.t. the relative privacy-accuracy trade-off ϕ in Figures 4c and 4f CDP
+outperforms LDP. At MI AP = 0.5 CDP achieves ϕ ≈ 1.5 for all C while LDP
+yields ϕ ≈ 1.1 for all C. The ϕ = 0 observed at i = 10000 for C = 100 is due to
+an actual increase in AP that is comparatively larger than the decrease in test
+accuracy. The exemplary precision-recall curves for C = 50 in Figures 4g and
+4h furthermore illustrate that CDP can already have a large effect on MI AP at
+
+D. Bernau et al.
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 100
+
+10
+
+1
+
+= 10
+= 20
+
+0.3
+
+Average Precision
+
+Accuracy
+
+12
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 100
+
+= 50
+= 100
+
+2
+
+1
+
+0.5
+
+0.1
+
+Accuracy
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.
+
+3
+
+= 50
+= 100
+
+2
+
+i
+
+1
+
+= 50
+= 100
+
+= 10
+= 20
+
+(d) Accuracy (LDP)
+
+0.5
+
+2.0
+1.5
+1.0
+0.5
+0.0
+
+0.1
+
+3
+
+(e) MI AP (LDP)
+
+0.4 0.6
+MI Recall
+
+= orig. (AP = 0.67)
+= 88.1 (AP = 0.58)
+= 4.1 (AP = 0.56)
+
+0.8
+
+1.0
+
+= 1.8 (AP = 0.54)
+= 1.2 (AP = 0.53)
+= 0.4 (AP = 0.5)
+
+Test Accuracy
+
+0.8
+
+MI Precision
+
+1.0
+
+0.2
+
+0.6
+0.4
+0.2
+0.0
+0.0
+
+0.2
+
+0.4 0.6
+MI Recall
+
+i = orig. (AP = 0.67)
+i = 3.0 (AP = 0.61)
+i = 2.0 (AP = 0.58)
+
+0.3
+
+1
+
+0.5
+
+0.1
+
+0.8
+
+= 50
+= 100
+
+(f) Rel. trade-off ϕ (LDP)
+
+0.8
+
+0.0
+0.0
+
+= 50
+= 100
+
+= 10
+= 20
+
+0.8
+
+0.2
+
+= 10
+= 20
+
+2
+
+= 50
+= 100
+
+1.0
+
+0.4
+
+1
+
+i
+
+1.0
+0.6
+
+10
+
+(c) ϕ (CDP)
+
+i
+
+= 10
+= 20
+
+MI Precision
+
+0.3
+
+(b) MI AP (CDP)
+Average Precision
+
+3
+
+1
+
+= 10
+= 20
+
+(a) Accuracy (CDP)
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.
+
+10
+
+2.0
+1.5
+1.0
+0.5
+0.0
+88
+
+1.0
+
+i = 1.0 (AP = 0.54)
+i = 0.5 (AP = 0.53)
+i = 0.1 (AP = 0.51)
+
+(g) PR curve C = 50 (CDP) (h) PR curve C = 50 (LDP)
+
+0.6
+0.4
+0.2
+0.0
+0.0
+
+0.2 0.4 0.6 0.8
+MI Average Precision
+
+CDP
+= 88.1
+= 4.1
+
+= 1.8
+= 1.2
+= 0.4
+
+LDP
+i = 3.0
+i = 2.0
+
+1.0
+i = 1.0
+i = 0.5
+i = 0.1
+
+(i) Abs. trade-off C = 50
+
+Fig. 3: Purchases accuracy and privacy (error bars lie within points)
+
+high . In addition, we observe from Figure 4i that CDP realizes a strictly better
+absolute privacy-accuracy trade-off under MI for C = 50.
+Skewed Purchases. The effects of dimensionality and imbalance of a dataset on
+MI have been addressed by related work [31,38]. However, the effect of a domain
+gap between training and test data which is found in transfer learning when
+insufficient high-quality data for training is initially available and reference data
+that potentially follows a different distribution has not been addressed. For this
+task we consider the Skewed Purchases dataset. Figures 5a and 5d show that the
+LDP test accuracy is in fact only decreasing at very small i whereas CDP again
+gradually decreases over . This leads to a consistently higher test accuracy in
+comparison to CDP. W.r.t. the relative privacy-accuracy trade-off LDP outperforms CDP as depicted by ϕ in Figures 5c and 5f. However, we observe several
+outliers. Most notably for CDP, the MI AP decreases for C = 100 and large
+ values, but increases for small  as shown in Figure 5b. This is a consequence
+of the target model resorting to random guessing for test records. Similarly, for
+
+Comparing LDP and CDP using MI
+
+13
+
+LDP the MI AP for C ∈ {10, 100} first decreases before recovering again as
+depicted in Figure 5e. We reason about the cause of these outliers by analyzing
+the target model decisive confidence values. LDP generalizes the training data
+towards the test data, however, at i = 1.0 LDP leads to nearly indistinguishable
+test and train distributions. Thus, the decisive softmax confidence of the target
+model increases in comparison to smaller and larger i . For C = 10 the absolute
+privacy-accuracy trade-off is also favorable for LDP as depicted in Figure 5i.
+
+6
+
+Discussion
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 100
+
+10
+
+1
+
+= 20
+= 50
+
+0.3
+
+Average Precision
+
+Accuracy
+
+Privacy parameter  alone is unsuited to compare and select and compare DP
+mechanisms. We consistently observed that while the theoretic upper bound
+on inference risk reflected by  in LDP is higher by a factor of hundreds or
+even thousands in comparison to CDP, the practical protection against a whitebox MI attack is actually not considerably weaker at similar model accuracy.
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 100
+
+= 100
+
+1
+
+= 100
+
+Accuracy
+
+MI Precision
+
+MI Precision
+
+0.6
+0.4
+0.2
+0.8
+
+1.0
+
+= 1.7 (AP = 0.5)
+= 0.8 (AP = 0.5)
+= 0.4 (AP = 0.5)
+
+(g) PR curve C = 50 (CDP)
+
+= 100
+
+(e) MI AP (LDP)
+
+0.8
+
+= orig. (AP = 0.89)
+= 70.4 (AP = 0.59)
+= 3.9 (AP = 0.52)
+
+1
+
+2.0
+1.5
+1.0
+0.5
+0.0
+10000
+
+1.0
+
+0.8
+
+0.8
+
+0.6
+0.4
+0.2
+0.2
+
+0.4 0.6
+MI Recall
+
+i = orig. (AP = 0.89)
+i = 10000.0 (AP = 0.87)
+i = 1000.0 (AP = 0.57)
+
+0.3
+
+= 100
+
+1000
+
+100
+
+10
+
+1
+
+0.8
+
+1.0
+
+i = 100.0 (AP = 0.51)
+i = 10.0 (AP = 0.53)
+i = 1.0 (AP = 0.52)
+
+(h) PR curve C = 50 (LDP)
+
+= 100
+
+(f) Rel. trade-off ϕ (LDP)
+
+1.0
+
+0.0
+0.0
+
+= 20
+= 50
+
+= 20
+= 50
+
+Test Accuracy
+
+(d) Accuracy (LDP)
+
+1
+
+i
+
+= 20
+= 50
+
+1.0
+
+0.4 0.6
+MI Recall
+
+10
+
+10
+
+(c) Rel. trade-off ϕ (CDP)
+
+i
+
+= 20
+= 50
+
+0.2
+
+= 100
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 10000 1000 100
+
+i
+
+0.0
+0.0
+
+0.3
+
+(b) MI AP (CDP)
+Average Precision
+
+10
+
+1
+
+= 20
+= 50
+
+(a) Accuracy (CDP)
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 10000 1000 100
+
+10
+
+2.0
+1.5
+1.0
+0.5
+0.0
+62
+
+0.6
+0.4
+0.2
+0.0
+0.0
+CDP
+= 70.4
+= 3.9
+
+0.2 0.4 0.6 0.8
+MI Average Precision
+= 1.7
+= 0.8
+= 0.4
+
+LDP
+i = 10000.0
+i = 1000.0
+
+1.0
+i = 100.0
+i = 10.0
+i = 1.0
+
+(i) Abs. trade-off C = 50
+
+Fig. 4: LFW accuracy and privacy (error bars lie within points)
+
+D. Bernau et al.
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 100
+
+10
+
+1
+
+= 10
+= 20
+
+0.3
+
+Average Precision
+
+Accuracy
+
+14
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig. 100
+
+= 50
+= 100
+
+2
+
+1
+
+0.5
+
+0.1
+
+Accuracy
+
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.
+
+3
+
+1
+
+= 50
+= 100
+
+= 10
+= 20
+
+0.5
+
+0.1
+
+2.0
+1.5
+1.0
+0.5
+0.0
+
+3
+
+0.8
+
+0.8
+
+0.4 0.6
+MI Recall
+
+= orig. (AP = 1.0)
+= 28.9 (AP = 1.0)
+= 1.6 (AP = 1.0)
+
+0.8
+
+1.0
+
+= 0.7 (AP = 0.99)
+= 0.9 (AP = 0.99)
+= 0.4 (AP = 0.97)
+
+0.6
+0.4
+0.2
+0.0
+0.0
+
+0.2
+
+0.4 0.6
+MI Recall
+
+i = orig. (AP = 1.0)
+i = 3.0 (AP = 1.0)
+i = 2.0 (AP = 1.0)
+
+0.5
+
+0.1
+
+0.8
+
+= 50
+= 100
+
+(f) Rel. trade-off ϕ (LDP)
+Test Accuracy
+
+MI Precision
+
+1.0
+
+0.8
+
+0.2
+
+1
+= 10
+= 20
+
+(e) MI AP (LDP)
+
+0.0
+0.0
+
+2
+
+= 50
+= 100
+
+1.0
+
+0.2
+
+= 50
+= 100
+
+i
+
+(d) Accuracy (LDP)
+
+0.4
+
+0.3
+
+(c) Rel. trade-off ϕ (CDP)
+
+1.0
+0.6
+
+1
+= 10
+= 20
+
+i
+
+= 10
+= 20
+
+10
+
+= 50
+= 100
+
+2
+
+i
+
+MI Precision
+
+0.3
+
+(b) MI AP (CDP)
+Average Precision
+
+3
+
+1
+
+= 10
+= 20
+
+(a) Accuracy (CDP)
+1.00
+0.75
+0.50
+0.25
+0.00
+Orig.
+
+10
+
+2.0
+1.5
+1.0
+0.5
+0.0
+28
+
+1.0
+
+i = 1.0 (AP = 0.9)
+i = 0.5 (AP = 0.86)
+i = 0.1 (AP = 1.0)
+
+(g) PR curve C = 10 (CDP) (h) PR curve C = 10 (LDP)
+
+0.6
+0.4
+0.2
+0.0
+0.0
+
+0.2 0.4 0.6 0.8
+MI Average Precision
+
+CDP
+= 28.9
+= 1.6
+
+= 0.7
+= 0.9
+= 0.4
+
+LDP
+i = 3.0
+i = 2.0
+
+1.0
+i = 1.0
+i = 0.5
+i = 0.1
+
+(i) Abs. trade-off C = 10
+
+Fig. 5: Skewed Purchases accuracy and privacy (error bars lie within points)
+
+For Texas Hospital Stays LDP mitigates white-box MI at an overall  = 6382
+whereas CDP lies between  = 0.9 for C = 100 and  = 0.3 for C = 300. This
+observation at the baseline AP also holds for Purchases Shopping Carts where
+LDP  = 60 and CDP is between  = 0.4 for C = 10 and  = 0.3 for C = 100,
+and LFW (LDP  = 62.5 × 102 , CDP  = 2.1 to  = 1.5). Thus, we note that
+assessing privacy solely based on  falls short. Given the results of the previous
+sections we rather encourage data scientists to also quantify privacy under an
+empirical attack such as white-box MI in addition to .
+LDP and CDP result in similar privacy-accuracy curves. A wide range of privacy regimes in CDP and LDP can be compared with our methodology under
+MI. We observed for most datasets that similar privacy-accuracy combinations
+are obtained for well generalizing models (i.e., use of early stopping against
+excessive overfitting) that were trained with LDP or CDP. We also ran the
+experiments with black-box MI (i.e., only model outputs) and observed that
+the additional assumptions made by white-box MI (e.g., access to internal gra-
+
+Comparing LDP and CDP using MI
+
+15
+
+dient and loss information) only yield a small increase in AP (3 – 5%). The
+privacy-accuracy scatterplots depict that LDP and CDP formulate very similar privacy-accuracy trade-offs for Purchases Shopping Carts, LFW and Texas
+Hospital Stays. At two occasions on the smaller classification tasks Purchases
+Shopping Carts C = {10, 20} and Skewed Purchases C = {10, 20} LDP realizes
+a strictly better privacy-accuracy trade-off w.r.t. the practical inference risk.
+These observations lead us to conclude that LDP is an alternative to CDP for
+differentially private deep learning on binary and image data, since the privacyaccuracy trade-off is often similar at the same model accuracy despite the significantly larger . Thus, data scientists should consider to use LDP especially
+when required to use optimizers without CDP implementations or when training ensembles (i.e., multiple models over one dataset), since the privacy loss will
+accumulate over all ensemble target models when assuming that training data
+is reused between ensemble models. Here, we see one architectural benefit of
+LDP: flexibility. LDP training data can be used for all ensemble models without
+increasing the privacy loss in contrast to CDP.
+The relative privacy-accuracy trade-off is favorable within a small interval. We
+observed that the privacy-accuracy trade-off as visualized in the scatterplots
+throughout this work allows to identify whether CDP or LDP achieve better
+test accuracy at similar APs. However, the scatterplots do not reflect whether
+target model test accuracy is decreasing slower, similar or stronger than MI
+AP decreases over the privacy parameter . For this purpose we introduced ϕ.
+We found that ϕ allows to identify  intervals in which the AP loss is stronger
+than the test accuracy loss for all datasets. On the high dimensional datasets
+Texas Hospital Stays and LFW CDP consistently achieves higher ϕ than LDP.
+In contrast, ϕ values are similar for LDP and CDP on Purchases, and superior
+for LDP on Skewed Purchases.
+
+7
+
+Related Work
+
+Our work is related to DP in neural networks, attacks against the confidentiality
+of training data and performance benchmarking of neural networks.
+CDP is a common approach to realize differentially private neural networks
+by adding noise to the gradients during model training. Fundamental approaches
+for perturbation with the differentially private gradient descent (DP-SGD) during model training were provided by Song et al. [39], Bassily et al. [4] and Shokri
+et al. [37]. Abadi et al. [1] formulated the DP-SGD that was used in this work.
+Mironov [29] introduces Renyi DP for measuring the DP-SGD privacy loss over
+composition. Iyengar et al. [23] suggest a hyperparameter free algorithm for differentially private convex optimization for standard optimizers.
+Fredrikson et al. [15,16] formulate model inversion attacks that use target model softmax confidence values to reconstruct training data per class. In
+contrast, MI attacks address the threat of identifying individual records in a
+dataset [3,36]. Yeom et al. [44] have demonstrated that the upper bound on
+
+16
+
+D. Bernau et al.
+
+MI risk for CDP can be converted into an expected bound for MI Advantage.
+We state MI precision and recall, arguing that in is the sensitive information.
+Jaymaran and Evans [24] showed that the theoretic MI upper bound and the
+achievable MI lower bound are far apart in CDP. We observe, that LDP can be
+an alternative to CDP as the upper and lower bounds are even farther apart from
+each other. Shokri et al. [32] formulate an optimal mitigation against their MI
+attack [38] by using adversarial regularization. By applying the MI attack gain as
+a regularization term to the objective function of the target model, a non-leaking
+behavior is enforced w.r.t. MI. While their approach protects against their MI
+adversary, DP mitigates any adversary with arbitrary background information.
+Carlini et al. [6] suggest exposure as a metric to measure the extent to which
+neural networks memorize sensitive information. Similar to our work, they apply
+DP for mitigation. We focus on attacks against machine learning models targeting identification of members of the training dataset. Abowd and Schmutte [2]
+describe an economic social choice framework to choose privacy parameter . We
+compare LDP and CDP mechanisms aside from . Rahman et al. [35] applied a
+black-box MI attack against DP-SGD models on CIFAR-10 and MNIST. They
+evaluate the severity of MI attack by the F1-score which results in numerically
+higher scores, but assumes out labels to be sensitive.
+MLPERF [30] and DPBench [19] are frameworks for machine learning performance measurements and evaluation of DP. We focus on comparing the privacyutility trade-off and apply the core principles of both benchmarks.
+
+8
+
+Conclusion
+
+We compared LDP and CDP mechanisms for differentially private deep learning
+under a white-box MI attack. The comparison comprises the average precision
+of the MI precision-recall curve and the target model test accuracy to support
+data scientists in choosing among available DP mechanisms and selecting privacy
+parameter . Our experiments on diverse learning tasks show that neither LDP
+nor CDP yields a consistently better privacy-accuracy trade-off. While MI only
+yields a lower bound on MI whereas  in DP yields an upper bound, we observed
+that the lower bounds for LDP and CDP are close at similar model accuracy
+despite large difference in their upper bound. This suggests that the upper bound
+is far from the practical susceptibility to MI attacks and that data scientists
+should also consider to apply LDP despite the large privacy parameter values.
+Especially, since LDP does not require privacy accounting when training multiple
+models and offers flexibility w.r.t. optimizers. We consider the relative privacyaccuracy trade-off for LDP and CDP as the ratio of losses in accuracy and
+privacy over , and show that it is only favorable within a small interval.
+Acknowledgements. This work has received funding from the European Union’s
+Horizon 2020 research and innovation program under grant agreement No. 825333
+(MOSAICROWN).
+
+Comparing LDP and CDP using MI
+
+17
+
+Appendix
+Neural network models and composed  for LDP are provided in Table 1. We
+state hyperparameters, composed  for CDP, and training accuracies in Table 2.
+Texas Hospitals Stays and Purchases Shopping Carts provided by Shokri et
+al. are unbalanced in terms of records per class, as shown in Figures 6 and 7.
+
+Table 1: Overview of datasets considered in evaluation.
+Dataset
+
+Model
+LDP
+Fully connected NN
+19, 125 – 638
+with three layers
+(6382 × i )
+(512 × 128 × C) [38].
+Fully connected NN
+Purchases Shopping
+1800 – 60
+with two layers (128 × C) [38]
+Carts [38]
+(600 × i )
+(i.e., logistic regression).
+Labeled Faces
+VGG-Very-Deep-16
+62.5 × 106 – 6, 250
+in the Wild [22]
+CNN [34]
+(250 × 250 × i )
+Fully connected NN
+Skewed
+1, 800 – 60
+with two layers (128 × C) [38]
+Purchases
+(600 × epsi )
+(i.e., logistic regression).
+Texas Hospital
+Stays [38]
+
+Table 2: Target Model training accuracy (from orig. to smallest ), CDP  values
+(from z = 0.5 to z = 16) and hyperparameters
+Texas Hospital Stays Purchases Shopping Carts
+LFW
+Skewed Purchases
+100 150 200 300 10
+20
+50
+100
+20
+50
+100
+10
+20
+50 100
+0.86 0.92 0.83 0.81 0.99 1.0 1.0
+0.99
+1.0
+1.0
+1.0
+1.0 1.0 1.0 1.0
+1.0 1.0 1.0 1.0 0.97 0.97 0.95
+0.94
+1.0
+1.0
+1.0
+1.0 1.0 1.0 0.99
+1.0 1.0 1.0 1.0 0.88 0.85 0.86
+0.90
+1.0 0.96
+1.0
+1.0 1.0 1.0 0.97
+LDP
+1.0 1.0 0.98 0.92 0.64 0.58 0.69
+0.79
+0.22 0.18 0.13 1.0 0.99 0.97 0.89
+0.99 0.95 0.86 0.72 0.58 0.47 0.62
+0.75
+0.24 0.17 0.13 0.93 0.98 0.9 0.80
+0.82 0.71 0.59 0.53 0.44 0.38 0.49
+0.51
+0.25 0.17 0.13 0.52 0.55 0.71 0.45
+0.86 0.92 0.83 0.81 1.0 1.0 1.0
+0.99
+1.0
+1.0
+1.0
+1.0 1.0 1.0 1.0
+0.74 0.75 0.69 0.62 0.95 0.91 0.82
+0.63
+0.99 0.87 0.79 1.0 1.0 0.97 0.58
+0.57 0.54 0.48 0.42 0.91 0.84 0.71
+0.51
+0.76 0.5
+0.35 1.0 0.96 0.6 0.1
+CDP
+0.35 0.31 0.26 0.22 0.80 0.69 0.46
+0.27
+0.44 0.28 0.25 0.92 0.8 0.25 0.02
+0.22 0.19 0.16 0.13 0.69 0.51 0.28
+0.14
+0.36 0.23 0.18 0.89 0.64 0.12 0.02
+0.05 0.04 0.03 0.02 0.28 0.14 0.05
+0.02
+0.32 0.19 0.13 0.66 0.24 0.03 0.01
+222.6 259.8 251.5 259.8 88.1 88.1 88.1
+88.1
+84.3 70.4 62.4 28.9 29.8 42.2 73.5
+6.3 6.6 7.3 7.4 4.6 4.1 4.1
+4.1
+4.8 3.9
+3.4
+1.6 1.7 3.5 2.1
+2.3 2.0 2.2 2.1 2.0 1.8 1.8
+1.8
+2.1 1.7
+1.5
+0.7 1.6 1.3 1.3
+
+0.9 1.1 1.0 1.1 1.3 1.2 1.2
+1.2
+1.3 0.8
+1.0
+0.9 0.9 0.7 0.6
+0.3 0.2 0.3 0.3 0.4 0.4 0.4
+0.3
+0.5 0.4
+0.3
+0.4 0.4 0.3 0.3
+Orig. 0.01 0.01 0.01 0.01 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001
+Learning
+CDP 0.01 0.01 0.01 0.01 0.01 0.01 0.01
+0.01 0.001 0.0008 0.0008 0.001 0.001 0.001 0.001
+rate
+LDP 0.01 0.01 0.01 0.01 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001 0.001
+Orig. 128 128 128 128 128 128 128
+128
+32
+32
+32
+100 100 100 100
+Batch
+CDP 128 128 128 128 128 128 128
+128
+16
+16
+16
+100 100 100 100
+size
+LDP 128 128 128 128 128 128 128
+128
+32
+32
+32
+100 100 100 100
+Orig. 200 200 200 200 200 200 200
+200
+30
+30
+30
+200 200 200 200
+Epochs CDP 1000 1000 1000 1000 200 200 200
+200
+110 110
+110 200 200 200 200
+LDP 200 200 200 200 200 200 200
+200
+30
+30
+30
+200 200 200 200
+Clipping
+CDP 4
+4
+4
+4
+4
+4
+4
+4
+3
+3
+3
+4
+4
+4
+4
+Norm
+C
+
+18
+
+D. Bernau et al.
+
+Quantity of Records
+
+5000
+4000
+3000
+2000
+1000
+0
+
+0
+
+20
+
+40
+
+60
+
+Labels
+
+80
+
+100
+
+3000
+
+3000
+
+2500
+
+2500
+Quantity of Records
+
+Quantity of Records
+
+Fig. 6: Quantity of records per label for Purchases Shopping Carts
+
+2000
+1500
+1000
+
+2000
+1500
+1000
+500
+
+500
+0
+
+20
+
+40
+
+Labels
+
+60
+
+80
+
+0
+
+100
+
+0
+
+20
+
+3000
+
+2500
+
+2500
+
+2000
+1500
+1000
+
+80
+Labels
+
+100
+
+120
+
+140
+
+2000
+1500
+1000
+500
+
+500
+0
+
+60
+
+(b) C = 150
+
+3000
+
+Quantity of Records
+
+Quantity of Records
+
+(a) C = 100
+
+40
+
+0
+
+25
+
+50
+
+75
+
+100
+Labels
+
+125
+
+(c) C = 200
+
+150
+
+175
+
+200
+
+0
+
+0
+
+50
+
+100
+
+150
+Labels
+
+200
+
+250
+
+300
+
+(d) C = 300
+
+Fig. 7: The Quantity of records per Label for the Texas Hospital Stays Dataset
+
+References
+1. Abadi, M., Chu, A., Goodfellow, I., McMahan, H.B., Mironov, I., Talwar, K.,
+Zhang, L.: Deep Learning with Differential Privacy. In: Proc. of Conference on
+Computer and Communications Security (CCS). ACM Press (2016)
+2. Abowd, J.M., Schmutte, I.M.: An economic analysis of privacy protection and
+statistical accuracy as social choices. American Economic Review 109(1) (2019)
+3. Backes, M., Berrang, P., Humbert, M., Manoharan, P.: Membership Privacy in
+MicroRNA-based Studies. In: Proc. of Conference on Computer and Communications Security (CCS). ACM Press (2016)
+4. Bassily, R., Smith, A., Thakurta, A.: Private Empirical Risk Minimization. In:
+Proc. of Symposium on Foundations of Computer Science (FOCS). IEEE Computer Society (2014)
+5. BBC News: Google DeepMind NHS app test broke UK privacy law (2017), https:
+//www.bbc.com/news/technology-40483202
+
+Comparing LDP and CDP using MI
+
+19
+
+6. Carlini, N., Liu, C., Kos, J., Erlingsson, Ú., Song, D.: The secret sharer: Measuring
+unintended neural network memorization and extracting secrets (2018)
+7. Davis, J., Goadrich, M.: The relationship between precision-recall and roc curves.
+In: Proc. of Conference on Machine Learning (ICML). Omnipress (2006)
+8. Dwork, C.: Differential Privacy. In: Proc. of Colloquium on Automata, Languages
+and Programming (ICALP). Springer (2006)
+9. Dwork, C., Kenthapadi, K., McSherry, F., Mironov, I., Naor, M.: Our Data, Ourselves: Privacy via distributed noise generation. In: Proc. of Conference on Theory
+and Applications of Cryptographic Techniques (EUROCRYPT). Springer (2006)
+10. Dwork, C., Roth, A.: The Algorithmic Foundations of Differential Privacy. Foundations and Trends in Theoretical Computer Science 9(3-4) (2014)
+11. Erlingsson, U., Feldman, V., Mironov, I., Raghunathan, A., Talwar, K., Thakurta,
+A.: Amplification by shuffling: From local to central differential privacy via
+anonymity. In: Proc. of Symp. on Discrete Algorithms (SODA) (2019)
+12. Erlingsson, U., Pihur, V., Korolova, A.: RAPPOR: Randomized Aggregatable
+Privacy-Preserving Ordinal Response. In: Proc. of Conference on Computer and
+Communications Security (CCS). ACM Press (2014)
+13. Everingham, M., Gool, L., Williams, C.K., Winn, J., Zisserman, A.: The pascal
+visual object classes challenge. International Journal of Computer Vision 88(2)
+(2010)
+14. Fan, L.: Image pixelization with differential privacy. In: Proc. of Conference on
+Data and Applications Security and Privacy (DBSEC). Springer (2018)
+15. Fredrikson, M., Jha, S., Ristenpart, T.: Model Inversion Attacks that Exploit Confidence Information and Basic Countermeasures. In: Proc. of Conference on Computer and Communications Security (CCS). ACM Press (2015)
+16. Fredrikson, M., Lantz, E., Jha, S., Lin, S., Page, D., Ristenpart, T.: Privacy in
+Pharmacogenetics: An End-to-End Case Study of Personalized Warfarin Dosing.
+In: Proc. of USENIX Security Symposium. USENIX Association (2014)
+17. Goodfellow, I., Bengio, Y., Courville, A.: Deep Learning. MIT Press (2016), http:
+//www.deeplearningbook.org
+18. Grandvalet, Y., Canu, S.: Comments on “Noise injection into inputs in back propagation learning”. IEEE Transactions on Systems, Man, and Cybernetics 25(4)
+(1995)
+19. Hay, M., Machanavajjhala, A., Miklau, G., Chen, Y., Zhang, D.: Principled evaluation of differentially private algorithms using dpbench. In: Proc. of Conference
+on Management of Data (SIGMOD). ACM Press (2016)
+20. Hayes, J., Melis, L., Danezis, G., De Cristofaro, E.: LOGAN: Membership Inference Attacks Against Generative Models. Proc. on Privacy Enhancing Technologies
+(PoPETs) 2019(1) (2019)
+21. Hill, Kashmir: How Target Figured Out A Teen Girl Was Pregnant Before Her
+Father Did (2012), https://www.forbes.com/sites/kashmirhill/2012/02/16/
+how-target-figured-out-a-teen-girl-was-pregnant-before-her-father-did/
+22. Huang, G.B., Ramesh, M., Berg, T., Learned-Miller, E.: Labeled faces in the wild:
+A database for studying face recognition in unconstrained environments. Tech.
+rep., University of Massachusetts (2007)
+23. Iyengar, R., Near, J.P., Song, D., Thakkar, O.D., Thakurta, A., Wang, L.: Towards
+practical differentially private convex optimization. In: Proc. of Symposium on
+Security and Privacy (S&P). IEEE Computer Society (2019)
+24. Jayaraman, B., Evans, D.: Evaluating differentially private machine learning in
+practice. In: Proc. of the USENIX Security Symposium. USENIX Association
+(2019)
+
+20
+
+D. Bernau et al.
+
+25. Kairouz, P., Oh, S., Viswanath, P.: The Composition Theorem for Differential
+Privacy. IEEE Transactions on Information Theory 63(6) (2017)
+26. Kasiviswanathan, S.P., Lee, H.K., Nissim, K., Raskhodnikova, S., Smith, A.: What
+can we learn privately? SIAM Journal on Computing 40 (2008)
+27. Kingma, D.P., Ba, J.: Adam: A method for stochastic optimization. In: 3rd International Conference on Learning Representations, ICLR 2015, San Diego, CA,
+USA, May 7-9, 2015, Conference Track Proceedings. ICLR (2015)
+28. Matsuoka, K.: Noise injection into inputs in back-propagation learning. IEEE
+Transactions on Systems, Man, and Cybernetics 22(3) (1992)
+29. Mironov, I.: Rényi differential privacy. In: Proc. of Computer Security Foundations
+Symposium (CSF). IEEE Computer Society (2017)
+30. MLPerf Website: MLPerf – Fair and useful benchmarks for measuring training
+and inference performance of ML hardware, software, and services (2018), https:
+//mlperf.org/
+31. Nasr, M., Shokri, R., Houmansadr, A.: Comprehensive Privacy Analysis of Deep
+Learning: Stand-alone and Federated Learning under Passive and Active Whitebox Inference Attacks (2018)
+32. Nasr, M., Shokri, R., Houmansadr, A.: Machine learning with membership privacy using adversarial regularization. In: Proc. of Conference on Computer and
+Communications Security (CCS). ACM Press (2018)
+33. Papernot, N., Song, S., Mironov, I., Raghunathan, A., Talwar, K., Úlfar Erlingsson:
+Scalable private learning with pate (2018)
+34. Parkhi, O.M., Vedaldi, A., Zisserman, A.: Deep face recognition. In: British Machine Vision Conference. BMVA Press (2015)
+35. Rahman, M.A., Rahman, T., Laganière, R., Mohammed, N.: Membership inference
+attack against differentially private deep learning model. Transactions on Data
+Privacy 11 (2018)
+36. Sankararaman, S., Obozinski, G., Jordan, M.I., Halperin, E.: Genomic privacy and
+limits of individual detection in a pool. Nature Genetics 41 (2009)
+37. Shokri, R., Shmatikov, V.: Privacy-preserving Deep Learning. In: Proc. of Conference on Computer and Communications Security (CCS). ACM Press (2015)
+38. Shokri, R., Stronati, M., Song, C., Shmatikov, V.: Membership inference attacks
+against ML models. In: Proc. of Symposium on Security and Privacy (S&P). IEEE
+Computer Society (2017)
+39. Song, S., Chaudhuri, K., Sarwate, A.D.: Stochastic gradient descent with differentially private updates. In: Proc. of Conference on Signal and Information Processing. IEEE Computer Society (2013)
+40. Wang, T., Blocki, J., Li, N., Jha, S.: Locally Differentially Private Protocols for
+Frequency Estimation. In: Proc. of USENIX Security Symposium. USENIX Association (2017)
+41. Warner, S.L.: Randomized Response: A Survey Technique for Eliminating Evasive
+Answer Bias. Journal of the American Statistical Association 60(309) (1965)
+42. Wirth, R., Hipp, J.: Crisp-dm: Towards a standard process model for data mining.
+In: Proc. of Conference on practical applications of knowledge discovery and data
+mining. Practical Application Company (2000)
+43. Yeom, S., Fredrikson, M., Jha, S.: The unintended consequences of overfitting:
+Training data inference attacks (2017)
+44. Yeom, S., Giacomelli, I., Fredrikson, M., Jha, S.: Privacy Risk in Machine Learning:
+Analyzing the Connection to Overfitting (2018)
+
+
