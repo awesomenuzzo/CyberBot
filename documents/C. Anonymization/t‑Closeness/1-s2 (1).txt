@@ -1,0 +1,1211 @@
+Knowledge-Based Systems 74 (2015) 151–158
+
+Contents lists available at ScienceDirect
+
+Knowledge-Based Systems
+journal homepage: www.elsevier.com/locate/knosys
+
+From t-closeness to differential privacy and vice versa in data
+anonymization
+Josep Domingo-Ferrer ⇑, Jordi Soria-Comas
+Universitat Rovira i Virgili, Dept. of Computer Engineering and Maths, UNESCO Chair in Data Privacy, Av. Països Catalans 26, E-43007 Tarragona, Catalonia
+
+a r t i c l e
+
+i n f o
+
+Article history:
+Received 8 July 2014
+Received in revised form 4 November 2014
+Accepted 11 November 2014
+Available online 20 November 2014
+Keywords:
+t-closeness
+e-differential privacy
+Data anonymization
+Statistical disclosure control
+Syntactic anonymization
+Semantic anonymization
+
+a b s t r a c t
+k-anonymity and e-differential privacy are two mainstream privacy models, the former introduced to
+anonymize data sets and the latter to limit the knowledge gain that results from including one individual
+in the data set. Whereas basic k-anonymity only protects against identity disclosure, t-closeness was presented as an extension of k-anonymity that also protects against attribute disclosure. We show here that,
+if not quite equivalent, t-closeness and e-differential privacy are strongly related to one another when it
+comes to anonymizing data sets. Speciﬁcally, k-anonymity for the quasi-identiﬁers combined with e-differential privacy for the conﬁdential attributes yields stochastic t-closeness (an extension of t-closeness),
+with t a function of k and e. Conversely, t-closeness can yield e-differential privacy when t ¼ expðe=2Þ and
+the assumptions made by t-closeness about the prior and posterior views of the data hold.
+Ó 2014 Elsevier B.V. All rights reserved.
+
+1. Introduction
+k-anonymity and e-differential privacy are two mainstream
+privacy models originated within the computer science community.
+Their approaches towards disclosure limitation are quite different:
+k-anonymity is a model for releases of microdata (i.e. individual
+records) that seeks to prevent record re-identiﬁcation by hiding
+each original record within a group of k indistinguishable
+anonymized records, while e-differential privacy seeks to limit the
+knowledge gain between data sets that differ in one individual. Both
+models are often presented as antagonistic: e-differential privacy
+supporters view k-anonymity as an old-fashioned privacy notion
+that offers only poor disclosure limitation guarantees (they argue
+that generating a ‘‘noisy table’’ that safely provides accurate
+answers to arbitrary queries is not feasible [11]), while e-differential
+privacy detractors criticize the limited utility of e-differentially
+private outputs [24,2].
+In this paper we show that t-closeness (one of the extensions of
+k-anonymity) and e-differential privacy turn out to be strongly
+related when it comes to anonymizing data sets. Speciﬁcally,
+k-anonymizing the quasi-identiﬁers of a data set and ensuring edifferential privacy for the conﬁdential attributes yields stochastic
+t-closeness (which in turn is an extension of t-closeness), with t a
+
+⇑ Corresponding author.
+E-mail addresses: josep.domingo@urv.cat (J. Domingo-Ferrer), jordi.soria@urv.
+cat (J. Soria-Comas).
+http://dx.doi.org/10.1016/j.knosys.2014.11.011
+0950-7051/Ó 2014 Elsevier B.V. All rights reserved.
+
+function of e and of the size of the k-anonymity equivalence classes. Attaining standard t-closeness from e-differential privacy is
+unfeasible because, being e-differential privacy a stochastic mechanism, it is not possible to meet the requirements that t-closeness
+puts on the empirical distribution of the conﬁdential attributes. To
+circumvent this issue, we introduce stochastic t-closeness, which is
+deﬁned on the theoretical distribution of the conﬁdential attribute
+that results from the masking procedure (rather than on a speciﬁc
+realization of it). Conversely, t-closeness can yield guarantees similar to e-differential privacy for the conﬁdential attribute. Attaining
+exact e-differential privacy from t-closeness is unfeasible because,
+for instance, t-closeness fails to provide any protection if we
+assume that all the records except one are known by the intruder.
+However, if the assumptions made by t-closeness about the prior
+and posterior views of the data by the intruder hold, then the
+protection we get from t-closeness is equivalent to that of e-differential privacy.
+Section 2 contains background on k-anonymity, t-closeness and
+e-differential privacy. Section 3 introduces the concept of stochastic
+t-closeness. Section 4 shows that combining k-anonymity and differential privacy as sketched above yields (stochastic) t-closeness.
+Section 5 shows that, under the assumptions made by t-closeness
+about the prior and posterior views of the data, t-closeness provides
+differential privacy-like privacy guarantees for the conﬁdential
+attributes. A construction to attain t-closeness that relies on bucketization is presented in Section 6. Section 7 reviews related work.
+Conclusions and future research issues are summarized in Section 8.
+
+152
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+
+The material in Section 6 was presented in the conference paper
+[28]. The rest of sections in this paper are new.
+2. Background
+
+t-closeness clearly solves the attribute disclosure vulnerability, although the original paper [20] did not propose a computational procedure to achieve this property and did not mention the
+large utility loss that achieving it is likely to inﬂict on the original
+data.
+
+2.1. k-anonymity
+2.3. e-differential privacy
+Assume a data set X from which direct identiﬁers have been
+suppressed, but which contains so-called quasi-identiﬁer attributes,
+that is, attributes (e.g. age, gender, nationality, etc.) which can be
+used by an intruder to link records in X with records in some external database containing direct identiﬁers. The intruder’s goal is to
+determine the identity of the individuals to whom the values of
+conﬁdential attributes (e.g. health condition, salary, etc.) in records
+in X correspond (identity disclosure). See [17] for further details on
+disclosure attacks.
+A data set X is said to satisfy k-anonymity [27,26] if each combination of values of the quasi-identiﬁer attributes in it is shared
+by at least k records. We use the term equivalence class to refer
+to a maximal set of records that are indistinguishable with respect
+to the quasi-identiﬁers. k-anonymity protects against identity
+disclosure: given an anonymized record in X, an intruder cannot
+determine the identity of the individual to whom the record (and
+hence the conﬁdential attribute values in it) corresponds. The reason is that there are at least k records in X sharing any combination
+of quasi-identiﬁer attribute values.
+The most usual computational procedure to attain k-anonymity
+is generalization of the quasi-identiﬁer attributes [26], but an
+alternative approach is based on microaggregation of the quasiidentiﬁer attributes [7].
+2.2. t-closeness
+While k-anonymity protects against identity disclosure, as mentioned above, it does not protect in general against attribute disclosure, that is, disclosure of the value of a conﬁdential attribute
+corresponding to an external identiﬁed individual. Let us assume a
+target individual T for whom the intruder knows the identity and
+the values of the quasi-identiﬁer attributes. Let GT be a group of at
+least k anonymized records sharing a combination of quasiidentiﬁer attribute values that is the only one compatible with T’s
+quasi-identiﬁer attribute values. Then the intruder knows that the
+anonymized record corresponding to T belongs to GT . Now, if the
+values for one (or several) conﬁdential attribute(s) in all records of
+GT are the same, the intruder learns the values of that (those)
+attribute(s) for the target individual T.
+The property of l-diversity [23] has been proposed as an extension of k-anonymity which tries to address the attribute disclosure
+problem. A data set is said to satisfy l-diversity if, for each equivalence class, there are at least l ‘‘well-represented’’ values for each
+conﬁdential attribute. Achieving l-diversity in general implies
+more distortion than just achieving k-anonymity. Yet, l-diversity
+may fail to protect against attribute disclosure if the l values of a
+conﬁdential attribute are very similar or are strongly skewed. pSensitive k-anonymity [30] is a property similar to l-diversity,
+which shares similar shortcomings. See [8] for a summary of criticisms to l-diversity and p-sensitive k-anonymity.
+t-closeness [20] is another extension of k-anonymity which also
+tries to solve the attribute disclosure problem.
+Deﬁnition 1. An equivalence class is said to satisfy t-closeness if
+the distance between the distribution of a sensitive attribute in this
+class and the distribution of the attribute in the whole table is no
+more than a threshold t. A table is said to satisfy t-closeness if all its
+equivalence classes satisfy t-closeness.
+
+Differential privacy was proposed by [9] as a relative privacy
+model that limits the knowledge gain between data sets that differ
+in one individual.
+Deﬁnition 2. A randomized function j gives e-differential privacy
+if, for all data sets D1 ; D2 such that one can be obtained from the
+other by modifying a single record, and all S  RangeðjÞ
+
+PrðjðD1 Þ 2 SÞ 6 expðeÞ  PrðjðD2 Þ 2 SÞ
+
+ð1Þ
+
+Originally the focus was on the interactive setting; that is, to
+protect the outcomes of queries to a database. The assumption is
+that an anonymization mechanism sits between the user
+submitting queries and the database answering them. The computational mechanism to attain e-differential privacy is often called
+e-differentially private sanitizer. A usual sanitization approach is
+noise addition: given a query f, the real value f ðDÞ is computed,
+and a random noise, say YðDÞ, is added to mask f ðDÞ, that is, a randomized response jðDÞ ¼ f ðDÞ þ YðDÞ is returned. To generate
+YðDÞ, a common choice is to use a Laplace distribution with zero
+mean and DðXÞ=e scale parameter, where:
+ e is the differential privacy parameter;
+ Dðf Þ is the L1 -sensitivity of f, that is, the maximum variation of
+the query function between neighbor data sets, i.e., sets differing in at most one record.
+Differential privacy was also developed for the non-interactive
+setting in [3,14,16,4]. Even though a non-interactive data release
+can be used to answer an arbitrarily large number of queries, in
+all these proposals this feature is obtained at the cost of preserving
+utility only for restricted classes of queries (typically count queries). This contrasts with the general-purpose utility-preserving
+data release offered by the k-anonymity model.
+
+3. Stochastic t-closeness
+The fact that differential privacy is stochastic, while t-closeness
+is deterministic, makes it impossible to guarantee that a differentially private data set will satisfy t-closeness. To bridge this gap,
+we introduce the concept of stochastic t-closeness.
+Let X be a data set with quasi-identiﬁer attributes collectively
+denoted by QI and conﬁdential attributes C 1 ; C 2 ; . . . ; C n . Let N be
+the number of records of X.
+To attain t-closeness we need to partition X into equivalence
+classes such that the (empirical) distribution of the conﬁdential
+attributes over the entire X is close to the (empirical) distribution
+of the conﬁdential attributes within each of the equivalence classes: the distance between the former distribution and each of the
+latter distributions must be less than a threshold value t. If
+c1 ; c2 ; . . . ; cN are the values of a conﬁdential attribute in X, and
+c1 ; c2 ; . . . ; cjEj are the values of that attribute within equivalence
+class E, the respective empirical distributions PrðÞ and PrE ðÞ can
+be computed as
+
+PrðBÞ ¼
+
+1 X
+Pr1 ðBÞ
+N i¼1;2;...;N ci
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+
+and
+
+PrE ðBÞ ¼
+
+X
+
+1
+Pr1 ðBÞ
+jEj i¼1;2;...;jEj ci
+
+where B is any subset of values of the attribute, and P1ci ðBÞ ¼ 1 if
+and only if ci 2 B.
+The standard practice to generate a t-close data set X 0 out of X
+favors preserving the values of the conﬁdential attributes within
+each of the equivalence classes. Probably the reason has to do with
+t-closeness being an extension of k-anonymity. k-anonymity is not
+concerned with the values of the conﬁdential attributes and, thus,
+attaining k-anonymity does not require any operation on them. tcloseness was initially attained by incorporating its constraints
+into k-anonymous data set generation algorithms; in this way,
+the values of the conﬁdential attributes within each equivalence
+class were kept unmodiﬁed. In [20,21], the Incognito [19] and
+the Mondrian [18] algorithms that were designed for k-anonymity
+are adapted for t-closeness. Modiﬁcation of the conﬁdential values
+was considered in [25]. Let f be a function that masks the conﬁdential attributes to bring the empirical distribution of the modiﬁed
+equivalence classes closer to the empirical distribution of the modiﬁed whole data set. Using the previous notations, the modiﬁed
+empirical distributions are computed as
+
+PrðBÞ ¼
+
+1 X
+Pr1 ðBÞ
+N i¼1;2;...;N f ðci Þ
+
+and
+
+PrE ðBÞ ¼
+
+1 X
+Pr1 ðBÞ:
+jEj i¼1;2;...;jEj f ðci Þ
+
+The previous masking function f is deterministic, but dealing with
+stochastic masking functions would be interesting. Let Z be a stochastic function. Attaining t-closeness is not possible for Z, as the
+actual values depend on each speciﬁc realization of Z. However,
+there is a natural extension of the concept of t-closeness that deals
+smoothly with stochastic functions. Basically, we have to stop
+working with empirical distributions, and use the distributions
+determined by Z instead. In terms of the formulas, we need to
+change 1f ðÞ by ZðÞ.
+Deﬁnition 3. Let X 0 be a data set obtained from X by applying a
+stochastic function Z to its conﬁdential attributes. We say that X 0
+satisﬁes stochastic t-closeness if, for each equivalence class E, the
+distance between
+
+PrðBÞ ¼
+
+1 X
+PrZðci Þ ðBÞ
+N i¼1;2;...;N
+
+and
+
+PrE ðBÞ ¼
+
+1 X
+PrZðci Þ ðBÞ
+jEj i¼1;2;...;jEj
+
+is less than a threshold t.
+
+153
+
+Stochastic t-closeness, just as t-closeness, is about making the
+distance between the data set-level and the equivalence class-level
+distribution of the conﬁdential attribute less than a threshold value
+t for any equivalence class. When t-closeness was introduced, the
+Earth Mover’s distance (EMD) was proposed [20]. The EMD
+measures the minimal amount of work required to transform one
+distribution into another by moving probability mass between
+each other.
+The speciﬁc distance used can actually be viewed as an
+additional parameter of t-closeness and it has a signiﬁcant impact
+on the kind of privacy guarantees offered. As we aim to show that
+differential privacy for the conﬁdential attributes leads to stochastic t-closeness, we take a distance function that is more suited to
+differential privacy.
+Deﬁnition 4. Given two random distributions D1 and D2 , we
+deﬁne the distance between D1 and D2 as:
+
+
+
+PrD1 ðSÞ PrD2 ðSÞ
+dðD1 ; D2 Þ ¼ max
+;
+S
+PrD2 ðSÞ PrD1 ðSÞ
+
+where S is an arbitrary (measurable) set, and we take the quotients
+of probabilities to be zero, if both PrD1 ðSÞ and PrD2 ðSÞ are zero, and to
+be inﬁnity if only the denominator is zero.
+We are ready to move to the main result of the section: the
+implication between differential privacy and t-closeness.
+Proposition 1. Let X be an original data set and X 0 be a corresponding
+anonymized data set such that the projection of X on the conﬁdential
+attributes is e-differentially private. Then X satisﬁes stochastic tcloseness with
+
+t ¼ max
+E
+
+
+
+jEj
+N  jEj  1
+1þ
+expðeÞ
+N
+jEj
+
+where E is an equivalence class.
+Proof. Let E be an equivalence class of X and let c1 ; c2 ; . . . ; cjEj be the
+values of the projection of X on the conﬁdential attributes. For tcloseness to hold, it must be PrE ðBÞ 6 t  PrðBÞ and PrðBÞ 6 t
+PrE ðBÞ, for any B.
+We start by deriving an inequality that will later be used. If Z
+satisﬁes e-differential privacy, we have expðeÞ  PrZðcj Þ ðBÞ
+6 PrZðci Þ ðBÞ 6 expðeÞ  PrZðcj Þ ðBÞ, for all i and j. In particular, we have
+
+expðeÞ X
+expðeÞ X
+PrZðcj Þ ðBÞ 6 PrZðci Þ ðBÞ 6
+PrZðcj Þ ðBÞ:
+jEj j¼1;2;...;jEj
+jEj j¼1;2;...;jEj
+P
+Let d ¼ i¼1;2;...;jEj PrZðci Þ ðBÞ. The previous equation becomes
+1
+1
+expðeÞd 6 PrZ ðci Þ 6 jEj
+expðeÞd. By taking the sum for i in
+jEj
+jEj þ 1; jEj þ 2; . . . ; N, we have
+
+X
+N  jEj
+expðeÞd 6
+PrZðci Þ ðBÞ;
+jEj
+i¼jEjþ1;jEjþ2;...;N
+X
+i¼jEjþ1;jEjþ2;...;N
+
+PrZðci Þ ðBÞ 6
+
+N  jEj
+expðeÞd:
+jEj
+
+ð2Þ
+ð3Þ
+
+Although a deeper analysis of stochastic t-closeness might be
+interesting, our aim here is to relate it to differential privacy and
+the above deﬁnition will sufﬁce to this aim.
+
+Now we turn to the t-closeness requirements. We start with
+PrE ðBÞ 6 t  PrðBÞ. This inequality can be rewritten as
+
+4. From differential privacy to (stochastic) t-closeness
+
+1 X
+1 X
+PrZðci Þ ðBÞ 6 t 
+PrZðci Þ ðBÞ:
+jEj i¼1;2;...;jEj
+N i¼1;2;...;N
+
+This section develops one of the main results in this paper: the
+implication between e-differential privacy and stochastic
+t-closeness. Before going into that result, we need to deal with
+an important aspect of t-closeness: the distance between the probability distributions used.
+
+In terms of d it becomes
+
+!
+X
+1
+1
+PrZðci Þ ðBÞ :
+d6t
+dþ
+jEj
+N
+i¼jEjþ1;jEjþ2;...;N
+
+154
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+
+By Inequality (2) the following inequality implies the previous one
+
+
+
+1
+1
+N  jEj
+d6t
+dþ
+expðeÞd
+jEj
+N
+jEj
+By operating on the previous inequality we get
+
+tP
+
+
+1
+N
+N  jEj
+1þ
+expðeÞ
+:
+jEj
+jEj
+
+By following a similar process with inequality PðBÞ 6 t  P E ðBÞ
+we conclude
+
+tP
+
+
+
+jEj
+N  jEj
+1þ
+expðeÞ :
+N
+jEj
+
+
+1
+N
+N  jEj
+t ¼ max
+1þ
+expðeÞ
+;
+E
+jEj
+jEj
+
+
+
+PrD1 ðxi Þ PrD2 ðxi Þ
+;
+:
+i¼1;2;...;N PrD2 ðxi Þ PrD1 ðxi Þ
+
+
+)
+jEj
+N  jEj
+:
+1þ
+expðeÞ
+N
+jEj
+
+It can be seen that the second term is always greater than the
+ﬁrst one, which leads to
+
+t ¼ max
+E
+
+Proposition 2. If distributions D1 and D2 take values in a discrete set
+fx1 ; x2 . . . ; xN g, then the distance dðD1 ; D2 Þ can be computed as
+
+dðD1 ; D2 Þ ¼ max
+
+The conclusion is that if Z satisﬁes e-differential privacy, then
+we get t-closeness on X 0 for
+
+(
+
+prior and posterior view (the distribution of the conﬁdential data
+within the equivalence classes) by limiting the distance between
+both distributions.
+Similarly to Section 4, to make t-closeness closer in meaning to
+differential privacy, we use the distance proposed in Deﬁnition 4. If
+the distributions D1 and D2 of Deﬁnition 4 are discrete (as is the
+case for the empirical distribution of a conﬁdential attribute in a
+microdata set), computing the distance between them is simpler:
+taking the maximum over the possible individual values sufﬁces.
+
+
+
+jEj
+N  jEj  1
+1þ
+expðeÞ : 
+N
+jEj
+
+There are two approaches to enforce t-closeness for a data set
+that contains multiple conﬁdential attributes: (i) take the conﬁdential attributes together as a single conﬁdential attribute and
+seek t-closeness for it using the joint distribution, and (ii) deal with
+each conﬁdential attribute separately, that is, seek t-closeness
+independently for each conﬁdential attribute. The ﬁrst approach
+is stronger in terms of privacy guarantees, and it is the one we have
+used in the previous proposition. If instead of having e-differential
+privacy for the projection of the data set on the conﬁdential attributes we had e-differential privacy for each individual attribute,
+then the second approach would be more suitable.
+Proposition 2 shows that e-differential privacy for the conﬁdential attributes implies (stochastic) t-closeness for a t that depends
+on the number of records, the cardinality of the equivalence classes
+and e. The proposition shows that e-differential privacy is stronger
+than (stochastic) t-closeness as a privacy model. From a more practical point of view, Proposition 2 can be seen as a possible approach
+to generate a t-close data set. The conﬁdential attribute of such a
+data set has not only the privacy guarantees provided by t-closeness but also the ones given by e-differential privacy.
+5. e-differential privacy through t-closeness
+In this section we show that if the conditions under which tcloseness provides its privacy guarantee hold for a data set, then
+we have differential privacy on the projection over the conﬁdential
+attributes.
+The quasi-identiﬁer attributes are excluded from our
+discussion. The reason is that t-closeness offers no additional protection to the quasi-identiﬁers beyond what k-anonymity does. For
+example, we may learn that an individual is not in the data set if
+there is no equivalence class in the released t-close data whose
+quasi-identiﬁer values are compatible with the individual’s.
+The main requirement for the implication between t-closeness
+and differential privacy relates to the satisfaction of the t-closeness
+requirements about the prior and posterior knowledge of an observer. t-closeness assumes that the distribution of the conﬁdential
+data is public information (this is the prior view of observers about
+the conﬁdential data) and limits the knowledge gain between the
+
+ð4Þ
+
+Suppose that t-closeness holds; that is, the data set X 0 consists of
+several equivalence classes selected in such a way that the multiplicative distance proposed in Deﬁnition 4 between the distribution of
+the conﬁdential attribute over the whole data set and the distribution within each of the equivalence classes is less than t. We will
+show that, if the assumption on the prior and posterior views of
+the data made by t-closeness holds, then expðe=2Þ-closeness implies
+e-differential privacy. A microdata release can be viewed as the collected answers to a set of queries, where each query requests the
+attribute values associated to a different individual. As the queries
+relate to different individuals, checking that differential privacy
+holds for each individual query sufﬁces, by parallel composition,
+to check that it holds for entire data set. Let I be a speciﬁc individual
+in the data set. For differential privacy to hold for the query associated to individual I, including I’s data in the data set vs not including
+them must modify the probability of the output by a factor not
+greater than expðeÞ, where e is differential privacy parameter.
+Proposition 3. Let kI ðDÞ be the function that returns the view on I’s
+conﬁdential data given D. If the assumptions required for t-closeness
+to provide a strong privacy guarantee hold, then expðe=2Þ-closeness
+on D implies e-differential privacy of kI . In other words, if we restrict
+the domain of kI to expðe=2Þ-close data sets, then we have edifferential privacy for kI .
+Proof. Let D1 and D2 be two data sets satisfying expðe=2Þ-closeness
+for the combination of all conﬁdential attributes. For e-differential
+privacy to hold, we need PrðkI ðD1 Þ 2 SÞ 6 expðeÞ  PrðkI ðD2 Þ 2 SÞ.
+We consider four different cases: (i) I R D1 and I R D2 , (ii)
+I R D1 and I 2 D2 , (iii) I 2 D1 and I R D2 , and (iv) I 2 D1 and I 2 D2 .
+In case (i), the posterior view does not provide information
+about I beyond the one in the prior view: we have kI ðD1 Þ ¼ kI ðD2 Þ.
+Hence, e-differential privacy is satisﬁed.
+Cases (ii) and (iii) are symmetric. We focus on case (ii). Given
+the assumptions, we have that kI ðD1 Þ has the distribution of the
+conﬁdential attribute on the whole table, while kI ðD2 Þ has the
+distribution of the conﬁdential attribute of the equivalence class
+that contains I. Because of expðe=2Þ-closeness, the distributions of
+kI ðD1 Þ and kI ðD2 Þ differ by a factor not greater than expðe=2Þ and,
+therefore, satisfy e-differential privacy.
+Case (iv) is a composition of the previous case for kI ðD1 Þ and
+kI ðD2 Þ. Both kI ðD1 Þ and kI ðD2 Þ differ from the distribution of the
+conﬁdential attribute on the whole table by a factor of expðe=2Þ.
+Thus, they differ from each other by a factor not greater than
+expðeÞ, as we wanted. h
+Parallel to what we did in Section 4, the previous proposition
+deals with all conﬁdential attributes at once. That is, we assume
+that t-closeness holds for the combination of all the conﬁdential
+attributes and we see that we get differential privacy for the same
+
+155
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+
+combination of attributes. If t-closeness is satisﬁed only for a
+speciﬁc conﬁdential attribute (or subset of conﬁdential attributes),
+then we get differential privacy for that attribute (or subset of conﬁdential attributes).
+Proposition 3 shows that, if the assumptions of t-closeness
+about the prior and posterior views of the intruder are satisﬁed,
+then the level of disclosure risk limitation provided by t-closeness
+is as good as the one of e-differential privacy. Of course, differential
+privacy is independent of the prior knowledge, so Proposition 3
+does not apply in general. However, when it applies, it provides
+an effective way of generating an e-differentially private data set.
+6. A bucketization construction to attain t-closeness
+We want to reach t-closeness using the distance of Deﬁnition 4.
+A problem we face is that t-closeness is not attainable if there are
+conﬁdential attribute values with multiplicity less than the number of equivalence classes. The reason is that, when an equivalence
+class lacks one of the values of the conﬁdential attribute, the distance between the equivalence class-level distribution and the
+data set-level distribution is inﬁnity (according to Deﬁnition 4).
+To circumvent this issue, instead of working with the empirical
+distribution of the conﬁdential attribute, we work with a bucketized version of it, where points are clustered into a set of buckets
+B1 ; B2 ; . . . ; Bn .
+Before going into the details, we give an overview of the steps
+required to attain t-closeness. Fig. 1 shows two sets of data. At
+the top there are the original values of the conﬁdential attribute.
+According to the previous discussion, t-closeness (for a ﬁnite t) is
+not feasible for it. At the bottom, there is a version of the conﬁdential attribute where data have been clustered in buckets B1 ; B2 and
+B3 that contain four points each. The granularity reduction of the
+data makes it feasible to attain t-closeness for a ﬁnite t.
+For instance, Fig. 2 shows a partition of the data set in
+equivalence classes that satisﬁes 1.5-closeness, according to the
+previously deﬁned distance. The empirical distribution of the original data assigns probability 1=3 to each of the buckets B1 ; B2 and
+B3 ; hence, the bucket-level distribution D of the conﬁdential attribute in the original data set is PrðB1 Þ ¼ PrðB2 Þ ¼ PrðB3 Þ ¼ 1=3. Each
+of the equivalence classes in the partition (E1 ; E2 ; E3 ) takes either
+one or two points from each bucket. Thus, the bucket-level empirical distribution DðE1 Þ of the conﬁdential attribute for equivalence
+class E1 is PrðB1 Þ ¼ 1=2 and PrðB2 Þ ¼ PrðB3 Þ ¼ 1=4; for equivalence
+class E2 , the distribution, denoted by DðE2 Þ, is PrðB1 Þ ¼ PrðB3 Þ
+¼ 1=4 and PrðB2 Þ ¼ 1=2; for equivalence class E3 , the distribution,
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+1
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+12
+
+B1
+
+B2
+
+B3
+
+4
+
+4
+
+4
+
+12
+
+12
+
+12
+
+Fig. 1. Top, original conﬁdential attribute values. Bottom, bucketized conﬁdential
+attribute values.
+
+denoted by DðE3 Þ, is PrðB1 Þ ¼ PrðB2 Þ ¼ 1=4 and PrðB3 Þ ¼ 1=2. By
+using Eq. (4) to measure the distance between D and DðEi Þ, for
+all i, we conclude that the generated partition satisﬁes 1.5-closeness. In Fig. 2 we have depicted both the original set of values of
+the conﬁdential attribute and the generated buckets.
+The rest of the section focuses on determining the conditions
+that the bucketization and the partition in equivalence classes
+must satisfy to maximize data utility. To ﬁx notations, we assume
+a data set X of size N. The granularity of the conﬁdential attribute is
+reduced by considering b buckets B1 ; B2 ; . . . ; Bb , each of them containing bi original values (that is, each of them having probability
+bi =N). The partition in equivalence classes consists of e equivalence
+classes E1 ; E2 ; . . . ; Ee , each of them containing ei (bucketized)
+records. Let k be the minimum among the ei ’s.
+The necessary condition, discussed at the beginning of the section, for t-closeness to be attainable can be reformulated according
+to the stated notation as bi P e for all i.
+6.1. Optimal bucketization
+The selected bucketization of the conﬁdential attribute has a
+large impact on data utility. To minimize the damage to data utility
+we should generate buckets that are as homogeneous as possible.
+In general, if a distance function is used to measure the similarity
+of the values of the conﬁdential attribute, a clustering algorithm
+can be used to generate homogeneous buckets. The size of the
+buckets is a parameter that can have a large impact on bucket
+homogeneity: the smaller the buckets, the more homogeneous
+they can be. However, taking too small buckets may defeat the
+purpose of the bucketization, that is, reducing the granularity of
+the conﬁdential attribute so that t-closeness is attainable. In this
+section we seek to determine the optimal bucket size.
+Fig. 3 illustrates two probability distributions: the uniform
+distribution represents the global distribution of the conﬁdential
+attribute (over the whole data set), and the other distribution corresponds to the conﬁdential attribute restricted to an equivalence
+class Ei . These two distributions satisfy 2-closeness with the distance of Deﬁnition 4: the density of the restriction to Ei is 1=2 for
+the entire range of values of the conﬁdential attribute, except for
+a subrange where it is 2.
+When bucketizing the distributions in Fig. 3, the subrange with
+density 2 should exactly correspond to a bucket or a union of buckets, in order to maximize the utility of the resulting data. This is
+illustrated in Fig. 4, whose top row shows bucketized versions of
+the distributions of Fig. 3 using three buckets: top left graph,
+bucketized version of the global distribution; top right graph,
+bucketized version of the restriction to Pi . Note that, for each of
+the buckets, the global probability and the probability restricted
+to Ei differ by a multiplicative factor of two; that is, we attain 2closeness with equality for each of the buckets. The bottom row
+of Fig. 4 shows the bucketized versions of the distributions in
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+Fig. 2. Sample partition that satisﬁes 1.5-closeness.
+
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+1.0
+
+Fig. 3. Probability distributions satisfying 2-closeness with the distance of Deﬁnition 4.
+
+156
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+1.0
+
+1.0
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+B1
+
+B2
+
+B3
+
+B1
+
+1.0
+
+1.0
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+B1
+
+B2
+
+B2
+
+B3
+
+B1
+
+B2
+
+Fig. 4. Bucketized distributions of the conﬁdential attribute for the whole data (left) and for an equivalence class Ei (right). Three buckets are considered in the top
+distributions, and two in the bottom ones.
+
+Fig. 3 using two buckets. It can be seen that, with the two proposed
+buckets, both bucketized distributions are identical; that is, we get
+1-closeness, which is stronger than the intended 2-closeness, but
+comes at the cost of data utility loss. Therefore, the number and
+hence the probability mass of the optimal buckets is dependent
+on the level of t-closeness that we want.
+According to the previous example, if the privacy requirement is
+t-closeness, for a certain t, it seems reasonable to use up the allowed
+distance t between the global distribution of the conﬁdential
+attribute and the restriction of that distribution within each equivalence class. Using up the allowed distance between the conﬁdential attribute distributions enables forming equivalence classes
+that are more homogeneous, and hence decreases information loss.
+Let us now put together what we said about the homogeneity
+and size of the buckets, and about the equivalence classes that
+emphasize a speciﬁc bucket (the probability distribution of the
+restriction to each equivalence class must differ from the global
+distribution by a factor of t for a speciﬁc bucket, and by a factor
+of 1=t for the rest of buckets). The conclusion is that we should
+set off for the maximum number of buckets (thus, for buckets that
+are as small as possible) but with the constraint that equivalence
+classes should be able to emphasize a speciﬁc bucket. This is
+formulated as
+
+t  bi =N þ
+
+1
+ ð1  bi =NÞ ¼ 1
+t
+
+for all i. The result is bi ¼ N=ðt þ 1Þ for all i. That is, the optimal
+bucketization consists of t þ 1 buckets of size N=ðt þ 1Þ. Notice that
+the optimal bucketization is only attainable if t þ 1 divides N;
+otherwise we should select the closest feasible bucketization.
+6.2. t-closeness construction
+Consider the original data set X ¼ fðqii ; ci Þji ¼ 1; 2; . . . ; Ng,
+where qii refers to the quasi-identiﬁer attributes, and ci to the conﬁdential attribute. We want to generate a k-anonymous t-close
+data set X 0 .
+
+According to Section 6.1, we need to reduce the granularity of
+the conﬁdential attribute. In particular, it was proposed to group
+the values of the conﬁdential attribute in t þ 1 buckets of
+N=ðt þ 1Þ records. In general a clustering algorithm is used to
+generate a set of buckets that maximize intra-bucket homogeneity. Here, for the sake of simplicity, we assume that the records
+can be ordered in terms of the conﬁdential attribute ci (this is
+possible if ci is numerical or ordinal). In this case the buckets
+are:
+
+B1 ¼ fc1 ; c2 ; . . . ; c½ N þ0:5 g;
+tþ1
+
+B2 ¼ fc½ N þ0:5þ1 ; c½ N þ0:5þ2 ; . . . ; c½2 N þ0:5 g;
+tþ1
+
+tþ1
+
+tþ1
+
+..
+.
+Btþ1 ¼ fc½t N þ0:5þ1 ; c½t N þ0:5þ2 ; . . . ; cN g:
+tþ1
+
+tþ1
+
+The k-anonymous t-close data set is generated as follows:
+1. Replace the values of the conﬁdential attribute in the original
+data set D by the corresponding buckets, and call D the resulting
+data set;
+2. Partition D in equivalence classes of k (or more) records.
+In the second step above, not all values of k are equally suitable.
+For instance, it must be k P t þ 1, because we showed in
+Section 6.1 that b 6 k and b ¼ t þ 1. In fact, we can write:
+
+k¼
+
+N
+ðt þ 1Þl
+
+where l  1 is a natural number that counts the number of equivalence classes that emphasize each of the buckets. In fact, if we take
+into account the previous inequality k P t þ 1, we conclude that l
+j
+k
+N
+belongs to the set f1; 2; . . . ; ðtþ1Þ
+2 g. Similarly to the discretization
+of the conﬁdential attribute, the value of k produced by the previous
+formula may not be an integer. In that case we need to adjust the
+size ei of each equivalence class Ei to
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+
+
+
+ei ¼ i
+
+N
+ðt þ 1Þl
+
+
+
+
+ ði  1Þ
+
+
+
+N
+:
+ðt þ 1Þl
+
+7. Related work
+
+Table 1 gives the theoretical probability mass of each bucket of
+the conﬁdential attribute for each of the equivalence classes. We
+assume that l ¼ 1 and that equivalence class E1 emphasizes bucket
+B1 ; E2 emphasizes bucket B2 , and so on. The exact theoretical probability masses may not be achievable due to the discrete nature of
+the data. First of all, it may not be possible to obtain a discretization of the conﬁdential attribute in buckets with probability mass
+1=ðt þ 1Þ. Also, when generating the k-anonymous partition
+E1 ; E2 ; . . . ; Etþ1 , it may not be possible for each of the groups to contain exactly k records. Let pj ¼ bj =N be the probability that a record
+in the original data set belongs to bucket Bj . For t-closeness to be
+achieved, the following must hold for every equivalence class Pi :
+(i) at most bei pi tc records must have Bi as the value for the conﬁ
+dential attribute; and (ii) at least ei pj =t records must have Bj as
+the value for the conﬁdential attribute. For these conditions to
+
+hold, we can start selecting ei pj =t records with conﬁdential attribute Bj , for each j – i, and complete the partition set with
+
+ei  t ei pj =t records with conﬁdential attribute Bi .
+
+6.3. t-closeness algorithm
+Let us now restate the whole bucketization and equivalence
+class generation process in an algorithmic way:
+1. Let the number of records in the original data set be N.
+2. Let t be the desired level of t-closeness.
+3. Cluster the N values of the conﬁdential attribute in the original
+data set into b ¼ t þ 1 buckets in such a way that:
+(a) the probability mass of each bucket is as close as possible to
+1=b, that is, each bucket contains ½N=b values, except for
+some buckets that contain ½N=b þ 1 values (when N is not
+divisible by b);
+(b) values within a bucket are as similar as possible. E.g. for a
+numerical or ordinal conﬁdential attribute, each bucket
+would contain consecutive values. In general, a clustering
+algorithm can be used.
+In this way, we can view the bucketized distribution of the conﬁdential attribute in the original data set as being uniform.
+4. Partition the records in the bucketized data set into a number of
+equivalence classes, in such a way that every equivalence class
+satisﬁes that:
+(a) it contains k (or more) records, in view of achieving
+k-anonymity;
+(b) no bucket contains a proportion of the conﬁdential attribute values of the equivalence class higher than t=b or
+lower than 1=ðtbÞ (that is, so that the bucketized distribution of the conﬁdential attribute in the group is at distance
+less than t from the bucketized distribution of the
+conﬁdential attribute in the overall data set, according to
+Deﬁnition 4).
+
+Table 1
+Theoretical probability mass of the distribution of the conﬁdential attribute in each of
+the buckets corresponding to the discretization of the conﬁdential attribute.
+
+Original data
+E1
+E2
+..
+.
+Etþ1
+
+157
+
+B1
+
+B2
+
+
+
+Btþ1
+
+1=t þ 1
+t=t þ 1
+1=tðt þ 1Þ
+..
+.
+1=tðt þ 1Þ
+
+1=t þ 1
+1=tðt þ 1Þ
+t=t þ 1
+..
+.
+1=tðt þ 1Þ
+
+
+
+
+
+1=t þ 1
+1=tðt þ 1Þ
+1=tðt þ 1Þ
+..
+.
+t=t þ 1
+
+
+
+Our proposal aims to ﬁnd links between syntactic privacy
+models (in particular, t-closeness) and differential privacy. Syntactic privacy models require the anonymized data set to have a speciﬁc form that helps reducing the disclosure risk. k-anonymity
+[27,26], l-diversity [23], and t-closeness [20,21] are among the most
+popular syntactic privacy models. These privacy models are based
+on speciﬁc intruder scenarios, and they aim at avoiding data set
+conﬁgurations that are disclosive under these intruder scenarios.
+Syntactic models of privacy are known to have several issues such
+as their limited utility for high-dimensional data sets [1] and the
+vulnerabilities they present against several attacks [5,23,20]. Perhaps the most prominent issue with syntactic privacy models has
+to do with the intruder scenario: if the level of knowledge of the
+intruder is greater than assumed, the protection achieved may be
+ineffective.
+Differential privacy [9,12] was introduced to provide a strong
+privacy model that addresses the vulnerabilities of previous
+privacy models. To this end, differential privacy takes a relative
+approach to disclosure limitation: the risk of disclosure must be
+only slightly affected by the inclusion or removal of any speciﬁc
+record in the data set. In this way, differential privacy avoids the
+need to make assumptions about intruder scenarios (an intruder
+that knows everything but one record is implicitly assumed).
+The dissimilar approaches to disclosure risk limitation taken by
+differential privacy on the one hand and syntactic models on the
+other hand have motivated mutual criticism between both families
+of methods. For example, [10,13,11] justify the use of differential
+privacy by criticizing several statistical disclosure control
+techniques such as query restriction, input perturbation and even
+output perturbation (the basis of differential privacy) when
+applied naively. On the contrary [24,2] criticize differential privacy
+because of the limited utility it provides for numerical data. Other
+criticisms to differential privacy are related to the unboundedness
+of the responses and to the selection of the e parameter. See [6] for
+a more detailed comparison between syntactic privacy models and
+differential privacy.
+Despite the above controversies, some attempts to ﬁnd
+connections between differential privacy and syntactic privacy
+models have been made. In [22] it is shown that when k-anonymization is done ‘‘safely’’ it leads to ðe; dÞ-differential privacy (a generalization of differential privacy). The randomness required for
+differential privacy to hold is introduced by a random sampling
+step. In contrast to [22], which only goes from k-anonymity to
+ðe; dÞ-differential privacy, we show both implications between edifferential privacy and t-closeness. The approach used to
+introduce the uncertainty required by e-differential privacy is also
+different; while [22] make use of an additional sampling step, we
+take advantage of the assumptions made by t-closeness about
+the prior and posterior views of the data. Connections between
+syntactic models of privacy and differential privacy are not limited
+to the satisﬁability of one family given the other. In [15] an
+interesting mix between differential privacy and k-anonymity is
+proposed. Essentially, e-differential privacy is relaxed to require
+individuals to be indistinguishable only among groups of k individuals. In [29] k-anonymity is used as an intermediate step in the
+generation of an e-differentially private data set. The use of k-anonymity reduces the sensitivity of the data, thereby decreasing the
+amount of noise required to satisfy differential privacy.
+
+8. Conclusions and future research
+This paper has highlighted and exploited several connections
+between k-anonymity, t-closeness and e-differential privacy. These
+
+158
+
+J. Domingo-Ferrer, J. Soria-Comas / Knowledge-Based Systems 74 (2015) 151–158
+
+models are more related than believed so far in the case of data set
+anonymization.
+On the one hand we have introduced the concept of stochastic
+t-closeness, which, instead of being based on the empirical
+distribution like classic t-closeness, is based on the distribution
+induced by a stochastic function that modiﬁes the conﬁdential
+attributes. We have shown that k-anonymity for the quasi-identiﬁers combined with e-differential privacy for the conﬁdential
+attributes yields stochastic t-closeness, with t a function of e, the
+size of the data set and the size of the equivalence classes. This
+result shows that differential privacy is stronger than t-closeness
+as a privacy notion. From a practical point of view, it provides a
+way of generating an anonymized data set that satisﬁes both
+(stochastic) t-closeness and differential privacy.
+On the other hand, we have demonstrated that the k-anonymity
+family of models is powerful enough to achieve e-differential privacy in the context of data set anonymization, provided that a
+few reasonable assumptions on the intruder’s side knowledge hold.
+Speciﬁcally, using a suitable construction, we have shown that
+expðe=2Þ-closeness implies e-differential privacy. The construction
+of a t-close data set based on the distance function in Deﬁnition 4
+has also been detailed. Apart from partitioning into equivalence
+classes, a prior bucketization of the values of the conﬁdential attribute is required. The optimal size of the buckets and the optimal
+size of equivalence classes have been determined.
+The new stochastic t-closeness model opens several future
+research lines. Being a generalization of t-closeness, we can expect
+stochastic t-closeness to allow better data utility. Comparing the
+utility obtainable with both types of t-closeness is an interesting
+future research line that requires devising a construction to reach
+stochastic t-closeness (other than the one based on differential privacy). Exploring whether and how stochastic t-closeness (rather
+than standard t-closeness) could yield e-differential privacy is
+another possible follow-up of this article. Finally, it would also
+be interesting to compare in terms of privacy and utility the impact
+of the distance between distributions proposed in the article and
+the earth mover’s distance.
+Acknowledgments
+The following funding sources are gratefully acknowledged:
+Government of Catalonia (ICREA Acadèmia Prize to the ﬁrst author
+and grant 2014 SGR 537), Spanish Government (project TIN201127076-C03-01 ‘‘CO-PRIVACY’’), European Commission (projects
+FP7 ‘‘DwB’’, FP7 ‘‘Inter-Trust’’ and H2020 ‘‘CLARUS’’), Templeton
+World Charity Foundation (grant TWCF0095/AB60 ‘‘CO-UTILITY’’)
+and Google (Faculty Research Award to the ﬁrst author). The
+authors are with the UNESCO Chair in Data Privacy. The views in
+this paper are the authors’ own and do not necessarily reﬂect the
+views of UNESCO, the Templeton World Charity Foundation or
+Google.
+References
+[1] C.C. Aggarwal, On k-anonymity and the curse of dimensionality, in: Proc. of the
+31st Intl. Conf. on Very Large Data Bases-VLDB 2005, 2005, pp. 901–909.
+[2] J.R. Bambauer, K. Muralidhar, R. Sarathy, Fool’s gold! An illustrated critique of
+differential privacy, Vanderbilt J. Entertain. Technol. Law 16 (4) (2014) 701–
+755.
+[3] A. Blum, K. Ligett, A. Roth, A learning theory approach to non-interactive
+database privacy, in: Proc. of the 40th Annual Symposium on the Theory of
+Computing-STOC 2008, 2008, pp. 609–618.
+
+[4] R. Chen, N. Mohammed, B.C.M. Fung, B.C. Desai, L. Xiong, Publishing set-valued
+data via differential privacy, in: Proc. of the 37th Intl. Conf. on Very Large Data
+Bases-VLDB 2011/Proc. of the VLDB Endowment, vol. 4(11), 2011, pp. 1087–
+1098.
+[5] R. Chi-Wing Wong, A. Wai-Chee Fu, K. Wang, J. Pei, Minimality attack in
+privacy preserving data publishing, in: Proc. of the 33rd Intl. Conf. on Very
+Large Data Bases-VLDB 2007, 2007, pp. 543–554.
+[6] C. Clifton, T. Tassa, On syntactic anonymity and differential privacy, Trans. Data
+Privacy 6 (2) (2013) 161–183.
+[7] J. Domingo-Ferrer, V. Torra, Ordinal, continuous and heterogeneous kanonymity through microaggregation, Data Min. Knowl. Disc. 11 (2) (2005)
+195–212.
+[8] J. Domingo-Ferrer, A critique of k-anonymity and some of its enhancements,
+in: Proc. of the 3rd Intl. Conf. on Availability, Reliability and Security-ARES
+2008, IEEE Computer Society, 2008, pp. 990–993.
+[9] C. Dwork, Differential privacy, in: Proc. of the 33rd Intl. Colloquium on
+Automata, Languages and Programming-ICALP 2006, LNCS 4052, Springer,
+2006, pp. 1–12.
+[10] C. Dwork, An ad omnia approach to deﬁning and achieving private data
+analysis, in: Proc. of the 1st ACM SIGKDD Intl. Conf. on Privacy, Security, and
+Trust in KDD-PinKDD’07, 2007, pp. 1–13.
+[11] C. Dwork, A ﬁrm foundation for private data analysis, Commun. ACM 54 (1)
+(2011) 86–95.
+[12] C. Dwork, F. McSherry, K. Nissim and A. Smith. Calibrating noise to sensitivity
+in private data analysis, in: Proc. of the 3rd Conf. on the Theory of
+Cryptography-TCC’06, LNCS 3876, 2006, pp. 265–284.
+[13] C. Dwork, M. Naor, On the difﬁculties of disclosure prevention in statistical
+databases or the case for differential privacy, J. Privacy Conﬁdentiality 2 (1)
+(2010).
+[14] C. Dwork, M. Naor, O. Reingold, G.N. Rothblum, S. Vadhan, On the complexity
+of differentially private data release: efﬁcient algorithms and hardness results,
+in: Proc. of the 41st Annual Symposium on the Theory of Computing-STOC
+2009, 2009, pp. 381–390.
+[15] J. Gehrke, M. Hay, E. Lui, R. Pass, Crowd-blending privacy, in: Advances in
+Cryptology-CRYPTO 2012, LNCS 7417, 2012, pp. 479–496.
+[16] M. Hardt, K. Ligett, F. McSherry, A simple and practical algorithm for
+differentially private data release, Preprint arXiv:1012.4763v1, 21 December
+2010.
+[17] A. Hundepool, J. Domingo-Ferrer, L. Franconi, S. Giessing, E. Schulte Nordholt,
+K. Spicer, P.-P. de Wolf, Statistical Disclosure Control, Wiley, 2012.
+[18] K. LeFevre, D.J. DeWitt, R. Ramakrishnan, Mondrian multidimensional kanonymity, in: Proc. of the 22nd IEEE Intl. Conf. on Data Engineering-ICDE
+2006, 2006, p. 25.
+[19] K. LeFevre, D.J. DeWitt, R. Ramakrishnan, Incognito: efﬁcient full-domain kanonymity, in: Proc. of the 2005 ACM SIGMOD Intl. Conf. on Management of
+Data-SIGMOD 2005, ACM, 2005, pp. 49–60.
+[20] N. Li, T. Li, S. Venkatasubramanian, t-Closeness: privacy beyond k-anonymity
+and l-diversity, in: Proc. of the 23rd IEEE Intl. Conf. on Data Engineering-ICDE
+2007, 2007, pp. 106–115.
+[21] N. Li, T. Li, S. Venkatasubramanian, Closeness: a new privacy measure for data
+publishing, IEEE Trans. Knowl. Data Eng. 22 (7) (2010) 943–956.
+[22] N. Li, W. Qardaji, D. Su, On sampling, anonymization, and differential privacy
+or, k-anonymization meets differential privacy, in: Proc. of the 7th ACM
+Symposium on Information, Computer and Communications Security-ASIACCS
+2012, 2012, pp. 32–33.
+[23] A. Machanavajjhala, J. Gehrke, D. Kiefer, M. Venkitasubramaniam, l-Diversity:
+privacy beyond k-anonymity, ACM Trans. Knowl. Disc. Data 1 (1) (2007). art.
+no. 3.
+[24] R. Sarathy, K. Muralidhar, Evaluating Laplace noise addition to satisfy
+differential privacy for numeric data, Trans. Data Privacy 4 (1) (2011)
+1–17.
+[25] D. Rebollo-Monedero, J. Forné, J. Domingo-Ferrer, From t-closeness-like
+privacy to postrandomization via information theory, IEEE Trans. Knowl.
+Data Eng. 22 (11) (2010) 1623–1636.
+[26] P. Samarati, Protecting respondents’ identities in microdata release, IEEE
+Trans. Knowl. Data Eng. 13 (6) (2001) 1010–1027.
+[27] P. Samarati, L. Sweeney, Protecting privacy when disclosing information: kanonymity and its enforcement through generalization and suppression, SRI
+International Report, 1998.
+[28] J. Soria-Comas, J. Domingo-Ferrer, Differential privacy via t-closeness in data
+publishing, in: Proc. of the 11th Annual Conf. on Privacy, Security and TrustPST 2013, 2013, pp. 27–35.
+[29] J. Soria-Comas, J. Domingo-Ferrer, D. Sánchez, S. Martínez, Enhancing data
+utility in differential privacy via microaggregation-based k-anonymity, VLDB J.
+23 (5) (2014) 771–794.
+[30] T.M. Truta, B. Vinay, Privacy protection: p-sensitive k-anonymity property, in:
+Proc. of the 22nd Intl. Conf. of Data Engineering Workshops-ICDE 2006, 2006,
+p. 94.
+
+

@@ -1,0 +1,1513 @@
+On the Complexity of t-Closeness Anonymization and Related
+Problems
+
+arXiv:1301.1751v1 [cs.DS] 9 Jan 2013
+
+Hongyu Liang∗
+
+Hao Yuan†
+
+Abstract
+An important issue in releasing individual data is to protect the sensitive information from
+being leaked and maliciously utilized. Famous privacy preserving principles that aim to ensure
+both data privacy and data integrity, such as k-anonymity and l-diversity, have been extensively
+studied both theoretically and empirically. Nonetheless, these widely-adopted principles are still
+insufficient to prevent attribute disclosure if the attacker has partial knowledge about the overall
+sensitive data distribution. The t-closeness principle has been proposed to fix this, which also has
+the benefit of supporting numerical sensitive attributes. However, in contrast to k-anonymity
+and l-diversity, the theoretical aspect of t-closeness has not been well investigated.
+We initiate the first systematic theoretical study on the t-closeness principle under the
+commonly-used attribute suppression model. We prove that for every constant t such that
+0 ≤ t < 1, it is NP-hard to find an optimal t-closeness generalization of a given table. The proof
+consists of several reductions each of which works for different values of t, which together cover
+the full range. To complement this negative result, we also provide exact and fixed-parameter
+algorithms. Finally, we answer some open questions regarding the complexity of k-anonymity
+and l-diversity left in the literature.
+
+1
+
+Introduction
+
+Privacy-preserving data publication is an important and active topic in the database area. Nowadays many organizations need to publish microdata that contain certain information, e.g., medical
+condition, salary, or census data, of a collection of individuals, which are very useful for research
+and other purposes. Such microdata are usually released as a table, in which each record (i.e., row)
+corresponds to a particular individual and each column represents an attribute of the individuals.
+The released data usually contain sensitive attributes, such as Disease and Salary, which, once
+leaked to unauthorized parties, could be maliciously utilized and harm the individuals. Therefore,
+those features that can directly identify individuals, e.g., Name and Social Security Number, should
+be removed from the released table. See Table 1 for example of an (imagined) microdata table that
+a hospital prepares to release for medical research. (Note that the IDs in the first column are only
+for simplicity of reference, but not part of the table.)
+∗
+
+Institute for Interdisciplinary Information Sciences, Tsinghua University, Beijing, China.
+Email:
+lianghy08@mails.tsinghua.edu.cn.
+Supported in part by the National Basic Research Program of China
+Grant 2011CBA00300, 2011CBA00301, and the National Natural Science Foundation of China Grant 61033001,
+61061130540, 61073174.
+†
+Department of Computer Science, City University of Hong Kong, Kowloon, Hong Kong, China. Email:
+haoyuan@cityu.edu.hk. Supported by the Research Grants Council of Hong Kong under grant 9041688 (CityU
+124411).
+
+1
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+Quasi-identifiers
+Zipcode Age Education
+98765
+38
+Bachelor
+98654
+39
+Doctorate
+98543
+32
+Master
+97654
+65
+Bachelor
+96689
+45
+Bachelor
+97427
+33
+Bachelor
+96552
+54
+Bachelor
+97017
+69
+Doctorate
+97023
+55
+Master
+97009
+62
+Bachelor
+
+Sensitive
+Disease
+Viral Infection
+Heart Disease
+Heart Disease
+Cancer
+Viral Infection
+Viral Infection
+Heart Disease
+Cancer
+Cancer
+Cancer
+
+Table 1: The raw microdata table.
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+Quasi-identifiers
+Zipcode Age Education
+98⋆⋆⋆
+3⋆
+⋆
+98⋆⋆⋆
+3⋆
+⋆
+98⋆⋆⋆
+3⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+970⋆⋆
+⋆⋆
+⋆
+970⋆⋆
+⋆⋆
+⋆
+970⋆⋆
+⋆⋆
+⋆
+
+Sensitive
+Disease
+Viral Infection
+Heart Disease
+Heart Disease
+Cancer
+Viral Infection
+Viral Infection
+Heart Disease
+Cancer
+Cancer
+Cancer
+
+Table 2: A 3-anonymous partition.
+Nonetheless, even with unique identifiers removed from the table, sensitive personal information
+can still be disclosed due to the linking attacks [27, 28], which try to identify individuals from the
+combination of quasi-identifiers. The quasi-identifiers are those attributes that can reveal partial
+information of the individual, such as Gender, Age, and Hometown. For instance, consider an
+adversary who knows that one of the records in Table 1 corresponds to Bob. In addition he knows
+that Bob is around thirty years old and has a Master’s Degree. Then he can easily identify the
+third record as Bob’s and thus learns that Bob has a heart disease.
+A widely-adopted approach for protecting privacy against such attacks is generalization, which
+partitions the records into disjoint groups and then transforms the quasi-identifier values in each
+group to the same form. (The sensitive attribute values are not generalized because they are usually
+the most important data for research.) Such generalization needs to satisfy some anonymization
+principles, which are designed to guarantee data privacy to a certain extent.
+The earliest (and probably most famous) anonymization principle is the k-anonymity principle
+proposed by Samarati [27] and Sweeney [28], which requires each group in the partition to have
+size at least k for some pre-specified value of k; such a partition is called k-anonymous. Intuitively,
+this principle ensures that every combination of quasi-identifier values appeared in the table is
+2
+
+1
+2
+3
+5
+8
+9
+4
+6
+7
+10
+
+Quasi-identifiers
+Zip Code Age Education
+98⋆⋆⋆
+3⋆
+⋆
+98⋆⋆⋆
+3⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+97⋆⋆⋆
+⋆⋆
+Bachelor
+97⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+
+Sensitive
+Disease
+Viral Infection
+Heart Disease
+Heart Disease
+Viral Infection
+Cancer
+Cancer
+Cancer
+Viral Infection
+Heart Disease
+Cancer
+
+Table 3: A 2-diverse partition of Table 1.
+indistinguishable from at least k − 1 other records, and hence protects the individuals from being
+uniquely recognized by linking attacks. The k-anonymity principle has been extensively studied,
+partly due to the simplicity of its statement. Table 2 is an example of a 3-anonymous partition of
+Table 1, which applies the commonly-used suppression method to generalize the values in the same
+group, i.e., suppresses the conflicting values with a new symbol ‘⋆’.
+A potential issue with the k-anonymity principle is that it is totally independent of the sensitive
+attribute values. This issue was formally raised by Machanavajjhala et al. [19] who showed that
+k-anonymity is insufficient to prevent disclosure of sensitive values against the homogeneity attack.
+For example, assume that an attacker knows that one record of Table 2 corresponds to Danny, who
+is an elder with a Doctorate Degree. From Table 2 he can easily conclude that Danny’s record
+must belong to the third group, and hence knows Danny has a cancer since all people in the third
+group have the same disease. To forestall such attacks, Machanavajjhala et al. [19] proposed the
+l-diversity principle, which demands that at most a 1/l fraction of the records can have the same
+sensitive value in each group; such a partition is called l-diverse. Table 3 is an example of a 2diverse partition of Table 1. (There are some other formulations of l-diversity, e.g., one requiring
+that each group comprises at least l different sensitive values.)
+Li et al. [17] observed that the l-diversity principle is still insufficient to protect sensitive
+information disclosure against the skewness attack, in which the attacker has partial knowledge of
+the overall sensitive value distribution. Moreover, since l-diversity only cares whether two sensitive
+values are distinct or not, it fails to well support sensitive attributes with semantic similarities,
+such as numerical attributes (e.g., the salary).
+To fix these drawbacks, Li et al. [17] introduced the t-closeness principle, which requires that
+the sensitive value distribution in any group differs from the overall sensitive value distribution
+by at most a threshold t. There is a metric space defined on the set of possible sensitive values,
+in which the maximum distance of two points (i.e., sensitive values) in the space is normalized to
+1. The distance between two probability distributions of sensitive values are then measured by
+the Earth-Mover Distance (EMD) [26], which is widely used in many areas of computer science.
+Intuitively, the EMD measures the minimum amount of work needed to transform one probability
+distribution to another by means of moving distribution mass between points in the probability
+space. The EMD between two distributions in the (normalized) space is always between 0 and 1.
+3
+
+We will give an example of a t-closeness partition of Table 1 for some threshold t later in Section 2,
+after the related notation and definitions are formally introduced.
+The t-closeness principle has been widely acknowledged as an enhanced principle that fixes the
+main drawbacks of previous approaches like k-anonymity and l-diversity. There are also many
+other principles proposed to deal with different attacks or for use of ad-hoc applications; see, e.g.,
+[3, 20, 22, 23, 29, 30, 32, 33] and the references therein.
+
+1.1
+
+Theoretical Models of Anonymization
+
+It is always assumed that the released table itself satisfies the considered principle (k-anonymity,
+l-diversity, or t-closeness), since otherwise there exists no feasible solution at all. Therefore, the
+trivial partition that puts all records in a single group always guarantees the principle to be met.
+However, such a solution is useless in real-world scenarios, since it will most probably produce a
+table full of ‘⋆’s, which is undesirable in most applications. This extreme example demonstrates
+the importance of finding a balance between data privacy and data integrity.
+Meyerson and Williams [21] proposed a framework for theoretically measuring the data integrity,
+which aims to find a partition (under certain constraints such as k-anonymity) that minimizes the
+number of suppressed cells (i.e., ‘⋆’s) in the table. This model has been widely adopted for theoretical investigations of anonymization principles. Under this model, k-anonymity and l-diversity
+have been extensively studied; more detailed literature reviews will be given later.
+However, in contrast to k-anonymity and l-diversity, the theoretical aspects of the t-closeness
+principle have not been well explored before. There are only a handful of algorithms designed for
+achieving t-closeness [17, 18, 8, 25]. The algorithms given by Li et al. [17, 18] incorporate t-closeness
+into k-anonymization frameworks (Incognito [14] and Mondrian [15]) to find a t-closeness partition.
+Cao et al. [8] proposed the SABRE algorithm, which is the first framework tailored for t-closeness.
+The information-theoretic approach in [25] works for an “average” version of t-closeness. None of
+these algorithms is guaranteed to have good worst-case performance. Furthermore, to the best
+of our knowledge, no computational complexity results of t-closeness have been reported in the
+literature.
+
+1.2
+
+Our Contributions
+
+In this paper, we initiate the first systematic theoretical study on the t-closeness principle under
+the commonly-used suppression framework. First, we prove that for every constant t such that
+0 ≤ t < 1, it is NP-hard to find an optimal t-closeness generalization of a given table. Notice
+that the problem becomes trivial when t = 1, since the EMD between any two sensitive value
+distributions is at most 1, and hence putting each record in a distinct group provides a feasible
+solution that does not need to suppress any value at all, which is of course optimal. Our result shows
+that the problem immediately becomes hard even if the threshold is relaxed to, say, 0.999. At the
+other extreme, a 0-closeness partition demands that the sensitive value distribution in every group
+must be the same with the overall distribution. This seems to restrict the sets of feasible solutions
+in a very strong sense, and thus one might imagine whether there exists an efficient algorithm for
+dealing with this special case. Our result dashes the hope for this idea. The proof of our hardness
+result actually consists of several different reductions. Interestingly, each of these reductions only
+work for a set of special values of t, but altogether they cover the full range [0, 1). We note that
+
+4
+
+the hardness of t1 -closeness does not directly imply that of t2 -closeness for t1 6= t2 , since they may
+have very different optimal objective values.
+As a by-product of our proof, we establish the NP-hardness of k-anonymity when k = cn, where
+n is the number of records and c is any constant in (0, 1/2]. To the best of our knowledge, this
+is the first hardness result for k-anonymity that works for k = Ω(n). The existing approaches for
+proving hardness of k-anonymity all fail to generalize to this range of k due to inherent limits of
+the reductions. We note that k = n/2 is the largest possible value for which k-anonymity can be
+hard, because when k > n/2, any k-anonymous partition can only contain one group, namely the
+table itself.
+To complement our negative results, we also provide exact and fixed-parameter algorithms
+for obtaining the optimal t-closeness partition. Our exact algorithm for t-closeness runs in time
+2O(n) · O(m), where n and m are respectively the number of rows and columns in the input table.
+Together with a reduction that we derive (Lemma 1), this gives a 2O(n) · O(m) time algorithm for
+k-anonymity for all values of k, thus generalizing the result in [4] which only works for constant
+k. We then prove that the problem is fixed-parameter tractable when parameterized by m and the
+alphabet size of the input table. This implies that an optimal t-closeness partition can be found
+in polynomial time if the number of quasi-identifiers and that of distinct attribute values are both
+small (say, constants), which is true in many real-world applications. (We say a problem is fixedparameter tractable with respect to some parameters k1 , . . . , kr , if there is an algorithm solving the
+problem that runs in time h(k1 , . . . , kr )nO(1) , where n is the size of the input and h is an arbitrary
+computable function depending only on the parameters. Parameterized complexity has become a
+very active research area. For standard notation and definitions in parameterized complexity, we
+refer the reader to [10].) We obtain our fixed-parameter algorithm by reducing t-closeness to a
+special mixed integer linear program in which some variables are required to take integer values
+while others are not. The integer linear program we derived for characterizing t-closeness may have
+its own interest in future applications. We note that both of our algorithms work for all values of
+t.
+Last but not least, we review the problems of finding optimal k-anonymous and l-diverse partitions, and answer two open questions left in the literature.
+• We prove that the 2-diversity problem can be solved in polynomial time, which complements
+the NP-hardness results for l ≥ 3 given in [31]. (We notice that the authors of [9] claimed
+that 2-diversity was proved to be polynomial by [31]. However what [31] actually proved is
+that the special 2-diversity instances, in which there are only two distinct sensitive values,
+can be reduced to the matching problem and hence solved in polynomial time. They do not
+have results for general 2-diversity. To the best of our knowledge, ours is the first work to
+demonstrate the tractability of 2-diversity.)
+• We then present an m-approximation algorithm for k-anonymity that runs in polynomial
+time for all values of k. (Recall that m is the number of quasi-identifiers.) This improves the
+O(k) and O(log k) ratios in [1, 24] when k is relatively large compared to m. We note that
+the performance guarantee of their algorithms cannot be reduced even for small values of m,
+due to some intrinsic limitations (for example, [24] uses the tight Θ(log k) approximation for
+k-set cover).
+
+5
+
+1.3
+
+Related Work
+
+It is known that finding an optimal k-anonymous partition of a given table is NP-hard for every
+fixed integer k ≥ 3 [21], while it can be solved optimally in polynomial time when k ≤ 2 [4].
+The NP-hardness result holds even for very restricted cases, e.g., when k = 3 and there are only
+three quasi-identifiers [5, 6]. On the other hand, Blocki and Williams [4] gave a 2O(n) · O(m) time
+algorithm that finds an optimal k-anonymous partition when k = O(1), where n and m are the
+number of records and attributes (i.e., rows and columns) of the input table respectively. They
+also showed this problem to be fixed-parameter tractable when m and |Σ| (the alphabet size of the
+table) are considered as parameters. The parameterized complexity of k-anonymity has also been
+studied in [6, 7, 11] with respect to different parameters.
+Meyerson and Williams [21] gave an O(k log k) approximation algorithm for k-anonymity, i.e.,
+it finds a k-anonymous partition in which the number of suppressed cells is at most O(k log k) times
+the optimum. The ratio was later improved to O(k) by Aggarwal et al. [1] and to O(log k) by Park
+and Shim [24]. We note that the algorithms in [21, 24] run in time nO(k), and hence are guaranteed
+to be polynomial only if k = O(1), while the algorithm in [1] has a truly polynomial running time
+for all k. There are also a number of heuristic algorithms for k-anonymity (e.g., Incognito [14]),
+which work well in many real datasets but have poor worst-case performance guarantee.
+Xiao et al. [31] are the first to establish a systematic theoretical study on l-diversity. They
+showed that finding an optimal l-diverse partition is NP-hard for every fixed integer l ≥ 3 even if
+m, the number of quasi-identifiers, is any fixed integer not smaller than l. They also provided an
+(l · m)-approximation algorithm. Dondi et al. [9] proved an inapproximability factor of c ln(l) for
+l-diversity where c > 0 is some constant, and showed that the problem remains APX-hard even
+if l = 4 and the table consists of only three columns. They also presented an m-approximation
+algorithm when the number of distinct sensitive values is constant, and gave some parameterized
+hardness results and algorithms.
+
+1.4
+
+Paper Organization
+
+The rest of this paper is organized as follows. Section 2 introduces notation and definitions used
+throughout the paper, and then formally defines the problems. Section 3 is devoted to proving the
+hardness of finding the optimal t-closeness partition, while Section 4 provides exact and parameterized algorithms. Sections 5 and 6 present our results for k-anonymity and 2-diversity, respectively.
+Finally, the paper is concluded in Section 7 with some discussions and future research directions.
+
+2
+
+Preliminaries
+
+We consider a raw database that contains m quasi-identifiers (QIs) and a sensitive attribute (SA).∗
+Each record t in the database is an (m + 1)-dimensional vector drawn from Σm+1 , where Σ is the
+alphabet of possible values of the attributes. For 1 ≤ i ≤ m, t[i] is the value of the i-th QI of t, and
+t[m + 1] is the value of the SA of t. Let Σs ⊆ Σ be the alphabet of possible SA values. A microdata
+table (or table, for short) T is a multiset of vectors (or rows) chosen from Σm+1 , and we denote by
+|T | the size of T , i.e., the number of vectors contained in T . We will let n = |T | when the table T
+∗
+
+Following previous approaches, we only consider instances with one sensitive attribute. Our hardness result
+indicates that one sensitive attribute already makes the problem NP-hard. Meanwhile, it is easy to verify that our
+algorithms also work for the case where multiple sensitive attributes exist.
+
+6
+
+1
+2
+3
+1
+2
+3
+
+Quasi-identifiers
+Sensitive
+Zip Code Age Education
+Disease
+98765
+38
+Bachelor
+Viral Infection
+98654
+39
+Doctorate
+Heart Disease
+98543
+32
+Master
+Heart Disease
+After generalization:
+98⋆⋆⋆
+3⋆
+⋆
+Viral Infection
+98⋆⋆⋆
+3⋆
+⋆
+Heart Disease
+98⋆⋆⋆
+3⋆
+⋆
+Heart Disease
+Table 4: The first three records in Table 1.
+
+is clear in the context. Note that T may contain identical vectors since it can be a multiset. We
+also use T [j] to denote the j-th vector in T under some ordering, e.g., T [3][m + 1] is the SA value
+of the third vector of T .
+Let ⋆ be a fresh character not in Σ. For each vector t ∈ T , let t∗ be the suppressor of t (inside
+T ) defined as follows:
+• t∗ [m + 1] = t[m + 1];
+• for 1 ≤ i ≤ m, t∗ [i] = t[i] if t[i] = t′ [i] for all t′ ∈ T , and t∗ [i] = ⋆ otherwise.
+The cost of a suppressor t∗ is cost(t∗ ) = |{1 ≤ i ≤ m | t∗ [i] = ⋆}|, i.e., the number of ‘⋆’s in
+It is easy to see that all vectors in T have the same suppressor if we only consider the quasiidentifiers. The generalization of T is defined as Gen(T ) = {t∗ P
+| t ∈ T }. (Note that Gen(T ) is
+also a multiset.) The cost of the generalization of T is cost(T ) = t∗ ∈Gen(T ) cost(t∗ ), i.e., the sum
+of costs of all the suppressors. Since all suppressors in T have the same cost, we can equivalently
+write cost(T ) = |T | · cost(t∗ ) for any t∗ ∈ Gen(T ).
+As an illustrative example, Table 4 consists of the first three record of Table 1, which contains
+eight QIs (we regard each digit of Zip-code and Age as a separate QI) and one SA. The generalization
+of Table 4 is also shown. In this case all suppressors have cost 5, and the cost of this generalization
+is 5 · 3 = 15.
+A partition P of table T is a collection of pairwise disjoint non-empty subsets of T whose union
+equals T . Each subset in the partition is called a group or a sub-table. The cost of the partition
+P, denoted by cost(P), is the sum of costs of all its groups. For example, the partition of Table 1
+given by Table 2 has cost 5 · 3 + 6 · 4 + 5 · 3 = 54.
+t∗ .
+
+2.1
+
+t-Closeness Principle
+
+We formally define the t-closeness principle introduced in [17] for protecting data privacy. Let
+T be a table, and assume without loss of generality that Σs = {1, 2, . . . , |Σs |}. The sensitive
+attribute value space (SA space) is a normalized metric space (Σs , d), where d(·, ·) is a distance
+function defined on Σs × Σs satisfying that (1)d(i, i) = 0 for any i ∈ Σs ; (2)d(i, j) = d(j, i) for all
+i, j ∈ Σs ; (3)d(i, j) + d(j, k) ≥ d(i, k) for i, j, k ∈ Σs (this is called the triangle inequality); and
+(4)maxi,j∈Σs d(i, j) = 1 (this is called the normalized condition).
+For a sub-table M ⊆ TPand i ∈ Σs , denote by n(M, i) the number of vectors whose SA value
+equals i. Clearly |M | = i∈Σs n(M, i). The sensitive attribute value distribution (SA distribution) of M , denoted by P(M ), is a |Σs |-dimensional vector whose i-th coordinate is P(M )[i] =
+7
+
+n(M, i)/|M | for 1 ≤ i ≤ |Σs |. Thus P(M ) can be seen as the probability distribution of the SA
+values in M , assuming that each vector in M appears with the same probability. For a threshold
+0 ≤ t ≤ 1, we say M have t-closeness (with T ) if EMD(P(M ), P(T )) ≤ t, where EMD(X, Y) is
+the Earth-Mover Distance (EMD) between distributions X and Y [26]. A t-closeness partition of
+T is one in which every group has t-closeness with T .
+Intuitively, the EMD measures the minimum amount of work needed to transform one probability distribution to another by means of moving distribution mass between points in the probability
+space; here a unit of work corresponds to moving a unit amount of probability mass by a unit of
+ground distance. The EMD between two SA distributions X and Y can be formally defined as the
+optimal objective value of the following linear program [26, 17]:
+Minimize
+
+|Σs | |Σs |
+X
+X
+
+d(i, j)f (i, j)
+
+subject to:
+
+|Σs |
+X
+
+f (i, j) = X[i],
+
+∀1 ≤ i ≤ |Σs |
+
+|Σs |
+X
+
+f (i, j) = Y[j],
+
+∀1 ≤ j ≤ |Σs |
+
+i=1 j=1
+
+j=1
+
+i=1
+
+f (i, j) ≥ 0,
+
+∀1 ≤ i, j ≤ |Σs |.
+
+The above constraints are a little different from those in [17]; however they can be proved equivalent using the triangle inequality condition of the SA space. It is also easy to see that EMD(X, Y) =
+EMD(Y, X). By the normalized condition of the SA space, we have 0 ≤ EMD(X, Y) ≤ 1 for any
+SA distributions X and Y.
+The equal-distance space refers to a special SA space in which each pair of distinct sensitive
+values have distance exactly 1. There is a concise formula for computing the EMD between two
+SA distributions in this space.
+Fact 1 ([17]). For any two SA distributions X and Y in the equal-distance space, we have
+|Σs |
+
+EMD(X, Y) =
+
+1X
+|X[i] − Y[i]| =
+2
+i=1
+
+X
+
+(X[i] − Y[i]).
+
+1≤i≤|Σs |:X[i]≥Y[i]
+
+Therefore, in the equal-distance space, the EMD coincides with the total variation distance
+between two distributions.
+Let us go back to Table 1 for an example. We let 1,2,and 3 denote the sensitive values “Viral
+Inspection”, “Heart Disease”, and “Cancer”, respectively. Let the SA space be the equal-distance
+space. The SA distribution of the whole table is then (0.3, 0.3, 0.4). Suppose we set the threshold
+t = 0.3. It can be verified that Table 3, although being a 2-diverse partition, is not a t-closeness
+partition of Table 1. In fact, the SA distribution of the first group is (0.5, 0.5, 0), and hence the
+EMD between it and the overall distribution is 0.4. (This example also reflects some property of
+the skewness attack that l-diversity suffers from. If an attacker can locate the record of Alice in the
+first group of Table 3, then he knows that Alice does not have a cancer. If he in addition knows that
+Alice comes from some district where people have a very low chance to have heart disease, then he
+8
+
+1
+2
+4
+3
+5
+8
+9
+6
+7
+10
+
+Quasi-identifiers
+Zipcode Age Education
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+⋆
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+9⋆⋆⋆⋆
+⋆⋆
+Bachelor
+
+Sensitive
+Disease
+Viral Infection
+Heart Disease
+Cancer
+Heart Disease
+Viral Infection
+Cancer
+Cancer
+Viral Infection
+Heart Disease
+Cancer
+
+Table 5: A 0.3-closeness partition
+would be confident that Alice has a viral infection.) We instead give a 0.3-closeness partition in
+Table 5. We can actually verify that it is even a 0.1-closeness partition.
+Now we are ready to define the main problem studied in this paper.
+Problem 1. Given an input table T , an SA space (Σs , d), and a threshold t ∈ [0, 1], the tCloseness problem requires to find a t-closeness partition of T with minimum cost.
+Finally we review another two widely-used principles for privacy preserving, namely k-anonymity
+and l-diversity, and the combinatorial problems associated with them. A partition is called kanonymous if all its groups have size at least k. A (sub-)table M is called l-diverse if at most
+|M|/l of the vectors in M have an identical SA value. A partition is called l-diverse if all its groups
+are l-diverse.
+Problem 2. Let T be a table given as input. The k-Anonymity (l-Diversity) problem requires
+to find a k-anonymous (l-diverse) partition of T with minimum cost.
+
+3
+
+NP-hardness Results
+
+In this section we study the complexity of the t-Closeness problem. The problem is trivial if
+the given threshold is t = 1, since putting each vector in a distinct group produces a 1-closeness
+partition with cost 0, which is obviously optimal. Our main theorem stated below indicates that
+this is in fact the only easy case.
+Theorem 1. For any constant t such that 0 ≤ t < 1, t-Closeness is NP-hard.
+We will prove Theorem 1 via several reductions, each covering a particular range of t, which
+altogether prove the theorem. We first present a result that relates t-Closeness to k-Anonymity.
+Lemma 1. There is a polynomial-time reduction from k-Anonymity to t-Closeness with equaldistance space and t = 1 − k/n.
+Proof. Let T be an input table of k-Anonymity. We properly change the SA values of vectors in T
+to ensure that all their SA values are distinct; this can be done because the SA values are irrelevant
+9
+
+Figure 1: Reduction from MinBisection to (n/2)-Anonymity.
+to the objective of the k-Anonymity problem. Assume w.l.o.g. that the SA values are {1, 2, . . . , n}.
+Consider an instance of t-Closeness with the same input table T , in which t = 1 − k/n and the
+SA space is the equal-distance space. The SA distribution of T is (1/n, 1/n, . . . , 1/n). In the
+SA distribution of each size-r group Tr , there are exactly r coordinates equal to 1/r and n − r
+coordinates equal to 0. It is easy to see that EMD(P(T ), P(Tr )) = (n − r)(1/n) = 1 − r/n. Hence,
+a group has t-closeness if and only if it is of size at least k. Therefore, each k-anonymous partition
+of T is also a t-closeness partition, and vice versa. The lemma follows.
+By Lemma 1 we can directly deduce the NP-hardness of t-Closeness when the threshold t is
+given as input, using e.g. the NP-hardness of 3-Anonymity [21]. However, to show hardness for
+constant t that is bounded away from 1, we need k/n = Ω(1) and thus k = Ω(n). Unfortunately,
+the existing hardness results for k-Anonymity only work for k = O(1) and cannot be generalized
+to large values of k. For example, most hardness proofs use reductions from the k-dimensional
+matching problem, but this problem can be solved in polynomial time when k = Ω(n). Below we
+show the NP-hardness of k-Anonymity for k = Ω(n) via reductions different from all previous
+approaches in the literature.
+Theorem 2. For any constant c such that 0 < c ≤ 1/2, (cn)-Anonymity is NP-hard.
+To the best of our knowledge, Theorem 2 is the first hardness result for k-Anonymity when
+k = Ω(n). We note that the constant 1/2 is the best possible, since for any k > n/2, a k-anonymous
+partition can only contain one group, namely the table itself. We first prove the following result,
+which will be used as a starting point in further reductions.
+Theorem 3. (n/2)-Anonymity is NP-hard.
+Proof. We will present a polynomial-time reduction from the minimum graph bisection (MinBisection)
+problem to (n/2)-Anonymity. MinBisection is a well-known NP-hard problem [12, 13] defined
+as follows: given an undirected graph, find a partition of its vertices into two equal-sized halves so
+as to minimize the number of edges with exactly one endpoint in each half.
+Let G = (V, E) be an input graph of MinBisection, where |V | ≥ 4 is even. Suppose V =
+{v1 , v2 , . . . , vn } and E = {e1 , e2 , . . . , em }. In what follows we construct a table T of size n = |V |
+that contains m = |E| quasi-identifiers. (The sensitive attributes are useless in k-Anonymity
+so they will not appear.) This table will serve as the input to the k-Anonymity problem with
+k = n/2. Intuitively each row (or vector) of T corresponds to a vertex in V , while each column
+(or QI) of T corresponds to an edge in E. The alphabet Σ is {1, 2, . . . , n}. For each i ∈ [n] and
+j ∈ [m],† let T [i][j] = i if vi ∈ ej , and T [i][j] = 0 if vi 6∈ ej . Thus each column contains exactly
+†
+
+We use [q] to interchangeably denote {1, 2, . . . , q}.
+
+10
+
+two non-zero elements corresponding to the two endpoints of the associated edge. See Figure 1 for
+a toy example. It is easy to see that T can be constructed in polynomial time.
+Before delving into the reduction, we first prove a result concerning the partition cost of T .
+Any (n/2)-anonymous partition of T contains at most two groups. For the trivial partition that
+only contains T itself, the cost is n · m because all elements in T should be suppressed. Thus
+an (n/2)-anonymous partition with minimum cost should consist of exactly two groups. Suppose
+P = {T1 , T2 } is an (n/2)-anonymous partition of T where |T1 | = |T2 | = n/2. Let {V1 , V2 } be the
+corresponding partition of V (recall that each vector in T corresponds to a vertex in V ). Consider
+Gen(T1 ), the generalization of T1 . For any column j ∈ [m], if some endpoint of ej , say vi , belongs
+to V1 , then T [i][j] = i. By our construction of T , any other element in the j-th column does not
+equal to i. Since |T1 | ≥ n/2 ≥ 2, column j of T1 must be suppressed to ⋆. On the other hand, if
+none of ej ’s endpoints belongs to V1 , then column j of T1 contains only zeros and thus can stay
+unsuppressed. Therefore, we obtain
+cost(T1 ) = |T1 | · (|E11 | + |E12 |) = n(|E11 | + |E12 |)/2,
+
+(1)
+
+where Epq denotes the set of edges with one endpoint in Vp and another in Vq , for p, q ∈ {1, 2}.
+Similarly we have cost(T2 ) = n(|E22 | + |E12 |)/2. Hence the cost of the partition P is
+cost(P) =
+
+2
+X
+
+cost(Tp ) = n(|E| + |E12 |)/2,
+
+(2)
+
+p=1
+
+noting that |E| = |E11 | + |E12 | + |E22 |.
+We now prove the correctness of the reduction. Let OP T be the minimum size of any cut {V1 , V2 }
+of G with |V1 | = |V2 |, and OP T ′ be the minimum cost of any (n/2)-anonymous partition of T .
+We prove that OP T ′ = n(|E| + OP T )/2, which will complete the reduction from MinBisection
+to (n/2)-Anonymity. Let {V1 , V2 } be the cut of G achieving the optimal cut size OP T , where
+|V1 | = |V2 | = n/2. Using notation introduced before, we have OP T = |E12 |. Let P = {T1 , T2 }
+where Tp = {T [i] | vi ∈ Vp } for p ∈ {1, 2}. Clearly P is an (n/2)-anonymous partition of T . By
+Equation (2) we have OP T ′ ≤ cost(P) = n(|E| + OP T )/2.
+On the other hand, let P ′ = {T1′ , T2′ } be an (n/2)-anonymous partition with cost(P ′ ) = OP T ′ .
+We have |T1′ | = |T2′ | = n/2. Consider the partition {V1′ , V2′ } of V with Vp′ = {vi | T [i] ∈ Tp′ } for
+′ | where E ′ denotes the set of edges
+p ∈ {1, 2}. Since |V1′ | = |V2′ | = n/2, we have OP T ≤ |E12
+12
+′
+′
+′ |)/2 ≥
+with one endpoint in V1 and another in V2 . By Equation (2) we have OP T ′ = n(|E| + |E12
+n(|E| + OP T )/2. Combined with the previously obtained inequality OP T ′ ≤ n(|E| + OP T )/2,
+we have shown that OP T ′ = n(|E| + OP T )/2. By the analyses we also know that an optimal
+(n/2)-anonymous partition of T can easily be transformed to an optimal equal-sized cut of G.
+This finishes the reduction from MinBisection to (n/2)-Anonymity, and completes the proof of
+Theorem 3.
+Theorem 4. For any constant c such that 0 < c ≤ 1/3, (cn)-Anonymity is NP-hard.
+Proof. Fix 0 < c ≤ 1/3. We reduce (n/2)-Anonymity to (cn)-Anonymity, which will prove the
+NP-hardness of the latter due to Theorem 3. Let T be an instance of (n/2)-Anonymity with n
+rows and m QI columns. Choose two fresh symbols λ1 , λ2 not appearing in T . We construct a
+
+11
+
+Figure 2: Reduction from (n/2)-Anonymity to (n/3)-Anonymity.
+new table T ′ with n′ = n/2c rows and m′ = m + nm QI columns as follows‡ . For all 1 ≤ i ≤ n,
+let T ′ [i][j] = T [i][j] for 1 ≤ j ≤ m, and T ′ [i][j] = λ1 for m + 1 ≤ j ≤ m′ . For all n + 1 ≤ i ≤ n′
+and 1 ≤ j ≤ m′ , let T ′ [i][j] = λ2 . This finishes the description of T ′ . See Figure 2 for an example
+where c = 1/3, λ1 = ‘A’, and λ2 = ‘B’. Clearly T ′ can be constructed in polynomial time.
+Let OP T denote the minimum cost of an (n/2)-anonymous partition of T and OP T ′ be the
+minimum cost of a (cn′ )-anonymous partition of T ′ . We next prove OP T = OP T ′ , which will
+complete the reduction from (n/2)-Anonymity to (cn)-Anonymity.
+On one hand, let P = {T1 , T2 } be an (n/2)-anonymous partition of T with cost(P) = OP T . We
+have |T1 | = |T2 | = n/2. Define a partition P ′ of T ′ as {T1′ , T2′ , T3′ }, where Tp′ = {T ′ [i] | T [i] ∈ Tp , 1 ≤
+i ≤ n} for p ∈ {1, 2}, and T3′ = {T ′ [i] | n + 1 ≤ i ≤ n′ }. We have |T1′ | = |T2′ | = n/2 ≥ c(n/2c) = cn′ ,
+and |T3′ |/n′ = (n/2c − n)/(n/2c) = 1 − 2c ≥ c as c ≤ 1/3. Hence P ′ is a (cn)-anonymous partition
+of T ′ . It is easy to verify that cost(P ′ ) = cost(P) = OP T , implying that OP T ′ ≤ OP T .
+On the other hand, let P ′ = {T1′ , . . . , Tr′ } be a (cn)-anonymous partition of T ′ with cost(P ′ ) =
+OP T ′ . For the simplicity of expression, we call T ′ [i] an old row if 1 ≤ i′ ≤ n, and call it a new row
+if n + 1 ≤ i ≤ n′ . First assume that there exists Tp′ ∈ P ′ that contains both an old row and a new
+row. By our construction of T ′ , an old row and a new row differ in all the last nm coordinates, and
+thus the cost for generalizing Tp′ is at least 2nm. Since OP T ≤ nm, we have OP T ′ > OP T in this
+case, which cannot happen since we already proved OP T ′ ≤ OP T . Therefore, for any Tp′ ∈ P ′ , it
+either contains only old rows or contains only new rows. Assume w.l.o.g. that T1′ , . . . , Tr′′ are the
+sub-tables in P ′ that contain only old rows. Since all new rows are identical by our construction,
+we have
+r′
+X
+′
+′
+cost(Tp′ ).
+(3)
+OP T = cost(P ) =
+p=1
+
+We now define a partition of T as P = {T1 , . . . , Tr′ }, where Tp = {T [i] | T ′ [i] ∈ Tp′ } for all
+1 ≤ p ≤ r ′ . Because |Tp | = |Tp′ | ≥ cn′ = c(n/2c) = n/2, P is an (n/2)-anonymous partition of
+T . As the last nm + 1 columns are identical for all old rows of T ′ , we have OP T ≤ cost(P) =
+Pr ′
+Pr ′
+′
+′
+′
+p=1 cost(Tp ) = OP T by Equation (3). Combined with that OP T ≤ OP T
+p=1 cost(Tp ) =
+obtained previously, we obtain that OP T = OP T ′ , and that an optimal (cn)-anonymous partition
+of T ′ can be easily transferred to an optimal (n/2)-anonymous partition of T . This finishes the
+reduction from (n/2)-Anonymity to (cn)-Anonymity, and completes the proof of Theorem 4.
+So far we have shown the hardness of (cn)-Anonymity for c ∈ (0, 1/3] ∪ {1/2}. For the
+remaining case c ∈ (1/3, 1/2) we need a different reduction.
+‡
+
+Here we assume n/2c is an integer, otherwise we can use ⌊n/2c⌋ instead and get the same result, with more
+tedious analyses. Similar issues appear also in other proofs, which we will not mention again.
+
+12
+
+Theorem 5. For any constant c such that 1/3 < c < 1/2, (cn)-Anonymity is NP-hard.
+Proof. Fix 1/3 < c < 1/2. We will present a polynomial reduction from the following problem
+to (cn)-Anonymity: given an undirected graph G = (V, E), decide whether G contains a clique
+(i.e., a subgraph in which every pair of vertices have an edge between them) that contains exactly
+|V |/2 vertices. Call this problem HalfClique. The NP-hardness of HalfClique easily follows
+from that of the well-known maximum clique problem, as can be seen as follows. We reduce the
+classical Clique problem to HalfClique. Given a graph G = (V, E) and an integer k ≤ |V |, the
+Clique problem asks whether G contains a clique with exactly k vertices. This is a well-known
+NP-hard problem [12]. Now construct another graph G′ based on G as follows: if k ≥ |V |/2, then
+add 2k − |V | new isolated vertices to V ; if k < |V |/2, then add |V | − 2k new vertices to V and
+connecting them with each other as well as all original vertices in V . Let V ′ be the new vertex set.
+It is easy to verify that G has a clique of size k if and only if G′ has a clique of size |V ′ |/2, which
+completes the reduction.
+Let G = (V, E) be an input graph of HalfClique with |V | = n ≥ 4 and |E| = m. Assume
+V = {v1 , . . . , vn } and E = {e1 , . . . , em }. We construct a table T with n′ = n/2c rows and m QI
+columns as follows. For 1 ≤ i ≤ n and 1 ≤ j ≤ m, let T [i][j] = i if vi ∈ ej , and T [i][j] = 0
+otherwise. For n + 1 ≤ i ≤ n′ and 1 ≤ j ≤ m, let T [i][j] = i. (Note that, in some sense, this
+construction can be seen as a combination of those used in the proof of Theorems 3 and 4; however
+the analysis will be different and more intriguing.)
+We first prove a result regarding the structure of an optimal (cn)-partition of T . Call T [i] an
+n
+− n ≥ 2, i.e., T contains
+old row if 1 ≤ i ≤ n, and a new row if n + 1 ≤ i ≤ n′ . We assume that 2c
+at least two new rows; this is without loss of generality because c is a constant smaller than 1/2.
+Since c > 1/3, any (cn)-anonymous partition contains at most two groups. The trivial partition
+that consists of T itself need to suppress every coordinate in the table, because a new row and an
+old row do not share common values. Therefore, the minimum cost (cn)-partition of T contains
+exactly two groups.
+Denote by OP T the minimum cost of a (cn)-anonymous partition
+of T . We claim that G
+n/2
+′
+contains a clique of size n/2 if and only if OP T ≤ n m − (n/2) 2 . First consider the “only
+if” part. Assume V2 ⊆ V is a clique of size n/2, and let V1 = V \ V2 . Then |V2 | = |V1 | = n/2.
+For p, q ∈ {1, 2}, denote by Epq the set of edges with one endpoint in Vp and another in Vq . We
+define a partition P = {T1 , T2 } of T by letting T1 = {T [i] | vi ∈ V1 } and T2 = T \ T1′ . Since
+|T1 | = n/2 = c(n/2c) = cn′ and |T2 |/n′ = (n/2c − n/2)/(n/2c) = 1 − c ≥ c, P is a (cn)-anonymous
+partition. Similar to the proof of Theorem 3, we have cost(T1 ) = n(|E11 |+|E12 |)/2 (see Equation (1)
+and its proof). Since T2 contains both old and new rows, we have cost(T2 ) = |T2 | · m = (n′ − n/2)m.
+Therefore,
+OP T
+
+≤ cost(P) = cost(T1 ) + cost(T2 )
+= n(|E11 | + |E12 |)/2 + (n′ − n/2)m
+= n(m − |E22 |)/2 + (n′ − n/2)m
+= n′ m − (n/2)|E22 |
+
+
+n/2
+′
+= n m − (n/2)
+,
+2
+
+where the last equality holds because V2 is a clique of size n/2. This proves the “only if” part of
+the claim.
+13
+
+Next we consider the “if” direction. Let P = {T1 , T2 } be a (cn)-partition with cost(P) =
+OP T ≤ n′ m − (n/2) n/2
+2 . As argued before, every sub-table that contains both old and new
+rows need to be suppressed totally. Thus, if both T1 and T2 contain both old and new rows, then
+cost(P) = n′ m, which is worst possible. In this case we can change T1 to be any set of n/2 old
+rows and let T2 = T \ T1 to obtain a (cn)-partition with no worse cost. Therefore, in what follows
+we assume w.l.o.g. that T1 consists of only old rows.
+Let V1 = {vi | T [i] ∈ T1 } and V2 = V \ V1 . Define Epq analogously as before for p, q ∈ {1, 2}.
+Similar to the proof of Theorem 3, we have cost(T1 ) = |V1 |(|E11 | + |E12 |) (just replace n/2 with |V1 |
+in Equation (1)). Also cost(T2 ) = |T2 | · m = (n′ − |V1 |)m since T2 contains both old and new rows.
+′
+′
+Hence, cost(P) = |V1 |(|E11 |+|E22 |)+(n′ −|V1 |)m = |V1 |(m−|E
+22 |)+(n −|V1 |)m = n m−|V1 |·|E22|.
+n/2
+′
+On the other hand, cost(P) = OP T ≤ n m − (n/2) 2 . Thus we have |V1 | · |E22 | ≥ (n/2) n/2
+2 .
+|V2 |
+As |V1 | + |V2 | = n and |E22 | ≤ 2 , we obtain that
+
+
+
+
+|V2 |
+n n/2
+.
+(4)
+(n − |V2 |)
+≥ |V1 | · |E22 | ≥
+2 2
+2
+Because |V1 | = |T1 | ≥ cn′ = n/2, we have |V2 | ≤ n/2. Define a fucntion f : [0, n/2] → R as
+f (x) = (n − x) x2 = (n − x)x(x − 1)/2 for all 0 ≤ x ≤ n/2. Then Equation (4) indicates that
+f (|V2 |) ≥ f (n/2). Since f (0) = 0, |V2 | ≥ 1 holds. Let f ′ be the derivative of f with respect
+to x. It is easy to verify that f ′ (x) = 21 (−3x2 + 2(n + 1)x − n). The minimum value of f ′ (x)
+when 1 ≤ x ≤ n/2 can only be obtained at x ∈ {1, n/2, (n + 1)/3}. Simple calculations show that
+f ′ (1), f ′ (n/2), and f ′ ((n + 1)/3) are all positive. Hence f ′ (x) > 0 for all 1 ≤ x ≤ n/2, which means
+that f (x) is strictly monotone increasing on [1, n/2]. Since we know that f (|V2 |) ≥ f (n/2) and that
+1 ≤ |V2 | ≤ n/2, it
+ must hold that |V2 | = n/2. Therefore (4) holds with two equalities. We thus
+have |E22 | = n/2
+2 , implying that V2 is a clique of size n/2.
+We have shown that G has a clique of size n/2 if and only if T has a (cn)-anonymous partition of
+cost at most n′ m−(n/2) n2 . This completes the reduction from HalfClique to (cn)-Anonymity,
+from which Theorem 5 follows.
+Now Theorem 2 follows straightforward from Theorems 3, 4 and 5. Interestingly, the three
+reductions work for disjoint ranges of c, which altogether give the desired result. By Lemma 1 we
+obtain:
+Corollary 1. For any constant t such that 1/2 ≤ t < 1, t-Closeness is NP-hard even with
+equal-distance space.
+We next show the hardness of t-Closeness for 0 ≤ t < 1/2 by two different reductions from
+the 3-dimensional matching problem, each of which covers a different range of t.
+Theorem 6. For any constant t such that 0 ≤ t < 1/3, t-Closeness is NP-hard even if |Σs | = 3.
+Proof. Fix 0 ≤ t < 1/2. We perform a polynomial-time reduction from the 3-dimensional matching
+problem (3D-Matching) to t-Closeness. The input of 3D-Matching consists of three equalsized pairwise-disjoint sets X, Y , and Z, together with a collection S of 3-tuples from X × Y × Z.
+The goal is to decide whether there exists a set of |X| tuples from S that covers each element of
+X ∪ Y ∪ Z exactly once. This problem is well known to be NP-hard [12].
+Consider an instance of 3D-Matching. Assume |X| = |Y | = |Z| = n, U = X ∪ Y ∪ Z =
+{v1 , v2 , . . . , v3n , and the set of tuples is S = {e1 , e2 , . . . , em }. Each tuple in S is regarded as a
+14
+
+subset of U of size 3. The reduction that we will use is similar to that in [31]. We construct an
+instance of t-Closeness as follows. The table T has 3n rows and m QI columns as well as an
+SA column. For every 1 ≤ i ≤ 3n and 1 ≤ j ≤ m, let T [i][j] = i if vi 6∈ ej and T [i][j] = 0 if
+vi ∈ ej . Let T [i][m + 1] be 1, 2, or 3, if vi belongs to X, Y , or Z, respectively. The SA space is the
+equal-distance space. Notice that each QI column of T contains exactly three zeros, corresponding
+to the three elements in the tuple associated with this column. Also note that the SA distribution
+of T is P(T ) = (1/3, 1/3, 1/3) since |X| = |Y | = |Z|.
+We will prove that, there exists n tuples of S whose union equals U = X ∪ Y ∪ Z if and only
+if T has a t-closeness partition of cost at most 3n(m − 1). This will complete the reduction from
+3D-Matching to t-Closeness.
+Assume that there exists S ′ ⊆ S, |S ′ | = n, such that
+S First consider the “only of” direction.
+′
+e∈S ′ e = U . We assume w.l.o.g. that S = {e1 , e2 , . . . , en }. Define a partition P of T as follows:
+P = {T1 , . . . , Tn }, where Tp = {T [i] | vi ∈ ep } for all 1 ≤ p ≤ n. Clearly |T1 | = . . . = |Tn | = 3. Since
+each ep contains exactly one element from each of X, Y and Z, we have P(Tp ) = (1/3, 1/3, 1/3) =
+P(T ). Hence P is a t-closeness (and in fact 0-closeness) partition of T . By our construction, for
+each p ∈ [n], the p-th column of Tp consists of three zeros, and every
+P other column contains at least
+two different QI values. Thus cost(Tp ) = 3(m − 1), and cost(P) = np=1 cost(Tp ) = 3n(m − 1). The
+“only if” direction is proved.
+We next consider the “if” direction. Let P = {T1 , . . . , Tr } be a t-closeness partition of T with
+cost at most 3n(m − 1). We claim that |Tp | ≥ 3 for all p ∈ [r]. Assume to the contrary that |Tp | ≤ 2
+for some p. Then P(Tp ) is either (0, 1/2, 1/2) or (0, 0, 1) up to permutations of the coordinates.
+It is easy to verify that EMD(P(Tp ), P(T )) ≥ 1/3 > c in both cases, which contradicts the fact
+that P is a t-closeness partition. Hence, |Tp | ≥ 3. If |Tp | ≥ 4, then cost(Tp ) = |Tp | · m, because
+each column of T consists of three zeros and 3n − 3 distinct non-zero values and thus needs to be
+suppressed entirely in Tp . If |Tp | = 3, then cost(Tp ) = 3(m − 1) if there is a tuple in S that contains
+the three elements associated with the vectors in Tp (in which case the column corresponding to this
+tuple needs not be suppressed), and cost(Tp ) = 3m otherwise. Since cost(P) = 3n(m − 1), every
+group Tp is of size 3 and induces a tuple, say ep ∈ S. Then {e1 , . . . , ep } is a set of n tuples whose
+union equals U , proving the “if” direction. This completes the reduction from 3D-Matching to
+t-Closeness, and Theorem 6 follows.
+Finally we come to the last part t ∈ [1/3, 1/2).
+Theorem 7. For any constant t such that 1/3 ≤ t < 1/2, t-Closeness is NP-hard even if |Σs | = 4.
+Proof. Fix 1/3 ≤ t < 1/2. We give a reduction from 3D-Matching to t-Closeness similar to
+that used in the the proof of Theorem 6, with some more ingredients. Consider an instance of
+3D-Matching. The element set is U = X ∪ Y ∪ Z = {v1 , v2 , . . . , v3n } where |X| = |Y | = |Z| = n.
+The tuple set is S = {e1 , . . . , em } where each ei , 1 ≤ i ≤ m, is a subset of U of size 3 that consists of
+exactly one elementSfrom each of X, Y , and Z. The goal is to decide whether there exists S ′ ⊆ S,
+|S ′ | = n, such that e∈S ′ e = U .
+We set up an instance of t-Closeness as follows. The table T consists of n′ = 3n/(1 − 2t)
+rows, m QI columns, and an SA column. For all 1 ≤ i ≤ 3n and 1 ≤ j ≤ m, T [i][j] = i if vi 6∈ ej
+and T [i][j] = 0 if vi ∈ ej . For 1 ≤ i ≤ 3n, T [i][m + 1] = 1 if vi ∈ X, T [i][m + 1] = 2 if vi ∈ Y , and
+T [i][m + 1] = 3 if vi ∈ Z. For 3n + 1 ≤ i ≤ n′ , T [i][j] = i for 1 ≤ j ≤ m, and T [i][m + 1] = 4. Note
+that Σs = {1, 2, 3, 4}. Define the distance function of the SA space as d(1, 2) = d(1, 3) = d(2, 3) = 1
+and d(4, 1) = d(4, 2) = d(4, 3) = 1/2; this clearly forms a metric on Σs . It is easy to verify that
+15
+
+1−2t 1−2t
+P(T ) = ( 1−2t
+3 , 3 , 3 , 2t). The goal is to decide whether T has a t-closeness partition. Before
+showing the correctness of the reduction, we present a formula for computing the EMD between
+two distributions under this metric. Let A = (a1 , a2 , a3 , a4 ) and B = (b1 , b2 , b3 , b4 ) be two SA
+distributions with a4 ≥ b4 . Then,
+
+1
+EMD(A, B) = (a4 − b4 ) +
+2
+
+X
+
+(ai − bi ).
+
+(5)
+
+i∈{1,2,3}:ai ≥bi
+
+This can be seen as
+= {1 ≤ i ≤ 4 | ai ≥ bi } and S< = {1, 2, 3, 4} \ S≥ . We
+P follows. Let S≥ P
+(a
+−
+b
+)
+=
+have 4 ∈ S≥ and
+i
+j∈S< (bj − aj ). To transform A to B, we need to move
+i∈S≥ i
+P
+M = i∈S≥ (ai − bi ) amount of mass from S≥ to S< . a4 − b4 amount of mass at point 4 can be
+moved out by distance 1/2, P
+while the remaining amount must P
+be moved by distance 1. Therefore
+EMD(A, B) = 21 (a4 − b4 ) + i∈S≥ \{4} (ai − bi ) = 21 (a4 − b4 ) + i∈{1,2,3}:ai ≥bi (ai − bi ).
+We prove that the answer to the matching instance is yes if and only if T has a t-closeness
+partition of cost at most
+w.l.o.g. that S ′ =
+S 3n(m−1). First consider the “only if” direction. Assume
+′
+′
+, . . . , Tn′′ },
+, T3n+2
+{e1 , . . . , en } satisfies e∈S ′ e = U . Define a partition P = {T1 , T2 , . . . , Tn } ∪ {T3n+1
+′
+′
+where Tp = {T [i] | i ∈ ep } for 1 ≤ p ≤ n and Tp = {T [p]} for 3n + 1 ≤ p ≤ n , i.e., each Tp′
+consists of a single row. By similar arguments as in the proof of Theorem 6, cost(Tp ) = 3(m − 1) for
+1 ≤ p ≤ n, and obviously cost(Tp′ ) = 0 for 3n + 1 ≤ p ≤ n′ . Hence cost(P) = 3n(m − 1). It remains
+to show that P is a t-closeness partition. For 1 ≤ p ≤ n, P(Tp ) = (1/3, 1/3, 1/3, 0), by Equation (5)
+we have EMD(P(Tp ), P(T )) = 21 · 2t = t. Since P(Tq′ ) = (0, 0, 0, 1) for all 3n + 1 ≤ q ≤ n′ ,
+EMD(P(Tq′ ), P(T )) = 21 (1 − 2t) ≤ t as t ≥ 1/3 (actually this holds for all t ≥ 1/4). This proves
+that P is a t-closeness partition, and hence the “only if” direction.
+Now consider the “if” direction. Let P = {T1 , . . . , Tr } be a t-closeness partition of T with cost
+at most 3n(m − 1). Call T [i] an old row if 1 ≤ i ≤ 3n, and a new row if i > 3n. By our construction
+of T , it is clear that cost(Tp ) = |Tp | · m if |Tp | ≥ 2 and Tp contains at least one new row. Now
+let Tp be a group containing only old rows. If |Tp | ≤ 2, then P(Tp )) is equivalent to (1, 0, 0, 0) or
+(1/2, 1/2, 0, 0) up to permutations of the first three coordinates. By (5) and the fact that t < 1/2,
+we can verify that EMD(P(Tp ), P(T )) > t in both cases. Therefore |Tp | ≥ 3. Analogous to the
+proof of Theorem 6, we know that cost(Tp ) = 3(m − 1) if Tp consists of three old rows corresponding
+to three elements in the same tuple, and cost(Tp ) = |Tp |·m otherwise. Thus for cost(P) = 3n(m−1)
+it must be the case that there exist n groups each of which consists of three old rows, and each of
+the remaining groups consists of exact one new row. As groups are disjoint, they together cover all
+the 3n old rows, which naturally induces n tuples of S whose union equals U . The “if” direction is
+thus proved. This completes the reduction from 3D-Matching to t-Closeness, and Theorem 7
+follows.
+
+4
+
+Exact and Fixed-Parameter Algorithms
+
+In this section we design exact algorithms for solving t-Closeness. Notice that the size of an
+instance of t-Closeness is polynomial in n and m + 1. The brute-force approach that examines
+each possible partition of the table to find the optimal solution takes nO(n) mO(1) = 2O(n log n) mO(1)
+time. We first improve this bound to single exponential in n. (Note that it cannot be improved to
+polynomial unless P = NP.)
+Theorem 8. The t-Closeness problem can be solved in 2O(n) · O(m) time.
+16
+
+Proof. Consider an input table T of the t-Closeness problem. Assume that P = {T1 , . . . , Tr } is
+an optimal t-closeness partition of T (note that we do not know P; it is only used for analysis).
+Obviously there is at most one group Tp with |Tp | > n/2. We claim that, ifS
+|Tp | ≤ n/2 for all p ∈ [r],
+then there is a disjoint partition (A1 , A2 ) of {1, 2, . . . , r} suchSthat n/4 ≤ | p∈Ai Tp | ≤ 3n/4 for any
+i ∈ {1, 2}. This can be seen as follows. Denote by n(A) = | p∈A Tp | for any A ⊆ [r]. Let (A1 , A2 )
+be the partition of [r] that minimizes |n(A1 ) − n(A2 )|. Assume w.l.o.g. that n(A1 ) ≤ n(A2 ). If
+n(A2 ) ≤ 3n/4, the claim is proved. Otherwise, A2 contains at least two groups, and we move
+an arbitrary group from A2 to A1 resulting in a new partition (A′1 , A′2 ). If n(A′1 ) ≤ n(A′2 ), then
+|n(A′1 ) − n(A′2 )| = n(A′2 ) − n(A′1 ) < n(A2 ) − n(A1 ) = |n(A1 ) − n(A2 )|, which contradicts the way
+in which (A1 , A2 ) is chosen. We thus have n(A′1 ) > n(A′2 ), and so n(A′1 ) ≥ n/2. Since each group
+has size at most n/2, we have n/2 ≤ n(A′1 ) ≤ n(A1 ) + n/2 < 3n/4, and hence n/2 ≥ n(A′2 ) =
+n − n(A′1 ) > n/4. This proves the claim.
+For any M ⊆ T , let OP T (M ) denote the minimum cost of any partition of M in which each
+group is t-close to T ; thus the optimal cost of the problem is OP T (T ). We now have a natural
+recursive algorithm for computing OP T (T ): Enumerate all T1 ⊆ T with n/4 ≤ |T1 | ≤ 3n/4 and
+find the one minimizing OP T (T1 ) + OP T (T \ T1 ); denote this minimum cost by OP T1 . We also
+exhaustively find T1′ ⊆ T with |T1′ | > n/2 that minimizes OP T (T1′ ) + OP T (T \ T1′ ), which is
+denoted by OP T2 . By our previous analysis, OP T (T ) = min{OP T1 , OP T2 } and thus we can solve
+t-Closeness by taking the better solution. Two notes on the recursive steps: (1) If we have a table
+of constant size (say, less than 10) then we can directly solve it in O(m) time by the brute-force
+approach. (2) If we have a table T ′ such that EMD(P(T ′ ), P(T )) > t then we return with cost
++∞.
+We now analyze the running time of the algorithm. Let f (s) denote the running time on a
+sub-table of T of size s. When s ≤ 10 we have f (s) = O(m), and when s > 10,
+f (s) ≤
+
+3s/4  
+
+X
+
+i=s/4
+s+2
+
+≤ 2
+
+s
+
+X
+s
+· 2f (3s/4) +
+i
+
+i=s/2
+
+ 
+s
+f (s/2) + O(2s )
+i
+
+s
+
+f (3s/4) + O(2 ).
+
+In the first inequality, the first term stands for the time of enumerating T1 with n/4 ≤ |T1 | ≤ 3n/4,
+the second term is for the enumeration of T1′ with |T1′ | > n/2, and the third term is responsible
+for other works such as recording the subsets. It is easy to verify that this recursion gives f (n) ≤
+2O(n) · O(m).
+In many real applications, there are usually only a small number of attributes and distinct attribute values. Thus it is interesting to see whether t-Closeness can be solved more efficiently when
+m and |Σ| is small. We answer this question affirmatively in terms of fixed-parameter tractability.
+Theorem 9. t-Closeness is fixed-parameter tractable when parameterized by m and |Σ|. Thus
+we can solve t-Closeness optimally in polynomial time when m and |Σ| are constants.
+Proof. Consider an input table T with n rows and m + 1 columns (of which m are QIs and one
+is SA). For v ∈ Σm and s ∈ Σs , denote
+P by Rv,s the set of vectors in T that is identical to (v, s),
+and let rv,s = |Rv,s |. We thus have v∈Σm ,s∈Σs rv,s = n. We write a integer linear program to
+characterize the minimum cost of a t-closeness partition of T . For every v ∈ Σm and s ∈ Σs such
+that Rv,s 6= ∅, and every v ∗ ∈ (Σ ∪ {⋆})m that generalizes v, there is a nonnegative integer variable
+17
+
+x(v ∗ , v, s) which means the number of vectors in Rv,s that is generalized to (v ∗ , s) in the partition.
+We clearly have
+X
+x(v ∗ , v, s) = rv,s , ∀(v, s) s.t. Rv,s 6= ∅.
+(6)
+v∗ :v∗ generalizes v
+
+Each v ∗ ∈ (Σ ∪ {⋆})m induces a group, denoted Gv∗ , which consists of all vectors whose QI values
+are generalized to v ∗ . Those groups together form a partition (note that some P
+group may be empty).
+Denoting by Cv∗ the number of ‘⋆’s in v ∗ , the cost of the partition is precisely v∗ ,v,s Cv∗ ·x(v ∗ , v, s).
+Thus the objective function is
+X
+Minimize
+Cv∗ · x(v ∗ , v, s) .
+(7)
+v∗ ,v,s
+
+We still need other constraints to ensure that each group Gv∗ either is empty or has t-closeness. We
+do this by adding a set of constraints, for every v ∗ , that characterizes the transportation between
+∗ and T as in the definition of EMD. First assume that Gv ∗ is nonthe SA distributions of GvP
+∗
+∗
+∗
+empty.
+We
+have
+|G
+|
+=
+v
+v∈Σm ,s∈Σs x(v , v,
+Ps). The probability mass of i ∈ ∗Σs in P(Gv ) is
+P
+∗
+∗
+v∈Σm rv,i /n. For i, j ∈ Σs , let f (v , i, j) denote the
+v∈Σm x(v , v, i)/|Gv |, and that in P(T ) is
+amount of mass moved from i to j in order to transform P(Gv∗ ) to P(T ). Let di,j be the distance
+between i and j in the SA space. To guarantee the t-closeness of Gv∗ we can write the following
+constraints:
+X
+X
+f (v ∗ , i, j) =
+x(v ∗ , v, i)/|Gv∗ |, ∀i ∈ Σs
+v∈Σm
+
+j∈Σs
+
+X
+
+rv,j /n, ∀j ∈ Σs
+
+v∈Σm
+
+i∈Σs
+
+X
+
+X
+
+f (v ∗ , i, j) =
+
+di,j · f (v ∗ , i, j) ≤ t
+
+i,j∈Σs
+
+f (v ∗ , i, j) ≥ 0, ∀i, j ∈ Σs .
+The first constraint above is not linear. To overcome this, we define g(v ∗ , i, j) = f (v ∗ , i, j) · |Gv∗ |,
+substitute g(v ∗ , i, j) for f (v ∗ , i, j) in the above constraints, and expand |Gv∗ |. This produces the
+following equivalent constraints:
+X
+X
+g(v ∗ , i, j) =
+x(v ∗ , v, i), ∀i ∈ Σs
+v∈Σm
+
+j∈Σs
+
+n
+
+X
+
+g(v ∗ , i, j) =
+
+rv,j
+
+v∈Σm
+
+i∈Σs
+
+X
+
+X
+
+di,j · g(v ∗ , i, j) ≤ t ·
+
+X
+
+x(v ∗ , v, s), ∀j ∈ Σs
+
+v∈Σm ,s∈Σs
+
+X
+
+x(v ∗ , v, s)
+
+v∈Σm ,s∈Σs
+
+i,j∈Σs
+∗
+
+g(v , i, j) ≥ 0, ∀i, j ∈ Σs .
+Note that these constraints hold even if Gv∗ is empty. Thus they force group Gv∗ to be t-closeness
+or empty. The set of such constraints for all v ∗ , together with (6) and (7), compose a mixed
+integer linear program (i.e., only some of the variables are required to take integer values) that
+precisely characterizes the t-Closeness problem on T .§ The number of variables in the program
+§
+
+A technical issue here is that, in order to apply results for mixed integer linear program, t needs to be a rational
+number. Nevertheless, for irrational t we can use rationals to approximate the value of t to an arbitrary precision.
+
+18
+
+is N ≤ |Σ|m (|Σ| + 1)m |Σs | + (|Σ| + 1)m |Σs |2 ≤ 2(|Σ| + 1)2m+1 . The time spent on constructing and
+writing down this linear program is polynomial in n, m, and N . By the result in [16] (Section 5 of it
+deals with mixed ILP), a mixed linear integer program with N variables can be solved in N O(N ) L
+time, where L is the number of bits used to encode the program. In our case L is polynomial in n
+and m. Therefore, we can solve this program, and hence solve t-Closeness, in h(m, |Σ|)nO(1) time
+for some function h. This shows that t-Closeness is fixed-parameter tractable when parameterized
+by m and |Σ|.
+
+5
+
+Approximation Algorithm for k-Anonymity
+
+In this section we give a polynomial-time m-approximation algorithm for k-Anonymity, which
+improves the previous best ratio O(k) [1] and O(log k) [24] when k is relatively large compared
+with m. (We note that the O(log k)-approximation algorithm given in [24] is not guaranteed to run
+in polynomial time for super-constant k, while our result holds for all k.)
+Theorem 10. k-Anonymity can be approximated within factor m in polynomial time.
+Proof. Consider a table T with n rows and m QI columns. Denote by OP T the minimum cost of
+any k-anonymous partition of T . Partition T into “equivalence classes” C1 , . . . , CR in the following
+sense: any two vectors in the same class are identical, i.e., they have the same value on each
+attribute, while any two vectors from different classes differ on at least one attribute. Assume
+|C1 | ≤ |C2 | ≤ . . . ≤ |CR |. If |C1 | ≥ k, then these classes form a k-anonymous partition with cost
+0, which is surely optimal. Thus we assume |C1 | < k, and let L ∈ [R] be the maximum integer for
+which |CL | < k. Then |CL′ | ≥ k for all L < L′ ≤ R. It is clear that each
+P vector in C1 ∪ . . . ∪ CL
+contributes at least one to the cost of any partition of T . Thus OP T ≥ L
+i=1 |Ci |.
+PL
+groups: {C1 ∪ . . . ∪
+Case 1:
+i=1 |Ci | ≥ k. In this case we partition T into R − L + 1 P
+CL , CL+1 , CL+2 , . . . , CR }. This is a k-anonymous partition of cost at most m· L
+i=1 |Ci | ≤ m·OP T .
+PR
+PL
+PL
+′
+(|C
+|
+−
+k)
+≥
+k.
+We
+choose
+C
+|C
+|
++
+|C
+|
+<
+k
+and
+Case 2:
+i
+i
+i
+i ⊆ Ci for L + 1 ≤
+i=L+1
+i=1
+i=1
+P
+P
+R
+′
+i ≤ R satisfying that |Ci \Ci′ | ≥ k and L
+i=L+1 |Ci | = k. This can be done because of the
+i=1 |Ci |+
+SR
+S
+′
+second condition of this case. We partition T into R − L + 1 groups: { L
+i=1 Ci ∪ i=L+1 Ci , CL+1 \
+′
+′
+CL+1 , . . . , CR \ CR }. This is a k-anonymous partition of cost at most m · k ≤ m · OP T , since
+OP T ≥ k. P
+PR
+Case 3: L
+i=L+1 (|Ci | − k) < k. We claim that there exists i ∈ {L + 1, . . . , R} such
+i=1 |Ci | +
+that any vector in Ci contributes at least one to the cost of any k-anonymous partition. Assume
+the contrary. Then there exists a k-anonymous partition such that, for every L + 1 ≤ i ≤ R, there
+is a vector v ∈ Ci whose suppression cost is 0, which means that v belongs to a group that only
+contains vectors in Ci ; denote this group by Ci′ . We also know that there is at least one group in the
+partition that has positive cost. However,
+removing all Ci′ , L P
++ 1 ≤ i ≤ R,
+T , the number
+Pfrom
+Pby
+R
+R
+|C
+|
++
+of vectors left is at most n − k(R − L) = i=1 |Ci | − k(R − L) = L
+i
+i=L+1 (|Ci | − k) < k,
+i=1
+due to the condition of this case. This contradicts with the property of k-anonymous partitions.
+Therefore the claim holds, i.e., there exists j ∈ {L+1, . . . , R} such that any vector in Cj contributes
+P
+P
+|Ci |+|Cj | ≥ L+1
+at least one to the partition cost. Thus we have OP T ≥ L
+i=1 |Ci |. We partition
+i=1
+SL+1
+T into R − L groups: { i=1 Ci , CL+2 , . . . , CR }. This is a k-anonymous partition with cost at most
+P
+m · L+1
+i=1 |Ci | ≤ m · OP T .
+By the above case analyses, we can always find in polynomial time a k-anonymous partition of
+T with cost at most m · OP T . This completes the proof of Theorem 10.
+19
+
+We note that Theorem 10 implies that k-Anonymity can be solved optimally in polynomial
+time when m = 1. This is in contrast to l-Diversity, which remains NP-hard when m = 1 (with
+unbounded l) [9].
+
+6
+
+Algorithm for 2-Diversity
+
+In this part we give the first polynomial time algorithm for solving 2-Diversity. Let T be an
+input table of 2-Diversity. The following lemma is crucial to our algorithm.
+Lemma 2. There is an optimal 2-diverse partition of T in which every group consists of 2 or 3
+vectors with distinct SA values.
+Proof. It suffices to show that any 2-diverse sub-table M ⊆ T can be further partitioned into
+groups each of which consists of 2 or 3 vectors with distinct SA values (note that partitioning a
+group does not increase the generalization cost). We use induction on the size of M . When |M | = 2
+or 3 it can be verified directly. Now consider M ⊆ T of size t ≥ 4. Suppose M contains k SA
+values {1, 2, . . . , k} where k ≥ 2. Let ai be the number of vectors in M with SA value i, for i ∈ [k].
+Assume w.l.o.g. that a1 ≥ a2 ≥ . . . ≥ ak . Let A1 and A2 be two vectors with SA value 1 and 2,
+respectively. Partition M into {A1 , A2 } and M ′ = M \ {A1 , A2 }. We only need to show that M ′ is
+2-diverse, so that we can use induction on it. We perform a case analysis as follows.
+• a1 = 1. Then M ′ consists of at least two vectors with distinct SA values, and thus is 2-diverse.
+• k = 2. Since M is 2-diverse, we have a1 = a2 . Then M ′ still contains the same number of SA
+values 1 and 2, so it remains 2-diverse.
+• a1 ≥ 2, k ≥ 3, a1 > a3 . The highest frequency of any SA value in M ′ is a1 − 1 ≤ |M |/2 − 1 =
+|M ′ |/2, and thus M ′ is 2-diverse.
+• a1 = a3 ≥ 2, k ≥ 3. In this case |M | ≥ 3a3 . The highest frequency of an SA value in M ′ is
+a3 . We have |M ′ | − 2a3 = |M | − 2 − 2a3 ≥ a3 − 2 ≥ 0, so M ′ is 2-diverse.
+All the cases are covered above and hence Lemma 2 is proved.
+Giving Lemma 2, the rest of the proof is basically the same with that of the polynomial-time
+tractability of 2-Anonymity given in [4]. We restate the proof for completeness. We reduce 2Diversity to a combinatorial problem called Simplex Matching introduced in [2], which admits a
+polynomial algorithm [2]. The input of Simplex Matching is a hypergraph H = (V, E) containing
+edges of sizes 2 and 3 with nonnegative edge costs c(e) for all edges e ∈ E. In addition H is guaranteed to satisfy the following simplex condition: if {v1 , v2 , v3 } ∈ E, then {v1 , v2 }, {v2 , v3 }, {v3 , v1 }
+are also in E, and c({v1 , v2 }) + c({v2 , v3 }) + c({v1 , v3 }) ≤ 2 · c({v1 , v2 , v3 }). The goal is to find
+a perfect matching of H (i.e., a set of edges that cover every vertex v ∈ V exactly once) with
+minimum cost (which is the sum of costs of all chosen edges).
+Let T be an input table of 2-Diversity. We construct a hypergraph H = (V, E) as follows. Let V = {v1 , v2 , . . . , vn } where vi corresponds to the vector T [i]. For every two vectors
+T [i], T [j] (or three vectors T [i], T [j], T [k]) with distinct SA values, there is an edge e = {vi , vj }
+(or e = {vi , vj , vk }) with cost equal to cost({T [i], T [j]}) (or cost({T [i], T [j], T [k]})). Consider any
+3D edge e = {vi , vj , vk }. Since each column that needs to be suppressed in {T [i], T [j]} must also
+20
+
+be suppressed in {T [i], T [j], T [k]}, we have c(e)/3 ≥ c({vi , vj })/2. Similarly, c(e)/3 ≥ c({vi , vk })/2
+and c(e)/3 ≥ c({vj , vk })/2. Summing the inequalities up gives 2c(e) ≥ c({vi , vj }) + c({vi , vk }) +
+c({vj , vk }). Therefore H satisfies the simplex condition, and it clearly can be constructed in polynomial time. Call a 2-diverse partition of T good if every group in it consists of 2 or 3 vectors with
+distinct SA values. Lemma 2 shows that there is an optimal 2-diverse partition that is good. By
+the construction of H, each good 2-diverse partition of T can be easily transformed to a perfect
+matching of H with the same cost, and vice versa. Hence, we can find an optimal 2-diverse partition
+of T by using the polynomial time algorithm for Simplex Matching [2]. We thus have:
+Theorem 11. 2-Diversity is solvable in polynomial time.
+
+7
+
+Conclusions
+
+This paper presents the first theoretical study on the t-closeness principle for privacy preserving.
+We prove the NP-hardness of the t-Closeness problem for every constant t ∈ [0, 1), and give
+exact and fixed-parameter algorithms for the problem. We also provide conditionally improved
+approximation algorithm for k-Anonymity, and give the first polynomial time exact algorithm for
+2-Diversity.
+There are still many related problems that deserve further explorations, amongst which the
+most interesting one to the authors is designing polynomial time approximation algorithms for
+t-Closeness with provable performance guarantees. We conjecture that the best approximation
+ratio may be dependent on n (e.g., O(log n)). The parameterized complexity of t-Closeness with
+respect to other sets of parameters are also of interest. Some interesting parameters that have been
+studied for k-anonymity can be found in [11, 6, 7].
+
+References
+[1] G. Aggarwal, T. Feder, K. K. R. Motwani, R. Panigrahy, D. Thomas, and A. Zhu. Anonymizing
+tables. In ICDT, pages 246–258, 2005.
+[2] E. Anshelevich and A. Karagiozova. Terminal backup, 3D matching, and covering cubic graphs.
+SIAM Journal on Computing, 40(3):678–708, 2011.
+[3] M. M. Baig, J. Li, J. Liu, and H. Wang. Cloning for privacy protection in multiple independent
+data publications. In CIKM, pages 885–894, 2011.
+[4] J. Blocki and R. Williams. Resolving the complexity of some data privacy problems. In ICALP,
+pages 393–404, 2010.
+[5] P. Bonizzoni, G. D. Vedova, and R. Dondi. Anonymizing binary and small tables is hard to
+approximate. Journal of Combinatorial Optimization, 22(1):97–119, 2011.
+[6] P. Bonizzoni, G. D. Vedova, R. Dondi, and Y. Pirola. Parameterized complexity of kanonymity: hardness and tractability. Journal of Combinatorial Optimization, in press.
+[7] R. Bredereck, A. Nichterlein, R. Niedermeier, and G. Philip. The effect of homogeneity on the
+complexity of k-anonymity. In FCT, pages 53–64, 2011.
+21
+
+[8] J. Cao, P. Karras, P. Kalnis, and K.-L. Tan. SABRE: a sensitive attribute bucketization and
+redistribution framework for t-closeness. The VLDB Journal, 20(1):59–81, 2011.
+[9] R. Dondi, G. Mauri, and I. Zoppis. The l-diversity problem: Tractability and approximability.
+Theoretical Computer Science, 2012, in press. DOI: 10.1016/j.tcs.2012.05.024.
+[10] R. G. Downey and M. R. Fellows. Parameterized Complexity. Springer, 1999.
+[11] P. A. Evans, T. Wareham, and R. Chaytor. Fixed-parameter tractability of anonymizing data
+by suppressing entries. Journal of Combinatorial Optimization, 18(4):362–375, 2009.
+[12] M. R. Garey and D. S. Johnson. Computers and Intractability: A Guide to the Theory of
+NP-Completeness. W. H. Freeman, 1979.
+[13] M. R. Garey, D. S. Johnson, and L. Stockmeyer. Some simplified NP-complete problems. In
+STOC, pages 47–63, 1974.
+[14] K. LeFevre, D. J. DeWitt, and R. Ramakrishnan. Incognito: Efficient full-domain k-anonymity.
+In SIGMOD, pages 49–60, 2005.
+[15] K. LeFevre, D. J. DeWitt, and R. Ramakrishnan. Mondrian multidimensional k-anonymity.
+In ICDE, 2006.
+[16] H. W. Lenstra, Jr. Integer programming with a fixed number of variables. Mathematics of
+Operations Research, 8(4):538–548, 1983.
+[17] N. Li, T. Li, and S. Venkatasubramanian. t-Closeness: Privacy beyond k-Anonymity and
+l-Diversity. In ICDE, pages 106–115, 2007.
+[18] N. Li, T. Li, and S. Venkatasubramanian. Closeness: A new privacy measure for data publishing. IEEE Transactions on Knowledge and Data Engineering, 22(7):943–956, 2010.
+[19] A. Machanavajjhala, D. Kifer, J. Gehrke, and M. Venkitasubramaniam. l-diversity: Privacy
+beyond k-anonymity. ACM Trans. Knowl. Discov. Data (TKDD), 1(1), 2007.
+[20] D. J. Martin, D. Kifer, A. Machanavajjhala, J. Gehrke, and J. Y. Halpern. Worst-case background knowledge for privacy preserving data publishing. In ICDE, pages 126–135, 2007.
+[21] A. Meyerson and R. Williams. On the complexity of optimal k-anonymity. In PODS, 2004.
+[22] N. Mohammed, R. Chen, B. C. M. Fung, and P. S. Yu. Differentially private data release for
+data mining. In KDD, 2011.
+[23] M. E. Nergiz, M. Atzori, and C. Clifton. Hiding the presence of individuals from shared
+databases. In SIGMOD, pages 665–676, 2007.
+[24] H. Park and K. Shim. Approximate algorithms for k-anonymity. In SIGMOD, 2007.
+[25] D. Rebollo-Monedero, J. Forné, and J. Domingo-Ferrer. From t-closeness-like privacy to postrandomization via information theory. IEEE Transactions on Knowledge and Data Engineering, 22(11):1623–1636, 2010.
+22
+
+[26] Y. Rubner, C. Tomasi, and L. J. Guibas. The earth mover’s distance as a metric for image
+retrieval. International Journal of Computer Vision, 40(2):99–121, 2000.
+[27] P. Samarati. Protecting respondents’ identities in microdata release. IEEE Transactions on
+Knowledge and Data Engineering, 13(6):1010–1027, 2001.
+[28] L. Sweeney. k-anonymity: a model for protecting privacy. International Journal of Uncertainty,
+Fuzziness and Knowledge-Based Systems, 10(5):557–570, 2002.
+[29] X. Xiao and Y. Tao. Personalized privacy preservation. In SIGMOD, pages 229–240, 2006.
+[30] X. Xiao and Y. Tao. m-invariance: Towards privacy preserving re-publication of dynamic
+datasets. In SIGMOD, pages 689–700, 2007.
+[31] X. Xiao, K. Yi, and Y. Tao. The hardness and approximation algorithms for l-diversity. In
+EDBT, pages 135–146, 2010.
+[32] M. Xue, P. Karras, C. Raissi, and H. K. Pung. Utility-driven anonymization in data publishing.
+In CIKM, pages 2277–2280, 2011.
+[33] Q. Zhang, N. Koudas, D. Srivastava, and T. Yu. Aggregate query answering on anonymized
+tables. In ICDE, pages 116–125, 2007.
+
+23
+
+

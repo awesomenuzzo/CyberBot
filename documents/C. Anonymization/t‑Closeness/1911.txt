@@ -1,0 +1,1287 @@
+A Tutorial on Computing t-Closeness
+Richard Dosselmann, Mehdi Sadeqi, and Howard J. Hamilton
+Department of Computer Science, University of Regina
+3737 Wascana Parkway, Regina, Saskatchewan, Canada S4S 0A2
+
+arXiv:1911.11212v1 [cs.CR] 25 Nov 2019
+
++306-585-4633 (telephone), +306-585-4745 (fax)
+dosselmr@cs.uregina.ca, sadeqi2m@cs.uregina.ca and Howard.Hamilton@uregina.ca
+
+Abstract
+
+As an example, original and anonymized tables relating to
+incidents that have occurred at different homes in a city are
+presented in Tables 1 and 2, respectively. The explicit identifier Address of Table 1 has been completely removed from the
+anonymized data of Table 2, while the quasi-identifier Zone
+and sensitive (categorical) attribute Incident have been preserved. The individual records of Table 2 are further grouped
+into equivalence classes, subsets of (indistinguishable) records
+having the same QI values [1, 6]. There are four such equivalence classes in Table 2. Although “anonymized”, Table 2
+still reveals much to an observer. A prospective home buyer
+would know for instance that homes in zone 2C experience
+frequent power outrages, a finding that might discourage that
+buyer from purchasing a house in that area. An insurance
+provider looking at this data might be wary of insuring customers in zone 4F, given the serious events that have taken
+place in that zone. By comparison, potential buyers or insurers would be more open to the homes and occupants of zone
+3B, an area with comparatively minor problems.
+
+This paper presents a tutorial of the computation of tcloseness. An established model in the domain of privacy preserving data publishing, t-closeness is a measure of the earth
+mover’s distance between two distributions of an anonymized
+database table. This tutorial includes three examples that
+showcase the full computation of t-closeness in terms of both
+numerical and categorical attributes. Calculations are carried out using the definition of the earth mover’s distance and
+weighted order distance. This paper includes detailed explanations and calculations not found elsewhere in the literature.
+An efficient algorithm to calculate the t-closeness of a table is
+also presented.
+Keywords: t-closeness, earth mover’s distance, privacy preserving data publishing, anonymization
+
+1
+
+Introduction
+Address
+4984 Apple St.
+4810 Cherry Ave.
+4075 Grape Blvd.
+459 Red Cres.
+754 Blue Blvd.
+541 Yellow Lane
+622 Green Ave.
+14002 Square St.
+11411 Circle Cres.
+2032 Rain St.
+2055 Snow Ave.
+2091 Cloudy Ave.
+2002 Fog Blvd.
+2040 Sunshine St.
+
+Zone
+2C
+2C
+2C
+4F
+4F
+4F
+4F
+9A
+9A
+3B
+3B
+3B
+3B
+3B
+
+Incident
+power outage
+power outage
+power outage
+theft
+fire
+fatal accident
+fire
+sidewalk repair
+power outage
+pest control
+power outage
+sidewalk repair
+tree replanting
+sidewalk repair
+
+Database tables are routinely published online. In many instances, this can be readily done without any adverse effects. At times though tables contain sensitive information that
+should not be disclosed to the public. Attributes with values
+that directly identify a person or entity, such as name, student ID number, or product code, are explicit identifers and
+are not generally made public [1, 2]. A set of attributes that
+together (and indirectly) identifies a person or entity, such as
+occupation, nationality, and neighborhood, is a quasi-identifier
+(QI) [1, 2]. Finally, an attribute with values that should not be
+linked to a person or entity for privacy reasons, such as an employee’s salary, a patient’s medical condition, or a student’s
+grade, is a sensitive attribute [3]. Before publishing a table
+that contains sensitive information, certain values are either removed or obfuscated, a process known as anonymization [4].
+Table 1: Incidents occurring at homes in a city
+This is done in order to prevent a subsequent user from linking
+a person or entity to a sensitive value in that table. The study
+As the example of Tables 1 and 2 demonstrates, anonymizaand design of anonymization algorithms is a major topic in the
+domain of privacy preserving data publishing (PPDP) [5].
+tion often fails to fully mask all of the distinguishing content
+1
+
+Address
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+
+Zone
+2C
+2C
+2C
+4F
+4F
+4F
+4F
+9A
+9A
+3B
+3B
+3B
+3B
+3B
+
+Incident
+power outage
+power outage
+power outage
+theft
+fire
+fatal accident
+fire
+sidewalk repair
+power outage
+pest control
+power outage
+sidewalk repair
+tree replanting
+sidewalk repair
+
+Li et al. introduce t-closeness so as to overcome the problems that affect both k-anonymity and `-diversity [1, 2]. Conceptually, t-closeness is the maximum of the distances between the distribution of values of a sensitive attribute of the
+equivalence classes (of a table) and that of the (entire) table.
+The intuition is that individual equivalence classes of a table
+that are similar to that table do not generally reveal any more
+information than the table itself. Formally, “an equivalence
+class is said to have t-closeness if the distance between the
+distribution of a sensitive attribute in this class and the distribution of the attribute in the whole table is no more than a
+threshold t. A table is said to have t-closeness if all equivalence classes have t-closeness” [1]. At this point, no universal threshold for t appears to exist. The computation of the
+t-closeness of Table 2 is deferred to Section 2.2.
+This paper provides a comprehensive tutorial of the calculation of the t-closeness model in situations involving either
+a numerical or categorical attribute. Situations not relating
+to numerical and categorical attributes are explored in [1, 2].
+The examples presented in this paper incorporate explanations
+and calculations that go beyond those of the existing literature [1, 2, 4, 8–15]. Additionally, a more efficient algorithm
+to compute t-closeness in circumstances relating to numerical
+attributes is shown. This paper will ultimately help others to
+calculate t-closeness, as well as provide them with examples
+for use in testing.
+The following section introduces the mathematics behind
+the calculation of t-closeness. Three examples are then presented in Sections 3, 4, and 5. An efficient algorithm is given
+in Section 6, followed by some closing remarks in Section 7.
+
+Table 2: Anonymized incidents occurring at homes in a city
+
+of a table. This motivates one to (formally) quantify the level
+of privacy of an anonymized table. A number of models to do
+so have been proposed. One of the earliest, k-anonymity is the
+minimum number of (QI) indistinguishable records in a table,
+where higher values of k are generally representative of a more
+secure table [7]. In the first equivalence class of Table 2, there
+are three indistinguishable records, whereas there are four,
+two, and five such records, respectively, in the three remaining equivalence classes. As a result, k = min(3, 4, 2, 5) = 2,
+meaning that Table 2 is 2-anonymous. Suppose that a user is
+interested in learning the value of the attribute Incident of a
+home in zone 2C. Though the user is not able to determine
+precisely which record in the first equivalence class of Table
+2 is associated with that specific home, the user is still able to
+2 Earth Mover’s Distance
+infer that if it experienced an incident, it experienced a power
+outage, because all homes in that equivalence class have been
+Formally, t-closeness is computed using the one-dimensional
+affected by power outages. Thus, k-anonymity does not alearth mover’s distance (EMD) [16]. Two variants of the EMD
+ways accurately represent the actual level of privacy of a table.
+are examined in this paper. The first is used in situations inMachanavajjhala et al. propose `-diversity as a way of coun- volving a numerical attribute, as described in Section 2.1. The
+tering the faults of k-anonymity [3]. In an `-diverse table, there second, described in Section 2.2, is used in the context of a
+are at least ` “well represented” values of a sensitive attribute categorical variable.
+in each equivalence class. In the first equivalence class of Table 2, there is only one distinct value of the sensitive attribute
+Incident, namely “power outage”, whereas there are three, two, 2.1 Numerical Attribute
+and four values, respectively, in the remaining equivalence
+classes. As a result, Table 2 is min(1, 3, 2, 4)-diverse = 1- Conceptually, the EMD, as it relates to a numerical attribute,
+diverse. Consider the second equivalence class of Table 2, is the total cost of optimally moving masses of earth in a space
+pertaining to homes in zone 4F. Even though there are three to holes in that same space, thus transforming the distribution
+distinct values of the sensitive attribute, namely “theft”, “fire”, of the masses to match that of the holes [17]. In the domain
+and “fatal accident”, all three pertain to serious events, allow- of PPDP, attention is restricted to a one-dimensional space in
+ing a user interested in a home in that area to conclude that an which successive holes are spaced at a distance of one unit
+associated incident, whatever it might have been, was rather apart. In this context, the probabilities pi of a distribution
+serious. In the end, this means that while `-diversity considers P denote the masses, while those of a second distribution Q,
+the number of distinct values of a sensitive attribute, it does identified as qj , refer to the holes, where |P| = |Q| = m and
+not take into account the inherent meaning of those values.
+1 ≤ i, j ≤ m. It is assumed that both P and Q are normalized
+2
+
+2.1.2
+
+distributions, that is
+m
+X
+
+pi =
+
+i=1
+
+m
+X
+
+qj = 1.
+
+Calculation using the Weighted Ordered Distance
+
+The second way of calculating the EMD requires that one first
+define a notion of the distance that separates the elements of
+the distributions P and Q. Let P 0 and Q0 be totally ordered
+[18] multisets [19] with elements sorted in ascending order by
+frequency (structures that are hereinafter referred to as sets)
+associated with P and Q, respectively. Note that elements do
+not need to be ordered in the case of a categorical attribute.
+Multisets are used in place of conventional sets since elements
+are often repeated, such as in the case of {3, 3, 3, 1, 1, 2, 4} 6=
+{3, 1, 2, 4}. Moreover, by enforcing a total ordering, one can
+be sure that for any x, y, z ∈ P 0 :
+
+(1)
+
+j=1
+
+let Q01
+
+As an example,
+= {14, 27, 88, 101} and P10 =
+0
+{14, 88} ⊆ Q1 be sets of values, where P10 is an equivalence class of Q01 . Although numbers, the elements of P10
+and Q01 are effectively nothing more than labels. What matters in this context is not the particular choice of labels, but
+instead the underlying probabilities of these elements. Each of
+the values 14, 27, 88, and 101 appears once in Q01 , meaning
+that the four probabilities, or holes, of the associated distribution Q1 are of size q1 = q2 = q3 = q4 = 1/|Q01 | = 1/4.
+1. x ≤ x (reflexive [20])
+Thus, Q1 = {1/4, 1/4, 1/4, 1/4}. Because each of 14 and 88 oc0
+curs once in P1 , they are assigned probabilities, or masses, of
+2. x ≤ y and y ≤ x ⇒ x = y (antisymmetric [20])
+p1 = p3 = 1/2. The two remaining values of Q01 , specifically
+0
+27 and 101, are not found in P1 . They are accordingly given
+3. x ≤ y and y ≤ z ⇒ x ≤ z (transitive [20])
+masses of p2 = p4 = 0. It follows that the distribution of P10
+is P1 = {1/2, 0, 1/2, 0}. Because P10 has only two elements, P1
+4. x ≤ y or y ≤ x (trichotomy [21])
+is extended using zeros to ensure that it, like Q1 , is of length
+With this framework established, the ordered distance [1, 2]
+m = 4.
+Two ways of calculating the EMD in the case of a numerical between elements vi ∈ P 0 and vj ∈ Q0 is
+attribute are given by Li et al. [1, 2]. The first is based on the
+|i − j|
+definition of the EMD, while the second relates to the under.
+(4)
+D(vi , vj ) =
+m−1
+lying transformation given by the EMD. These two ways are
+empirically shown to be equivalent in each of the examples of
+Equation (4) does not take into account the mass moved bethis paper.
+tween vi and vj , only the distance separating these two values.
+Thus, in this paper, the right-hand side of Equation (4) is mul2.1.1 Calculation using the Definition
+tiplied by the actual amount wi,j of mass transferred between
+The first way of calculating the EMD employs the definition vi and vj , resulting in the weighted ordered distance, defined
+as
+[1, 2], which is
+|i − j|
+D0 (vi , vj ) = wi,j ·
+.
+(5)
+i
+m
+m−1
+1 X X
+(pj − qj ) .
+(2)
+E(P, Q) =
+m − 1 i=1 j=1
+Consequently, the EMD of Equation (2) is also given as
+Equation (2) represents the cost of transforming a distribution
+P into another distribution Q. Using Equation (2), the EMD,
+and hence t-closeness, of P10 and Q01 of the previous section is
+
+1
+1 1
+E(P1 , Q1 ) =
+− +
+4−1 2 4
+
+ 
+
+1 1
+1
+−
++ 0−
++
+2 4
+4
+
+ 
+ 
+
+1 1
+1
+1 1
+−
++ 0−
++
+−
++
+2 4
+4
+2 4
+ 
+ 
+ 
+
+
+1
+1 1
+1
+1 1
+−
++ 0−
++
+−
++ 0−
+2 4
+4
+2 4
+4
+≈ 0.1667.
+
+E(P, Q) =
+
+n
+X
+
+D0 (vi , vj ),
+
+(6)
+
+i=1
+
+where n is the number of optimal actions needed to transform
+P into Q.
+Referring again to the example of P10 and Q01 of Section
+2, two (optimal) actions are needed to transform P1 into Q1 .
+First, one transfers w1,2 = 1/4 from mass p1 = 1/2 of v1 =
+14 ∈ P10 from index i = 1 to hole v2 = 27 ∈ Q01 of size
+q2 = 1/4 at index j = 2. Using Equation (5), the cost of doing
+so is
+1 |1 − 2|
+D0 (v1 , v2 ) = ·
+≈ 0.0833.
+(7)
+4 4−1
+
+(3)
+
+In this example, only one-half of the mass p1 = 1/2 of v1 =
+When there is more than one equivalence class in a given 14 ∈ P10 is moved to hole v2 = 27 ∈ Q01 of size q2 = 1/4
+table, the t-closeness of that table is the maximum of the EMD because only one-half of the mass of v1 can “fit” in hole v2 of
+values of the individual equivalence classes.
+size q2 (p1/2 = 1/4). In the second step, one moves w3,4 = 1/4
+3
+
+from mass p3 = 1/2 of v3 = 88 ∈ P10 from index i = 3 to hole remaining equivalance classes are
+v4 = 101 ∈ Q01 of size q4 = 1/4 at index j = 4, at a cost of
+0
+P2,2
+= {theft, fire, fatal accident, fire}
+D0 (v3 , v4 ) =
+
+1 |3 − 4|
+·
+≈ 0.0833.
+4 4−1
+
+(P2,2 = {0, 1/4, 2/4, 1/4, 0, 0, 0}),
+
+(8)
+
+0
+P2,3
+= {sidewalk repair, power outage}
+
+Then, by Equation (6), E(P1 , Q1 ) = 0.0833 + 0.0833 ≈
+(P2,3 = {1/2, 0, 0, 0, 1/2, 0, 0}), and
+0.1667, a result that is equal to the value of Equation (3).
+0
+P2,4
+= {pest control, power outage, sidewalk repair,
+These two actions, illustrated in Figure 1, effectively trans0
+form the distribution P1 of P1 to that of the global distribution
+tree replanting, sidewalk repair}
+Q1 of Q01 .
+(P2,4 = {1/5, 0, 0, 0, 2/5, 1/5, 1/5}), respectively.
+Using Equation (9), the EMD, and hence t-closeness, of the
+1/4
+1/4
+first equivalence class of Table 2 is
+
+1
+2
+1 3
+5
++ 0−
++ 0−
++
+−
+E 0 (P2,1 , Q2 ) =
+1/2
+0
+1/2
+0
+P1:
+2 3 14
+14
+14
+
+1
+3
+1
+1
+vi:
+0−
++ 0−
++ 0−
++ 0−
+14
+27
+88
+101
+14
+14
+14
+14
+1
+2
+3
+4
+i:
+≈ 0.6429.
+(10)
+Repeating this approach, the t-closeness values of the other
+classes are E 0 (P2,2 , Q2 ) ≈ 0.7143, E 0 (P2,3 , Q2 ) ≈ 0.4286,
+It is important to recognize that the method of this section and E(P2,4 , Q2 ) ≈ 0.4429, respectively. In the end, the trequires that the actions that transform a distribution P into Q closeness of Table 2 is the maximum of these four values, that
+be chosen optimally. This means that an arbitrary sequence of is 0.7143.
+actions may not yield the lowest possible cost. Li et al. offer
+no method of determining the optimal sequence of actions for
+3 Salary Example
+a given problem [1, 2].
+Figure 1: Transformation of P1 to Q1
+
+2.2
+
+Consider the example put forward by Li et al., which is replicated in this paper in Table 3 [1]. The quasi-identifiers Zip
+Code and Age are partially obfuscated so as to prevent one
+from precisely linking an individual in Table 3 to the sensitive attributes Salary and Disease. This example makes use
+of the attribute Salary and the nine associated values, organized into the set Q03 = {3k, 4k, 5k, 6k, 7k, 8k, 9k, 10k, 11k},
+all m = 9 of which are distinct. Reiterating the point
+made in Section 2.1, the values of Q03 , although numbers,
+should be regarded as nothing more than labels. Each element vj ∈ Q03 is unique, resulting in nine uniform holes of
+size q1 = q2 = q3 = . . . = q9 = 1/|Q03 | = 1/9. Hence,
+Q3 = (1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9).
+The EMD is calculated for each of the three equivalence
+classes of Table 3. The first equivalence class, correspond0
+=
+ing to the first three rows of Table 3, is given by P3,1
+0
+{3k, 4k, 5k} ⊆ Q3 . The three elements 3k, 4k, and 5k
+0
+each have a frequency of one, giving masses of
+of P3,1
+0
+p1 = p2 = p3 = 1/|P3,1
+| = 1/3. The six other val0
+0
+ues of Q3 , not found in P3,1 , have masses of p4 = p5 =
+p6 = p7 = p8 = p9 = 0. Consequently, P3,1 =
+(1/3, 1/3, 1/3, 0, 0, 0, 0, 0, 0). The second equivalence class of
+0
+Table 3, P3,2
+= {6k, 8k, 11k}, has a distribution of P3,2 =
+1
+(0, 0, 0, /3, 0, 1/3, 0, 0, 1/3), and the final equivalence class of
+0
+Table 3, namely P3,3
+= {7k, 9k, 10k}, corresponds to the distribution P3,3 = (0, 0, 0, 0, 1/3, 0, 1/3, 1/3, 0).
+
+Categorical Attribute
+
+In the case of a categorical attribute, the EMD is computed
+using the variational distance [1, 2], specifically
+m
+
+E 0 (P, Q) =
+
+1X
+|pi − qi | ,
+2 i=1
+
+(9)
+
+a measure that is equal to one-half of the Manhattan distance
+[22].
+As an example, consider again the scenario put forward in
+Table 1. The (global) set of values of the sensitive attribute
+Incident is given as
+Q02 = {power outage, theft, fire, fatal accident,
+sidewalk repair, pest control, tree replanting}.
+The associated distribution of Q02 (with the values in
+the same order as that of Q02 ) is equal to Q2 =
+{5/14, 1/14, 2/14, 1/14, 3/14, 1/14, 1/14}. The first equivalence
+class of Table 2, denoted
+0
+P2,1
+= {power outage, power outage, power outage},
+
+contains three occurrences of the value “power outage”, yielding a distribution of P2,1 = {3/3, 0, 0, 0, 0, 0, 0}. The three
+4
+
+Zip Code
+476**
+476**
+476**
+4790*
+4790*
+4790*
+476**
+476**
+476**
+
+Age
+2*
+2*
+2*
+≥ 40
+≥ 40
+≥ 40
+3*
+3*
+3*
+
+Salary
+3k
+4k
+5k
+6k
+11k
+8k
+7k
+9k
+10k
+
+Disease
+gastric ulcer
+gastritis
+stomach cancer
+gastritis
+flu
+bronchitis
+bronchitis
+pneumonia
+stomach cancer
+
+ues above, the t-closeness of Table 3 is determined to be
+t = max(0.375, 0.1667, 0.2361) = 0.375.
+
+3.2
+
+Calculation using the Weighted Ordered
+Distance
+
+The cost of changing P3,1 into Q3 can also be found using the
+weighted ordered distance approach of Equation (6). The full
+process of doing so is given in the six steps B1 , B2 , B3 , . . . ,
+B6 below.
+
+Table 3: Anonymized salary data (based on Table 4 of Li et
+Transformation of P3,1 to Q3 :
+al. [1])
+
+3.1
+
+0
+B1 . Move w1,4 = 1/9 from p1 = 1/3 of v1 = 3k ∈ P3,1
+from
+index i = 1 to j = 4 (i, j ∈ P3,1 ), leaving a remainder of
+p1 = 1/3 − 1/9 = 2/9.
+
+Calculation using the Definition
+
+The first task is to determine the cost of transforming P3,1 into
+Q3 . Using Equation (2), this is calculated as
+
+1
+1 1
+E(P3,1 , Q3 ) =
+− +
+9−1 3 9
+
+ 
+
+1 1
+1 1
+−
+−
++
++
+3 9
+3 9
+
+ 
+ 
+
+1 1
+1 1
+1 1
++
+−
++
+−
++
+−
+3 9
+3 9
+3 9
+
+ 
+
+1 1
+1 1
+−
++
+−
++
+3 9
+3 9
+
+
+ 
+
+1 1
+1
+−
++ ···
+(11)
++ 0−
+3 9
+9
+
+
+=
+
+12
+4
+6
+5
+4
+3
+2
+1
+ + + + + + + + 
+8 9
+9
+9
+9
+9
+9
+9
+9
+A1
+
+A2
+
+A3
+
+A4
+
+A5
+
+= 0.375.
+
+A6
+
+A7
+
+B2 . Move w1,5 = 1/9 from the remainder of p1 = 2/9 of v1 =
+0
+3k ∈ P3,1
+from i = 1 to j = 5 (i, j ∈ P3,1 ), leaving
+2
+p1 = /9 − 1/9 = 1/9.
+B3 . Move w2,6 = 1/9 from p2 = 1/3 of v2 from i = 2 to
+j = 6, leaving p2 = 2/9.
+B4 . Move w2,7 = 1/9 from p2 = 2/9 of v2 from i = 2 to
+j = 7, leaving p2 = 1/9.
+B5 . Move w3,8 = 1/9 from p3 = 1/3 of v3 from i = 3 to
+j = 8, leaving p3 = 2/9.
+B6 . Move w3,9 = 1/9 from p3 = 2/9 of v3 from i = 3 to
+j = 9, leaving p3 = 1/9.
+
+(12) Using Equation (5), the EMD, and thus t-closeness, of P3,1
+and Q3 is calculated as
+
+A8
+
+(13)
+
+E(P3,1 , Q3 ) =
+
+The individual “actions” A1 , A2 , A3 , . . . , A8 of Equation (12),
+shown in Figure 2, correspond to the movements of masses
+that transform P3,1 into Q3 . In A1 , 2/9 from mass p1 = 1/3
+of v1 = 3k is moved forward to v2 . Then, in A2 , 2/9 from
+mass p2 = 1/3 of v2 = 4k, along with the 2/9 from v1 , thus
+2/9 + 2/9 = 4/9, is moved forward to v . A further 2/9 is picked
+3
+up at v3 , yielding a total of 4/9 + 2/9 = 6/9. The first hole
+is encountered at v4 , at which point 1/9 is deposited, leaving
+6/9 − 1/9 = 5/9 to carry forward. In each of the remaining
+five holes of v5 through v9 , a mass of 1/9 is dropped, thereby
+depleting all of the available mass. Following the actions of
+A1 , A2 , A3 , . . . , A8 , each element of P3,1 contains a mass of
+1/9, meaning that P
+3,1 has been transformed into the (uniform)
+distribution Q3 .
+0
+In the case of the two remaining equivalence classes P3,2
+0
+and P3,3 , P3,2 and P3,3 can be individually transformed, again
+using Equation (2), to Q3 at costs of (approximately) 0.1667
+and 0.2361, respectively. Lastly, given the three EMD val-
+
+1 |1 − 4| 1 |1 − 5| 1 |2 − 6|
+·
++ ·
++ ·
++
+9 9−1
+9 9−1
+9 9−1
+B1
+
+B2
+
+B3
+
+1 |2 − 7| 1 |3 − 8| 1 |3 − 9|
+·
++ ·
++ ·
+= 0.375.
+9 9−1
+9 9−1
+9 9−1
+B4
+
+B5
+
+(14)
+
+B6
+
+The result is the same as that of Equation (13). The actions
+B1 , B2 , B3 , . . . , B6 of this transformation are seen in Equation (14) and depicted in Figure 2. Observe that two actions,
+namely B1 and B2 , “pass through” the “region” above action
+A1 of Figure 2. These two actions correspond to term A1 (2/9)
+of Equation (12). Likewise, the four actions B1 , B2 , B3 , and
+B4 that “pass through” the “region” of A2 match up to A2 (4/9)
+of Equation (12). The six actions B1 , B2 , B3 , B4 , B5 , and B6
+of the “region” of A3 relate to term A3 (6/9) of Equation (12),
+and so forth. Each time that an action “passes through” a “region”, it contributes a mass of 1/9 to that “region”. These individual masses of 1/9 are then collectively summed over a given
+“region”, just as in Equation (12), thereby linking Equations
+5
+
+B1
+
+Ps,1:
+
+1/3
+
+vi:
+i:
+
+3k
+1
+
+A1
+
+1/3
+
+4k
+2
+
+A2
+
+1/3
+
+5k
+3
+
+A3
+
+0
+
+B2
+
+A4
+
+6k
+4
+
+0
+
+7k
+5
+
+B3
+
+A5
+
+0
+
+B4
+A6
+
+8k
+6
+
+0
+
+9k
+7
+
+B5
+A7
+
+0
+
+10k
+8
+
+B6
+A8
+
+0
+
+11k
+9
+
+Figure 2: Transformation of P3,1 to Q3
+Project Name
+E**
+E**
+E**
+U **
+G**
+G**
+G**
+G**
+R**
+R**
+
+(12) and (14). Ultimately, both interpretations of the EMD
+presented in Equations (2) and (6) are equivalent.
+Taking the same approach as above, one obtains
+1 |4 − 1| 1 |4 − 2| 1 |4 − 3|
+·
++ ·
++ ·
++
+9 9−1
+9 9−1
+9 9−1
+1 |6 − 4| 1 |6 − 5| 1 |9 − 7| 1 |9 − 8|
+·
++ ·
++ ·
++ ·
+9 9−1
+9 9−1
+9 9−1
+9 9−1
+≈ 0.1667.
+(15)
+
+E(P3,2 , Q3 ) =
+
+The EMD of the final equivalence class of Table 3, specifi0
+cally P3,3
+, is
+
+Merit Points
+1
+4
+2
+3
+3
+4
+3
+1
+4
+3
+
+Table 4: Anonymized merit points data
+
+1 |5 − 1| 1 |5 − 2| 1 |5 − 3|
+·
++ ·
++ ·
++
+4.1 Calculation using the Definition
+9 9−1
+9 9−1
+9 9−1
+1 |7 − 4| 1 |7 − 5| 1 |7 − 6|
+·
++ ·
++ ·
++
+Applying Equation (2) to distributions P4,1 and Q4 of the at9 9−1
+9 9−1
+9 9−1
+tribute Merit Points, one obtains
+1 |8 − 7| 1 |8 − 9|
+·
++ ·
+≈ 0.2361.
+(16)
+9 9−1
+9 9−1
+
+4
+1
+E(P4,1 , Q4 ) =
+0−
++
+4−1
+10
+
+ 
+
+4
+1
+3
+4 Merit Points Example
+0−
++
+−
++
+10
+3 10
+ 
+ 
+
+
+1
+3
+1
+2
+4
+Observe that in all four distributions of Section 3, each of the
++
+−
++
+−
+0−
++
+0
+0
+0
+10
+3 10
+3 10
+has an individual frequency
+elements of Q03 , P3,1
+, P3,2
+, P3,3
+ 
+
+
+of one. The EMD also extends to sets that are strictly multisets
+1
+3
+4
++
+−
++
+0−
+(having repeated values). Let Q04 = {3, 3, 3, 3, 4, 4, 4, 1, 1, 2}
+10
+3 10
+
+
+
+
+
+represent the sensitive values of the attribute Merit Points of
+1
+2
+1
+1
+Table 4. With four values of 3, three instances of 4, two values
+−
++
+−
+(17)
+3 10
+3 10
+of 1, and a single 2, of a total of m = 10 elements, the acE(P3,3 , Q3 ) =
+
+≈ 0.3333.
+(18)
+companying distribution is Q4 = {4/10, 3/10, 2/10, 1/10}. The
+0
+0
+four equivalence classes of Q4 are P4,1 = {4, 1, 2} ⊆ Q4
+0
+(P4,1 = {0, 1/3, 1/3, 1/3}), P4,2
+= {3} (P4,2 = {1, 0, 0, 0}),
+0
+0
+P4,3 = {3, 3, 4, 1} (P4,3 = {2/4, 1/4, 1/4, 0}), and P4,4
+=
+Similarly, E(P4,2 , Q4 ) ≈ 0.3333, E(P4,3 , Q4 ) = 0.0833,
+1
+1
+{3, 4} (P4,4 = { /2, /2, 0, 0}). Note that the explicit identi- and E(P4,4 , Q4 ) ≈ 0.1667. Combining the results of this exfier Project Name of Table 4 shows only the first letter of each ample, the t-closeness of Table 4 is equal to t = 0.3333, the
+name.
+maximum of the four EMD values.
+6
+
+4.2
+
+Weighted Ordered Distance
+
+The second and third equivalence classes of the attribute
+Disease of Table 3 are
+
+The task of transferring the masses of P4,1 to the holes of Q4
+of Table 4, thus transforming P4,1 to Q4 , is given in the actions
+C1 , C2 , and C3 that follow.
+
+0
+P5,2
+= {gastritis, flu, bronchitis}
+
+(P5,2 = {0, 1/3, 0, 1/3, 1/3, 0}) and
+Transformation of P4,1 to Q4 :
+
+0
+P5,3
+= {bronchitis, pneumonia, stomach cancer}
+
+0
+C1 . Move w2,1 = 1/30 from p2 = 1/3 of v2 = 4 ∈ P4,1
+from
+index i = 2 to j = 1 (i, j ∈ P4,1 ), leaving a remainder of
+p2 = 1/3 − 1/30 = 3/10.
+
+(P5,3 = {0, 0, 1/3, 0, 1/3, 1/3}), respectively. The EMD of P5,2
+and P5,3 , also obtained via Equation (9), are both (approximately) 0.4444. Thus, the t-closeness of the attribute Disease
+is 0.4444.
+
+0
+C2 . Move w3,1 = 4/30 from p3 = 1/3 of v3 = 1 ∈ P4,1
+from
+1
+i = 3 to j = 1 (i, j ∈ P4,1 ), leaving p2 = /3 − 4/30 =
+2/10.
+
+6
+
+Efficient EMD Algorithm
+
+C3 . Move w4,1 = 7/30 from p4 = 1/3 of v4 = 2 from i = 4 to
+The redundancies of the calculation of the EMD via Equation
+j = 1, leaving p4 = 1/10.
+(2) are visible in the expansions of Equations (11) and (17).
+Using Equation (6), one finds that
+These expansions each contain repeated sequences of sums of
+differences of the form
+1 |2 − 1|
+4 |3 − 1|
+7 |4 − 1|
+E(P4,1 , Q4 ) =
++
++
+·
+·
+·
+1
+30 4 − 1
+30 4 − 1
+30 4 − 1
+[|p1 − q1 | + |(p1 − q1 ) + (p2 − q2 )| +
+E(P, Q) =
+m−1
+C1
+C2
+C3
+|(p1 − q1 ) + (p2 − q2 ) + (p3 − q3 )| + . . .] ,
+(21)
+≈ 0.3333.
+(19)
+As before, E(P4,2 , Q4 ) ≈ 0.3333, E(P4,3 , Q4 ) = 0.0833, meaning that, for example, the sum (p1 − q1 )+(p2 − q2 ) is repeatedly calculated. Because of these redundancies, the naı̈ve
+and E(P4,4 , Q4 ) ≈ 0.1667.
+computation of the EMD via Equation (2) can be replaced by
+the enhanced procedure given in Algorithm 1 [23]. Algorithm
+1 requires only a single pass over the data, giving a linear run5 Disease Example
+time complexity of O(m), which is less than the quadratic
+As a final case, consider the sensitive attribute Disease of Ta- complexity O(m · (1 + 2 + 3 + · · · + m)) = O(m2 ) of the
+naı̈ve implementation of Equation (2).
+ble 3. Globally, the values of Disease are given as
+Q05 = {gastric ulcer, gastritis, stomach cancer, gastritis,
+
+Algorithm 1 Efficient EMD
+EMD ← 0
+S←0
+
+flu, bronchitis, bronchitis, pneumonia, stomach cancer}.
+In the set Q05 , there is one instance of “gastric ulcer”, two
+of each of “gastritis” and “stomach cancer”, one of “flu”,
+two of “bronchitis”, and finally one of “pneumonia”. Accordingly, the distribution of these values over Table 3 is
+Q5 = {1/9, 2/9, 2/9, 1/9, 2/9, 1/9}. In the first equivalence class
+of Table 3, in particular
+0
+P5,1
+= {gastric ulcer, gastritis, stomach cancer},
+
+there is one occurrence of each of “gastric ulcer”, “gastritis”, and “stomach cancer”, yielding a distribution of P5,1 =
+{1/3, 1/3, 1/3, 0, 0, 0}. Given that Disease is a categorical attribute, the EMD is calculated using Equation (9) as follows
+
+1 2
+1 2
+1 1 1
+−
++
+−
++
+− +
+E 0 (P5,1 , Q5 ) =
+2 3 9
+3 9
+3 9
+
+1
+2
+1
+0−
++ 0−
++ 0−
+≈ 0.4444.
+(20)
+9
+9
+9
+
+7
+
+. initialize EMD
+. initialize (current) sum S
+
+for i = 1 to m do
+S ← S + (pi − qi )
+EMD ← EMD + |S|
+end for
+
+. for each pi ∈ P, qi ∈ Q
+. increase S
+. increase EMD
+
+EMD ← EMD/(m − 1)
+
+. m 6= 1
+
+Conclusion
+
+This paper presents three examples of the calculation of the
+one-dimensional EMD in the context of t-closeness. The first
+example examines the well-known scenario given by the designers of t-closeness, the second looks at more arbitrary distributions, and the third pertains to a categorical variable. Details not previously explained elsewhere in the literature are
+7
+
+thoroughly articulated. The existing definition of the EMD [13] Jianneng Cao, Panagiotis Karras, Panos Kalnis, and Kian-Lee Tan.
+SABRE: A Sensitive Attribute Bucketization and REdistribution frameis empirically demonstrated to be equivalent to the sums of
+work for t-closeness. The VLDB Journal, 20(1):59–81, 2011.
+the individual weighted ordered distances between masses and
+[14]
+Debaditya
+Roy. Determining t in t-closeness using multiple sensitive
+holes when optimal moves are made. As well, an efficient
+attributes. Master’s thesis, National Institute of Technology Rourkela,
+method of computing the EMD is presented.
+2013.
+[15] Hongyu Liang and Hao Yuan. On the complexity of t-closeness
+anonymization and related problems. In Int. Conf. Database Systems
+for Advanced Applications, pages 331–345, 2013.
+
+Acknowledgements
+
+[16] Yossi Rubner, Carlo Tomasi, and Leonidas Guibas. The earth mover’s
+distance as a metric for image retrieval. Int. J. Computer Vision,
+Funding for this research was provided by ISM Canada.
+40(2):99–121, 2000.
+Additional funding was provided by the Natural Sciences
+[17]
+Enrico
+Vezzetti and Federica Marcolin. Similarity Measures for Face
+and Engineering Research Council of Canada (NSERC)
+Recognition. Bentham Science Publishers, 2015.
+through a Collaborative Research and Development Grant
+(CRDPJ 514906-17) and a Discovery Grant (RGPIN-2014- [18] Daniel Velleman. How to Prove It: A Structured Approach. Cambridge
+University Press, 2nd edition, 2006.
+2014-04598) awarded to Hamilton. The authors wish to thank
+Rahim Samei of ISM Canada for his help in the review of this [19] Gordon Pace. Mathematics of Discrete Structures for Computer Science.
+Springer-Verlag, 2012.
+article.
+[20] W. Wallis. A Beginner’s Guide to Discrete Mathematics. Birkhäuser,
+2003.
+
+References
+
+[21] Susanna Epp. Discrete Mathematics with Applications. Brooks/Cole,
+4th edition, 2011.
+
+[1] Ninghui Li, Tiancheng Li, and Suresh Venkatasubramanian. t-closeness:
+Privacy beyond k-anonymity and l-diversity. In IEEE 23rd Int. Conf.
+Data Engineering, 2007.
+
+[22] Shashi Shekhar and Hui Xiong, editors. Encyclopedia of GIS. Springer,
+2008.
+[23] Sung-Hyuk Cha and Sargur N. Srihari. On measuring the distance between histograms. Pattern Recognition, 35(6):1355–1370, 2002.
+
+[2] Ninghui Li, Tiancheng Li, and Suresh Venkatasubramanian. Closeness:
+A new privacy measure for data publishing. IEEE Trans. Knowledge
+and Data Engineering, 22(7), 2010.
+[3] Ashwin Machanavajjhala, Daniel Kifer, Johannes Gehrke, and Muthuramakrishnan Venkitasubramaniam. l-diversity: Privacy beyond kanonymity. ACM Trans. Knowledge Discovery from Data, 1(1), 2007.
+[4] Josep Domingo-Ferrer, David Sánchez, and Jordi Soria-Comas.
+Database Anonymization: Privacy Models, Data Utility, and
+Microaggregation-based Inter-model Connections. Morgan & Claypool,
+2016.
+[5] Benjamin C.M. Fung, Ke Wang, Ada Wai-Chee Fu, and Philip S. Yu. Introduction to Privacy-Preserving Data Publishing: Concepts and Techniques. CRC Press, 2010.
+[6] Shafiullah Khan, Al-Sakib Pathan, and Nabil Alrajeh, editors. Wireless
+Sensor Networks: Current Status and Future Trends. Taylor & Francis
+Group, 2012.
+[7] Latanya Sweeney. k-anonymity: a model for protecting privacy. Int. J.
+Uncertainty, Fuzziness and Knowledge-based Systems, 10(5):557–570,
+2002.
+[8] Raymond Wong and Ada Fu. Privacy-Preserving Data Publishing: An
+Overview. Morgan & Claypool, 2010.
+[9] Pelayo Quirós, Pedro Alonso, Irene Dı́az, and Susana Montes. On the
+use of fuzzy partitions to protect data. Integrated Computer-Aided Engineering, 21(4):355–366, 2014.
+[10] Chaofeng Sha, Yi Li, and Aoying Zhou. On t-Closeness with KLdivergence and semantic privacy. In Proc. 15th Int. Conf. Database
+Systems for Advanced Applications, volume II, pages 153–167, 2010.
+[11] Lengdong Wu, Hua He, and Osmar Zaı̈ane. Utility of privacy preservation for health data publishing. In 2013 IEEE 26th Int. Symp. ComputerBased Medical Systems, 2013.
+[12] Jordi Soria-Comas, Josep Domingo-Ferrer, David Sánchez, and Sergio
+Martı́nez. t-closeness through microaggregation: Strict privacy with enhanced utility preservation. IEEE Trans. Knowledge & Data Engineering, 27(11):3098–3110, 2015.
+
+8
+
+
