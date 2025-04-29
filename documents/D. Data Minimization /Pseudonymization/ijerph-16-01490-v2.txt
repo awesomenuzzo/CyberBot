@@ -1,0 +1,2310 @@
+International  Journal  of 
+Environmental Research
+and Public Health
+Article
+PAX: Using Pseudonymization and Anonymization
+to Protect Patients’ Identities and Data in the
+Healthcare System
+Mishall Al-Zubaidie1,2,*
+, Zhongwei Zhang2
+and Ji Zhang2
+1Thi-Qar University, Nasiriyah 64001, Iraq
+2Faculty of Health, Engineering and Sciences, University of Southern Queensland,
+Toowoomba, QLD 4350, Australia; Zhongwei.Zhang@usq.edu.au (Z.Z.); Ji.Zhang@usq.edu.au (J.Z.)
+*Correspondence: Mishall.Al-Zubaidie@usq.edu.au or u1070801@umail.usq.edu.au; Tel.: +61-469-869-029
+Received: 13 March 2019; Accepted: 23 April 2019; Published: 27 April 2019
+/gid00030/gid00035/gid00032/gid00030/gid00038/gid00001/gid00033/gid00042/gid00045 /gid00001
+/gid00048/gid00043/gid00031/gid00028/gid00047/gid00032/gid00046
+Abstract: Electronic health record (EHR) systems are extremely useful for managing patients’ data
+and are widely disseminated in the health sector. The main problem with these systems is how
+to maintain the privacy of sensitive patient information. Due to not fully protecting the records
+from unauthorised users, EHR systems fail to provide privacy for protected health information.
+Weak security measures also allow authorised users to exceed their speciﬁc privileges to access
+medical records. Thus, some of the systems are not a trustworthy source and are undesirable for
+patients and healthcare providers. Therefore, an authorisation system that provides privacy when
+accessing patients’ data is required to address these security issues. Speciﬁcally, security and privacy
+precautions should be raised for speciﬁc categories of users, doctor advisors, physician researchers,
+emergency doctors, and patients’ relatives. Presently, these users can break into the electronic systems
+and even violate patients’ privacy because of the privileges granted to them or the inadequate security
+and privacy mechanisms of these systems. To address the security and privacy problems associated
+with speciﬁc users, we develop the Pseudonymization and Anonymization with the XACML (PAX)
+modular system, which depends on client and server applications. It provides a security solution to
+the privacy issues and the problem of safe-access decisions for patients’ data in the EHR. The results of
+theoretical and experimental security analysis prove that PAX provides security features in preserving
+the privacy of healthcare users and is safe against known attacks.
+Keywords: anonymity; ECDSA; electronic health record (EHR); PAX; pseudonym; XACML
+1. Introduction
+Data privacy is a prerequisite for any system, but especially for those systems, such as healthcare
+systems, that transmit user-sensitive data [ 1]. The healthcare system uses authorisation policies
+to enable healthcare providers to access required patients’ data. Ensuring patients’ privacy means
+preventing unauthorised users from accessing this data. Unfortunately, many healthcare systems
+transmit user requests or store policies with explicit plaintext, thus exposing patients’ data to the public.
+The personally controlled electronic health record (PCEHR) system provided by the National E-health
+Transition Authority (NEHTA) in Australia argues that security and privacy should be properly
+addressed in healthcare systems [2].
+1.1. Security in EHR Systems
+The security of medical records in the electronic health record (EHR) system has been a major focus
+of health and academic institutions, since the efﬁciency and quality of patients’ data management [ 1,3]
+Int. J. Environ. Res. Public Health 2019 ,16, 1490; doi:10.3390/ijerph16091490 www.mdpi.com/journal/ijerph
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 2 of 36
+by using the World Wide Web. EHR systems include identiﬁcations and patients’ data that require
+authorisation privileges to determine access control for authorised users [ 4]. Accurate medical data
+is essential for diagnosing diseases and determining the condition of patients during their online
+transfer from patient to healthcare provider [ 5,6]. Any change to this data causes health problems for
+patients. In addition, penetration of medical records of patients with diseases such as HIV infection or
+dermatological conditions can lead to discrimination, harassment, or even death of the patient if the
+diagnostic data changes during the transition from client to server [ 6,7]. In a broad sense, a terrorist
+may cause national instability by disclosing patients’ data, changing the data, destroying the data,
+or impersonating some patients [ 8]. Healthcare systems, and in particular, EHR systems, should
+provide end-to-end privacy for patients’ data. In addition, data storage and authorisation policies for
+patients in a central server yield data management gains but are an attractive target for hackers [ 8].
+Therefore, there should be security mechanisms to protect the privacy of the patient as well as to
+prevent the penetration of policies on the server.
+1.2. Privacy of Critical Medical Cases
+The use of patients’ data for various purposes, such as consultations, access by a relative or
+caregiver, research, and emergency (secondary or indirect use) is a major challenge for authorisation
+systems; for example, the researcher should not exceed the limits of privacy granted to him/her [ 4].
+In an emergency, when the patients’ doctor is unavailable or the patient does not have the capacity
+to give consent to another doctor, the patient’s privacy is seriously compromised [ 9]. In addition,
+if the patient is incapacitated, a relative is responsible for receiving the patient’s data [ 10]. Sometimes,
+the doctor also needs to consult another doctor to treat a patient’s condition. All these cases can result
+in the intrusion and penetration of data. The sharing of medical records among users of the EHR
+system allows patients’ data to be misused or abused by malicious breaches [ 11]. Many examples
+of penetration of the medical records for patients, such as medical staff who sold medical records to
+cancer patients, accessed medical records for patients at Washington University [ 12] or unauthorised
+access attacks exposed (June 2016) millions of healthcare records [ 13]. In 2018, the U.S. Department
+of Health and Human Services pointed out that unauthorised access/disclosure attacks targeted
+many health institutions and penetrated huge health records [ 14]. These penetrations show that
+the healthcare system requires a high level of security. Furthermore, an internal attack penetrates
+medical records more easily than external attacks because each practitioner has a privilege that allows
+him/her to access the server system. Many access control models have been used in the EHR, such as
+mandatory access control (MAC), discretionary access control (DAC), role-based access control (RBAC),
+and attribute-based access control (ABAC), and each model has speciﬁc authorisation mechanisms
+for data access [ 2]. In our project, we adopted the integration of the RBAC and ABAC to support a
+security level based on both role and user attributes. Therefore, EHR systems require mechanisms to
+ensure the privacy of patients’ data while protecting authorisation policies and healthcare provider
+requests [ 15]. In order to develop a successful project, privacy must be provided to the patient via the
+following measures:
+1. Preventing attackers from accessing patient data and making data anonymous in case attackers
+do gain access to the data (i.e., external attacks).
+2. Preventing legitimate users from exceeding their privileges (i.e., internal attacks).
+3. Securing all requests, policies, and data of the change on the server or during the transfer between
+the clients and server to ensure the accuracy and reliability of patient data.
+4. Applying anonymity to requests and policies to hide users’ identities.
+5. Applying random pseudonym to requests, policies, and data to separate data associated with the
+real attributes of patients.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 3 of 36
+1.3. Our Contributions
+Our contributions to providing full privacy and security of patients’ records can be summarised
+as follows:
+• Combining ABAC and RBAC
+In this project, we integrate two existing models (ABAC and RBAC) to develop a system
+that provides handling of patients’ information at the coarse-grained and ﬁne-grained levels.
+Our model ﬁts the privacy and security requirements for medical records in the EHR by merging
+a user’s ID with the role as a single attribute entered in signature to identify subjects and objects.
+• Separating users into two sets
+We have proposed separating users into direct and indirect sets for patients’ records to allow the
+server to distinguish between users’ requests. This signiﬁcantly reduces the penetration rate of
+internal attacks.
+• Using ECDSA’s signatures with XACML
+The anonymity property has been applied to the requests and policies of subjects. This feature
+was used during the implementation of the ECDSA signature algorithm with XACML to prevent
+attackers from determining the identity of healthcare providers (to prevent knowledge of the
+relation between a physician with a particular patient).
+• Using Shamir scheme with signatures
+We used the Shamir scheme with the ECDSA signatures in the third protocol of authorising
+indirect users. This procedure is necessary to verify unauthorised users of patients’ data who
+could be conducting serious attacks on the EHR system.
+• Using random pseudonym with patients’ data
+The pseudonym property has been applied to the requests and policies of subjects and resources.
+This feature prevents hackers from knowing that the data belongs to a particular patient
+(separating data from real attributes).
+• Validating PAX scheme
+PAX scheme has simulated with an automated validation of Internet security protocols and
+applications (AVISPA) tool that is an efﬁcient and ﬂexible tool for testing and analysis attacks in
+modern research. AVISPA has used to validate that PAX is secure against both passive and active
+attacks. Additionally, Burrows, Abadi and Needham (BAN) logic has used to ensure request
+source, freshness and entity legitimacy.
+1.4. Structure of the Paper
+The report proceeds as follows. Section 2 discusses previous studies related to our research. Basic
+concepts about the techniques used in the PAX system will be introduced in Section 3. Section 4
+describes the proposed authorisation model. Section 5 describes users’ scenarios and security analysis
+in the authorisation system. Section 6 presents comparison between PAX and previous studies.
+The conclusion and recommendations for future work are presented in Section 7.
+2. Related Work
+This Section discusses related works [2,6,8,9,16–18], and highlights their shortcomings.
+The PERMIS project was proposed by [ 16] with the RBAC model. It described the conceptual
+authorisation of the credential validation service (CVS) before the approval stage of the access decisions
+for the resource as well as the distributed management of the credentials. However, the PERMIS
+system does not adequately protect the CVS. PERMIS also suffers from the problem of inheriting
+managers for all the attributes of their followers (hospital department managers or specialist doctors
+who inherit all their practitioners’ attributes and thus have access to patients’ data, which can lead to
+signiﬁcant internal attacks) and also uses one signature of a public key cryptography (PKC#12) ﬁle for
+policies and attributes.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 4 of 36
+Quantin et al. [8]suggested using non-central medical records to eliminate issues of
+standardization and structure in data access requests. However, this scheme suffered from the use
+of a single aggregator that was similar to the dataset on the central server, which is vulnerable to
+attack. In addition, patients’ data comes from different sources and have different structures and
+standards; this difference causes a burden on the aggregator. Moreover, the authors used Rivest,
+Shamir, and Adleman’s (RSA) encryption algorithm, and this algorithm uses a large key size of
+1024 bits, which causes a burden on the server. In addition, the aggregator needs time and storage
+to convert the data into a single context. Furthermore, this scheme suffered from the collision and
+doubloon problems due to the transference and transformation of patients’ data contexts.
+The pseudonymization of information for privacy in an e-health (PIPE) project was designed to
+protect health data in the EHR through a layered system that included many keys such as an external
+key pair, an internal key pair, a symmetric key pair, and a shared key. It relied on RBAC to protect
+the keys [ 6]. This scheme used the Shamir scheme as a backup mechanism to retrieve the patients’
+keys in the case of the loss of the smart card. However, this scheme did not explain the symmetric and
+asymmetric encryption algorithms used to generate pseudonym for users. In addition, the scheme
+increases the complexity of the server system with the use of many keys, especially if the scheme
+is used by a large health institution. In addition, the server must use the keystore to store the keys,
+and this requires protection and a storage space on the server.
+Gajanayake et al. [2]integrated four access control models (DAC, MAC, RBAC, and purpose
+based access control [PBAC]) to obtain a single model that limits user access control of the medical
+record. However, their scheme addressed only the doctor and the patient and did not address different
+classes of healthcare providers. In addition, data and requests are clearly transmitted between client
+and server.
+The healthcare system for patient privacy (HCPP) project was designed for the EHR to protect the
+privacy of patient data [ 9]. Researchers focused on an emergency scenario regarding the protection
+of patients’ data. They used a backup mechanism that allows the doctor to access patients’ health
+information without access to conﬁdential parameters. However, this search relies on encrypting
+all patient data. When a client wants to access patient data, the server uses a keyword to perform
+an encrypted data mining operation. This process is very expensive for the server for two reasons.
+First, the server must encrypt the entire massive database with the continuous addition of new records,
+and second, the server must continuously mine each access request. In addition, their system did not
+support levels of authorisation and privileges (roles and attributes) that are more secure in providing
+privacy to patients’ records. In addition, researchers have reported that the patient has not been
+exposed to collusion because the patient does not attack himself, but this is not true because some
+impersonation attacks do the job without the theft or loss of the patient’s device. Moreover, this search
+did not specify the type of encryption algorithm used, which is very important for security and server
+performance, and addressed only emergency cases.
+Jo & Chung [17] proposed an XML access control system (XACS) that enables users to access
+speciﬁc elements in an XML document. This system relies on removing certain parts of the XML
+document to allow users who are authorised to see certain parts of an XML document. However,
+requester information is transmitted explicitly over the Internet to a server, which makes it easier for
+an attacker to penetrate the privacy of users. In addition, it does not address internal attacks that are
+applied by legitimate users even though certain parts of the XML document have been removed.
+Seol et al. [18] proposed an access control model based on partial encryption and XML signing
+in EHR’s documents within a cloud environment. Their model is supported in two phases: the ﬁrst
+phase is access control using XACML and the second is to encrypt and sign data with XML. However,
+the cloud environment presents multiple security and privacy problems in the EHR system because
+of the distributed exchange of data between the various health centres. In addition, their scheme
+uses encryption in XML requests and responses, which will be extremely costly for legitimate entities
+exchanges in healthcare systems. In addition, in the ﬁrst phase, requests and responses are clearly
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 5 of 36
+sent between the legitimate parties and therefore are exposed to attack. They also did not address the
+pseudonym mechanism that prevents access to real users’ information.
+3. Overview of Security and Privacy Techniques in EHR Systems
+The EHR system needs a set of techniques to implement the management and privacy of patients’
+data. In our project, we focus on the security aspect of authorising legitimate users. The EHR system
+collects and stores medical records on a server, and each medical record is associated with a set of
+attributes that allow healthcare providers or patients to access it later. Several countries, such as
+Australia, the USA, and the UK have implemented EHR by taking advantage of dealing with patients’
+data over the Internet [ 5]. Therefore, our project used a set of techniques with the EHR. This section
+describes the threat model and the basic concepts of these techniques:
+• Threat model
+Many serious risks to healthcare systems that require the building of a threat model to detect
+weaknesses in these systems. Dolev-Yao threat model [ 19] is used to test users’ authorisation
+in PAX. It is a formal model, a practical way of analyzing authorisation protocols in real
+environments. This model is very efﬁcient in examining and analyzing various attacks. We assume
+that attacks can be internal, external, active, and passive. Additionally, we suppose that attributes
+server ( AS) is trustworthy and safe against information repository penetration attacks. In this
+model, we address the following threats:
+– The attacker can ﬂood the server with intensive authorisation requests, which is to stop the
+service from healthcare’s users and destroy the network.
+– The attacker performs an attack to penetrate the repository on the central server, to access
+the patient’s data and reveal their identities.
+– The attacker performs a Man-in-the-middle (MITM) attack to modify the data and to become
+a legitimate user in the network.
+– The attacker sends a fake authorisation request during the execution of a
+forgery/impersonation attack to gain access to patient data.
+– The attacker can launch an eavesdropping attack to obtain authorisation requests, and then
+perform an analysis of these requests to detect the correlation between data, information,
+and pseudonyms.
+– The attacker can execute timing attacks by using the time period to reveal user authorisation
+information.
+• Access control in EHR systems
+Any system needs access control (AC) models to determine users’ access to the data repository.
+There are many AC models, and each one depends on a particular method and set of rules.
+One of the most distinct AC models is role-based access control (RBAC). This model relies on
+the classiﬁcation of users into roles, and each role has privileges and rights regarding data
+access [ 2]. With RBAC, the security of the system is based on the structure of the system’s roles
+assigned to users [ 20]. Each role in the system is assigned according to the job of the user in the
+organization [ 21]. RBAC was introduced to solve problems with previous access models such as
+DAC. As shown in Figure 1, the RBAC model divides users into roles (such as a patient, doctor,
+and researcher).
+In recent years, there has been signiﬁcant interest in using the attribute-based access control
+(ABAC) model for the protection of data privacy. This model is designed to access data more
+accurately (ﬁne-grained) and securely. It handles user attributes (such as name, address, age,
+mobile, location, time) to allow users to access the server’s repository. ABAC proposed to
+go beyond the limitations in the rules and design of the most well-known control access
+models (DAC, MAC, and RBAC) [ 22,23]. ABAC is a rich model because it deals with a
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 6 of 36
+wide range of user attributes. ABAC supports administration, authorisation of context-aware,
+risk-intelligence, and scalability in various applications such as the Internet, IoT, Big Data, cloud
+computing, and VANET [ 24]. The attributes in ABAC are categorized into subject, object, action,
+and environment. As shown in Figure 2, each user has a set of attributes that allows him/her to
+access data in the server.
+• Distributed AC implementation technology
+The most important component in the proposed EHR system is the EHR repository.
+The repositories contain data in various forms because these systems have difﬁculties dealing with
+different coordinates for data. Therefore, the use of extensible access control (XML) is suitable for
+the exchange of various data via the Internet. XML is a symbolic language and uses a simple and
+ﬂexible method designed to describe, exchange, and manage data across the Internet.
+However, XML should support security and privacy mechanisms that provide different levels of
+protection of sensitive data in the whole or part of the XML document [ 17]. Access to data is a
+major challenge in big data management systems (EHR) that use different techniques. In addition,
+the exchange of information over the Internet has become essential and needs to achieve access
+authorisation, particularly in healthcare applications. Extensible access control markup language
+(XACML) standards include both access control (authorisation) and data management based
+on XML in the different systems [ 25]. Effectively, XACML offers features for data access and
+authorisation for the users at the ﬁne-grained level, which is the most ﬂexible and effective [ 26–28].
+This technology is presented by the organization for the advancement of structured information
+standards (OASIS). This standard has many of the features that qualify it for use on the Internet,
+such as combining policy, combining algorithm, attribute, multiple subjects, policy distribution,
+implementation independency and obligations [23,28,29].
+This technique is based on the speciﬁc policies ﬁrst and then on many modules such as policy
+enforcement point (PEP), policy decision point (PDP), policy administration point (PAP), policy
+information point (PIP), and policy retrieval point (PRP) to evaluate the request for access [ 4],
+as shown in Figure 3 (PEP sends and receives requests and accesses responses to the repository;
+PDP evaluates the decision; PAP creates policies based on users’ attributes; PIP retrieves users’
+attributes; and PRP retrieves the users’ data from the repository). The result of the decision
+(permit, deny, not applicable, indeterminate) is sent to the subject via PEP [23].
+• Elliptic curve digital signature algorithm (ECDSA)
+Proposed by Scott Vanstone in 1992 [ 30], the elliptic curve digital signature algorithm (ECDSA) is
+an asymmetric signature algorithm that depends on the use of the points on the curve to sign
+data. It has been used to provide integrity, authentication, and non-repudiation properties in the
+communications network with limited capacity in terms of power and processing. The algorithm
+depends on the elliptic curve discrete logarithm problem (ECDLP). It is impervious against
+different attacks when the parameters are accurately selected [ 31], i.e., it is difﬁcult to obtain kfrom
+PandQ(where kis an integer and PandQare two points on the curve) [ 32,33]. ECDSA uses small
+parameters which expedites the performance of computations, thus reducing time and storage [ 34].
+These features are very important for large organizations and constrained-source devices such as
+wireless sensor networks (WSN) that require processing power, memory, bandwidth, or power
+consumption [35]. More details about ECDSA’s signature and veriﬁcation are available in [31].
+• Shamir scheme
+The secret sharing scheme or the Shamir ( SSs,t) scheme depends on a set of keys/secrets
+sharing ( SSs) and threshold ( t) to produce a master key/secret ( MS). The master secret can
+be created from some or all of the SSs[36]. In this scheme, tspeciﬁes the minimum number of
+keys/secrets that allow reconﬁguring MS[37,38]. This scheme consists of two phases: Generation
+and Reconstruction. In the Generation phase, the server divides MSinto a set of secrets sharing
+(SS1,SS2, ..,SSn), and each client ( Ci) securely receives one secret sharing ( SS) that is part of MS.
+In the Reconstruction phase, Cineeds to achieve any set of secrets ( SSs) required by relying on the
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 7 of 36
+value of tto construct MS(correctness and homomorphism properties). If Cihast-1 from SSs,Ci
+fails to obtain information from server (secrecy property). Calculating the MSis a very difﬁcult
+operation for the attacker. In addition, the secrets that are conﬁgured for the MSare anonymous
+users; the attacker does not know if these secrets belong to any of the users [ 6]. The Shamir scheme
+provides an anonymity solution to generate a MSwith several features such as full security in
+hiding Cis’SSs, aMSsize equal to Cis’SSssizes, easy creation of a MSfrom a set of keys/secrets,
+and creation of a new key/secret for one-time use [33].
+Figure 1. Scheme of role-based access control (RBAC) model.
+Figure 2. Scheme of attribute-based access control (ABAC) model.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 8 of 36
+Figure 3. Scheme of XACML.
+4. Our Proposed Authorisation Model
+In this Section, we will provide details about our new authorisation scheme that support
+security and privacy mechanisms to ensure legitimate users’ authorisation in healthcare applications.
+This Section will be divided into the network model, applying privacy concepts and PAX authorisation
+protocols for users.
+4.1. Network Model
+As shown in Figure 4, Pseudonymization and Anonymization with the XACML (PAX) is an
+authorisation system that works with EHR. The network model consists of four entities: client ( Ci),
+central server ( CS), attributes server ( AS) and data server ( DS). These entities communicate with
+each other in the PAX framework to accomplish authorisation and privacy preservation of users in
+access to the patients’ datasets. CSis the portal that prevents users from accessing directly to both AS
+and DS. Patients’ data are stored on the data server ( DS) and are fully separated from the attributes
+of the users (patients and healthcare providers) that stored on the attributes server ( AS). Each Ci
+creates an access request and sends it to the CS. Then, CSveriﬁes the authorisation information for
+the user’s request, if this request is valid, CSsends the authorisation request to ASfor an evaluation;
+otherwise, CSsends the “deny” response to Ci. When ASreceives the authorisation request from
+CS,ASevaluates the access request by PDPs modules, veriﬁes signatures, pseudonyms, and other
+security parameters. If all evaluations and tests are valid, ASsends a request to DSto retrieve patient
+data; otherwise, ASsends the “deny” response to CS. After that, DSchecks for signatures (Sigs) and
+privacy parameters (PP), if all operations are correctly performed, DSsends the required data with
+pseudonyms and Sigs to ASwhich in turn sends the “permit” response to CibyCSto allow access
+to the dataset. The authorised user will receive the “permit” response and the copy of the required
+data. The PAX system uses two PDPs (PDP1 and PDP2) to implement the user authorisation process,
+as shown in Figure 4. In this project, we focus on securing requests and policies to provide a high
+level of user privacy. PAX depends on the Balana Project, which is the only open source project that
+implements XACML v3.0 to ensure privacy and security for patients’ medical records.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 9 of 36
+Figure 4. Pseudonymization and Anonymization with the XACML (PAX) model.
+4.2. Implementation of PAX
+In this section, we will introduce the privacy concepts in PAX.
+• EHR’s users in PAX
+Security and privacy address where, when, and why data is available and who can access
+the data repository. Patients and healthcare providers require services that are efﬁcient, fast,
+and continuous and at the same time incorporate strict restrictions to determine data access.
+Therefore, AC to medical records has several challenges in terms of security and privacy:
+1. Legitimate users should not exceed their privileges.
+2. Users’ roles in the EHR system should be deﬁned. For example, a doctor can have several
+roles, such as an emergency doctor and a researcher doctor.
+3. Data should be anonymous when it reaches the wrong user due to misuse or attacks.
+4. Compliance with medical standards for EHR (such as HIPAA) is essential.
+In PAX, we divide users into two categories:
+– Direct users: These users include those who are directly associated with the data, such as the
+patient and the doctor.
+– Indirect users: These users include those who are not directly and continuously associated
+with the data, such as advisors, patients’ relatives, researchers, and emergency doctors.
+Although PAX includes both categories of users, this project focuses on indirect users (Figure 5
+shows a ﬂow chart for authorisation of direct and indirect users in PAX). Any healthcare system
+can be exposed to an internal attack by indirect users if there are no security and privacy
+mechanisms to prevent them.
+• Users’ pseudonym in PAX
+Several methods are used to protect the privacy of patients’ data, such as encryption and
+anonymization. However, these methods suffer from disadvantages. For example, encryption of
+patients’ data [7] has the following disadvantages:
+1. The researcher or emergency doctor will not beneﬁt from the encrypted data, and if he/she
+can decrypt the patients’ data, this is a breach of security in the healthcare system.
+2. Large database encryption is very expensive for the server system, which leads to
+unnecessary time consumption and reduced processor performance [39].
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 10 of 36
+3. The database of patients’ data requires the continuous addition and deletion of records,
+and if the data is encrypted, this will increase the burden on the server [40,41].
+4. Encryption can contain direct information about the patients. The penetration of this
+encryption will leave the patients’ identity and information exposed [42].
+The anonymization of patients’ data requires the following:
+1. The removal of all the attributes associated with the patient that prevents the healthcare
+provider from dealing with the associated patient’s data [7].
+2. Adding a large set of counterfeit records, which greatly increases the size of the database
+and therefore consumes server resources, especially with the continuous use of the database
+by healthcare providers.
+To solve these problems, we apply random pseudonyms with PAX to separate the association
+between patients’ attributes and data. The medical records transmitted between the client and
+server do not contain any patients’ attributes. This prevents the attackers from identifying patients.
+In PAX, we propose to use four datasets: the ﬁrst was for users’ attributes (patients and healthcare
+providers); the second was for applying pseudonyms to users; the third was for users’ policies
+(onAS); and the fourth was for patients’ data (on DS). When the EHR system wants to add a new
+healthcare provider or patient, the PAX randomly generates a pseudonym for that user and adds
+it to the second dataset. Suppose that we have a dataset for random pseudonyms, as in Table 1.
+PAX generates pseudonyms (such as p429ord761) for patients or healthcare providers during
+the addition of a letter representing the user’s role ( UR) such as pordplus a random client’s
+number ( CN). Each subject’s pseudonym ( SP) and object’s pseudonym ( OP) consists of URand
+CN(internal pseudonym), which are not transferred between entities and are used for policy
+veriﬁcation at AS. XACML’s request in PAX depends on the SPandOP(external pseudonym),
+and both SPandOPare divided into role’s number ( RN) and user’s number ( UN) (after replacing
+URwith RNand CNwith RN) and the latter are segmented into three parts (low (l), medium
+(m), and high (h)) with length 8 bits per part as in Table 2. These pseudonyms are associated
+with the users’ IDs. It enables users to access a speciﬁc patient’s data without exceeding granted
+privileges and rights.
+• Using ECDSA’s signatures
+PAX uses ECDSA (NIST prime-256) with requests and policies to ensure that security requirements
+apply to the privacy of patients’ data. We have applied ECDSA signatures with subjects’ and
+objects’ attributes to ensure integrity property to prevent changing attributes in requests and
+policies, authentication property to prevent external attackers and non-repudiation property to
+prevent authorised users from denying their requests to receive medical records. The application
+of security requirements is very important in systems that use sensitive data, such as healthcare
+systems. In PAX, the Cisigns the request with pseudonyms ( RN and UN), and the servers
+(CSand AS) verify the request’s Sigs. If valid, the ASassigns the request to the PDPs engines
+(after replacing Sigs(external pseudonym) with Sigs(internal pseudonym)) in XACML v3.0;
+otherwise, the request is rejected. PAX uses ECDSA’s Sigs to hide parts of SPand OPwhen
+exchanging XACML’s requests between PAX entities. The high performance and security level
+makes this algorithm suitable for application in large systems (such as EHR).
+• Policies administration in PAX
+System Administrator is responsible for creating policies for healthcare providers and patients
+inASby PAP . Policy in PAX consists of the policy ID, subject, object, and rules for policy
+implementation. The ﬁrst process in the PAX system is to create datasets for pseudonyms and
+attributes for all users. The process of creating policies depends on previous datasets. PAX uses
+ECDSA to generate a signature of SP(Ssp) and a signature of OP(Sop) based on the pseudonyms
+(URandCN) for both SPandOP. Creating signature-based policies and pseudonyms protects
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 11 of 36
+policies on the server in a way that is immune to internal and external attacks (policies do not
+depend on users’ real attributes). For example, the system administrator creates a user policy
+by entering the doctor’s name and URand patient’s name, PAX creates this policy as shown
+in Figure 6. The policy parameters are highlighted in green: d20 represents the SPand uses
+as policy’s ID; the ﬁrst long 128-bit hexadecimal number represents the Sop; and the second
+long 128-bit hexadecimal number represents the Ssp. This policy can include a set of rules such
+as determining the date of data access, the time speciﬁed on a given day, or the number of
+access times.
+• Clients’ requests and server’s responses
+PAX’s users must create an authorisation request to access medical records. This request consists
+of subjects’ and objects’ attributes. The Ciapplication in PAX uses the parts of RNand UN as
+a single attribute to generate the ECDSA’s Sig for the subjects and the objects. Figure 7 shows
+the client’s request to access patient data (where the request parameters are highlighted in green;
+CiS2tmjjRNoptmjjUN optmjjNCjjCiS4tmin resource segment represents the object’s attributes; and
+theCiS1tmjjRNsptmjjUN sptmjjNCjjTSCtmjjSNCtmin access-subject segment represents the subject’s
+attributes). In addition, the Ciapplication uses a part of RNspto explain to the ASthe user’s role
+to determine the desired policy after verifying the Sigs. Then, the Cisends the request to the AS
+byCSfor evaluation. The ASevaluates the request in the PDP engines, and the response (permit
+or deny) returns to the CibyCS.
+• Using Shamir scheme
+In PAX, we implemented the Shamir scheme to increase the level of security for indirect users
+(advisors, patients’ relatives, researchers, and emergency). Indirect users are legitimate users who
+can perform an internal attack because of the rights granted to them. PAX uses ECDSA to sign
+all signatures of healthcare users to create a master signature (MS). Then, PAX uses the Shamir
+scheme to generate secrets sharing ( SSs) from a MS. Each indirect user receives SSvia a secure
+communication channel. Cineeds a set of SSsto reproduce MS. PAX uses t= 3, which means
+that the randomly selected SSsrequire at least 3 SSsto generate MS. In addition, depending on
+RNsp,ASspeciﬁes that the user’s role is indirect and use the Shamir scheme with ECDSA’s Sig
+to verify the original MSand then evaluate the request by PDP2. Using Shamir’s scheme with
+XACML adds the property of authenticity, as an indirect user cannot access data with the same SSs.
+This operation enables PAX to secure the privacy of patients’ data and protect patients’ data from
+internal and external attacks. When an indirect user wants access to medical records, he/she does
+not know whether the SSsused to generate the MSbelong to any speciﬁc healthcare providers.
+Table 1. Internal and external pseudonyms of users.
+Users UR CN Internal Pseudonym RN UN External Pseudonym
+patient p p 1...pn
+doctor d d 1...dn
+advisor a a 1...an
+relative pr 1 ...n pr 1...prn 1 ...n 1 ...n 1 ...n
+researcher r r 1...rn (48-bit)
+emergency e e 1...en
+Shamir - -
+Table 2. Parts of SPandOP.
+SP OP
+RNsp UNsp RNop UNop
+RNsplRNspmRNsphUN splUN spmUN sphRNoplRNopmRNophUN oplUN opmUN oph
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 12 of 36
+Cicreates and
+sends the
+request to CS
+CSreceives user’s
+request, veriﬁes
+and sends it to AS
+ASreceives user’s
+request, evaluates it
+Verify
+PP+Sigs
+(ECDSA)?Communication
+denied
+Is the
+request
+for direct
+user?Evaluation of
+authorisation
+request with two
+PDPs (Figure 14)Evaluation of
+authorisation
+request with single
+PDP1 (Figure 8)
+Is the
+direct
+user
+authorised?Is the
+indirect
+user
+authorised?Access denied
+(server’s repository)
+Access granted
+for patient-speciﬁc
+data from DSAccess granted for
+patient (s)-speciﬁc
+data from DSNo
+Yes
+No
+Yes
+No
+No
+Yes Yes
+Figure 5. Authorisation of direct and indirect users.
+Figure 6. PAX policy.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 13 of 36
+Figure 7. Ci’s request.
+4.3. PAX Authorisation Protocols
+In this section, we will provide in detail PAX’s protocols framework in authorising direct and
+indirect users. PAX uses four protocols for direct users such as doctor and ﬁve protocols for indirect
+users such as researcher to secure communication among PAX’s entities. The request in protocols
+includes PP for a subject (sender) and object (receiver).
+• Authorisation protocols for direct subjects and objects
+To run through the authorisation process for direct users of PAX, the security techniques
+mentioned in the previous sections will be the basis for building the PAX authorisation system.
+In this section, we will explain the protocols of authorising direct users such as doctors and
+patients to access medical records (EHR).
+– Prerequisite procedures
+There are a set of steps that must be taken before authorisation can begin.
+1. Create two datasets (attributes, pseudonym) on AS. If datasets are established,
+the processes are to add new users or delete direct users.
+2. Create policies (dataset 3) for all direct users based on anonymity and pseudonym.
+3. Storage of medical records (dataset 4) for patients in the DS’s repository (after collecting
+them from patients using wireless medical devices, this process requires security
+mechanisms, but the process of storing medical records safely is beyond the scope
+of this research). We assume that patients’ data is located on the DS.
+– Authorisation protocols
+The following protocols detail how the direct user is associated with the EHR in DS. Figure 8
+depicts generally the authorisation process, while Figures 9–12 show the authorisation
+protocols of direct users with PAX entities.
+1. First protocol as shown in Figure 9:
+* PAX’s user enters the subject ID ( SID), object ID ( OID), subject role ( SR) and
+object role ( OR) to the Ciapplication. Cireplaces SID,OID,SRandORwith CNsp,
+CNop,UR spandUR oprespectively. After that, internal pseudonyms are replaced
+with UN sp,UN op,RNspRNoprespectively. Then, Cigenerates random nonces
+(NCand SNC) and new timestamp ( TSCi).SNCis a random secret between Ci
+and CS.Cicomputes 4 Sigs ( CiS1,CiS2,CiS3and CiS4).CiS1and CiS2is used to
+ensure the legitimacy of CiinCS.CiS3is used to protect SNCbetween Ciand
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 14 of 36
+CS.CiS4is used to validate Ciin both ASand DS(depending on RNophand
+UN oph).Cihides all Sigs such as CiS1temporary ( CiS1tm) and PP such as TSCtm
+andSNCtm. At this point, Cisends XACML’s request to CSthat including subject’s
+information ( CiS1tmjjRNsptmjjUN sptmjjNCjjTSCtmjjSNCtm) and object’s information
+(CiS2tmjjRNoptmjjUN optmjjNCjjCiS4tm).
+*CSreceives XACML’s request from Ci, cuts Sigs and PP from access-subject ( CiS1tm,
+RNsptm,UN sptm,NC,TSCtmand SNCtm) and resource ( CiS2tm,RNoptm,UN optm,NC
+and CiS4tm). Then, CSextracts RNspl,UN spl,RNopland UN oplfrom receiving
+parameters ( such as RNsptm).UN spland UN oplis used to retrieve UN spmand
+UN opmfrom datasets. CSextracts CiS4,SNC,TSCiand checks timestamp. Then, CS
+computes Sigs ( CSS 1,CSS 2andCSS 3), and uses CSS 1to extract original CiS1and
+CiS2. After that, CSchecks CSS 2=CiS1andCSS 3=CiS2. If the Sigs are not identical,
+CScancels the connection; otherwise, it moves to the next protocol.
+2. Second protocol as shown in Figure 10:
+*CSgenerates random secret ( SNCS) and new timestamp ( TSCS) between CSand
+AS. Then, CScomputes the secret signature ( CSS 4) to protect SNCS. In addition, CS
+hides Ci’s parameters such as NCandTSCito use them with validation operations
+inASand DS. In addition, all Sigs (such as CSS 2tm) and PP (such as NCSand
+TSCStm) are anonymously hidden by CS. At this point, CSsends XACML’s request
+toAS.
+* ASreceives the request, cuts Sigs and PP . After that, ASextracts original parameters
+(such as CiS4andTSCS) and checks timestamp. AScomputes ASS 1(to extract CSS 2
+andCSS 3) and computes ASS 2and ASS 3(to check ASS 2=CSS 2and ASS 3=CSS 3).
+ASretrieves RNophand UN ophfrom dataset (depending on RNopmand UN opm)
+and computes ASS 4to ensure Cirequest is legitimate after checks ASS 4=CiS4.
+ASuses the parts of external pseudonyms to specify UR sp,UR op,CNspand
+CNsp.ASretrieves Sigs of SPand OP(Sspand Sop) depending on the internal
+SPand OP.ASuses PDP1 engine to evaluate XACML’s request after adding
+Sspand Sopto that request. ASspeciﬁes user’s policy in PAP and checks user’s
+attributes in PIP . PDP1 applies policy to get a decision (permit, deny, not applicable
+and indeterminate). If decision=“permit”, ASuses UR spto specify user’s role
+(direct/indirect). If UR sp=direct, ASsends the data retrieval request by PRP to DS;
+ifUR sp=indirect, ASsends the Shamir request that contain at least 2 SSsto ensure
+legitimate indirect users. Otherwise ASsends reject response to CibyCS.
+3. Third protocol as shown in Figure 11:
+* Similarly, ASgenerates random secret ( SNAS) and timestamp ( TSAS) between
+ASand DS.AScomputes ASS 5to protect secret ( SNAS) between ASand DS.
+Additionally, AScomputes ASS 6to ensure legitimate PP ( RNopmand UN opm) in
+DS. All Sigs (such as ASS 6tm) and PP (such as TSAStmandSNAStm) are anonymously
+hidden by AS. Then, ASsends XACML’s request to DS.
+* DSreceives the request, cuts Sigs and PP . After that, DSextracts original parameters
+(such as CiS4and SNAS) and checks timestamp. DScomputes DSS 1(to extract
+ASS 6) and retrieves RNophand RNopmdepending on RNopl. Then, DScomputes
+DSS 2and DSS 3to check DSS 2=ASS 6and DSS 3=CiS4. IfAS’s parameters
+validated in DScorrectly, DScomputes timestamp ( TSDS) and signs patient’s data
+(DSS 4). All Sigs (such as DSS 4tm) and PP (such as TSDStm) are anonymously hidden
+byDS. At this point, DSsends the response to AS.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 15 of 36
+* ASreceives the response, extracts PP (such as TSDS) and checks timestamp. AS
+tests the Sigs checking (such as ASS 6=DSS 2). Then, AScomputes data signature
+(ASS 7) to check data integrity by ASS 7=DSS 4.
+4. Fourth protocol as shown in Figure 12:
+* ASprepares the response to CSby generating a new timestamp ( TSAS), hides data
+signature ( ASS 7) with ASS 2,ASS 3,CiS4and secret signature ( ASS 1).AShides PP
+and sends the response that contains decision and patient’s data to CS.
+*CSreceives the response and extracts Sigs and PP . CScomputes data signature
+(DSS 5) to check data integrity ( CSS 5=ASS 7). Then, CSchecks other Sigs
+(CSS 2,CSS 3and CSS 4) with received Sigs ( ASS 2,ASS 3and CiS4) to ensure
+legitimacy of AS.CSprepares the response to Ciby generating a new timestamp
+and hides data signature ( CSS 5) with CSS 2,CSS 3,CiS4and secret signature ( CSS 1).
+CSsends the response to Ci.
+*Cireceives the response, extracts PP and checks timestamp. Cicomputes data
+signature ( CiS5) to check data integrity by CiS5=CSS 5. Then, Ciextracts signatures
+(CSS 2,CSS 3,CSS 1andCiS4) and checks them with original signatures ( CiS1,CiS2,
+CiS3andCiS4) respectively. Ciuses CSS 2,CSS 3andCSS 1(secret signature between
+CiandCS) to check legitimacy of CSwhile uses CiS4to check legitimacy of ASand
+DS. If all Sigs are validated, namely, authorised Cireceived securely correct data.
+• Authorisation protocols for indirect subjects and objects
+Indirect user authorisation is an important process to secure sensitive patients’ data in the EHR
+stored in DS. PAX offers additional procedures to prevent the abuse of indirect user privileges.
+– Prerequisite procedures
+There are a set of steps that must be performed before authorisations are applied.
+1. Steps from 1 to 3 are similar to those for direct users.
+2. The Shamir scheme is used to generate the SSsfrom MSfor the number of users, each Ci
+has unique SSsame length as MS, and authorised with two policies for each indirect
+user on AS. The policy evaluation process is also done with two, PDP1 and PDP2,
+evaluation engines. The use of two evaluation engines is very important in separating
+direct and indirect users and increasing security in the privacy of medical records.
+3. The PAX authorisation system identiﬁes certain medical records (the patients’ history
+at a given time such as a year or more ago) for indirect users who can access them,
+as shown in Figure 13 (researcher case).
+– Authorisation protocols
+The following protocols detail how the indirect user obtains medical records in PAX. Figure 14
+illustrates generally the authorisation of indirect users, while Figures 9–12 and 15 show the
+authorisation protocols of indirect users in PAX.
+1. The steps of the ﬁrst and second protocols are similar to the ones of the direct users
+authorisation.
+2. Third protocol as shown in Figure 15:
+* AScomputed MSpreviously by signing all users’ signatures. Then, AScomputes
+Shamir scheme to generate SSswith the same number of users (each Cihas one
+unique SS). In PAX, Cineeds at least 3 SSsto generate original MS. In this protocol,
+ASgenerates a new timestamp and retrieves at least 2 SSs. After that, AShides SSs
+with ASS 2,CiS4,Sspand secret signature ( ASS 1) as well as parameters (such as
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 16 of 36
+TSAStmand UN sptm) are anonymously hidden. At this point, ASsends request
+toCS.
+*CSreceives the request, extracts PP and checks timestamp. Then, CSremoves
+the secret signature ( CSS 4) and adds the secret signature ( CSS 1) inCSS 2tm.CS
+generates a new timestamp ( TSCS), hides PP and sends the request to Ci.
+*Cireceives Shamir’s request, extracts PP and checks timestamp. Then, Cicomputes
+CiS6to extract SSsand retrieves his SS. At the moment, Cican generate MSfrom
+Shamir ( Ci’sSS||SSs), hides MSwith CiS6and CiS3, generates timestamp and
+hides PP . At this point, Cisends the response to CS.
+*CSreceives the response, extracts PP and checks timestamp. Also, CSremoves
+CSS 1and adds CSS 4inCiS6tm.CSgenerates a new timestamp, hides PP and sends
+the response to AS.
+* ASreceives Shamir response, extracts PP and checks timestamp. Then, ASextracts
+the received MSand checks it with the saved original MS. After that, ASretrieves
+Ci’sSSdepending on Ssp(UR spjjCNsp) and assigns the request ( SS,Sop) to PDP2
+.ASspeciﬁes policy depending on policy’s ID (Shamir|| SP), checks attributes
+in PIP and PDP2 applies policy in PAP to produce the decision. If the decision is
+“permit”, AScreates a data retrieval request by PRP to DS; otherwise ASsends
+reject response to CibyCS.
+3. The fourth and ﬁfth protocols are similar to the third and fourth ones respectively in
+direct user authorisation. DSsends the response to the CibyASand CS. IfCiis an
+advisor, relative, or emergency doctor, Ciwill receive speciﬁc patient’s data; otherwise,
+ifCiis researcher doctor, Ciwill receive a set of medical records.
+Figure 8. Authorisation of direct users.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 17 of 36
+Ci CS
+Enters SID,OID,SRandOR
+Replaces SIDwith CN sp,OIDwith CN op
+SRwith UR spandORwith UR op
+Replaces CN sp,CN op,UR spandUR opwith
+UN sp,UN op,RN spandRN op
+SP=RN spjjUN sp,OP=RN opjjUN op
+UN sp=UN spljjUN spmjjUN sph
+UN op=UN opljjUN opmjjUN oph
+RN sp=RN spljjRN spmjjRN sph
+RN op=RN opljjRN opmjjRN oph
+Generates new NC,SNCandTSCi
+CiS1=ECDSA (RN spmjjUN spmjjNCjjTSCi)
+CiS2=ECDSA (RN opmjjUN opmjjNCjjTSCi)
+CiS3=ECDSA (SNC)
+CiS4=ECDSA (RN ophjjUN ophjjTSCi)
+CiS1tm=CiS1CiS3,CiS2tm=CiS2CiS3
+TSCtm=TSCiSNCRN spmUN spm
+SNCtm=UN spmUN opmSNCCiS4CiS1tm
+CiS4tm=CiS4UN spmUN opmCiS2tm
+RN sptm=RN splCiS1tmSNCtm
+RN optm=RN oplCiS2tmSNCtm
+UN sptm=UN splCiS1tmSNCtm
+UN optm=UN oplCiS2tmSNCtm
+Request=( CiS1tmjjRN sptmjjUN sptmjjNCjjTSCtmjjSNCtm,
+CiS2tmjjRN optmjjUN optmjjNCjjCiS4tm)
+Sends XACML’s requestReceive XACML’s request
+From access-subject:
+Cuts CiS1tm,RN sptm,UN sptm,NC,TSCtmandSNCtm
+From resource:
+Cuts CiS2tm,RN optm,UN optm,NCandCiS4tm
+Extracts RN spl=RN sptmCiS1tmSNCtm
+Similarly, extracts RN opl,UN splandUN opl
+Retrieves UN spmandUN opmfrom datasets depending on
+UN splandUN opl
+CiS4=CiS4tmUN spmUN opmCiS2tm
+SNC=UN spmUN opmSNCtmCiS4CiS1tm
+TSCi=TSCtmSNCRN spmUN spm
+Checks TSCS TSCi4 T,CSS 1=ECDSA (SNC)
+CiS1=CiS1tmCSS 1,CiS2=CiS2tmCSS 1
+CSS 2=ECDSA (RN spmjjUN spmjjNCjjTSCi)
+CSS 3=ECDSA (RN opmjjUN opmjjNCjjTSCi)
+Checks CSS 2=CiS1andCSS 3=CiS2
+Figure 9. Protocol of PAX model between CiandCS.
+CS AS
+Creates new XACML’s request
+Generates new SNCSandTSCS
+CSS 4=ECDSA (SNCS)
+CSS 2tm=CSS 2CSS 4,CSS 3tm=CSS 3CSS 4
+NCS=NCTSCiTSCSSNCS
+TSCtm=TSCiSNCSRN spmUN spm
+TSCStm=TSCSSNCSRN opmUN opm
+SNCStm=UN spmUN opmSNCSCiS4CSS 2tm
+CiS4tm=CiS4UN spmUN opmCSS 3tm
+RN sptm=RN splCSS 2tmSNCStm
+RN optm=RN oplCSS 3tmSNCStm
+UN sptm=UN splCSS 2tmSNCStm
+UN optm=UN oplCSS 3tmSNCStm
+Request=( CSS 2tmjjRN sptmjjUN sptmjjNCSjjTSCtm
+jjTSCStmjjSNCStm,
+CSS 3tmjjRN optmjjUN optmjjCiS4tm)
+Sends XACML’s requestReceive XACML’s request
+Similarly for CS:
+Cuts security parameters, extracts RN spl,RN opl,UN splandUN opl
+Retrieves UN spmandUN opm
+Extracts CiS4,SNCS,TSCi,TSCSand NC, checks TSAS
+ASS 1=ECDSA (SNCS)
+CSS 2=CSS 2tmASS 1,CSS 3=CiS3tmASS 1
+ASS 2=ECDSA (RN spmjjUN spmjjNCjjTSCi)
+ASS 3=ECDSA (RN opmjjUN opmjjNCjjTSCi)
+Checks ASS 2=CSS 2and ASS 3=CSS 3
+Retrieves RN ophandUN oph
+ASS 4=ECDSA (RN ophjjUN ophjjTSCi),ASS 4=CiS4
+SP=RN spjjUN sp,OP=RN opjjUN op
+Speciﬁes UR sp,UR op,CN spandCN spdepending on
+RN spandRN op,UN spandUN sp
+Retrieves SspandSopdepending on SPandOP(internal pseudonym)
+Uses PDP1 to evaluate request ( Ssp,Sop)
+Speciﬁes policy depend on policy’s ID ( SP)
+Checks attributes ( SID,OID,SR,OR) in PIP , applies policy in PAP
+If decision =“permit”, then
+IfUR sp= direct user, then
+Sends data retrieval request by PRP to DS
+IfUR sp= indirect user, then
+Sends request with Shamir scheme to CibyCS
+Figure 10. Protocol of PAX model between CSand AS.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 18 of 36
+AS DS
+Creates new data retrieval request
+Generates new SNASandTSAS
+ASS 5=ECDSA (SNAS)
+ASS 6=ECDSA (RN opmjjUN opmjjSNASjjTSAS
+jjCiS4)
+RN optm=RN oplTSASSNAS
+ASS 6tm=ASS 6TSASASS 5
+TSCtm=TSCiSNASUN oph
+TSAStm=TSASSNASUN opm
+SNAStm=UN opmSNASCiS4ASS 6tm
+CiS4tm=CiS4UN ophSNAStmUN opm
+UN optm=UN oplASS 6tmSNAStm
+Request=( ASS 6tmjjRN optmjjUN optmjjSNAStm
+jjTSCtmjjTSAStmjjCiS4tm)
+Sends data retrieval requestReceives data retrieval request
+Extracts UN opl, retrieves UN opmandUN ophdepending on UN opl
+Extracts CiS4,SNAS,TSCiandTSAS, checks TSDS
+DSS 1=ECDSA (SNAS), extracts ASS 6andRN opl
+Retrieves RN ophandRN opmdepending on RN opl
+DSS 2=ECDSA (RN opmjjUN opmjjSNASjjTSASjjCiS4)
+DSS 3=ECDSA (RN ophjjUN ophjjTSCi)
+Checks DSS 2=ASS 6andDSS 3=CiS4
+Sends data retrieval response
+Generates new TSDS
+DSS 4=ECDSA ("Data" )
+DSS 4tm=DSS 4DSS 1CiS4
+DSS 2tm=DSS 2DSS 4TSDSDSS 1
+CiS4tm=CiS4DSS 1TSDS
+TSDStm=TSDSSNASUN oph
+UN optm=UN oplDSS 2tmTSDStm
+Response=( DSS 2tmjjDSS 4tmjjUN optm
+jjTSDStmjjCiS4tmjj"Data")
+Sends data retrieval responseReceives data retrieval response
+Extracts UN oplandTSDS, checks TSAS
+Extracts CiS4,DSS 2and ASS 6
+Checks ASS 6=DSS 2, extracts DSS 4
+ASS 7=ECDSA ("Data" ), checks ASS 7=DSS 4
+Figure 11. Protocol of PAX model between ASandDS.
+Ci CS AS
+Sends decision and data response
+Generates new TSAS
+ASS 2tm=ASS 2ASS 1ASS 7
+CiS 4
+ASS 3tm=ASS 3ASS 1ASS 7
+CiS 4
+TSAStm=TSASSNCSUN opm
+UN sptm=UN splASS 2tmTSAStm
+Response=( ASS 2tmjjASS 3tmjjUN sptmjj
+TSAStmjj"Decision & Data")
+Sends responseReceives decision and data response
+Extracts UN splandTSAS, checks TSCS
+Extracts ASS 7=CSS 2CSS 4CiS 4
+ASS 2tm
+CSS 5=ECDSA ("Data")
+Checks CSS 5=ASS 7, extracts ASS 2and ASS 3
+Checks CSS 2=ASS 2andCSS 3=ASS 3
+Extracts ASS 1andCiS4
+Checks the corresponding values for CSS 4andCiS4
+Sends response
+Generates new TSCS
+CSS 2tm=CSS 2CSS 1CSS 5CiS 4
+CSS 3tm=CSS 3CSS 1CSS 5CiS 4
+TSCStm=TSCSSNCUN opm
+UN sptm=UN splCSS 2tmTSCStm
+Response=( CSS 2tmjjCSS 3tmjjUN sptmjj
+TSCStmjj"Decision & Data")
+Sends responseReceives decision and data response
+Extracts UN splandTSCS, checks TSCi
+Extracts CSS 5
+CiS5=ECDSA ("Data")
+Checks CiS5=CSS 5
+Extracts CSS 2andCSS 3
+Checks CiS1=CSS 2and
+CiS2=CSS 3
+Extracts CSS 1andCiS4
+Checks the corresponding values for
+original CiS3andCiS4
+Figure 12. Protocol of PAX model between AS,CSandCi.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 19 of 36
+Int. J. Environ. Res. Public Health 2019 ,16, 5 21 of 34
+require the patient’s consent. Abraham should not know any secrets healthcare providers have
+used to authorise access to Rose’s data.
+PAX provides security and privacy for all previous scenarios; indirect users cannot access the patient’s
+personal information because it is separate and completely hidden from the data. As a result, the user
+can retrieve this data to improve healthcare without penetrating the repository in DS.
+Figure 15. Users’ scenarios in PAX.
+***********************************
+* Patient’s Data *
+***********************************
+Pseudonym: RN optm&UN optm
+check1: report: status: date:
+check2: report: status: date:
+check3: report: status: date:
+check4: report: status: date:
+check5: report: status: date:
+. . . .
+. . . .
+. . . .
+Figure 16. Part of Sarah’s data.*********************************
+* Patients’ DataSet *
+*********************************
+------------------------------------------------
+No Check Report Status time date
+------------------------------------------------
+1 check3 Report3 still 23:21:33 2017-09-05
+2 check1 Report1 ok 14:36:45 2017-09-08
+3 check2 Report2 normal 17:09:57 2017-09-08
+5 check3 Report3 still 17:10:09 2017-09-10
+6 check2 Report2 normal 12:28:20 2017-09-11
+. . . . . .
+. . . . . .
+. . . . . .
+Figure 17. Part of medical records
+for patients.
+5.2. Security Analysis
+Security and privacy mechanisms in PAX have evaluated under theoretical analysis, BAN logic
+and AVISPA tool.
+5.2.1. Theoretical Security Analysis
+Organizational and managerial features are important in healthcare systems, but the key player in
+applying these systems is the use of security and privacy mechanisms for patient records [ 11]. Medical
+records in the EHR are sensitive data and require security mechanisms to protect their privacy from
+attackers. Also, the different levels and privileges of healthcare providers make the development
+of security mechanisms and authorisation models very difﬁcult [ 4]. Moreover, applying privacy to
+medical records (EHR) requires the use of access models in the authorisation of users. Integrating
+Figure 13. Part of medical records for patients.
+Figure 14. Authorisation of indirect users.
+Ci CS AS
+Sends Shamir’s request
+MS =ECDSA (users0signatures )
+SSs=Shamir (MS,t,numberso f users )
+Each Cihas one SS
+Generates new TSAS
+Retrieves randomly 2 SSsor more
+ASS 2tm=ASS 2ASS 1SSs
+CiS4Ssp
+TSAStm=TSASSNCSUN opm
+UN sptm=UN splASS 2tmTSAStm
+Request=( ASS 2tmjjUN sptmjjTSAStm)
+Sends request
+Receives Shamir’s response
+Extracts UN splandTSCS, checks TSAS
+MS =CiS6tmSspASS 1
+Checks recieved MSwith saved MS
+Uses PDP2 to evaluate request ( SS,Sop)
+Speciﬁes policy depend on policy’s ID ( ShamirjjSP)
+Checks attributes in PIP , applies policy in PAP
+If decision =“permit”, then creates data retrieval request
+by PRP to DSand sends to CibyCS(Figures 11 and 12)Receives Shamir’s request
+Extracts UN splandTSAS, checks TSCS
+CSS 2tm=ASS 2tmCSS 4CSS 1
+Generates new TSCS
+TSCStm=TSCSSNCUN opm
+UN sptm=UN splCSS 2tmTSCStm
+Request=( CSS 2tmjjUN sptmjjTSCStm)
+Sends request
+Receives Shamir’s response
+Extracts UN splandTSCi, checks TSCS
+CiS6tm=CiS6tmCSS 1CSS 4
+Generates new TSCS
+TSCStm=TSCSSNCSUN opm
+UN sptm=UN splCiS6tmTSCStm
+Response=( CiS 6tmjjUN sptmjjTSCStm)
+Sends responseReceives Shamir’s request
+Extracts UN splandTSCS, checks TSCi
+CiS6=ECDSA (SP)
+SSs=CiS 1CiS3CSS 2tm
+CiS4CiS6
+Retrieves his SS
+MS =Shamir (C0
+isSSjjSSs)
+CiS6tm=CiS6CiS3MS
+Generates new TSCi
+TSCtm=TSCiSNCUN spm
+UN sptm=UN splCiS6tmTSCtm
+Response=( CiS6tmjjUN sptmjjTSCtm)
+Sends response
+Figure 15. Protocol of PAX model for indirect users.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 20 of 36
+5. Discussion
+In this Section, we discuss users scenarios and security analysis in PAX and demonstrate PAX’s
+ability to protect patients’ data during security and privacy implementation. In addition, the use of
+formal tools in the PAX security analysis is to prove security measures in repelling healthcare risks.
+5.1. Direct and Indirect Users Scenarios in PAX
+This Section illustrates four case scenarios in PAX that involve obtaining access to medical records
+in the EHR. We present our perspective of securing the privacy of patients’ data through the integration
+of anonymity, pseudonym, and XACML in our project. To provide user scenarios, we impose a number
+of EHR users with the PAX system, as shown in Figure 16. The patient may suffer from many diseases
+such as diabetes, dementia, cancer, addiction, blood pressure, and heart disease, which means that
+the patient is associated with more than one doctor. The patient does not want other healthcare
+providers to access his/her personal information because of embarrassment or his/her psychological
+state. In addition, the doctor has treated a set of patients. Therefore, ensuring privacy in non-disclosure
+of personal information to patients requires each indirect user to apply HIPAA standards.
+Assume we have three patients, Sara, John, and Rose, who suffer from diseases such as cancer,
+dementia, and diabetes respectively. Each disease requires a different level of care. For instance,
+a patient suffering from dementia needs a family member who assists with all of the patient’s tasks and
+is able to access all of the patient’s data. We assume that Julia is one of John’s relatives. In addition, there
+is a group of healthcare providers, including Simon, Adam, Hawa, and Abraham, who want access to
+patients’ medical records. These users can have different roles; for example, Adam may have the roles
+of advisor and doctor, and Abraham may be a doctor and an emergency doctor. Different user roles
+can be a major reason for breaching the privacy of medical records. Users such as patients (Sara and
+Rose) and the physician (Simon) need direct authorisation to EHR data because of persistent and
+regular requests to access the repository. For example, Simon is the general practitioner (GP) for Sara
+and needs to access her data every day or even more than once a day (under the PAX system, Sara’s
+data is private in data access requests by both Sara and Simon, as shown in Figure 17).
+1. The ﬁrst scenario (advisor): Simon needs a consultant (such as Adam) to diagnose Sara’s disease
+or to submit treatment suggestions (after taking Sara’s consent to seek specialist advice). Adam
+is not associated with Sara permanently and continuously and does not need Sara’s personal
+information; he only needs certain details of the patient’s data and medical reports. Therefore,
+in PAX, Adam needs to enter his name (Adam), the name of the doctor (Simon), and Sara’s
+pseudonym to access Sara’s data; he does not need to know Sara’s real attributes. Figure 17 shows
+Sara’s data, which can be obtained by Simon and Adam. We note from Figure 17 that the data
+received does not contain any of Sara’s attributes, and Adam does not use any real attributes
+for Sara, which means that PAX provides a high level of security and privacy that can prevent
+external and internal attacks.
+2. The second scenario (relative of a patient): Because the patient (John) suffers from dementia, he
+is unable to perform his duties. John needs a family helper (such as Julia) to access his medical
+data without misuse or to bypass these privileges to other medical records. Julia needs a request
+that contains her Sigs and John’s pseudonym to be considered a legitimate user in the system
+but is not authorised to access John’s data until the CSand AScomplete the third authorisation
+protocol with the Shamir scheme.
+3. The third scenario (researcher): Hawa is a researcher and tries to access the server’s repository
+to use EHR in evaluating a medical study to develop a disease treatment. The researcher needs
+access to medical records sporadically and not permanently. The researcher is not associated with
+a particular patient and needs access to a set of the patients’ data. In addition, this indirect user
+does not need access to the patients’ attributes. Figure 13 shows a set of medical records obtained
+by Hawa in the case of authorisation without using any of the patients’ real attributes.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 21 of 36
+4. The fourth scenario (emergency doctor): When Rose’s health has deteriorated signiﬁcantly and
+suddenly, her doctor is not available for some reason. Rose needs an emergency doctor to treat
+and assess her condition quickly (e.g., Abraham). The emergency doctor needs to access Rose’s
+data without accessing personal information. In an emergency, access to a patient’s data does not
+require the patient’s consent. Abraham should not know any secrets healthcare providers have
+used to authorise access to Rose’s data.
+PAX provides security and privacy for all previous scenarios; indirect users cannot access the
+patient’s personal information because it is separate and completely hidden from the data. As a result,
+the user can retrieve this data to improve healthcare without penetrating the repository in DS.
+Figure 16. Users’ scenarios in PAX.
+Int. J. Environ. Res. Public Health 2019 ,16, 5 21 of 34
+require the patient’s consent. Abraham should not know any secrets healthcare providers have
+used to authorise access to Rose’s data.
+PAX provides security and privacy for all previous scenarios; indirect users cannot access the patient’s
+personal information because it is separate and completely hidden from the data. As a result, the user
+can retrieve this data to improve healthcare without penetrating the repository in DS.
+Figure 15. Users’ scenarios in PAX.
+***********************************
+* Patient’s Data *
+***********************************
+Pseudonym: RN optm&UN optm
+check1: report: status: date:
+check2: report: status: date:
+check3: report: status: date:
+check4: report: status: date:
+check5: report: status: date:
+. . . .
+. . . .
+. . . .
+Figure 16. Part of Sarah’s data.*********************************
+* Patients’ DataSet *
+*********************************
+------------------------------------------------
+No Check Report Status time date
+------------------------------------------------
+1 check3 Report3 still 23:21:33 2017-09-05
+2 check1 Report1 ok 14:36:45 2017-09-08
+3 check2 Report2 normal 17:09:57 2017-09-08
+5 check3 Report3 still 17:10:09 2017-09-10
+6 check2 Report2 normal 12:28:20 2017-09-11
+. . . . . .
+. . . . . .
+. . . . . .
+Figure 17. Part of medical records
+for patients.
+5.2. Security Analysis
+Security and privacy mechanisms in PAX have evaluated under theoretical analysis, BAN logic
+and AVISPA tool.
+5.2.1. Theoretical Security Analysis
+Organizational and managerial features are important in healthcare systems, but the key player in
+applying these systems is the use of security and privacy mechanisms for patient records [ 11]. Medical
+records in the EHR are sensitive data and require security mechanisms to protect their privacy from
+attackers. Also, the different levels and privileges of healthcare providers make the development
+of security mechanisms and authorisation models very difﬁcult [ 4]. Moreover, applying privacy to
+medical records (EHR) requires the use of access models in the authorisation of users. Integrating
+Figure 17. Part of Sarah’s data.
+5.2. Security Analysis
+Security and privacy mechanisms in PAX have been evaluated under theoretical analysis, BAN
+logic and AVISPA tool.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 22 of 36
+5.2.1. Theoretical Security Analysis
+Organizational and managerial features are important in healthcare systems, but the key player
+in applying these systems is the use of security and privacy mechanisms for patient records [ 11].
+Medical records in the EHR are sensitive data and require security mechanisms to protect their privacy
+from attackers. In addition, the different levels and privileges of healthcare providers make the
+development of security mechanisms and authorisation models very difﬁcult [ 4]. Moreover, applying
+privacy to medical records (EHR) requires the use of access models in the authorisation of users.
+Integrating RBAC and ABAC gives more powerful features to PAX users. The result is an access
+control model based on roles and attributes that handle users’ requests at the coarse-grained and
+ﬁne-grained levels. To increase security and privacy in the authorisation model, we have added a
+set of mechanisms to hide and separate personal information about data. The PAX system ensures
+that legitimate users access their speciﬁc data and, on the other hand, the privacy of medical records
+is maintained. Any healthcare system should support the basic security features of conﬁdentiality,
+integrity, and availability (C.I.A.) [7], and there is a set of security features included in PAX.
+1. Integrity and non-repudiation of requests
+User requests and policies need protection from change or repudiation. We used the ECDSA
+algorithm to sign user attributes. Any change in the Sigs will be detected in the server because the
+server checks the users’ requests before authorising access to the data. In addition, the signatory
+party cannot deny its Sig. These features make the system immune against changing attacks such
+as MITM.
+2. Authentication and authorisation of requests
+Each EHR requires authentication and authorisation properties to protect medical records from
+unauthorised access. We applied ECDSA to the XACML v3.0 to support these properties in PAX.
+The use of Sigs in XACML between the Ciand the CS,ASand DSsupport user authentication
+in addition to the use of policies and rules to identify authorised users and the level of access
+granted to them by providing anti privileged insider and authorisation policies.
+3. Conﬁdentiality and anonymization
+One of the security features of hiding information is conﬁdentiality. We applied ECDSA to add
+conﬁdential requests to subjects and objects, and we added a Shamir scheme (backup or fail-open
+mechanism) to provide anonymity of SSsto users of the EHR system. This process prevents the
+attacker from seeing explicit attributes and does not allow the hacker to know the user-conﬁgured
+SSfor any healthcare provider. A Shamir scheme ensures the anonymity of the Sig. This backup
+mechanism enables indirect users to access protected health information (PHI) with privacy
+and security.
+4. Pseudonymization
+A patient’s privacy requires the separation of personal information from the patient’s data.
+Pseudonym prevents the intruder from knowing the data of any of the patients. PAX supports
+pseudonym in both subjects’ and objects’ attributes using pseudonyms for real attributes.
+This feature supports the privacy of a patient’s data.
+5. Audit and activities
+PAX records all user activities (requests and responses) to access medical records. It monitors user
+activities, including the number of access times, the result of the decision, and the amount of data
+required. The audit process is important for any healthcare system in determining users’ activities.
+PAX stores and organizes requests and responses for each user (patient, doctor, advisor, relative,
+researcher, and emergency doctor) separately to facilitate the management of these activities.
+There is a range of attacks that pose a serious risk to any healthcare system. PAX’s security
+mechanisms act as countermeasures (as shown in Table 3) against known attacks.
+1. Availability attacks
+The server is vulnerable to the denial of service (DoS) attacks that are intended to disable the
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 23 of 36
+service. In PAX, the indirect user creates a random Sig based on SSsprovided by healthcare
+providers. The attacker cannot use the same SSsbecause the CSand ASwill ignore the request.
+The abundance of medical records is critical to healthcare providers’ ﬂexible access. Therefore,
+supporting robustness in any healthcare system depends on preventing DoS attacks. Although the
+PAX system limits the risk of DoS attacks and provides successfully anti DoS, it does not do
+so fully because the attacker can still send requests without penetrating the patient’s personal
+information and data.
+2. Data and policies datasets attacks
+The data in the single server is considered an attractive treasure for attackers. In addition, policies
+contain the attributes and roles of users, which can assist attackers in carrying out an attack
+to recognise and access patients’ data. In PAX, even if the attacker obtained a patient’s data,
+the data would not be useful because both the stored and movable data would have a pseudonym.
+In addition, the data is stored (on DS) separately from policies (on AS) as well as PAX policies are
+associated with pseudonym and anonymity (both CSandDSdo not have real attributes datasets
+for users), which prevent attackers from revealing subjects’ and objects’ attributes. Consequently,
+PAX provides effectively authorisation policies and anti datasets attacks.
+3. Modiﬁcation attacks on requests
+Users’ requests from clients to server in PAX are fully protected from modiﬁcation. PAX uses
+random nonces and Sigs to detect changing operation by intruders. Thus, PAX fully is secure
+against MITM attacks.
+4. Replay attacks
+The intruder cannot resend authorisation request to the network later because PAX produces a
+new timestamp ( TSC,TSCS,TSAS, and TSDS) between PAX’s entities. Therefore, PAX withstands
+securely against replay attacks.
+5. Unauthorised access attacks
+User access to a repository depends on authorisation policies. We use XACML v3.0 to create user
+policies. Integrating RBAC and ABAC into XACML prevents internal/external unauthorised
+users from accessing patients’ data. Thus, PAX reliably provides anti privileged insider depending
+on users’ role and attributes.
+6. Trafﬁc analysis attacks
+To perform this attack, the hacker must analyse either the requests or the data moving between
+the source and the target. In PAX, if we assume that the attacker has some attributes (such as the
+name) and expects a speciﬁc patient, the attacker cannot use a keyword (name) and analyse it
+with multiple requests or medical records, even if it is the same user, to reveal its real attributes;
+the attacker cannot identify this data for a particular patient. Using pseudonym and anonymity
+prevents attackers from tracking/leaking trafﬁc. For example, if advisor1 and advisor2 want
+patient1 data, the generated requests will be different. This prevents the parsing of requests. As a
+result, PAX supports anonymity, pseudonym, anti traceability and anti leakage features.
+7. Impersonation attacks
+The intruder cannot impersonate PAX’s entities ( Ci,CS,ASand DS) because PAX uses secret
+nonces ( SNC,SNCSandSNAS) and secret Sigs among entities to support mutual authentication
+and prevent impersonation attacks. Thereupon, PAX resists impersonation attacks of the fake
+client/server.
+8. Timing attacks
+This attack exploits the security procedure while calculating the time period for security
+operations (such as encryption and signing). PAX prevents these attacks because when the
+attacker gets multiple requests for the same user, the attacker will ﬁnd that these requests
+contain different Sigs, and the attacker does not have the parameters to generate the Sig.
+In addition, ECDSA’s Sigs with 256-bit is resistant to timing attacks. Hence, PAX robustly
+prevents timing attacks.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 24 of 36
+5.2.2. Proof of PAX Security Protocol
+To verify request source, freshness and legitimacy of entity in PAX, we have used Burrows, Abadi
+and Needham (BAN) logic that depends set of rules such as seeing (SR), message meaning (MMR),
+nonce veriﬁcation (NVR), jurisdiction (JR), freshness conjuncatenation (FCR) and shared secret (SSR)
+(details about BAN’s notations and rules is available in [ 43–45]). With BAN, we prove that each entity
+in PAX deals with other legitimate entity when transferring the message (M) from the indirect user to
+the servers and vice versa. BAN structures consist of goals (G), idealized form, hypotheses (H) and
+proofs of goals by applying rules and hypotheses.
+• Goals : PAX must provide the following goals to securely exchange messages among PAX entities.
+– G1 :CijCiCiS3  *)  CS
+– G2 :CSjCiCSS1  *)  CS
+– G3 :CSjCSCSS4  *)  AS– G4 :ASjCSASS1   *)   AS
+– G5 :ASjDSASS5   *)   AS
+– G6 :DSjASDSS1   *)   DS
+• Idealized form : The messages (M) are represented in a BAN formula.
+– M1 :Ci!CS:CiS1tmjjRN sptmjjUN sptmjjNCjjTSCtmjjSNCtm,CiS2tmjjRN optmjjUN optmjjNCjjCiS4tm:hSNCiCiS3
+– M2 :CS!AS:CSS 2tmjjRN sptmjjUN sptmjjNCSjjTSCtmjjTSCStmjjSNCStm,CSS 3tmjjRN optmjjUN optmjjCiS4tm:hSNCSiCSS4
+– M3 :AS!CS:ASS 2tmjjUN sptmjjTSAStm:hSNCSiASS1
+– M4 :CS!Ci:CSS 2tmjjUN sptmjjTSCStm:hSNCiCSS1
+– M5 :Ci!CS:CiS6tmjjUN sptmjjTSCtm:hSNCiCiS3
+– M6 :CS!AS:CiS 6tmjjUN sptmjjTSCStm:hSNCSiCSS4
+– M7 :AS!DS:ASS 6tmjjRN optmjjUN optmjjSNAStmjjTSCtmjjTSAStmjjCiS4tm:hSNASiASS5
+– M8 :DS!AS:DSS 2tmjjDSS 4tmjjUN optmjjTSDStmjjCiS4tmjj"Data":hSNASiDSS1
+– M9 :AS!CS:ASS 2tmjjASS 3tmjjUN sptmjjTSAStmjj"Decision & Data": hSNCSiASS1
+– M10 :CS!Ci:CSS 2tmjjCSS 3tmjjUN sptmjjTSCStmjj"Decision & Data": hSNCiCSS1
+• Hypotheses : Sets of hypotheses to analyse PAX’s security.
+– H1 :Cij#(SNC).
+– H2 :Cij#(TSCi).
+– H3 :CSj#(SNC).
+– H4 :CSj#(TSCS).
+– H5 :CSj#(SNCS).
+– H6 :ASj#(SNCS).
+– H7 :ASj#(TSAS)
+– H8 :ASj#(SNAS).
+– H9 :DSj#(SNAS).
+– H10 :DSj#(TSDS).
+– H11 :CSjCi=)SNC.– H12 :ASjCS=)SNCS.
+– H13 :DSjAS=)SNAS.
+– H14 :CijCiKCS pu7   ! CS.
+– H15 :CSjCSKCpu7   ! Ci.
+– H16 :CSjCSKAS pu7   ! AS.
+– H17 :ASjASKCS pu7   ! CS.
+– H18 :ASjASKDS pu7   ! DS.
+– H19 :DSjDSKAS pu7   ! AS.
+• Proofs : We have used BAN logic to prove goals based on rules and hypotheses.
+– M1 :Ci!CS:
+* SR:
+S1:CSM1
+* MMR :
+Using MMR, S1 and H14, S2: CSjCijSNC
+* NVR and FCR :
+Using NVR, FCR, S2, H1 and H2, S3: CSjCijSNC
+* JR:
+Using JR,S3 and H11, S4: CSjSNC
+* SSR :
+Using SSR, S3, H1 and H2, S5: CSjCiCSS1  *)  CS(G2)
+– M2 :CS!AS:
+* SR:
+S6:ASM2
+* MMR :
+Using MMR, S6 and H16, S7: ASjCSjSNCS
+* NVR and FCR :
+Using NVR, FCR, S7, H4 and H5, S8: ASjCSjSNCS
+* JR:
+Using JR, S8 and H12, S9: ASjSNCS
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 25 of 36
+* SSR :
+Using SSR, S8, H4 and H5, S10: ASjCSASS1   *)   AS(G4)
+– M3 :AS!CS:
+* SR:
+S11: CSM3
+* MMR :
+Using MMR, S11 and H17, S12: CSjASjSNCS
+* NVR and FCR :
+Using NVR, FCR, S12, H6 and H7, S13: CSjASjSNCS
+* JR:
+Using JR, S13 and H12, S14: CSjSNCS
+* SSR :
+Using SSR, S13, H6 and H7, S15: CSjCSCSS4  *)  AS(G3)
+– M4 :CS!Ci:
+* SR:
+S16: CiM4
+* MMR :
+Using MMR, S16 and H15, S17: CijCSjSNC
+* NVR and FCR :
+Using NVR, FCR, S17, H3 and H4, S18: CijCSjSNC
+* JR:
+Using JR, S18 and H11, S19: CijSNC
+* SSR :
+Using SSR, S18, H3 and H4, S20: CijCiCiS3  *)  CS(G1)
+– M5 :Ci!CS: Similar to the M1 ( G2)
+– M6 :CS!AS: Similar to the M2 ( G4)
+– M7 :AS!DS:
+* SR:
+S21: DSM7
+* MMR :
+Using MMR, S21 and H18, S22: DSjASjSNAS
+* NVR and FCR :
+Using NVR, FCR, S22, H7 and H8, S23: DSjASjSNAS
+* JR:
+Using JR, S23 and H13, S24: DSjSNAS
+* SSR :
+Using SSR, S23, H7 and H8, S25: DSjDSDSS1   *)   AS(G6)
+– M8 :DS!AS:
+* SR:
+S26: ASM8
+* MMR :
+Using MMR, S26 and H19, S27: ASjDSjSNAS
+* NVR and FCR :
+Using NVR, FCR, S27, H9 and H10, S28: ASjDSjSNAS
+* JR:
+Using JR, S28 and H13, S29: ASjSNAS
+* SSR :
+Using SSR, S28, H9 and H10, S30: ASjASASS5   *)   DS(G5)
+– M9 :AS!CS: Similar to the M3 ( G3)
+– M10 :CS!Ci: Similar to the M4 ( G1)
+5.2.3. Proof of PAX Security Mechanism
+In this Section, we simulate the PAX scheme using the AVISPA tool to test and analyse that user
+authorisation information is safe during its transition between PAX entities and immune against active
+and passive attacks.
+• AVISPA Brieﬂy
+After designing any authorisation scheme, this scheme should be validated and its accuracy
+veriﬁed under a security analysis tool such as AVISPA to analyse, trace, observe and test the
+possibility of threat experimentally. The AVISPA tool is a push-button, testing/prooﬁng model
+and is used directives and expressive terms intermediate format (IF) and output format (OF) to
+achieve simulation of security analysis [ 3,46,47]. AVISPA is a formal tool for analysing security
+schemes and applied by researchers to evaluate recent security protocols [ 48–51]. This tool is
+based on the Dolev-Yao (dy) model in analysis protocols during the transmission of information
+in the communication channels. It provides many features to analyse security schemes, such as
+a practical assessment of error detection and tracking, statistics, accurate results, testing of
+many techniques on the one protocol, ease of use, robustness of this tool to implement security
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 26 of 36
+protocols [ 46]. This tool deals with high-level protocol speciﬁcation language (HLPSL) and
+4 backends such as Constraint-Logic-based Attack Searcher (CL-AtSe) to extract the results of the
+scheme analysis (more detailed information about the HLPSL language and the description of the
+AVISPA tool is available in [46,52]).
+• PAX with AVISPA
+In terms of HLSPL with AVISPA, PAX consists of four core (essential) roles: client ( Ci),
+centralServer ( CS), attributesServer ( AS) and dataServer ( DS). In addition, there are supporting
+roles such as session, and environment, goal speciﬁcation section. Essential roles include a
+transition section (to specify the sequence of communication operations in network framework).
+Supporting roles include a composition section (to specify the linking of sessions and roles). PAX
+depends on asymmetric cryptography by using ECDSA with public keys ( KCpu,KCS pu,KAS pu
+and KDS pu) to perform security requirements (integrity, authentication and non-repudiation).
+Moreover, PAX applies nonces ( SNC,SNCS,SNASand SNDS) to support anonymity and
+timestamps ( TSC,TSCS,TSASandTSDS) to support freshness. Authorisation process for indirect
+users is illustrated by the HLPSL scripts in Figures A1–A4 (in Appendix A). Each role consists of
+the number of transitions, the receiving process (RCV), the sending process (SND), the sender’s
+claim process of fresh value and correct (witness), the validation process in receiver for the
+sender’s claim (request), the process of creating a fresh value for the nonce and timestamp (new)
+and the use of the private key (_inv) in PAX’s entities. At ﬁrst, Cireceives the start signal as
+in Figure A1, then the SND and RCV operations continue until the authorisation process is
+completed as in Figure 18.
+Figure A5 shows the roles of session, environment, and goal section. In the session role,
+a composition process has been performed for the four roles ( clienti ,centralServer ,attributeServer
+and dataServer ) and speciﬁes the send and receive channels in the Dolev-Yao model. In the
+environment role, the PP , the goals speciﬁed in the goal section, and the known information
+for the intruder ( intruder _knowledge ) have been deﬁned. In this role, one or more sessions are
+composed, and we tested our scheme with sessions for replay, MITM, and impersonating entity
+attacks. We assumed that an intruder ( I) creates a public key ( ki) and has knowledge of the
+public keys ( kCpu ,kCSpu , and kASpu ) of PAX’s entities in the network. Intruder attempts to
+resend legitimate user requests later, intercepts/modiﬁes these requests, or impersonates the
+connecting entities using iconstant rather than ci,cs,asand ds. The results displays that these
+attacks cannot penetrate the security goals in our scheme. Goal section describes veriﬁed goals
+in PAX, and provides 10 goals of secrecy (such as S_ID,O_ID,S_RandO_Rrepresent the ﬁrst
+secret (sec1) and known only for both ciandcs) and eight goals of authentication (such as UNspm ,
+UNopm andTScs represent the ﬁrst authentication between ciandcs).
+• Simulation Result
+In this section, the simulation result is based on CL-AtSe backend in the AVISPA. Figure 19
+displays the simulation result with the CL-AtSe backend, PAX clearly and accurately achieves
+the SAFE result in the SUMMARY section, bounded number of sessions in the DETAILS section,
+the goals of the scheme achieved (as_speciﬁed) in the GOAL section as well as statistical numbers
+such as time, number of nodes, and analysed states in the STATISTICS section. Based on this
+result, we note that our scheme is capable of preventing passive and active attacks such as replay,
+MITM, and impersonating, and that the goals of the scheme in Figure A5 successfully prevented
+the violation of legitimate users information in the network authorisation.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 27 of 36
+Int. J. Environ. Res. Public Health 2019 ,16, 5 27 of 34
+Figure 18. PAX’s framework in AVISPA.SUMMARY
+SAFE
+DETAILS
+BOUNDED_NUMBER_OF_SESSIONS
+TYPED_MODEL
+PROTOCOL
+/home/span/span/testsuite/results/PAX.if
+GOAL
+As~Specified
+BACKEND
+CL-AtSe
+STATISTICS
+Analysed : 6912 states
+Reachable : 6912 states
+Translation: 2.12 seconds
+Computation: 139.21 seconds
+Figure 19. PAX’s result in CL-AtSe.
+6. Comparison Studies with Other Research
+In this Section, we explain how our project addresses the gaps in related works ([ 2,6,8,9,16–18]).
+PAX has not suffered from PERMIS’s problems [ 16] because each request to the healthcare provider
+has been signed randomly with the ECDSA algorithm, which includes both the roles ( RN s) and the
+pseudonyms ( UN s). In PAX, the policies are stored on the attributes server as Sigs and pseudonym
+rather than as explicit attributes in XACML (each user in PAX has attributes separate from other
+users that prevent the inheritance of attributes). Compared with [ 8], PAX has solved all requests
+standardization and structure problems by including XACML v3.0 and ECDSA. XACML v3.0 offers
+standardization, and generic and rich policy language and is uniﬁed with the context of subjects’
+requests. It does not have problems converting requests from different sources. We also use ECDSA to
+generate very small keys relative to RSA to improve server performance. Furthermore, PAX does not
+need the keys complexity in PIPE [ 6] because XACML has the ﬂexibility to handle practitioners and
+patients’ requests as well as we use only one high-performance signature algorithm. In our project, all
+the attributes in the requests and policies are not clearly written as in [ 2]. Moreover, data is anonymous
+to the patient when the data transferred from the source to the target because it is linked with a
+random pseudonym.
+Instead of one situation (emergency) as in HCPP , our project used several realistic situations such as
+doctor advisors, physician researchers, emergency doctors, and patients’ relatives for healthcare users
+and used the XACML v3.0 policy language, which is effective for authorising users. Our project does
+not require continuous mining [ 9] of patient data but relies on an internal pseudonym to access medical
+records. XACS [ 17] offers protection only against external attacks, whereas PAX offers protection
+against internal and external attacks by preventing attackers from identifying the personal information
+of legitimate users or patients’ data. Finally, The access control model in [ 18] deals with real attributes,
+whereas PAX integrates signatures and pseudonyms within XACML’s policies and requests to prevent
+the exchange of users’ attributes clearly during the authorisation process in healthcare applications [ 18].
+Table 3 compares the security features provided in PAX and related works.
+Figure 18. PAX’s framework in AVISPA.
+Int. J. Environ. Res. Public Health 2019 ,16, 5 27 of 34
+Figure 18. PAX’s framework in AVISPA.SUMMARY
+SAFE
+DETAILS
+BOUNDED_NUMBER_OF_SESSIONS
+TYPED_MODEL
+PROTOCOL
+/home/span/span/testsuite/results/PAX.if
+GOAL
+As~Specified
+BACKEND
+CL-AtSe
+STATISTICS
+Analysed : 6912 states
+Reachable : 6912 states
+Translation: 2.12 seconds
+Computation: 139.21 seconds
+Figure 19. PAX’s result in CL-AtSe.
+6. Comparison Studies with Other Research
+In this Section, we explain how our project addresses the gaps in related works ([ 2,6,8,9,16–18]).
+PAX has not suffered from PERMIS’s problems [ 16] because each request to the healthcare provider
+has been signed randomly with the ECDSA algorithm, which includes both the roles ( RN s) and the
+pseudonyms ( UN s). In PAX, the policies are stored on the attributes server as Sigs and pseudonym
+rather than as explicit attributes in XACML (each user in PAX has attributes separate from other
+users that prevent the inheritance of attributes). Compared with [ 8], PAX has solved all requests
+standardization and structure problems by including XACML v3.0 and ECDSA. XACML v3.0 offers
+standardization, and generic and rich policy language and is uniﬁed with the context of subjects’
+requests. It does not have problems converting requests from different sources. We also use ECDSA to
+generate very small keys relative to RSA to improve server performance. Furthermore, PAX does not
+need the keys complexity in PIPE [ 6] because XACML has the ﬂexibility to handle practitioners and
+patients’ requests as well as we use only one high-performance signature algorithm. In our project, all
+the attributes in the requests and policies are not clearly written as in [ 2]. Moreover, data is anonymous
+to the patient when the data transferred from the source to the target because it is linked with a
+random pseudonym.
+Instead of one situation (emergency) as in HCPP , our project used several realistic situations such as
+doctor advisors, physician researchers, emergency doctors, and patients’ relatives for healthcare users
+and used the XACML v3.0 policy language, which is effective for authorising users. Our project does
+not require continuous mining [ 9] of patient data but relies on an internal pseudonym to access medical
+records. XACS [ 17] offers protection only against external attacks, whereas PAX offers protection
+against internal and external attacks by preventing attackers from identifying the personal information
+of legitimate users or patients’ data. Finally, The access control model in [ 18] deals with real attributes,
+whereas PAX integrates signatures and pseudonyms within XACML’s policies and requests to prevent
+the exchange of users’ attributes clearly during the authorisation process in healthcare applications [ 18].
+Table 3 compares the security features provided in PAX and related works.
+Figure 19. PAX’s result in CL-AtSe.
+6. Comparison of Our Study with Other Research
+In this section, we explain how our project addresses the gaps in related works [ 2,6,8,9,16–18].
+PAX has not suffered from PERMIS’s problems [ 16] because each request to the healthcare provider
+has been signed randomly with the ECDSA algorithm, which includes both the roles ( RNs) and the
+pseudonyms ( UN s). In PAX, the policies are stored on the attributes server as Sigs and pseudonym
+rather than as explicit attributes in XACML (each user in PAX has attributes separate from other
+users that prevent the inheritance of attributes). Compared with [ 8], PAX has solved all requests
+standardization and structure problems by including XACML v3.0 and ECDSA. XACML v3.0 offers
+standardization, and generic and rich policy language and is uniﬁed with the context of subjects’
+requests. It does not have problems converting requests from different sources. We also use ECDSA to
+generate very small keys relative to RSA to improve server performance. Furthermore, PAX does not
+need the keys complexity in PIPE [ 6] because XACML has the ﬂexibility to handle practitioners and
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 28 of 36
+patients’ requests and we use only one high-performance signature algorithm. In our project, all the
+attributes in the requests and policies are not clearly written as in [ 2]. Moreover, data is anonymous
+to the patient when the data is transferred from the source to the target because it is linked with a
+random pseudonym.
+Instead of one situation (emergency) as in HCPP , our project used several realistic situations such
+as doctor advisors, physician researchers, emergency doctors, and patients’ relatives for healthcare
+users and used the XACML v3.0 policy language, which is effective for authorising users. Our
+project does not require continuous mining [ 9] of patient data but relies on an internal pseudonym
+to access medical records. XACS [ 17] offers protection only against external attacks, whereas PAX
+offers protection against internal and external attacks by preventing attackers from identifying the
+personal information of legitimate users or patients’ data. Finally, The access control model in [ 18]
+deals with real attributes, whereas PAX integrates signatures and pseudonyms within XACML’s
+policies and requests to prevent the exchange of users’ attributes clearly during the authorisation
+process in healthcare applications [ 18]. Table 3 compares the security features provided in PAX and
+related works.
+Table 3. Comparison of security features.
+Security FeatureChadwick et al. Quantin et al. Riedl et al. Gajanayake et al. Sun et al. Jo & Chung Seol et al.PAX[16] [8] [6] [2] [9] [17] [18]
+Mutual authentication X
+Preserving anonymity X X X X
+Pseudonym X X X X
+Anti DoS X X X X
+Anti dataset attack X X
+Anti MITM X X X X X X
+Anti replay X X X X X X X
+Anti privileged insider X X
+Anti traceability X X X
+Anti impersonation X
+Anti timing X X
+Anti leakage X X X
+Authorisation policies X X X X X
+7. Conclusions and Future Work
+The security and privacy of medical records have become essential requirements for the
+establishment of any healthcare system in recent years. To ensure the provision of security and
+privacy, this paper proposes a PAX authorisation system that supports pseudonym, anonymity and
+XACML. Speciﬁcally, the proposed system uses a random pseudonym to separate personal information
+about patients’ data, anonymity to hide subjects’ information, and XACML to create distributed access
+control policies to authorise subjects’ requests to objects’ records in EHR. Different from a large
+amount of theoretical investigation in the existing literature, this paper achieves the security and
+privacy preservation by utilizing the pseudonym and anonymity techniques, which can reduce the
+unnecessary time consumption and the burden on the server. Security analyses using the theoretical
+method or formal methods (BAN and AVISPA) demonstrate that PAX is safe, maintains the privacy
+of healthcare users and alleviates the risk of penetrating compared to existing research. We believe
+that the PAX system provides a security high-level that maintains patients’ privacy, and the system
+especially protects patients’ information from indirect users (advisors, patients’ relatives, researchers,
+and emergency doctors), who have been considered a serious security threat to any healthcare system
+because they can carry out internal attacks using the privileges granted to them. To further develop
+the proposed PAX system, we intend to add some features to support security and privacy in EHR.
+1. PAX requires an authentication mechanism that is more stringent to identify legitimate users
+in the network and prevent counterfeit requests. We intend to use a one-time password based
+on users’ attributes, temporary parameters, and Sigs to support the authentication of legitimate
+users in PAX.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 29 of 36
+2. Patients’ data requires devices (such as WSN) to be aggregated accurately and continuously
+and sent to the CSand DS. However, data collection and storage on the server requires
+security mechanisms.
+3. We will focus on patients’ data without the use of cryptographic mechanisms in examining the
+patients’ daily condition, use patients’ real data to test PAX with large data, and allow PAX to
+distinguish between patients’ history, daily status, and purpose of data access. We will also
+encrypt the patients’ old medical records (within a certain period) that are not frequently retrieved
+by healthcare providers in a manner that does not affect the efﬁciency of the server in providing
+the service to users.
+4. We will investigate the application of a light hash algorithm to generate patients’ pseudonyms,
+which support increased randomization while maintaining system performance as an additional
+security measure to protect the privacy of medical records in EHR.
+5. We intend to build an evaluation system to assess PAX in the exchange of requests among
+network entities Ci,CS,ASandDSin terms of authorisation request delay, cost of signature and
+veriﬁcation, storage and throughput.
+Author Contributions: conceptualization, M.A. and Z.Z.; methodology, M.A.; software, M.A.; formal analysis,
+Z.Z.; writing—original draft preparation, M.A.; writing—review and editing, M.A., Z.Z. and J.Z.; supervision,
+Z.Z. and J.Z.; project administration, M.A.
+Funding: This research received no external funding.
+Conﬂicts of Interest: The authors declare that they have no conﬂict of interest.
+Abbreviations
+The following abbreviations are used in this manuscript:
+Ci Client entity
+CS,AS,DS Central server, Attributes server and Data server
+MS Master secret/Master signature
+SS One secret sharing
+SID,OID Subject ID, Object ID
+SR,OR Subject role, Object role
+URi User’s role (patient, patient relative or provider)
+CNi Client’s number
+RNi Role’s number
+UN i User’s number
+SP,OP Subject ’s pseudonym and Object ’s pseudonym
+Ssp,Sop Signature of SPand Signature of OP
+RNsp,UN sp RNi,UN iforSP
+RNop,UN op RNi,UN iforOP
+N,SN Random nonces and random secret nonce
+TS Timestamp
+CiSj Signature generated by Ciand j is signature number
+CSS j Signature generated by CS
+ASS j Signature generated by AS
+DSS j Signature generated by DS
+k,,tm Concatenation operation, Exclusive or operation and Temporary
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 30 of 36
+Appendix A
+The following scripts represent roles in AVISPA tool:
+Int. J. Environ. Res. Public Health 2019 ,16, 5 30 of 34
+role clienti(Ci,CS:agent,KCpu,KCSpu:public_key,H:hash_func,
+S_ID,O_ID,S_R,O_R:message,SND,RCV:channel(dy))
+played_by Ci def=
+local
+State:nat,
+TSc,TScs,TSctm,TScstm,Nc,SNc,SNctm:text,
+CiS1,CiS2,CiS3,CiS4,CiS5,CiS6,CiS1tm,CiS2tm,CiS4tm,
+CiS6tm,CSS2tm,CSS3tm,CSS5:text,
+SP,OP,UNspl,UNspm,UNsph,UNopl,UNopm,UNoph,
+RNspl,RNspm,RNsph,RNopl,RNopm,RNoph:text,
+RNspn,RNopn,UNspn,UNopn:text,AS,DS:agent,
+MS,SS,SSs,Decision,Data:text
+const
+Section~1,sec2,sec3,sec4,sec5,sec6,auth1,auth2:protocol_id
+init
+State := 0
+transition
+1.State=0 /\ RCV(start) =|> State’:=1
+/\Nc’:=new()/\SNc’:=new()/\TSc’:=new()
+/\CiS1’:={H(RNspm.UNspm.Nc’.TSc’)}_inv(KCpu)
+/\CiS2’:={H(RNopm.UNopm.Nc’.TSc’)}_inv(KCpu)
+/\CiS3’:={H(SNc’)}_inv(KCpu)/\ CiS4’:={H(RNoph
+.UNoph.TSc’)}_inv(KCpu)
+/\CiS1tm’:=xor(CiS1’,CiS3’)/\CiS2tm’:=xor(CiS2’,CiS3’)
+/\TSctm’:=xor(TSc’,xor(SNc’,xor(RNspm,UNspm)))
+/\SNctm’:=xor(UNspm,xor(UNopm,xor(SNc’
+,xor(CiS4’,CiS1tm’))))
+/\CiS4tm’:=xor(CiS4’,xor(UNspm,xor(UNopm,CiS2tm’)))
+/\RNspn’:=xor(RNspl,xor(CiS1tm’,SNctm’))
+/\RNopn’:=xor(RNopl,xor(CiS2tm’,SNctm’))
+/\UNspn’:=xor(UNspl,xor(CiS1tm’,SNctm’))
+/\UNopn’:=xor(UNopl,xor(CiS2tm’,SNctm’))
+%Ci sends XACML’s request to CS
+/\SND(CS.CiS1tm’.RNspn’.UNspn’.Nc’.TSctm’.SNctm’
+.CiS2tm’.RNopn’.UNopn’.Nc’.CiS4tm’)
+/\secret({S_ID,O_ID,S_R,O_R},sec1,{Ci,AS})
+/\secret({SNc’,CiS3’,TSc’},sec2,{Ci,CS})
+/\secret({CiS1’,CiS2’},sec3,{Ci,CS,AS})
+/\secret({RNspm,UNspm,RNopm,UNopm},sec4,{Ci,CS})
+%Ci receives first authorisation response from CS
+2. State = 1/\RCV(Ci.CSS2tm’.UNspn’.TScstm’)=|>
+State’:= 2
+/\UNspl’:=xor(UNspn’,xor(CSS2tm’,TScstm’))
+/\TScs’:=xor(TScstm’,xor(SNc,UNopm))
+/\CiS6’:={H(SP)}_inv(KCpu)
+/\SSs’:=xor(CiS1,xor(CiS3,xor(CSS2tm’,xor(CiS4,CiS6’))))
+/\MS’:= {(SS.SSs’)}
+/\CiS6tm’:=xor(CiS6’,xor(CiS3,MS’))
+/\secret({OP,CiS4},sec5,{Ci,AS,DS})
+/\secret({SP,CiS6,MS’,SS},sec6,{Ci,AS})
+/\TSc’:=new()/\TSctm’:=xor(TSc’,xor(SNc,UNspm))
+/\UNspn’:=xor(UNspl’,xor(CiS6tm’,TSctm’))
+%Ci sends Shamir’s response to CS
+/\SND(CS.CiS6tm’.UNspn’.TSctm’)
+/\witness(Ci,CS,auth1,{UNspm,UNopm,TScs})
+%Ci receives decision & data from CS
+3.State=2/\RCV(Ci.CSS2tm’.CSS3tm’.UNspn’.TScstm’
+.Decision.Data)=|> State’:=3
+/\UNspl’:=xor(UNspn’,xor(CSS2tm’,TScstm’))
+/\TScs’:=xor(TScstm’,xor(SNc,UNopm))
+/\CSS5’:=xor(CiS1’,xor(CiS3’,xor(CSS2tm’,CiS4’)))
+/\CiS5’:={H(Data)}_inv(KCSpu)
+/\CiS1’:=xor(CSS2tm’,xor(CiS3,xor(CiS5’,CiS4)))
+/\CiS2’:=xor(CSS3tm’,xor(CiS3,xor(CiS5’,CiS4)))
+/\CiS3’:=xor(CiS2’,xor(CSS2tm’,xor(CiS5’,CiS4)))
+/\CiS4’:=xor(CiS1’,xor(CiS3’,xor(CiS5’,CSS2tm’)))
+/\request(Ci,CS,auth2,{SNc,CiS3,CiS4,TSc})
+end role
+Figure A1. Cirole of PAX in HLPSL.role centralServer(CS,Ci,AS:agent,KCSpu,KCpu,KASpu:public_key,
+H:hash_func,SND,RCV:channel(dy))
+played_by CS def=
+local
+State:nat,TSc,TScs,TSas,TSctm,TScstm,TSastm,Nc,Ncs,SNc,
+SNcs,SNctm,SNcstm:text,CSS1,CSS2,CSS3,CSS4,CSS5,CSS2tm,
+CSS3tm,CiS1,CiS2,CiS4,CiS1tm,CiS2tm,CiS4tm,CiS6tm:text,
+ASS2,ASS3,ASS7,ASS2tm,ASS3tm:text,Decision,Data:text,
+UNspl,UNspm,UNopl,UNopm,RNspl,RNspm,RNopl,RNopm,
+RNspn,RNopn,UNspn,UNopn:text
+const
+Section~2,sec3,sec4,sec7,auth1,auth2,auth3,auth4:protocol_id
+init
+State := 0
+transition
+%CS receives XACML’s request from Ci
+1.State=0 /\ RCV(CS.CiS1tm’.RNspn’.UNspn’.Nc’.TSctm’.SNctm’
+.CiS2tm’.RNopn’.UNopn’.Nc’.CiS4tm’)=|>State’:=1
+/\RNspl’:=xor(RNspn’,xor(CiS1tm’,SNctm’))
+/\RNopl’:=xor(RNopn’,xor(CiS2tm’,SNctm’))
+/\UNspl’:=xor(UNspn’,xor(CiS1tm’,SNctm’))
+/\UNopl’:=xor(UNopn’,xor(CiS2tm’,SNctm’))
+/\CiS4’:=xor(CiS4tm’,xor(UNspm,xor(UNopm,CiS2tm’)))
+/\SNc’:=xor(UNspm,xor(UNopm,xor(SNctm’,xor(CiS4’,CiS1tm’))))
+/\TSc’:=xor(TSctm’,xor(SNc’,xor(RNspm,UNspm)))
+/\CSS1’:={H(SNc’)}_inv(KCpu)
+/\CiS1’:=xor(CiS1tm’,CSS1’)/\CiS2’:= xor(CiS2tm’,CSS1’)
+/\CSS2’:={H(RNspm.UNspm.Nc’.TSc’)}_inv(KCpu)
+/\CSS3’:={H(RNopm.UNopm.Nc’.TSc’)}_inv(KCpu)
+/\secret({SNc’,CSS1’,TSc’},sec2,{CS,Ci})
+/\secret({CSS2’,CSS3’},sec3,{CS,Ci,AS})
+%CS creates authorisation request to AS
+/\SNcs’:=new() /\TScs’:=new()
+/\CSS4’:= {H(SNcs’)}_inv(KCSpu)
+/\CSS2tm’:=xor(CSS2’,CSS4’)
+/\CSS3tm’:=xor(CSS3’,CSS4’)
+/\Ncs’:=xor(Nc’,xor(TSc’,xor(TScs’,SNcs’)))
+/\TSctm’:=xor(TSc’,xor(SNcs’,xor(RNspm,UNspm)))
+/\TScstm’:=xor(TScs’,xor(SNcs’,xor(RNopm,UNopm)))
+/\SNcstm’:=xor(UNspm,xor(UNopm,xor(SNcs’,xor(CiS4’,CSS2tm))))
+/\CiS4tm’:=xor(CiS4’,xor(UNspm,xor(UNopm,CSS3tm’)))
+/\RNspn’:=xor(RNspl,xor(CSS2tm’,SNcstm’))
+/\RNopn’:=xor(RNopl,xor(CSS3tm’,SNcstm’))
+/\UNspn’:=xor(UNspl,xor(CSS2tm’,SNcstm’))
+/\UNopn’:=xor(UNopl,xor(CSS3tm’,SNcstm’))
+%CS sends request to AS
+/\SND(AS.CSS2tm’.RNspn’.UNspn’.Ncs’.TSctm’.TScstm’.SNcstm’
+.CSS3tm’.RNopn’.UNopn’.CiS4tm’)
+/\secret({RNspm,UNspm,RNopm,UNopm},sec4,{CS,AS})
+/\secret({SNcs’,CSS4’,TScs’,Nc’},sec7,{CS,AS})
+%CS receives authorisation response from AS
+2.State=1 /\ RCV(CS.ASS2tm’.UNspn’.TSastm’)=|>
+State’:=2/\CSS2tm’:=xor(ASS2tm’,xor(CSS4,CSS1))
+/\TScs’:=new()
+/\TScstm’:=xor(TScs’,xor(SNc,UNopm))
+/\UNspn’:=xor(UNspl,xor(CSS2tm’,TScstm’))
+/\witness(CS,AS,auth3,{UNspm,UNopm,Nc,TSc,TSas})
+%CS sends authorisation response to Ci
+/\SND(Ci.CSS2tm’.UNspn’.TScstm’)
+%CS receives Shamir’s response from Ci
+3. State = 2 /\RCV(CS.CiS6tm’.UNspn’.TSctm’)=|>
+State’:=3/\UNspl’:=xor(UNspn’,xor(CiS6tm’,TSctm’))
+/\TSc’:=xor(TSctm’,xor(SNc,UNspm))
+/\CiS6tm’:=xor(CiS6tm’,xor(CSS1,CSS4))
+/\request(CS,Ci,auth1,{UNspm,UNopm,TScs})
+/\TScs’:=new()
+/\TScstm’:=xor(TScs’,xor(SNcs,UNopm))
+/\UNspn’:=xor(UNspl,xor(CiS6tm’,TScstm’))
+%CS sends Shamir’s response to AS
+/\SND(AS.CiS6tm’.UNspn’.TScstm’)
+%CS receives decision & data response from AS
+4.State=3 /\RCV(CS.ASS2tm’.ASS3tm’.UNspn’.TSastm’.Decision.
+Data)=|>State’:=4/\UNspl’:=xor(UNspn’,xor(ASS2tm’,TSastm’))
+/\TSas’:=xor(TSastm’,xor(SNcs,UNopm))
+/\ASS7’:=xor(CSS2,xor(CSS4,xor(CiS4,ASS2tm)))
+/\CSS5’:={H(Data)}_inv(KASpu)
+/\ASS2’:=xor(ASS2tm’,xor(CSS4,xor(ASS7,CiS4)))
+/\ASS3’:=xor(ASS3tm,xor(CSS4,xor(ASS7,CiS4)))
+/\CiS4’:=xor(ASS2tm’,xor(CSS4,xor(ASS7,ASS2’)))
+/\request(CS,AS,auth4,{SNcs,CSS1,CiS4,TScs})
+/\TScs’:=new()
+/\CSS2tm’:=xor(CSS2,xor(CSS1,xor(CSS5,CiS4)))
+/\CSS3tm’:=xor(CSS3,xor(CSS1,xor(CSS5,CiS4)))
+/\TScstm’:=xor(TScs’,xor(SNc,UNopm))
+/\UNspn’:=xor(UNspl,xor(CSS2tm’,TScstm’))
+%CS sends decision & data response to Ci
+/\SND(Ci.CSS2tm’.CSS3tm’.UNspn’.TScstm’.Decision.Data)
+/\witness(CS,Ci,auth2,{SNc,CSS1,CiS4,TSc})
+end role
+Figure A2. CSrole of PAX in HLPSL.
+Figure A1. Cirole of PAX in high-level protocol speciﬁcation language (HLPSL).
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 31 of 36
+Int. J. Environ. Res. Public Health 2019 ,16, 5 30 of 34
+role clienti(Ci,CS:agent,KCpu,KCSpu:public_key,H:hash_func,
+S_ID,O_ID,S_R,O_R:message,SND,RCV:channel(dy))
+played_by Ci def=
+local
+State:nat,
+TSc,TScs,TSctm,TScstm,Nc,SNc,SNctm:text,
+CiS1,CiS2,CiS3,CiS4,CiS5,CiS6,CiS1tm,CiS2tm,CiS4tm,
+CiS6tm,CSS2tm,CSS3tm,CSS5:text,
+SP,OP,UNspl,UNspm,UNsph,UNopl,UNopm,UNoph,
+RNspl,RNspm,RNsph,RNopl,RNopm,RNoph:text,
+RNspn,RNopn,UNspn,UNopn:text,AS,DS:agent,
+MS,SS,SSs,Decision,Data:text
+const
+Section~1,sec2,sec3,sec4,sec5,sec6,auth1,auth2:protocol_id
+init
+State := 0
+transition
+1.State=0 /\ RCV(start) =|> State’:=1
+/\Nc’:=new()/\SNc’:=new()/\TSc’:=new()
+/\CiS1’:={H(RNspm.UNspm.Nc’.TSc’)}_inv(KCpu)
+/\CiS2’:={H(RNopm.UNopm.Nc’.TSc’)}_inv(KCpu)
+/\CiS3’:={H(SNc’)}_inv(KCpu)/\ CiS4’:={H(RNoph
+.UNoph.TSc’)}_inv(KCpu)
+/\CiS1tm’:=xor(CiS1’,CiS3’)/\CiS2tm’:=xor(CiS2’,CiS3’)
+/\TSctm’:=xor(TSc’,xor(SNc’,xor(RNspm,UNspm)))
+/\SNctm’:=xor(UNspm,xor(UNopm,xor(SNc’
+,xor(CiS4’,CiS1tm’))))
+/\CiS4tm’:=xor(CiS4’,xor(UNspm,xor(UNopm,CiS2tm’)))
+/\RNspn’:=xor(RNspl,xor(CiS1tm’,SNctm’))
+/\RNopn’:=xor(RNopl,xor(CiS2tm’,SNctm’))
+/\UNspn’:=xor(UNspl,xor(CiS1tm’,SNctm’))
+/\UNopn’:=xor(UNopl,xor(CiS2tm’,SNctm’))
+%Ci sends XACML’s request to CS
+/\SND(CS.CiS1tm’.RNspn’.UNspn’.Nc’.TSctm’.SNctm’
+.CiS2tm’.RNopn’.UNopn’.Nc’.CiS4tm’)
+/\secret({S_ID,O_ID,S_R,O_R},sec1,{Ci,AS})
+/\secret({SNc’,CiS3’,TSc’},sec2,{Ci,CS})
+/\secret({CiS1’,CiS2’},sec3,{Ci,CS,AS})
+/\secret({RNspm,UNspm,RNopm,UNopm},sec4,{Ci,CS})
+%Ci receives first authorisation response from CS
+2. State = 1/\RCV(Ci.CSS2tm’.UNspn’.TScstm’)=|>
+State’:= 2
+/\UNspl’:=xor(UNspn’,xor(CSS2tm’,TScstm’))
+/\TScs’:=xor(TScstm’,xor(SNc,UNopm))
+/\CiS6’:={H(SP)}_inv(KCpu)
+/\SSs’:=xor(CiS1,xor(CiS3,xor(CSS2tm’,xor(CiS4,CiS6’))))
+/\MS’:= {(SS.SSs’)}
+/\CiS6tm’:=xor(CiS6’,xor(CiS3,MS’))
+/\secret({OP,CiS4},sec5,{Ci,AS,DS})
+/\secret({SP,CiS6,MS’,SS},sec6,{Ci,AS})
+/\TSc’:=new()/\TSctm’:=xor(TSc’,xor(SNc,UNspm))
+/\UNspn’:=xor(UNspl’,xor(CiS6tm’,TSctm’))
+%Ci sends Shamir’s response to CS
+/\SND(CS.CiS6tm’.UNspn’.TSctm’)
+/\witness(Ci,CS,auth1,{UNspm,UNopm,TScs})
+%Ci receives decision & data from CS
+3.State=2/\RCV(Ci.CSS2tm’.CSS3tm’.UNspn’.TScstm’
+.Decision.Data)=|> State’:=3
+/\UNspl’:=xor(UNspn’,xor(CSS2tm’,TScstm’))
+/\TScs’:=xor(TScstm’,xor(SNc,UNopm))
+/\CSS5’:=xor(CiS1’,xor(CiS3’,xor(CSS2tm’,CiS4’)))
+/\CiS5’:={H(Data)}_inv(KCSpu)
+/\CiS1’:=xor(CSS2tm’,xor(CiS3,xor(CiS5’,CiS4)))
+/\CiS2’:=xor(CSS3tm’,xor(CiS3,xor(CiS5’,CiS4)))
+/\CiS3’:=xor(CiS2’,xor(CSS2tm’,xor(CiS5’,CiS4)))
+/\CiS4’:=xor(CiS1’,xor(CiS3’,xor(CiS5’,CSS2tm’)))
+/\request(Ci,CS,auth2,{SNc,CiS3,CiS4,TSc})
+end role
+Figure A1. Cirole of PAX in HLPSL.role centralServer(CS,Ci,AS:agent,KCSpu,KCpu,KASpu:public_key,
+H:hash_func,SND,RCV:channel(dy))
+played_by CS def=
+local
+State:nat,TSc,TScs,TSas,TSctm,TScstm,TSastm,Nc,Ncs,SNc,
+SNcs,SNctm,SNcstm:text,CSS1,CSS2,CSS3,CSS4,CSS5,CSS2tm,
+CSS3tm,CiS1,CiS2,CiS4,CiS1tm,CiS2tm,CiS4tm,CiS6tm:text,
+ASS2,ASS3,ASS7,ASS2tm,ASS3tm:text,Decision,Data:text,
+UNspl,UNspm,UNopl,UNopm,RNspl,RNspm,RNopl,RNopm,
+RNspn,RNopn,UNspn,UNopn:text
+const
+Section~2,sec3,sec4,sec7,auth1,auth2,auth3,auth4:protocol_id
+init
+State := 0
+transition
+%CS receives XACML’s request from Ci
+1.State=0 /\ RCV(CS.CiS1tm’.RNspn’.UNspn’.Nc’.TSctm’.SNctm’
+.CiS2tm’.RNopn’.UNopn’.Nc’.CiS4tm’)=|>State’:=1
+/\RNspl’:=xor(RNspn’,xor(CiS1tm’,SNctm’))
+/\RNopl’:=xor(RNopn’,xor(CiS2tm’,SNctm’))
+/\UNspl’:=xor(UNspn’,xor(CiS1tm’,SNctm’))
+/\UNopl’:=xor(UNopn’,xor(CiS2tm’,SNctm’))
+/\CiS4’:=xor(CiS4tm’,xor(UNspm,xor(UNopm,CiS2tm’)))
+/\SNc’:=xor(UNspm,xor(UNopm,xor(SNctm’,xor(CiS4’,CiS1tm’))))
+/\TSc’:=xor(TSctm’,xor(SNc’,xor(RNspm,UNspm)))
+/\CSS1’:={H(SNc’)}_inv(KCpu)
+/\CiS1’:=xor(CiS1tm’,CSS1’)/\CiS2’:= xor(CiS2tm’,CSS1’)
+/\CSS2’:={H(RNspm.UNspm.Nc’.TSc’)}_inv(KCpu)
+/\CSS3’:={H(RNopm.UNopm.Nc’.TSc’)}_inv(KCpu)
+/\secret({SNc’,CSS1’,TSc’},sec2,{CS,Ci})
+/\secret({CSS2’,CSS3’},sec3,{CS,Ci,AS})
+%CS creates authorisation request to AS
+/\SNcs’:=new() /\TScs’:=new()
+/\CSS4’:= {H(SNcs’)}_inv(KCSpu)
+/\CSS2tm’:=xor(CSS2’,CSS4’)
+/\CSS3tm’:=xor(CSS3’,CSS4’)
+/\Ncs’:=xor(Nc’,xor(TSc’,xor(TScs’,SNcs’)))
+/\TSctm’:=xor(TSc’,xor(SNcs’,xor(RNspm,UNspm)))
+/\TScstm’:=xor(TScs’,xor(SNcs’,xor(RNopm,UNopm)))
+/\SNcstm’:=xor(UNspm,xor(UNopm,xor(SNcs’,xor(CiS4’,CSS2tm))))
+/\CiS4tm’:=xor(CiS4’,xor(UNspm,xor(UNopm,CSS3tm’)))
+/\RNspn’:=xor(RNspl,xor(CSS2tm’,SNcstm’))
+/\RNopn’:=xor(RNopl,xor(CSS3tm’,SNcstm’))
+/\UNspn’:=xor(UNspl,xor(CSS2tm’,SNcstm’))
+/\UNopn’:=xor(UNopl,xor(CSS3tm’,SNcstm’))
+%CS sends request to AS
+/\SND(AS.CSS2tm’.RNspn’.UNspn’.Ncs’.TSctm’.TScstm’.SNcstm’
+.CSS3tm’.RNopn’.UNopn’.CiS4tm’)
+/\secret({RNspm,UNspm,RNopm,UNopm},sec4,{CS,AS})
+/\secret({SNcs’,CSS4’,TScs’,Nc’},sec7,{CS,AS})
+%CS receives authorisation response from AS
+2.State=1 /\ RCV(CS.ASS2tm’.UNspn’.TSastm’)=|>
+State’:=2/\CSS2tm’:=xor(ASS2tm’,xor(CSS4,CSS1))
+/\TScs’:=new()
+/\TScstm’:=xor(TScs’,xor(SNc,UNopm))
+/\UNspn’:=xor(UNspl,xor(CSS2tm’,TScstm’))
+/\witness(CS,AS,auth3,{UNspm,UNopm,Nc,TSc,TSas})
+%CS sends authorisation response to Ci
+/\SND(Ci.CSS2tm’.UNspn’.TScstm’)
+%CS receives Shamir’s response from Ci
+3. State = 2 /\RCV(CS.CiS6tm’.UNspn’.TSctm’)=|>
+State’:=3/\UNspl’:=xor(UNspn’,xor(CiS6tm’,TSctm’))
+/\TSc’:=xor(TSctm’,xor(SNc,UNspm))
+/\CiS6tm’:=xor(CiS6tm’,xor(CSS1,CSS4))
+/\request(CS,Ci,auth1,{UNspm,UNopm,TScs})
+/\TScs’:=new()
+/\TScstm’:=xor(TScs’,xor(SNcs,UNopm))
+/\UNspn’:=xor(UNspl,xor(CiS6tm’,TScstm’))
+%CS sends Shamir’s response to AS
+/\SND(AS.CiS6tm’.UNspn’.TScstm’)
+%CS receives decision & data response from AS
+4.State=3 /\RCV(CS.ASS2tm’.ASS3tm’.UNspn’.TSastm’.Decision.
+Data)=|>State’:=4/\UNspl’:=xor(UNspn’,xor(ASS2tm’,TSastm’))
+/\TSas’:=xor(TSastm’,xor(SNcs,UNopm))
+/\ASS7’:=xor(CSS2,xor(CSS4,xor(CiS4,ASS2tm)))
+/\CSS5’:={H(Data)}_inv(KASpu)
+/\ASS2’:=xor(ASS2tm’,xor(CSS4,xor(ASS7,CiS4)))
+/\ASS3’:=xor(ASS3tm,xor(CSS4,xor(ASS7,CiS4)))
+/\CiS4’:=xor(ASS2tm’,xor(CSS4,xor(ASS7,ASS2’)))
+/\request(CS,AS,auth4,{SNcs,CSS1,CiS4,TScs})
+/\TScs’:=new()
+/\CSS2tm’:=xor(CSS2,xor(CSS1,xor(CSS5,CiS4)))
+/\CSS3tm’:=xor(CSS3,xor(CSS1,xor(CSS5,CiS4)))
+/\TScstm’:=xor(TScs’,xor(SNc,UNopm))
+/\UNspn’:=xor(UNspl,xor(CSS2tm’,TScstm’))
+%CS sends decision & data response to Ci
+/\SND(Ci.CSS2tm’.CSS3tm’.UNspn’.TScstm’.Decision.Data)
+/\witness(CS,Ci,auth2,{SNc,CSS1,CiS4,TSc})
+end role
+Figure A2. CSrole of PAX in HLPSL.
+Figure A2. CSrole of PAX in HLPSL.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 32 of 36
+Int. J. Environ. Res. Public Health 2019 ,16, 5 31 of 34
+role attributesServer(AS,CS,DS:agent,KASpu,KCSpu,KDSpu:public_key,
+Ssp,Sop:text,H:hash_func,SND,RCV:channel(dy))
+played_by AS def=
+local
+State:nat, TSc,TScs,TSas,TSds,TSctm,TScstm,TSastm,TSdstm,Nc,
+Ncs,SNcs,SNas,SNcstm,SNastm:text, ASS1,ASS2,ASS3,ASS4,ASS5,
+ASS6,ASS7,ASS2tm,ASS3tm,ASS6tm:text, CiS4,CiS4tm,CiS6tm,CSS2,
+CSS3,CSS2tm,CSS3tm,DSS2tm,DSS4tm,DSS4:text,
+SP,OP,URsp,UNsp,URop,UNop,RNsp,RNop:text,
+UNspl,UNspm,UNsph,UNopl,UNopm,UNoph:text,
+RNspl,RNspm,RNsph,RNopl,RNopm,RNoph:text,
+RNspn,RNopn,UNspn,UNopn:text,
+S_ID,O_ID,S_R,O_R:message,Ci:agent,SSs,MS,Data,Decision:text
+const
+Section~1,sec3,sec4,sec5,sec6,sec7,sec8,sec9,sec10,auth3,auth4
+,auth5,auth6:protocol_id
+init State := 0
+transition
+%AS receives from CS
+1.State = 0 /\ RCV(AS.CSS2tm’.RNspn’.UNspn’.Ncs’.TSctm’.TScstm’
+.SNcstm’.CSS3tm’.RNopn’.UNopn’.CiS4tm’)=|> State’:= 1
+/\RNspl’:=xor(RNspn’,xor(CSS2tm’,SNcstm’))
+/\RNopl’:=xor(RNopn’,xor(CSS3tm’,SNcstm’))
+/\UNspl’:=xor(UNspn’,xor(CSS2tm’,SNcstm’))
+/\UNopl’:=xor(UNopn’,xor(CSS3tm’,SNcstm’))
+/\CiS4’:=xor(CiS4tm’,xor(UNspm,xor(UNopm,CSS3tm’)))
+/\SNcs’:=xor(UNspm,xor(UNopm,xor(SNcstm’,xor(CiS4’,CSS2tm’))))
+/\TSc’:=xor(TSctm’,xor(SNcs’,xor(RNspm,UNspm)))
+/\TScs’:=xor(TScstm’,xor(SNcs’,xor(RNopm,UNopm)))
+/\Nc’:=xor(Ncs’,xor(TSc’,xor(TScs’,SNcs’)))
+/\ASS1’:= {H(SNcs’)}_inv(KCSpu)
+/\CSS2’:=xor(CSS2tm’,ASS1’)
+/\CSS3’:=xor(CSS3tm’,ASS1’)
+/\ASS2’:= {H(RNspm.UNspm.Nc’.TSc’)}_inv(KCSpu)
+/\ASS3’:= {H(RNopm.UNopm.Nc’.TSc’)}_inv(KCSpu)
+/\ASS4’:={H(RNoph.UNoph.TSc’)}_inv(KCSpu)
+/\SP’:=URsp.UNsp/\OP’:=URop.UNop
+/\secret({S_ID,O_ID,S_R,O_R},sec1,{AS,Ci})
+/\secret({ASS2’,ASS3’},sec3,{AS,CS,Ci})
+/\secret({RNspm,UNspm,RNopm,UNopm},sec4,{AS,CS})
+/\secret({OP’,CiS4’},sec5,{AS,DS,Ci})
+/\secret({SP’,Ssp,MS,SSs},sec6,{AS,Ci})
+/\secret({SNcs’,ASS1’,TScs’,Nc},sec7,{AS,CS})
+/\secret(Sop,sec8,AS)
+%AS creates Shamir’s request
+/\TSas’:=new()
+/\ASS2tm’:=xor(ASS2,xor(ASS1,xor(SSs,xor(CiS4’,Ssp))))
+/\TSastm’:=xor(TSas’,xor(SNcs’,UNopm))
+/\UNspn’:=xor(UNspl’,xor(ASS2tm’,TSastm’))
+%AS sends Shamir’s request to CS
+/\SND(CS.ASS2tm’.UNspn’.TSastm’)
+%AS receives Shamir’s response from CS
+2.State=1 /\ RCV(AS.CiS6tm’.UNspn’.TScstm’)=|>
+State’:= 2/\UNspl’:=xor(UNspn’,xor(CiS6tm’,TScstm’))
+/\TScs’:=xor(TScstm’,xor(SNcs,UNopm))
+/\MS’:=xor(CiS6tm’,xor(Ssp,ASS1))
+/\request(AS,CS,auth3,{UNspm,UNopm,Nc,TSc,TSas})
+%AS creates data retrieval request
+/\SNas’:=new()/\TSas’:=new()
+/\ASS5’:={H(SNas’)}_inv(KASpu)
+/\ASS6’:={H(RNopm.UNopm.SNas’.TSas’.CiS4)}_inv(KASpu)
+/\RNopn’:=xor(RNopl,xor(TSas’,SNas’))
+/\ASS6tm’:=xor(ASS6’,xor(TSas’,ASS5’))
+/\TSctm’:=xor(TSc,xor(SNas’,UNoph))
+/\TSastm’:=xor(TSas’,xor(SNas’,UNopm))
+/\SNastm’:=xor(UNopm,xor(SNas’,xor(CiS4,ASS6tm’)))
+/\CiS4tm’:=xor(CiS4,xor(UNoph,xor(SNastm’,UNopm)))
+/\UNopn’:=xor(UNopl,xor(ASS6tm’,TSastm’))
+/\secret({SNas’,ASS5’,TSas’},sec9,{AS,DS})
+/\secret({RNoph,UNoph,ASS6’},sec10,{AS,DS})
+%AS sends data retrieval request to DS
+/\SND(DS.ASS6tm’.RNopn’.UNopn’.SNastm’.TSctm’.TSastm’.CiS4tm’)
+/\ witness(AS,DS,auth5,{CiS4,ASS6})
+%AS receives data retrieval response from DS
+3.State=2/\ RCV(AS.DS.DSS2tm’.DSS4tm’.UNopn’.TSdstm’
+.CiS4tm’.Data) =|> State’:=3
+/\UNopl’:=xor(UNopn’,xor(DSS2tm’,TSdstm’))
+/\TSds’:=xor(TSdstm’,xor(SNas,UNoph))
+/\CiS4’:=xor(CiS4tm’,xor(ASS5,TSds’))
+/\DSS4’:=xor(DSS4tm’,xor(ASS5,CiS4’))
+/\ASS6’:=xor(DSS2tm’,xor(DSS4’,xor(TSds’,ASS5)))
+/\ASS7’:={H(Data)}_inv(KDSpu)
+/\request(AS,DS,auth6,{SNas,ASS5,RNoph,UNoph})
+%AS creates decision & data response
+/\TSas’:=new()
+/\ASS2tm’:=xor(ASS2,xor(ASS1,xor(ASS7,CiS4)))
+/\ASS3tm’:=xor(ASS3,xor(ASS1,xor(ASS7,CiS4)))
+/\TSastm’:=xor(TSas’,xor(SNcs,UNopm))
+/\UNspn’:=xor(UNspl,xor(ASS2tm’,TSastm’))
+%AS sends data retrieval response (Data and Decision) to CS
+/\SND(CS.ASS2tm’.ASS3tm’.UNspn’.TSastm’.Decision.Data)
+/\witness(AS,CS,auth4,{SNcs,ASS1,CiS4,TScs})
+end role
+Figure A3. ASrole of PAX in HLPSL.role dataServer(DS,AS:agent,KDSpu,KASpu:public_key,
+H:hash_func,SND,RCV:channel(dy))
+played_by DS def=
+local
+State:nat,
+TSc,TSctm,TSas,TSastm,TSds,TSdstm,SNas,SNastm:text,
+OP,UNopl,UNopm,UNoph:text,
+RNopl,RNopm,RNoph,RNopn,UNopn:text,
+DSS1,DSS2,DSS3,DSS4:text,
+DSS2tm,DSS4tm,CiS4,CiS4tm,ASS6tm:text,
+Ci:agent,Data:text
+const Section~5,sec9,sec10,auth5,auth6:protocol_id
+init State := 0
+transition
+1.State = 0 /\ RCV(DS.ASS6tm’.RNopn’.UNopn’.SNastm’
+.TSctm’.TSastm’.CiS4tm’)=|>State’:=1
+/\UNopl’:=xor(UNopn’,xor(ASS6tm’,TSastm’))
+/\CiS4’:=xor(CiS4tm’,xor(UNoph,xor(SNastm’,UNopm)))
+/\SNas’:= xor(UNopm,xor(SNastm’,xor(CiS4’,ASS6tm’)))
+/\TSc’:=xor(TSctm’,xor(SNas’,UNoph))
+/\TSas’:=xor(TSastm’,xor(SNas’,UNopm))
+/\RNopl’:=xor(RNopn’,xor(TSas’,SNas’))
+/\DSS1’:={H(SNas’)}_inv(KASpu)
+/\DSS2’:={H(RNopm.UNopm.SNas’.TSas’.CiS4’)}_inv(KASpu)
+/\DSS3’:={H(RNoph.UNoph.TSc’)}_inv(KASpu)
+/\secret({OP,CiS4’},sec5,{DS,AS,Ci})
+/\secret({SNas’,DSS1’,TSas’},sec9,{DS,AS})
+/\secret({RNoph,UNoph,DSS2’},sec10,{DS,AS})
+/\request(DS,AS,auth5,{CiS4,DSS2})
+%DS Creates data retrieval response
+/\TSds’:=new()
+/\DSS4’:={H(Data)}_inv(KDSpu)
+/\DSS4tm’:=xor(DSS4’,xor(DSS1’,CiS4’))
+/\DSS2tm’:=xor(DSS2’,xor(DSS4’,xor(TSds’,DSS1’)))
+/\CiS4tm’:=xor(CiS4’,xor(DSS1’,TSds’))
+/\TSdstm’:=xor(TSds’,xor(SNas’,UNoph))
+/\UNopn’:=xor(UNopl’,xor(DSS2tm’,TSdstm’))
+%DS sends data retrieval response to AS
+/\SND(AS.DSS2tm’.DSS4tm’.UNopn’.TSdstm’.CiS4tm’.Data)
+/\ witness(DS,AS,auth6,{SNas,DSS1,RNoph,UNoph})
+end role
+Figure A4. DSrole of PAX in HLPSL.
+Figure A3. ASrole of PAX in HLPSL.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 33 of 36
+Int. J. Environ. Res. Public Health 2019 ,16, 5 31 of 34
+role attributesServer(AS,CS,DS:agent,KASpu,KCSpu,KDSpu:public_key,
+Ssp,Sop:text,H:hash_func,SND,RCV:channel(dy))
+played_by AS def=
+local
+State:nat, TSc,TScs,TSas,TSds,TSctm,TScstm,TSastm,TSdstm,Nc,
+Ncs,SNcs,SNas,SNcstm,SNastm:text, ASS1,ASS2,ASS3,ASS4,ASS5,
+ASS6,ASS7,ASS2tm,ASS3tm,ASS6tm:text, CiS4,CiS4tm,CiS6tm,CSS2,
+CSS3,CSS2tm,CSS3tm,DSS2tm,DSS4tm,DSS4:text,
+SP,OP,URsp,UNsp,URop,UNop,RNsp,RNop:text,
+UNspl,UNspm,UNsph,UNopl,UNopm,UNoph:text,
+RNspl,RNspm,RNsph,RNopl,RNopm,RNoph:text,
+RNspn,RNopn,UNspn,UNopn:text,
+S_ID,O_ID,S_R,O_R:message,Ci:agent,SSs,MS,Data,Decision:text
+const
+Section~1,sec3,sec4,sec5,sec6,sec7,sec8,sec9,sec10,auth3,auth4
+,auth5,auth6:protocol_id
+init State := 0
+transition
+%AS receives from CS
+1.State = 0 /\ RCV(AS.CSS2tm’.RNspn’.UNspn’.Ncs’.TSctm’.TScstm’
+.SNcstm’.CSS3tm’.RNopn’.UNopn’.CiS4tm’)=|> State’:= 1
+/\RNspl’:=xor(RNspn’,xor(CSS2tm’,SNcstm’))
+/\RNopl’:=xor(RNopn’,xor(CSS3tm’,SNcstm’))
+/\UNspl’:=xor(UNspn’,xor(CSS2tm’,SNcstm’))
+/\UNopl’:=xor(UNopn’,xor(CSS3tm’,SNcstm’))
+/\CiS4’:=xor(CiS4tm’,xor(UNspm,xor(UNopm,CSS3tm’)))
+/\SNcs’:=xor(UNspm,xor(UNopm,xor(SNcstm’,xor(CiS4’,CSS2tm’))))
+/\TSc’:=xor(TSctm’,xor(SNcs’,xor(RNspm,UNspm)))
+/\TScs’:=xor(TScstm’,xor(SNcs’,xor(RNopm,UNopm)))
+/\Nc’:=xor(Ncs’,xor(TSc’,xor(TScs’,SNcs’)))
+/\ASS1’:= {H(SNcs’)}_inv(KCSpu)
+/\CSS2’:=xor(CSS2tm’,ASS1’)
+/\CSS3’:=xor(CSS3tm’,ASS1’)
+/\ASS2’:= {H(RNspm.UNspm.Nc’.TSc’)}_inv(KCSpu)
+/\ASS3’:= {H(RNopm.UNopm.Nc’.TSc’)}_inv(KCSpu)
+/\ASS4’:={H(RNoph.UNoph.TSc’)}_inv(KCSpu)
+/\SP’:=URsp.UNsp/\OP’:=URop.UNop
+/\secret({S_ID,O_ID,S_R,O_R},sec1,{AS,Ci})
+/\secret({ASS2’,ASS3’},sec3,{AS,CS,Ci})
+/\secret({RNspm,UNspm,RNopm,UNopm},sec4,{AS,CS})
+/\secret({OP’,CiS4’},sec5,{AS,DS,Ci})
+/\secret({SP’,Ssp,MS,SSs},sec6,{AS,Ci})
+/\secret({SNcs’,ASS1’,TScs’,Nc},sec7,{AS,CS})
+/\secret(Sop,sec8,AS)
+%AS creates Shamir’s request
+/\TSas’:=new()
+/\ASS2tm’:=xor(ASS2,xor(ASS1,xor(SSs,xor(CiS4’,Ssp))))
+/\TSastm’:=xor(TSas’,xor(SNcs’,UNopm))
+/\UNspn’:=xor(UNspl’,xor(ASS2tm’,TSastm’))
+%AS sends Shamir’s request to CS
+/\SND(CS.ASS2tm’.UNspn’.TSastm’)
+%AS receives Shamir’s response from CS
+2.State=1 /\ RCV(AS.CiS6tm’.UNspn’.TScstm’)=|>
+State’:= 2/\UNspl’:=xor(UNspn’,xor(CiS6tm’,TScstm’))
+/\TScs’:=xor(TScstm’,xor(SNcs,UNopm))
+/\MS’:=xor(CiS6tm’,xor(Ssp,ASS1))
+/\request(AS,CS,auth3,{UNspm,UNopm,Nc,TSc,TSas})
+%AS creates data retrieval request
+/\SNas’:=new()/\TSas’:=new()
+/\ASS5’:={H(SNas’)}_inv(KASpu)
+/\ASS6’:={H(RNopm.UNopm.SNas’.TSas’.CiS4)}_inv(KASpu)
+/\RNopn’:=xor(RNopl,xor(TSas’,SNas’))
+/\ASS6tm’:=xor(ASS6’,xor(TSas’,ASS5’))
+/\TSctm’:=xor(TSc,xor(SNas’,UNoph))
+/\TSastm’:=xor(TSas’,xor(SNas’,UNopm))
+/\SNastm’:=xor(UNopm,xor(SNas’,xor(CiS4,ASS6tm’)))
+/\CiS4tm’:=xor(CiS4,xor(UNoph,xor(SNastm’,UNopm)))
+/\UNopn’:=xor(UNopl,xor(ASS6tm’,TSastm’))
+/\secret({SNas’,ASS5’,TSas’},sec9,{AS,DS})
+/\secret({RNoph,UNoph,ASS6’},sec10,{AS,DS})
+%AS sends data retrieval request to DS
+/\SND(DS.ASS6tm’.RNopn’.UNopn’.SNastm’.TSctm’.TSastm’.CiS4tm’)
+/\ witness(AS,DS,auth5,{CiS4,ASS6})
+%AS receives data retrieval response from DS
+3.State=2/\ RCV(AS.DS.DSS2tm’.DSS4tm’.UNopn’.TSdstm’
+.CiS4tm’.Data) =|> State’:=3
+/\UNopl’:=xor(UNopn’,xor(DSS2tm’,TSdstm’))
+/\TSds’:=xor(TSdstm’,xor(SNas,UNoph))
+/\CiS4’:=xor(CiS4tm’,xor(ASS5,TSds’))
+/\DSS4’:=xor(DSS4tm’,xor(ASS5,CiS4’))
+/\ASS6’:=xor(DSS2tm’,xor(DSS4’,xor(TSds’,ASS5)))
+/\ASS7’:={H(Data)}_inv(KDSpu)
+/\request(AS,DS,auth6,{SNas,ASS5,RNoph,UNoph})
+%AS creates decision & data response
+/\TSas’:=new()
+/\ASS2tm’:=xor(ASS2,xor(ASS1,xor(ASS7,CiS4)))
+/\ASS3tm’:=xor(ASS3,xor(ASS1,xor(ASS7,CiS4)))
+/\TSastm’:=xor(TSas’,xor(SNcs,UNopm))
+/\UNspn’:=xor(UNspl,xor(ASS2tm’,TSastm’))
+%AS sends data retrieval response (Data and Decision) to CS
+/\SND(CS.ASS2tm’.ASS3tm’.UNspn’.TSastm’.Decision.Data)
+/\witness(AS,CS,auth4,{SNcs,ASS1,CiS4,TScs})
+end role
+Figure A3. ASrole of PAX in HLPSL.role dataServer(DS,AS:agent,KDSpu,KASpu:public_key,
+H:hash_func,SND,RCV:channel(dy))
+played_by DS def=
+local
+State:nat,
+TSc,TSctm,TSas,TSastm,TSds,TSdstm,SNas,SNastm:text,
+OP,UNopl,UNopm,UNoph:text,
+RNopl,RNopm,RNoph,RNopn,UNopn:text,
+DSS1,DSS2,DSS3,DSS4:text,
+DSS2tm,DSS4tm,CiS4,CiS4tm,ASS6tm:text,
+Ci:agent,Data:text
+const Section~5,sec9,sec10,auth5,auth6:protocol_id
+init State := 0
+transition
+1.State = 0 /\ RCV(DS.ASS6tm’.RNopn’.UNopn’.SNastm’
+.TSctm’.TSastm’.CiS4tm’)=|>State’:=1
+/\UNopl’:=xor(UNopn’,xor(ASS6tm’,TSastm’))
+/\CiS4’:=xor(CiS4tm’,xor(UNoph,xor(SNastm’,UNopm)))
+/\SNas’:= xor(UNopm,xor(SNastm’,xor(CiS4’,ASS6tm’)))
+/\TSc’:=xor(TSctm’,xor(SNas’,UNoph))
+/\TSas’:=xor(TSastm’,xor(SNas’,UNopm))
+/\RNopl’:=xor(RNopn’,xor(TSas’,SNas’))
+/\DSS1’:={H(SNas’)}_inv(KASpu)
+/\DSS2’:={H(RNopm.UNopm.SNas’.TSas’.CiS4’)}_inv(KASpu)
+/\DSS3’:={H(RNoph.UNoph.TSc’)}_inv(KASpu)
+/\secret({OP,CiS4’},sec5,{DS,AS,Ci})
+/\secret({SNas’,DSS1’,TSas’},sec9,{DS,AS})
+/\secret({RNoph,UNoph,DSS2’},sec10,{DS,AS})
+/\request(DS,AS,auth5,{CiS4,DSS2})
+%DS Creates data retrieval response
+/\TSds’:=new()
+/\DSS4’:={H(Data)}_inv(KDSpu)
+/\DSS4tm’:=xor(DSS4’,xor(DSS1’,CiS4’))
+/\DSS2tm’:=xor(DSS2’,xor(DSS4’,xor(TSds’,DSS1’)))
+/\CiS4tm’:=xor(CiS4’,xor(DSS1’,TSds’))
+/\TSdstm’:=xor(TSds’,xor(SNas’,UNoph))
+/\UNopn’:=xor(UNopl’,xor(DSS2tm’,TSdstm’))
+%DS sends data retrieval response to AS
+/\SND(AS.DSS2tm’.DSS4tm’.UNopn’.TSdstm’.CiS4tm’.Data)
+/\ witness(DS,AS,auth6,{SNas,DSS1,RNoph,UNoph})
+end role
+Figure A4. DSrole of PAX in HLPSL.
+Figure A4. DSrole of PAX in HLPSL.
+Int. J. Environ. Res. Public Health 2019 ,16, 5 32 of 34
+role session(Ci,CS,AS,DS:agent,
+KCpu,KCSpu,KASpu,KDSpu:public_key,H:hash_func,
+S_ID,O_ID,S_R,O_R:message,Ssp,Sop:text)
+def=
+local SND1,RCV1,SND2,RCV2,SND3,RCV3,SND4,RCV4:channel(dy)
+composition
+clienti(Ci,CS,KCpu,KCSpu,H,S_ID,O_ID,S_R,O_R,SND1,RCV1)
+/\centralServer(CS,Ci,AS,KCSpu,KCpu,KASpu,H,SND2,RCV2)
+/\attributesServer(AS,CS,DS,KASpu,KCSpu,KDSpu,Ssp,Sop,
+H,SND3,RCV3)
+/\dataServer(DS,AS,KDSpu,KASpu,H,SND4,RCV4)
+end~role
+role environment()
+def=
+const
+ci,cs,as,ds,i:agent,
+kCpu,kCSpu,kASpu,kDSpu,ki:public_key,
+s_id,o_id,s_r,o_r:message,ssp,sop:text,
+h:hash_func,sec1,sec2,sec3,sec4,sec5,sec6,sec7,sec8,sec9,sec10,
+auth1,auth2,auth3,auth4,auth5,auth6,auth7,auth8:protocol_id
+intruder_knowledge={i,ci,cs,as,kCpu,kCSpu,kASpu,kDSpu,ki,inv(ki)}
+composition
+session(ci,cs,as,ds,kCpu,kCSpu,kASpu,kDSpu,h,s_id,o_id,s_r,
+o_r,ssp,sop)
+%Check replay attack
+/\session(ci,cs,as,ds,kCpu,kCSpu,kASpu,kDSpu,h,s_id,o_id,s_r,
+%o_r,ssp,sop)
+%Check MITM attack
+%/\session(cs,ci,as,ds,kCSpu,kCpu,kASpu,kDSpu,h,s_id,o_id,s_r,
+%o_r,ssp,sop)
+%Check impersonate Ci
+%/\session(i,cs,as,ds,ki,kCSpu,kASpu,kDSpu,h,s_id,o_id,s_r,
+%o_r,ssp,sop)
+%Check impersonate CS
+%/\session(ci,i,as,ds,kCpu,ki,kASpu,kDSpu,h,s_id,o_id,s_r,
+%o_r,ssp,sop)
+%Check impersonate AS
+%/\session(ci,cs,i,ds,kCpu,kCSpu,ki,kDSpu,h,s_id,o_id,s_r,
+%o_r,ssp,sop)
+%Check impersonate DS
+%/\session(ci,cs,as,i,kCpu,kCSpu,kASpu,ki,h,s_id,o_id,s_r,
+%o_r,ssp,sop)
+end~role
+goal
+secrecy_of Section~1,sec2,sec3,sec4,sec5,sec6,sec7,sec8,sec9,sec10
+authentication_on auth1,auth2,auth3,auth4,auth5,auth6,auth7,auth8
+end goal
+environment()
+Figure A5. Session, environment, and goal role of PAX in HLPSL.
+References
+1. Anjum, A., Choo, K.-K. R., Khan, A., Haroon, A., Khan, S., Khan, S. U., Ahmad, N., Raza, B. et al. (2018). An
+efﬁcient privacy mechanism for electronic health records. computers & security ,72, 196–211.
+2. Gajanayake, R., Iannella, R., & Sahama, T. (2014). Privacy oriented access control for electronic health records.
+Electronic Journal of Health Informatics ,8, 15.
+3. Al-Zubaidie, M., Zhang, Z., & Zhang, J. (2019). Ramhu: A new robust lightweight scheme for mutual users
+authentication in healthcare applications. Security and Communication Networks ,2019 , 1–26.
+4. Calvillo-Arbizu, J., Roman-Martinez, I., & Roa-Romero, L. M. (2014). Standardized access control
+mechanisms for protecting ISO 13606-based electronic health record systems. In Biomedical and Health
+Informatics (BHI), 2014 IEEE-EMBS International Conference on (pp. 539–542). IEEE.
+5. Alhaqbani, B., & Fidge, C. (2008). Privacy-preserving electronic health record linkage using pseudonym
+identiﬁers. In E-health Networking, Applications and Services, 2008. HealthCom 2008. 10th International Conference
+on(pp. 108–117). IEEE.
+6. Riedl, B., Grascher, V ., Fenz, S., & Neubauer, T. (2008). Pseudonymization for improving the privacy in
+e-health applications. In Hawaii International Conference on System Sciences, Proceedings of the 41st Annual (pp.
+255–255). IEEE.
+7. Neubauer, T., & Heurix, J. (2011). A methodology for the pseudonymization of medical data. International
+Journal of Medical Informatics ,80, 190–204.
+8. Quantin, C., Jaquet-Chiffelle, D.-O., Coatrieux, G., Benzenine, E., & Allaert, F.-A. (2011). Medical record
+search engines, using pseudonymised patient identity: An alternative to centralised medical records.
+International Journal of Medical Informatics ,80, e6–e11.
+Figure A5. Session, environment, and goal role of PAX in HLPSL.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 34 of 36
+References
+1. Anjum, A.; Choo, K.-K.R.; Khan, A.; Haroon, A.; Khan, S.; Khan, S.U.; Ahmad, N.; Raza, B. An efﬁcient
+privacy mechanism for electronic health records. Comput. Secur. 2018 ,72, 196–211. [CrossRef]
+2. Gajanayake, R.; Iannella, R.; Sahama, T. Privacy oriented access control for electronic health records.
+Electron. J. Health Inform. 2014 ,8, 15.
+3. Al-Zubaidie, M.; Zhang, Z.; Zhang, J. Ramhu: A new robust lightweight scheme for mutual users
+authentication in healthcare applications. Secur. Commun. Netw. 2019 ,2019 , 1–26. [CrossRef]
+4. Calvillo-Arbizu, J.; Roman-Martinez, I.; Roa-Romero, L.M. Standardized access control mechanisms for
+protecting ISO 13606-based electronic health record systems. In Proceedings of the 2014 IEEE-EMBS
+International Conference on Biomedical and Health Informatics (BHI), Valencia, Spain, 1–4 June 2014;
+pp. 539–542.
+5. Alhaqbani, B.; Fidge, C. Privacy-preserving electronic health record linkage using pseudonym identiﬁers.
+In Proceedings of the 10th International Conference on E-Health Networking, Applications and Services,
+Singapore, 7–9 July 2008; pp. 108–117.
+6. Riedl, B.; Grascher, V .; Fenz, S.; Neubauer, T. Pseudonymization for improving the privacy in e-health
+applications. In Proceedings of the 41st Annual Hawaii International Conference on System Sciences,
+Waikoloa, HI, USA, 7–10 January 2008; p. 255.
+7. Neubauer, T.; Heurix, J. A methodology for the pseudonymization of medical data. Int. J. Med. Inform. 2011 ,
+80, 190–204. [CrossRef] [PubMed]
+8. Quantin, C.; Jaquet-Chiffelle, D.-O.; Coatrieux, G.; Benzenine, E.; Allaert, F.-A. Medical record search engines,
+using pseudonymised patient identity: An alternative to centralised medical records. Int. J. Med. Inform.
+2011 ,80, e6–e11. [CrossRef]
+9. Sun, J.; Zhu, X.; Zhang, C.; Fang, Y. HCPP: Cryptography based secure EHR system for patient privacy and
+emergency healthcare. In Proceedings of the 2011 31st International Conference on Distributed Computing
+Systems (ICDCS), Minneapolis, MN, USA, 20–24 June 2011; pp. 373–382.
+10. Riedl, B.; Grascher, V .; Neubauer, T. Applying a threshold scheme to the pseudonymization of health data.
+In Proceedings of the 13th Paciﬁc Rim International Symposium on Dependable Computing, Melbourne,
+Australia, 17–19 December 2007; pp. 397–400.
+11. Rezaeibagha, F.; Win, K.T.; Susilo, W. A systematic literature review on security and privacy of electronic
+health record systems: Technical perspectives. Health Inf. Manag. J. 2015 ,44, 23–38. [CrossRef]
+12. Wimalasiri, J.S.; Ray, P .; Wilson, C. Security of electronic health records based on web services. In Proceedings
+of the 7th International Workshop on Enterprise Networking and Computing in Healthcare Industry, Busan,
+Korea, 24–25 June 2005; pp. 91–95.
+13. Koczkodaj, W.W.; Mazurek, M.; Strzałka, D.; Wolny-Dominiak, A.; Woodbury-Smith, M. Electronic health
+record breaches as social indicators. Soc. Indic. Res. 2019 ,141, 864–871. [CrossRef]
+14. U.S. Department of Health and Human Services Breaches Affecting 500 or More Individuals. 2018. Available
+online: https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf# (accessed on 2 December 2018).
+15. Fernández-Alemán, J.L.; Señor, I.C.; Lozoya, P .Á.O.; Toval, A. Security and privacy in electronic health
+records: A systematic literature review. J. Biomed. Inform. 2013 ,46, 541–562. [CrossRef] [PubMed]
+16. Chadwick, D.; Zhao, G.; Otenko, S.; Laborde, R.; Su, L.; Nguyen, T.A. Building a modular authorisation
+infrastructure. In The UK E-Science All Hands Meeting ; University of Kent: Canterbury, UK, 2006.
+17. Jo, S.-M.; Chung, K.-Y. Design of access control system for telemedicine secure XML documents. Multimed.
+Tools Appl. 2015 ,74, 2257–2271. [CrossRef]
+18. Seol, K.; Kim, Y.-G.; Lee, E.; Seo, Y.-D.; Baik, D.-K. Privacy-preserving attribute-based access control model
+for xml-based electronic health record system. IEEE Access 2018 ,6, 9114–9128. [CrossRef]
+19. Dolev, D.; Yao, A. On the security of public key protocols. IEEE Trans. Inf. Theory 1983 ,29, 198–208.
+[CrossRef]
+20. Sánchez, Y.K.R.; Demurjian, S.A.; Baihan, M.S. Achieving rbac on restful apis for mobile apps using
+fhir. In Proceedings of the 2017 5th IEEE International Conference on Mobile Cloud Computing, Services,
+and Engineering (MobileCloud), San Francisco, CA, USA, 6–8 April 2017; pp. 139–144.
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 35 of 36
+21. Alturki, M. Achieving a secured collaborative environment in e-sihi system users perspective on a framework
+to improve patients information. In Proceedings of the International Conference on Informatics, Health &
+Technology (ICIHT), Riyadh, Saudi Arabia, 21–23 February 2017; pp. 1–4.
+22. Jin, X.; Krishnan, R.; Sandhu, R.S. A uniﬁed attribute-based access control model covering DAC, MAC and
+RBAC. DBSec 2012 ,12, 41–55.
+23. Zhang, Y.; Zhang, B. A new testing method for xacml 3.0 policy based on abac and data ﬂow. In Proceedings
+of the 2017 13th IEEE International Conference on Control & Automation (ICCA), Ohrid, Macedonia, 3–6 July
+2017; pp. 160–164.
+24. Brossard, D.; Gebel, G.; Berg, M. A systematic approach to implementing abac. In Proceedings of the 2nd
+ACM Workshop on Attribute-Based Access Control, Scottsdale, AZ, USA, 24 March 2017; pp. 53–59.
+25. Lu, Y.; Sinnott, R.O. Semantic privacy-preserving framework for electronic health record linkage.
+Telemat. Inform. 2018 ,35, 737–752. [CrossRef]
+26. Grace, P .; Surridge, M. Towards a model of user-centered privacy preservation. In Proceedings
+of the 12th International Conference on Availability, Reliability and Security, Reggio Calabria, Italy,
+29 August–1 September 2017; p. 91.
+27. Beltran, V .; Martinez, J.; Skarmeta, A. User-centric access control for efﬁcient security in smart cities.
+In Proceedings of the Global Internet of Things Summit (GIoTS), Geneva, Switzerland, 6–9 June 2017;
+pp. 1–6.
+28. Turkmen, F.; den Hartog, J.; Ranise, S.; Zannone, N. Formal analysis of xacml policies using smt.
+Comput. Secur. 2017 ,66, 185–203. [CrossRef]
+29. Deng, F.; Wang, S.; Zhang, L.; Wei, X.; Yu, J. Establishment of attribute bitmaps for efﬁcient xacml policy
+evaluation. Knowl. Based Syst. 2018 ,143, 93–101. [CrossRef]
+30. Han, J.-H.; Kim, Y.-J.; Jun, S.-I.; Chung, K.-I.; Seo, C.-H. Implementation of ECC/ECDSA cryptography
+algorithms based on Java card. In Proceedings of the 22nd International Conference on Distributed
+Computing Systems Workshops, Vienna, Austria, 2–5 July 2002; pp. 272–276.
+31. Raﬁk, M.B.O.; Mohammed, F. The impact of ECC’s scalar multiplication on wireless sensor networks.
+In Proceedings of the 2013 11th International Symposium on Programming and Systems (ISPS), Algiers,
+Algeria, 22–24 April 2013; pp. 17–23.
+32. Sghaier, A.; Zeghid, M.; Machhout, M. Fast hardware implementation of ecdsa signature scheme.
+In Proceedings of the International Symposium on Signal, Image, Video and Communications (ISIVC),
+Tunis, Tunisia, 21–23 November 2016; pp. 343–348.
+33. Dikshit, P .; Singh, K. Efﬁcient weighted threshold ecdsa for securing bitcoin wallet. In Proceedings of the
+Asia Security and Privacy (ISEASP), Surat, India, 29 January–1 February 2017; pp. 1–9.
+34. Sojka-Piotrowska, A.; Langendoerfer, P . Shortening the security parameters in lightweight wsn applications
+for iot-lessons learned. In Proceedings of the 2017 IEEE International Conference on Pervasive Computing
+and Communications Workshops (PerCom Workshops), Kona, HI, USA, 13–17 March 2017; pp. 636–641.
+35. Dou, Y.; Weng, J.; Ma, C.; Wei, F. Secure and efﬁcient ecc speeding up algorithms for wireless sensor networks.
+Soft Comput. 2017 ,21, 5665–5673. [CrossRef]
+36. Liu, Y.; Yang, C.; Wang, Y.; Zhu, L.; Ji, W. Cheating identiﬁable secret sharing scheme using symmetric
+bivariate polynomial. Inf. Sci. 2018 ,453, 21–29. [CrossRef]
+37. Ahmadian, Z.; Jamshidpour, S. Linear subspace cryptanalysis of harn’s secret sharing-based group
+authentication scheme. IEEE Trans. Inf. Forensics Secur. 2018 ,13, 502–510. [CrossRef]
+38. Stinson, D.R.; Wei, R. Combinatorial repairability for threshold schemes. Des. Codes Cryptogr. 2018 ,86, 195–210.
+[CrossRef]
+39. Zhou, J.; Cao, Z.; Dong, X.; Vasilakos, A.V . Security and privacy for cloud-based iot: Challenges.
+IEEE Commun. Mag. 2017 ,55, 26–33. [CrossRef]
+40. Vatsalan, D.; Sehili, Z.; Christen, P .; Rahm, E. Privacy-preserving record linkage for big data: Current
+approaches and research challenges. In Handbook of Big Data Technologies ; Springer: Berlin/Heidelberg,
+Germany, 2017; pp. 851–895.
+41. Yu, S. Big privacy: Challenges and opportunities of privacy study in the age of big data. IEEE Access 2016 ,
+4, 2751–2763. [CrossRef]
+42. Bogos, S.; Gaspoz, J.; Vaudenay, S. Cryptanalysis of a homomorphic encryption scheme. Cryptogr. Commun.
+2018 ,10, 27–39. [CrossRef]
+Int. J. Environ. Res. Public Health 2019 ,16, 1490 36 of 36
+43. Burrows, M.; Abadi, M.; Needham, R.M. A logic of authentication. Proc. R. Soc. Lond. A 1989 ,426, 233–271.
+[CrossRef]
+44. Mahmood, K.; Chaudhry, S.A.; Naqvi, H.; Kumari, S.; Li, X.; Sangaiah, A.K. An elliptic curve cryptography
+based lightweight authentication scheme for smart grid communication. Future Gener. Comput. Syst. 2018 ,
+81, 557–565. [CrossRef]
+45. Amin, R.; Islam, S.H.; Biswas, G.; Khan, M.K.; Kumar, N. A robust and anonymous patient monitoring
+system using wireless medical sensor networks. Future Gener. Comput. Syst. 2018 ,80, 483–495. [CrossRef]
+46. Team, T.A. Avispa v1.1 User Manual. 2006. Available online: http://www.avispa-project.org (accessed on
+10 September 2018).
+47. Iqbal, U.; Shaﬁ, S. A provable and secure key exchange protocol based on the elliptical curve diffe–hellman for
+wsn. In Advances in Big Data and Cloud Computing ; Springer: Berlin/Heidelberg, Germany, 2019; pp. 363–372.
+48. Gupta, S.; Parne, B.L.; Chaudhari, N.S. An efﬁcient handover aka protocol for wireless network using
+chameleon hash function. In Proceedings of the 2018 4th International Conference on Recent Advances in
+Information Technology (RAIT), Dhanbad, India, 15–17 March 2018; pp. 1–7.
+49. Babu, K.R.; Padmanabhan, V . Automated validation of dnssec. In Progress in Computing, Analytics and
+Networking ; Springer: Berlin/Heidelberg, Germany, 2018; pp. 51–59.
+50. Xu, G.; Liu, J.; Lu, Y.; Zeng, X.; Zhang, Y.; Li, X. A novel efﬁcient maka protocol with desynchronization for
+anonymous roaming service in global mobility networks. J. Netw. Comput. Appl. 2018 ,107, 83–92. [CrossRef]
+51. Dey, S.; Hossain, A. Session-key establishment and authentication in a smart home network using public key
+cryptography. IEEE Sens. Lett. 2019 . [CrossRef]
+52. Das, A.K.; Sutrala, A.K.; Odelu, V .; Goswami, A. A secure smartcard-based anonymous user authentication
+scheme for healthcare applications using wireless medical sensor networks. Wirel. Pers. Commun. 2017 ,
+94, 1899–1933. [CrossRef]
+©2019 by the authors. Licensee MDPI, Basel, Switzerland. This article is an open access
+article distributed under the terms and conditions of the Creative Commons Attribution
+(CC BY) license (http://creativecommons.org/licenses/by/4.0/).

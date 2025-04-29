@@ -1,0 +1,886 @@
+Pseudonymization for improving the Privacy
+in e-Health Applications
+Bernhard Riedl, Veronika Grascher, Stefan Fenz, Thomas Neubauer
+Secure Business Austria
+Vienna, Austria
+Email: riedl, grascher, fenz, neubauer@securityresearch.ac.at
+Abstract — Electronic health records (EHR) promise to improve
+communication between health care providers, thus leading tobetter quality of patients’ treatment and reduced costs. Ashighly sensitive patient information provides a promising goal
+for attackers and is also demanded by insurance companies
+and employers, there is an increasing social and politicalpressure regarding the prevention of health data misuse. Thispaper presents a detailed description of the new system PIPE(Pseudonymization of Information for Privacy in e-Health) whichdiffers from existing approaches in its ability to securely integrateprimary and secondary usage of health data. Therefore, PIPEprovides a solution to shortcomings of existing approaches. Ourapproach may be used as a basis for implementing secure EHRarchitectures or as an extension to existing systems.
+I. I NTRODUCTION
+In our today’s health care system, the availability of sound
+information has tremendous impact on the decision regarding
+the patients’ care and thus on the quality of treatment andpatients’ health. In this context, electronic health records
+(EHR) were introduced over the past several years as a method
+for improving communication between health care providersand access to data and documentation, leading to better clinical
+and service quality [1]. The EHR promises the reduction of
+adverse drug events (ADR) accounting for about $175 billiona year in the US [2] and for the very high number of more than
+200.000 cases of death a year in the US [3] as it provides the
+physicians and their health care team [4] with decision support
+systems and guidelines for drug interactions. Further the EHR
+promises massive savings by digitizing diagnostic tests andimages. A study by the nonproﬁt research organization Rand
+Corporation found out that adopting the EHR could result in
+more than $81 billion in annual savings in the US, if 90% ofthe health care providers used it [3].
+However, the discussion of privacy is one of the funda-
+mental issues in health care today and a trade-off between the
+patient’s requirement for privacy as well as the society’s needs
+for improving efﬁciency and reducing costs of the health caresystem. With informative and interconnected health-related
+data comes highly sensitive and personal information. As a
+result of the high sensitivity, there is an increasing socialand political pressure to prevent the misuse of health data.
+On the one hand it is a fundamental right of every citizen
+to demand privacy and on the other hand the disclosure ofmedical data may cause serious problems for the patient.
+Insurance companies or employers could use this informationto deny health coverage or employment. The disclosure of
+sensitive data, such as the history about substance abuse orHIV infection, could result in discrimination or harassment. In
+addition to social and political pressure, legal acts demand the
+protection of health data. Regarding the individual’s privacy,historically the phrase ”to be let alone”, deﬁned at the US
+Supreme Court in 1834, became famous. In 2006 the United
+States Department of Health & Human Service Health issuedthe Insurance Portability and Accountability Act (HIPAA)
+[5] which demands the protection of patients data that is
+shared from its original source of collection. Since 2005 the
+processing and movement of personal data is legally regulated
+by the EU with the Directive 95/46/EC [6]. A citizen’s rightof privacy is also recognized in the Article 8 [7] of the
+European Convention for the Protection of Human Rights
+and Fundamental Freedoms. Additionally, in the EU manydomestic acts (e.g., the Austrian Data Protection Act [8])
+dictate strict regulations on the processing of personal data.
+Along with the improvement of interconnection, the increas-
+ing fear of data abuse as well as the adoption of laws lead
+to the development of a variety of techniques for protecting
+patients’ identity and privacy. One possibility to assure pa-tients’ privacy is to encrypt the anamnesis data. As medical
+data tends to be very large (e.g., the image size of a x-ray
+is 6 MB, for a mammogram 24 MB [9] or for a computertomography scan counts up to hundreds of MB [10]) and
+encryption is a highly time-consuming operation, the process
+to encrypt all data would not be manageable. As a conse-
+quence, several authors propose the usage of pseudonyms for
+privacy protection. The concept of pseudonymization (cf. [11],[12]) allows an association with a patient only under speciﬁed
+and controlled circumstances. Existing approaches (cf. [13]–
+[18]) have shortcomings like for example centralized patient-pseudonyms lists or the concealment of the applied algorithms.
+We will discuss these shortcomings in the Related Work
+section.
+This publication presents a detailed description of PIPE
+(Pseudonymization of Information for Privacy in e-Health), a
+new system that differs from existing approaches in its abilityto securely integrate primary and secondary usage (cf. [17]–
+[19]) of health data and thus provides a solution to security
+shortcomings of existing approaches. Moreover, it contains anew concept for data sharing, authorization and data recovery
+in case the user loses her access key. This approach can be
+used as a basis for implementing secure EHR architectures or
+as an extension to existing systems.
+II. R ELATED WORK
+Pseudonymization is a technique where identiﬁcation data
+is transformed into a and afterwards replaced by a speciﬁer
+which can not be associated with the identiﬁcation data with-out knowing a certain secret [11], [12], [20]. As it is necessary
+for privacy reasons to avoid storing any personal information
+with the pseudonymized dataset, a pseudonymized databasehas to contain at least two tables, one where all the personal
+information is hold persistent, and another which keeps the
+pseudonyms and the pseudonymized data. The process ofidentifying and separating personal from related data is called
+depersonalization [21]. After depersonalization and subsequent
+pseudonymization, a direct association between certain per-
+sons and their data cannot be established. Algorithms for
+calculating the pseudonym may be based on encrypting orhashing techniques [22]. The latter demands to store a list
+where all pseudonyms are kept in order to assure reversibility
+[17], [18], [23], but relying on the use of a list is not secure,as an attacker, who gains access to this list, could establish
+an unauthorized relation between the identiﬁcation and the
+medical data of a speciﬁc patient. Encryption provides amore secure alternative for building pseudonyms. For using
+encryption with a symmetric algorithm (e.g., AES [24]) a
+secret key, for the asymmetric alternative a key-pair (e.g., RSA[25], ECC [26]), is needed.
+As demanded by Kerckhoffs’ principle [27] only the keys
+have to be kept secret, whereas the applied algorithms areaccessible. Hence, a major requirement for a secure system is
+that keys have to be shared with as few people as possible,
+preferable with nobody. Nowadays it is a common practiceto store keys on smart cards [28], [29]. They are equipped
+with a small logic chip in order to conduct cryptographic
+operations without the need to process data on open systemslike a standard client, for example a personal computer. This
+technique in combination with a certiﬁed card reader assures
+conﬁdentiality and integrity (cf. [30] for a security taxonomy)of sensitive data during encryption and decryption. In other
+words, after authenticating against the smart card by entering
+a PIN, data is transfered to the card reader and afterwardsprocessed on the card’s cryptochip. If the PIN is only accessi-
+ble to the cardholder, this technique can be considered secure
+[28], [29].
+However, as smart cards may be lost, stolen, destroyed or
+compromised, it is a system’s requirement to provide a fall-
+back mechanisms that allows recovering the key in order to re-establish access to the data which has been encrypted with the
+smart card. One approach is to keep all keys centralized within
+the system in a backup keystore which needs to be secureditself. Role-based access control (RBAC) models could be
+used for handling the authorization and authentication tasks
+of the backup keystore, but as role-based access controlmodels can be by-passed or compromised [31], [32], a high
+level of security can only be established by encrypting thekeystore itself [20]. Nevertheless, persons with administrative
+roles have to be granted access to the backup keystore for
+maintenance purposes [14], [20]. Therefore, this techniquedoes not provide enough security for sensitive health data,
+because attacks could be performed by people working inside
+the system, e.g., by social engineering attacks [33]. In orderto mitigate this vulnerability, threshold schemes [34] allowing
+to share keys between multiple administrators can be used.
+Another shortcoming of existing systems is the patients’
+dependence on a single pseudonym. If a patient only holds
+one pseudonym, an attacker who gains access to the databasecould use data mining [35] for identifying relations between
+medical data and the patient. Exemplarily, only a group of
+patients might have had a knee operation in a speciﬁc timeslot. Moreover, perhaps only a few people of this group had
+been treated at a certain hospital and only one of them has
+seen her dentist a couple of days around the knee operation.Hence, as it is possible to conclude the identity of a person by
+combining single occurrences of her medical data, the usage
+of pseudonymization can only be considered secure if enoughdisjointed pseudonyms exist.
+Several approaches for securing EHR architectures have
+been propsed. The system published by Thielscher et al.
+(cf. [14]) is based on decentralized keys stored on smart
+cards. Their approach consists of two databases, one for thepatient’s identiﬁcation and one for the anamnesis data. The
+relation between a certain patient and her datasets can only
+be established by applying the necessary secret key on thesmart card in order to generate the unique identiﬁer. The
+system allows to authorize health care providers (HCP) to
+access speciﬁc anamnesis datasets. The major shortcomingof this systems is the dependence on a centralized patients-
+pseudonyms list, which provides a fall-back mechanism in
+case a patient looses her smart card because otherwise therewould be no possibility to recover the mentioned identiﬁer.
+Thielscher et al. circumvent this security ﬂaw by operating the
+patients-pseudonyms list off-line. This organizational work-around promises a higher level of security until a social-
+engineering attack is conducted on a system’s insider [33],
+[36] or an attacker gets physical access to the computer which
+holds this list. Pommerening et al. contributed two different
+approaches (cf. [17], [18]), which are both similar to thesystem of Thielscher et al. Their architecture, which is only
+applicable for the secondary use of medical data in research
+centers, is a combination of a hashing and an encryptiontechnique. The encryption itself is based on a centralized secret
+key, which opens a vulnerability, because if an attacker knows
+this single key, she might gain access to all patients’ relatedmedical data. The approach of Peterson [13] is also based on
+a centralized table, which is used for reidentiﬁcation purposes.
+This table which is, from a security point of view, comparableto the approaches of Pommerening or Thielscher relies on the
+same weak point, because a centralized list is attackable from
+in- or outside the system. In other words, it is a promising goalfor any attacker. In 2001 another architecture was proposed by
+Schmidt et al. [37]. The underlying security of this system
+is mainly based on encryption. Consequently the data is
+completely or partially encrypted, which in our opinion is too
+time-consuming to be applied for storing medical images.
+Based on the mentioned security techniques and their short-
+comings presented in this chapter, we deﬁne the followingdemands for a system that allows the secure pseudonymization
+of health care records:
+1) Use depersonalization to divide all patient related in-
+formation into two different tables or databases [21],
+one for the personal data and the second one for
+the anamnesis. This provides the basis for applyingpseudonymization as conﬁdentiality technique.
+2) Replace the foreign key in the anamnesis database,
+which is related to speciﬁc persons, with a pseudonym[12], [22] to assure the patient’s privacy.
+3) To avoid data mining, every dataset combination of
+patient, HCP and anamnesis should be deﬁned with aunique pseudonym [20]. For the same reason it is im-
+portant to hide any relation between interacting persons.
+4) Secure the keys to form pseudonyms and not the algo-
+rithm as demanded by Kerckhoff’s principle [27].
+5) Apply a threshold scheme, to share secrets like keys
+[34]. Moreover, conceal the association between the pa-
+tients and their responsible administrators. This demand
+assures that no single person is able to unveil a certainperson’s identity.
+6) Following the previous requirement, the number of ad-
+ministrators [34], which are assigned to hold a certainperson’s backup key and the number of administrators,
+which are necessary to act together to unveil the secret
+should be balanced.
+7) Use role-based access control models only if it is
+not possible to control the access rights for a certain
+pseudonym by sharing encrypted secrets (e.g., keys orhidden relations) to access certain pseudonyms, because
+latter currently is the highest security level [20].
+8) Provide the patient with the possibility to decide which
+datasets she wants to share by forming an unique
+pseudonym for the patient herself as well as for anypatient-health care provider-anamnesis combination. In
+addition, hand over all rights to authorize or revoke
+persons, as far as possible as well as according to thelegal situation [5]–[8], to assure that the patient is in full
+control of her data.
+The following section introduces the generalized workﬂows
+of our prototype based on the demands stated in the enumer-
+ation above.
+III. S
+YSTEM OVERVIEW
+PIPE consists of users U, which are mapped to the roles
+patient, relative, health care provider and operator. The patient(A), as the owner of her data, is in full control of her
+datasets. Every patient may give one or more relatives ( B)
+the right to access all of her anamnesis data. A health careprovider or medical staff group ( C) can be authorized to see
+or create a subset of the anamnesis data by the patient. Theoperators ( O), as we named our administrative roles, share the
+secrets of the patients to provide a fall-back mechanism for
+lost, compromised or destroyed smart cards. Table 1 gives anoverview of the keys and abbreviations used to describe our
+system. Note, that all private keys (where Kstands for key)
+are identiﬁed as K
+−1, for example the patient’s inner private
+key will be named /hatwideK−1
+A. All data is held persistent in the
+storage St, which represents the database as well as a secured
+keystore. In practice the logic L, and the storage St, which
+might be outsourced to a data processing center, have to form
+a trusted instance, because smart card management is handledthere.
+As shown in ﬁgure 1, PIPE is based on a hull-architecture
+[20], [38]. Every hull consists of one or more secrets (e.g.,
+encrypted keys or hidden relations) which are only accessible
+with the unveiled secrets from the next outer hull. For instance
+the patient’s inner private key /hatwideK
+−1
+Ain the inner hull — or user
+permissions layer of the patient A— is encrypted with the
+outer public key KAon her smart card, which represents the
+outer hull or authentication layer. A speciﬁc anamnesis dataset
+ϕi, which is associated with a list of jpseudonyms ψij, can
+only be accessed with the knowledge of the related secret,
+which has been encrypted with the inner symmetric key KA.
+As the inner symmetric key has been preliminary encryptedwith the inner public key, this encryption operation has to
+be reversed to gain access to this key in plain-text. In other
+words, if a patient wants to access her data, she has to decrypther inner private key /hatwideK
+−1
+A, which is stored encrypted inside
+the system with the outer public key KAof her smart card.
+Afterwards, she is able to decrypt the inner symmetric key KA
+with her inner private key and can use the inner symmetric
+key, which is now available for her in plain-text, to access the
+encrypted secrets in the most inner hull – the concealed data
+hull – by decrypting them. Consequently, to get access to the
+data, every user has to ’peel the hulls’.
+In our system PIPE, secrets can be shared between users
+for authorization purposes. First of all, a patient can providea relative with her inner private key /hatwideK
+−1
+A, which will then
+be encrypted with the relative’s symmetric key KB. By doing
+this, the relative gets access to all data of the patient, until
+the inner private key is changed. Moreover, a health care
+provider can be authorized to access a subset of anamnesisdatasets by sharing secrets, in our approach pseudonyms, of
+the concealed hull. A special case of a pseudonym, a so-
+called root pseudonym ψ
+i0exists for every dataset. This root
+pseudonym is only related with the patient and the anamnesis
+and no other user than the patient herself is able to delete
+this pseudonym. All other pseudonyms may be removed fromthe storage without authorized users permission. For example
+if two health care providers are related to see a speciﬁc
+anamnesis, three pseudonyms exist, whereas both pseudonymswhich are shared between a patient and a health care provider
+may be deleted without the particular health care providers
+notiﬁcation. If the patient decides to delete the anamnesisdataset, she is the only user, for whom it is possible to delete
+all pseudonyms. This assures that the patient is in full control
+Patient Relative HCP Operator Logic
+abbreviation ABCOL
+unique identiﬁer Aid Bid Cid Oid
+(outer public key, private key) (KA,K−1
+A)(KB,K−1
+B)(KC,K−1
+C)(KO,K−1
+O)
+(inner public key, private key) (/hatwideKA,/hatwideK−1
+A)(/hatwideKB,/hatwideK−1
+B)(/hatwideKC,/hatwideK−1
+C)(/hatwideKO,/hatwideK−1
+O)
+inner symmetric key KA KB KC KO KL
+key share σκ(K)
+medical data / anamnesis ϕi
+pseudonym ψij
+tags τv
+TABLE I
+DEFINITION OF SYSTEM ATTRIBUTES
+of her data, and authorizing as well as revoking of all users is
+possible at any time, as for example deﬁned by European Law.
+In case other legal acts demand that the health care providershould be the owner of the patient’s data, the HCP could hold
+the root pseudonym on behalf of the patient. Moreover a rule
+could be added to our role-based access control model, which
+veriﬁes, if a patient should be able to revoke rights of certain
+persons or institutions for a speciﬁc anamnesis.
+In the following sections, we introduce the necessary op-
+erations and constraints to conduct the workﬂows of our ap-
+proach. Furthermore, we show how authorizing and revokingof users works.
+A. Establishing a Backup Keystore
+We already mentioned that the need exists to assure that
+users still have access to their data if they lose their smartcards. In our system we provide an appropriate fall-back
+mechanism by sharing the user’s inner private key, which
+grants access to the inner symmetric key and the pseudonyms.
+For instance, a relative could hold another encrypted version of
+the user’s inner private key and, thus, would get the same rightsas the user herself, if not controlled by a role-based access
+control model. Maybe someone does not want to grant access
+to all data to a certain relative. The demand arises to store abackup of the necessary keys inside the system. This would
+also ease recovering keys and issuing new smart cards. Due
+to security reasons, these secrets have to be divided betweenmore persons.
+In our prototype, we applied Shamir’s threshold scheme
+[34] to divide the user’s inner private key /hatwideK
+−1
+Ainton
+shares σκ(/hatwideK−1
+A). At least kof these nshares are necessary
+to reconstruct the whole key. The nshares are randomly
+distributed amongst all operators, which we therefore deﬁne
+as assigned operators. As any assigned operator may only hold
+a maximum of one share of a certain user’s key, knecessary
+operators for every user exist that have to act together to unveil
+her key. This difference between nassigned and knecessary
+operators provides a fall-back mechanism and thus increasesthe availability of the system (cf. [30] for a security taxonomy)
+because one operator could be impeded from using his smart
+card. We named the set of assigned operators O
+n⊂O and the
+subset of necessary operators Ok⊆On. Following Shamir
+[34] it is not possible to combine k−1shares to computethe key, but if an attacker is able to bribe b≥koperators,
+she may succeed in unveiling a certain user’s identity. We
+state the probability of guessing the necessary operators fora speciﬁc user under the condition that the operators do not
+know for whom they are holding shares in equation (1), which
+is hypergeometrically distributed.
+P(k≤X≤n)= n/summationdisplay
+κ=k/parenleftbign
+κ/parenrightbig/parenleftbig|O|− n
+b−κ/parenrightbig
+/parenleftbig|O|
+b/parenrightbig (1)
+Using this equation leads to the following conclusions: (i)
+The larger the group of operators, the lower the probabilitythat an attacker could bribe the assigned operators to ﬁnd
+out a certain patient’s identity. (ii) The lower the minimum
+of operators necessary to unveil the secret compared to the
+number of operators assigned to a certain patient, the higher
+the probability for a misuse of the system. If the operatorsdo not know for which person they share secrets, an attacker
+has to compromise (in worst case) all operators minus the
+difference between the number of assigned and necessaryoperators to get access to a secret of a speciﬁc person.
+In order to conceal the relation between operators and
+patients, the system encrypts the secret shares σ
+κ(/hatwideK−1
+A)with
+its logic key KLand the inner public keys /hatwideKOof the operators.
+As the operator can unveil the relation solely under the
+condition that she knows KL, but still needs more operators
+to rebuild the shared secret, the possibility for arrangementsbetween the operators is lowered.
+In the upcoming section we provide the workﬂow of recov-
+ering a lost, destroyed or worn-out smart card.
+B. Recover Lost Smart Card
+With the deﬁned constraints of the last paragraphs, we now
+present how recovering of a lost smart card works. Firstly, the
+user identiﬁes against an operator and informs her to issue anew smart card. It is not mandatory, that the contacted operator
+has to hold a part of the inner private key of this user. Indeed
+she just starts the recovering process, by sending a messageto the logic. The logic initiates a broadcasts to all operators
+Oafter encrypting the patient’s identiﬁer A
+idwith the logic
+keyKL. All operators look up their backup keystore by ﬁrstly
+encrypting the already encrypted patient’s identiﬁer with the
+particular operator’s inner symmetric key KOto query the
+Fig. 1. PIPE security hull architecture
+storage via the logic to see which one possesses a shared
+secret of the user’s key. Any part which is available will be
+sent — after decrypting with the operators’ symmetric key
+KO— to the logic, which decrypts it with the logic key KL
+and combines the partial keys. As soon as the logic received
+the shares from a minimum of koperators, the patient’s inner
+private key can be re-constructed. Afterwards, a new outer
+public key pair will be created on the smart card and used to
+encrypt the inner private key. The logic updates this ciphertextin the database and issues the new smart card. The operators
+delete their shares and their relations to the user, because
+the logic randomly selects new operators to hold the sharedsecrets. At the same time, this workﬂow assures that the old
+smart card is not usable anymore.
+On the one hand this backup-mechanism assures a very
+high level of security, but on the other hand obviously thecosts for operating the whole system would increase as well,
+if all operators are human beings. Thus, we propse a com-
+bination of humans with smart cards and hardware securitymodules (HSM) [39] which, if operated as trusted instances
+and separated in different places, could act on behalf of human
+operators and still provide a reliable system.
+C. Workﬂow Description
+For information exchange between two or more actors,
+we use the notation of i
+thworkflow step :Sender →Receiver →...→Receiver :{Message }. If we apply a
+key as subscripted character, the message has been encrypted
+with this key. In the following, we state an example how the
+third message in a workﬂow between the patient and the logic,encapsulating the encrypted patient’s identiﬁer encrypted with
+the patient’s inner symmetric key would look like.
+Instance for a workﬂow step 3: A→L:/braceleftBig
+{A
+id}KA/bracerightBig
+In the next section we provide the basic workﬂows of our
+system. Firstly, we add actors to the system and set up relations
+between them. Afterwards we show the procedures for storing
+and retrieving of pseudonymized data.
+D. Add Actor to the System
+Every new actor in the system needs a smart card with her
+outer key pair stored on it, and a dataset in the identiﬁcation
+database which includes the inner public key as well asencrypted versions of the inner symmetric and inner private
+key. Furthermore, the inner private key will be shared by O
+n
+operators. As this workﬂow is identical to the one the relative
+has to go through and very similar to the one the health care
+provider conducts, we introduce the patient’s workﬂow as anexample.
+1:A→L:{A}
+After identiﬁcation against one or more persons (for ex-
+ample by applying the four-eye-principle), the patient is able
+to send her personal data to the logic. The logic computes a
+unique identiﬁer Aidfor the patient.
+Necessary operations : execute a hash-algorithm to compute
+the unique identiﬁer Aid
+2:L→St:{∃A0∈A :A0id=Aid?}
+The logic looks up the storage to check if Aidalready exists
+and hence veriﬁes that the patient has not been added to thesystem yet.
+Necessary operations : conduct one SQL select statement
+3:St→L:{∀A∈A :A
+0/∈A !}
+After the storage replied with ’ Aidunknown’, the new
+identiﬁer combined with the personal data is added to the
+identiﬁcation database. Moreover, the logic retrieves the inner
+key pair as well as the inner symmetric key from the secured
+keystore of the trusted instance and starts the smart card
+production. The personalized smart card will hold the outerpublic key pair and is secured by a PIN.
+Necessary operations : retrieve a key-pair and a symmetric
+key of secured keystore, initiate smart card production
+4:L→St:/braceleftbigg/braceleftBig
+/hatwideK
+−1
+A/bracerightBig
+KA,/braceleftbig
+KA/bracerightbig
+/hatwideKA/bracerightbigg
+In the next step, the logic conducts the necessary encrypt-
+ing operations and subsequently sends the inner private key,
+encrypted with the user’s outer public key, as well as the innersymmetric key encrypted, with the user’s inner public key, to
+the storage.
+Necessary operations : encrypt two keys and execute one
+SQL insert statement
+5:L→O:/braceleftBigg/braceleftbigg/braceleftBig
+σ
+κ(/hatwideK−1
+A),Aid/bracerightBig
+KL/bracerightbigg
+/hatwideKO/bracerightBigg
+∀On
+The logic randomly selects Onoperators and uses the
+threshold scheme to divide the patient’s inner private key into
+nshares. All shares are encrypted with the logic key KL,
+subsequently encrypted with the inner public key /hatwideKOof the
+particular operators and ﬁnally send to the operators. The
+logic encrypts the user’s ID with the logic key as well asthe particular operators key and transfers this ciphertext to the
+operators.
+Necessary operations : apply threshold scheme, encrypt
+shares and patient’s identiﬁer twice for O
+noperators
+6:O→L→St:/braceleftBigg/braceleftbigg/braceleftBig
+σκ(/hatwideK−1
+A),Aid/bracerightBig
+KL/bracerightbigg
+KO/bracerightBigg
+∀On
+The assigned operators decrypt the share and the user’s
+identiﬁer with their inner private keys /hatwideK−1
+O. Then they encrypt
+both attributes again with their inner symmetric keys KOand
+send these ciphertexts to the logic which forwards them to thestorage.
+Necessary operations : decrypt and encrypt the key shares
+and the user’s identiﬁer for O
+noperators; |On|SQL insert
+statements to store the ciphertexts in the database7:L→St:/braceleftBig
+/hatwideKA/bracerightBig
+The logic transfers the user’s inner public key for posterior
+communication purposes to the storage and issues the new
+smart card with the outer key pair to the user.
+Necessary operations : execute one SQL insert statement,
+ﬁnalize programming the smart card
+In addition to the fact that the smart card programming and
+issuing component has to be a trusted instance, we establisheda role-based access control model, which controls that no op-
+erator is allowed to see the ciphertext of the patient’s identiﬁer
+encrypted with the logic key {A
+id}KLwhile processing (cf.
+step 6). Otherwise the operators could write down and compare
+the encrypted identiﬁer with other operators and this could lead
+to frauds against the system.
+E. Authorize User
+A relation between two users is set up by exchanging their
+IDs and mutually encrypting them with their inner symmetric
+keys. This allows an user to create datasets for another user,
+which is controlled by a role-based access control model.Therefore, the logic provides the IDs of each participant
+encrypted with the particular public keys of the users. In order
+to describe the authentication process, we deﬁne function (2).
+f
+authenticate (Uid): =/braceleftBigg/braceleftBig
+/hatwideK−1
+U/bracerightBig
+KUUid∈St
+errorcode U id/∈St(2)
+1:U→L:{Uid},L→St:{fauthenticate (Uid)= ?},St→
+L→U:/braceleftbigg/braceleftBig
+/hatwideK−1
+U/bracerightBig
+KU/bracerightbigg
+The user Uauthenticates against her smart card by en-
+tering her PIN. If the PIN matches, the certiﬁcate of the
+client software is used to sign the user’s identiﬁer Uid.T h i s
+signed identiﬁer is transmitted to the logic which veriﬁes thissignature. If the certiﬁcate and the signature are valid, the
+logic queries the storage for the encrypted inner private key
+/hatwideK
+−1
+Uof the speciﬁc user and forwards it to the user. She
+decrypts her inner private key with her outer private key K−1
+U.
+Therefore, even if the keystore in the client application has
+been successfully compromised, an attacker who gets accessto the encrypted inner private key is not able to use it to gain
+access to the pseudonymized datasets until she does not have
+access to the outer private key, too. This authentication is as
+a pre-condition for all workﬂows including all participating
+users. Due to its similarity we leave out step 1 in the followingsections.
+Necessary operations : mutual authentication, one SQL
+select statement, decrypt inner private key
+2a:L→C:/braceleftBig
+{A
+id}/hatwideKC/bracerightBig
+Firstly the logic encrypts the patients’s identiﬁer Aidwith
+the health care provider’s inner public key /hatwideKCand transfers
+this ciphertext to the health care provider.
+Necessary operations : one encrypt operation
+2b:L→A:/braceleftBig
+{Cid}/hatwideKA/bracerightBig
+Secondly the logic conducts the opposite operation with the
+health care provider’s identiﬁer Cidand the patient’s inner
+public key /hatwideKAand sends this ciphertext to the patient.
+Necessary operations : one encrypt operation
+3a:C→L→St:/braceleftBig
+{{Aid},{Cid}}KC/bracerightBig
+As the patient’s identiﬁer is encrypted for secure communi-
+cation purposes, the health care provider needs to decrypt Aid
+with her inner private key /hatwideK−1
+Cbefore she is able to apply
+her inner symmetric key KC. Moreover, she also encrypts her
+own identiﬁer Cidwith her inner symmetric key and transfers
+both attributes to the logic, which forwards it to the storage.
+Necessary operations : decrypt and encrypt identiﬁer,
+encrypt own identiﬁer, one SQL insert statement
+3b:A→L→St:/braceleftBig
+{{Cid},{Aid}}KA/bracerightBig
+Compared to step 3a the patient conducts the mirrored oper-
+ations. The health care provider’s identiﬁer will be decrypted
+with the patient’s inner private key and afterwards encrypted
+again with the patient’s inner symmetric key. The patient alsoencrypts her identiﬁer and sends both to the logic which inserts
+both ciphertexts in the database via the storage.
+Necessary operations : decrypt and encrypt identiﬁer,
+encrypt own identiﬁer, one SQL insert statement
+To revoke an authorization (e.g., for a health care provider),
+the patient deletes the certain entry from the relation table
+by querying the ciphertexts. Afterwards our role-based access
+control model — the top layer of the security stack — denies
+the right of adding new datasets for the certain patient-healthcare provider combination.
+Authorizing and revoking of the relation between a relative
+Band a patient Ais similar to the workﬂow between a health
+care provider and a patient. Additionally, the patient provides
+the relative via the logic with her inner private key, which the
+relative stores encrypted with her inner symmetric key. Thismeans, that the relative would have the same rights as the
+patient, if we would not use a role-based access control model
+to control the relatives view on the data. In our prototype the
+relative is only allowed to read all data, writing and authorizing
+is denied.
+In the prior sections we introduced the workﬂows of how
+users can be added to the system and showed the set-up of re-
+lationships between them. With this basis we can consequentlyadd pseudonymized data to the system.
+F . Add Anamnesis to System
+All medical data in our approach is separated from the
+identiﬁcation data to assure users’ privacy. Therefore, all
+datasets are associated with jpseudonyms. Every pseudonym
+is unique for any patient-health care provider-anamnesis
+combination. Thus a so-called root pseudonym ψ
+i0exists,
+which is only related with the patient and the ithanamnesis
+dataset.2a:L→C:/braceleftBig/braceleftbig
+{Aid},/braceleftbig
+ψij/bracerightbig/bracerightbig
+/hatwideKC/bracerightBig
+2b:L→A:/braceleftBig/braceleftbig
+{Cid},{ψi0},/braceleftbig
+ψij/bracerightbig/bracerightbig
+/hatwideKA/bracerightBig
+The logic encrypts the patient’s identiﬁer with the health
+care provider’s inner public key and sends it to the health care
+provider. Afterwards the logic conducts the opposite encrypt
+operations for the patient with the health care provider’sidentiﬁer and the patient’s inner public key. Furthermore, the
+logic generates two new random numbers, which represent
+the root pseudonym ψ
+i0and the pseudonym ψi1, which will
+be shared between the health care provider and the patient.
+The logic encrypts these pseudonyms with the particular inner
+public keys and sends the ciphertexts to the health care
+provider and the patient.
+Necessary operations : encrypt identiﬁer, generate two
+new unique random numbers, one encrypt operation for thepatient related pseudonym and two encrypt operations for the
+pseudonym, which will be shared between the patient and the
+health care provider
+3a:C→L:/braceleftBig/braceleftbig
+{A
+id},{Cid},/braceleftbig
+ψij/bracerightbig
+,{τv}/bracerightbig
+KC,{ϕi}/bracerightBig
+The health care provider ﬁrstly decrypts the patient’s iden-
+tiﬁer and the pseudonym ψijwith her inner private key.
+Secondly, she begins to form the message for adding the
+new anamnesis by appending the anamnesis data in plain-text.Afterwards, she encrypts the pseudonym, the patient’s and the
+health care provider’s identiﬁer as well as the related chosen
+tagsτ
+vwith the health care provider’s inner symmetric key.
+Finally, she transmits this message to the logic.
+Every participant on an anamnesis may hold different tags,
+in other words a keyword like x-ray or surgery. Consequently,if two health care providers are authorized to access a certain
+anamnesis, they may apply tags that differ from each other.
+As this descriptive information of the dataset needs to behidden to avoid data mining and thus prevent guessing of
+a patient’s identity, tags and other identiﬁers are stored
+encrypted with the particular users’ inner symmetric keys.To assure an appropriate runtime of the system, every SQL
+query is only conducted with ciphertexts to minimize the
+encrypting operations of metadata. Even if it is possible to
+select anamnesis by the identiﬁers of the participants, the
+tags have to be chosen carefully to achieve more appropriateresults on the retrieval of datasets and in order to optimize
+the runtime. Moreover, the anamnesis’ timestamps need
+to be hidden. We propagate splitting up timestamps intotheir atoms. For example May 02, 2007 can be basically
+split into the tags May ,02and 2007 . Moreover, this was
+aWednesday , which is another tag. If we also add the
+week of the year, in our example the week
+14, time ranges
+become queryable as well. A practical example would be a
+radiologist who invites patients for a check-up a week afterthe surgery. To receive a list of all patients who have been
+screened in week 13 and need to re-attend a week later, she
+forms a query of her encrypted identiﬁer and of the tagsknee ,x−ray,needs
+follow up,Thursday andweek 13.
+The result will be the pseudonyms and their related metadata,
+which are both encrypted with the health care providers inner
+symmetric keys. Afterwards it is possible for her to decrypt
+the related metadata, select the desired anamnesis datasetsand retrieve the data as described in the next section.
+Necessary operations : decrypt identiﬁer and pseudonym,
+encrypt tags, patient as well as health care provider identiﬁers
+and pseudonym
+3b:A→L:/braceleftBig
+{{A
+id},{Cid},{ψi0},{ψi1},{τv}}KA/bracerightBig
+The patient decrypts her opposite’s identiﬁer and both
+pseudonyms ψij,ψi0with her inner private key. Afterwards
+she sends the related chosen tags, the patient’s as well asthe health care provider’s identiﬁer and the pseudonyms, all
+encrypted with the patient’s inner symmetric key, to the logic.
+Necessary operations : decrypt identiﬁer and pseudonyms,
+encrypt tags, patient as well as health care provider identiﬁers
+and pseudonyms
+4:L→St:/braceleftBig/braceleftbig
+ψ
+ij,τv,Aid,Cid/bracerightbig
+KC/bracerightBig
+5:L→St:/braceleftBig/braceleftbig
+ψi0,ψij,τv,Aid,Cid/bracerightbig
+KA/bracerightBig
+6:L→St:/braceleftbig
+ψi0,ψij,ϕi/bracerightbig
+The logic transfers the anamnesis data ϕiand a plain-
+text version of the pseudonyms to the anamnesis database in
+the storage. Afterwards the logic saves the encrypted tags,
+patient’s and health care provider’s identiﬁers as well as theencrypted pseudonyms in the pseudonyms table of the storage
+on which the users may afterwards execute a SQL select
+statement with the ciphertexts of exemplarily the patient’sidentiﬁer and her chosen tags.
+Necessary operations : three insert statements
+G. Retrieve Anamnesis from System
+There are different ways to retrieve an anamnesis. First of
+all the patient or a relative who have access to the patient’s
+inner private key /hatwideK
+−1
+Aare able to decrypt the patient’s
+inner symmetric key. A health care provider who has beenauthorized for a certain anamnesis may access the medical
+data with the appliance of her inner symmetric key /hatwideK
+−1
+A.
+Hence, all of these users are able to query the storage viathe logic by encrypting the necessary tags, like keywords or
+a time-stamp in combination with an encrypted version of
+the identiﬁers, to look up a certain anamnesis with a SQLselect statement. Moreover, it is possible to hand over a
+couple of pseudonymized datasets to a research institution.
+We present the workﬂow of a patient who wants to see aspeciﬁc anamnesis.
+2:A→L→St:/braceleftBig
+{τ
+v,Aid,Cid}KA/bracerightBig
+The patient prepares the where clause in the SQL statement
+by encrypting the chosen tags, for example a keyword, times-
+tamp or health care provider’s identiﬁer. The patient transfersthe query to the storage via the logic.
+Necessary operations : encrypt patient’s identiﬁer and
+desired tags3:St→L→A:/braceleftBig
+{ψ
+i0}KA/bracerightBig
+for|ψi0|≥1
+If the query produced any results, the storage replies with a
+minimum of one or a set of encrypted root pseudonyms which
+the logic forwards to the patient.
+Necessary operations : one SQL select statement
+4:A→L→St:{ψi0}for|ψi0|≥1
+5:St→L→A:{ϕi}
+The patient selects from the received list of pseudonyms and
+decrypts the desired pseudonym/s with her inner symmetrickey and queries the logic with the plain-text pseudonym/s. The
+logic forwards the patient’s request to the storage. The storage
+returns the matching anamnesis via the logic. Additionally thelogic provides the patient with all related tags of a certain
+pseudonym, even if they have not been within the query.
+Necessary operations : decrypt and encrypt ψ
+i0, one SQL
+select statement for every desired anamnesis
+As all datasets are already pseudonymized it is also possible
+to conduct secondary usage of the stored medical data with
+this workﬂow. If no relation between more datasets is required(e.g. to show the clinical history of a certain patient), the
+researchers are authorized by adding another pseudonym,
+which the researcher and the patient share. This is comparableto the authorization of a health care provider for an anamnesis,
+but without the exchange of the patient’s identiﬁer, which will
+not be handed over to the researcher. In case it is necessaryto base the results of a study on the medical history of the
+patients, it is also possible to use the same tag for a series
+of anamnesis. If the researchers want to invite the patients
+to a follow-up study or if new information about the studies’
+outcomings are available, they can add a ﬂag to the speciﬁcanamnesis. This ﬂag will be shown, for example in form of a
+dialog window, the next time a health care provider, authorized
+for this anamnesis, or the patient herself authenticates againstthe system.
+IV . C
+ONCLUSIONS
+The implementation of electronic health records does not
+only promises a higher level of service quality for the pa-
+tients, but also reduces costs for social insurance systems
+and therefore for the society. As highly sensitive data isstored and handled in nation-wide medical systems, there is
+the requirement for assuring the patients’ privacy to avoid
+misuse. Although several approaches for managing anamnesissystems exist, their underlying security is too weak to assure
+conﬁdentiality of life-long medical data storage. Moreover
+people need to be convinced of such centralized systems as
+they are strongly concerned about their privacy.
+In this paper we discussed a variety of existing approaches
+and their security shortcomings, such as their dependence on
+a centralized patient-pseudonyms list, a life-long pseudonym
+or the concealment of an algorithm. We worked out sev-eral principles with the focus on assuring the conﬁdentiality,
+integrity, availability and privacy of sensitive patient-related
+medical data. Furthermore, we contributed a secure and ef-
+ﬁcient architecture for the combined primary and secondary
+usage of health-related data based on these principles. Oursystem PIPE assures that the patient is in full control of
+her data with the maximum of gainable security, achieved
+by applying authorization on encryption [20], in- and outsidethe system as well as for all communication. In other words,
+even if all communication between the actors is transmitted
+over unsecure channels like the Internet, the conﬁdentiality
+is granted because all attributes in the database are already
+secured by encryption. For integrity purposes, we additionallypropose the usage of Transport Layer Security (TLS) or signed
+messages. As users possess smart cards as security tokens in
+our approach, we introduced a secure fall-back mechanism if asmart card has been lost, stolen, compromised or just worn out.
+We deﬁned the administrative role operator which is in charge
+to hold a backup of the user keys in their keystore. Moreoverwe applied a threshold scheme [34] to securely divide the
+backup keys between the operators to assure inner system’s
+security.
+V. F
+URTHER WORK
+During the last months we began to conduct several
+load tests with our prototype. The testbed consist of ≈
+100.000patients and≈10.000health care providers
+which hold together ≈500.000anamnesis datasets .T h er e -
+lations between the patient, health care providers and anamne-sis have been set-up randomly and are approximately equally
+distributed. As we did not have sufﬁcient resources to produce
+a unique smart card for each user, we decided to base ourtest on 100 smart cards by using one smart card for several
+actors. However, the load tests we conducted show that this
+restriction of the prototype does not have any inﬂuence on
+the performance results. PIPE is nearly linear scalable because
+only encrypted keys and random numbers have been applied torealize the hull structure and therefore the performance heavily
+depends on the underlying database and server machine. Al-
+though, the performance overhead of encrypting on the smartcard’s cryptochip may be further lowered, if the user’s inner
+private key as well as the user’s inner symmetric key would
+be cached on the smart card, the results are very promisingand allow the deployment of the system in case studies with
+partner companies. Further work will provide more statistical
+and economical insights on the applied threshold scheme.Moreover, we will present a workﬂow for ad-hoc access to
+a subset of the anamnesis data, the patient’s emergency data
+(cf. [40]). With this publication we introduce our realizationof an additional access routine for emergency doctors. In order
+to reﬁne the usage of our system, we will publish the details
+of our role-based access control model, which operates as thetop-layer of our stacked security approach.
+VI. A
+CKNOWLEDGMENT
+We want to thank our master students Mathias Kolb and
+Markus Pehaim as well as the members of our business
+partner Braincon Technologies, Oswald Boehm, AlexanderKrumboeck, and Gert Reinauer for their support, further Stefan
+Jakoubi for his review.
+This work was performed at Secure Business Austria, a
+competence center that is funded by the Austrian Federal
+Ministry of Economics and Labor (BMWA) as well as by the
+provincial government of Vienna.
+REFERENCES
+[1] S. Maerkle, K. Koechy, R. Tschirley, and H. U. Lemke, “The PREPaRe
+system – Patient Oriented Access to the Personal Electronic Medical
+Record,” in Proceedings of Computer Assisted Radiology and Surgery,
+Netherlands , 2001, pp. 849–854.
+[2] F. R. Ernst and A. J. Grizzle, “Drug-related morbidity and mortality:
+Updating the cost-of-illness model,” University of Arizona, Tech. Rep.,
+1995.
+[3] ——, “Drug-related morbidity and mortality: Updating the cost-of-
+illness model,” University of Arizona, Tech. Rep., 2001.
+[4] J. Pope, “Implementing EHRs requires a shift in thinking. PHRs–the
+building blocks of EHRs–may be the quickest path to the fulﬁllment
+of disease management.” Health Management Technology , vol. 27(6),
+p. 24, 2006.
+[5] United States Department of Health & Human Service, “Hipaa adminis-
+trative simpliﬁcation: Enforcement; ﬁnal rule,” Federal Register / Rules
+and Regulations , vol. V ol. 71, No. 32, 2006.
+[6] European Union, “Directive 95/46/ec of the european parliament and of
+the council of 24 october 1995 on the protection of individuals with
+regard to the processing of personal data and on the free movement ofsuch data.” Ofﬁcial Journal of the European Communities , vol. L 281,
+pp. 31–50, 1995, http://europa.eu/scadplus/leg/en/lvb/l14012.htm.
+[7] Council of Europe, European Convention on Human Rights . Martinus
+Nijhoff Publishers, 1987.
+[8] Republic of Austria, “Datenschutzgesetz 2000 (DSG 2000), BGBl. I Nr.
+165/1999,” 1999.
+[9] M. Ackerman, R. Craft, F. Ferrante, M. Kratz, S. Mandil, and H. Sapci,
+“Telemedicine technology,” Telemedicine Journal and e-Health ,v o l .8 ,
+No. 1, pp. 71 –78, 2002.
+[10] J. Montagnat, F. Bellet, H. Benoit-Cattin, V . Breton, L. Brunie,
+H. Duque, Y . Legr, I. E. Magnin, L. Maigne, S. Miguet, J. M. Pierson,
+L. Seitz, and T. Tweed, “Medical images simulation, storage, and pro-
+cessing on the european datagrid testbed,” Journal of Grid Computing ,
+vol. 2, Number 4, pp. 387–400, 2004.
+[11] A. Pﬁtzmann and M. Koehntopp., “Anonymity, Unlinkability, Unob-
+servability, Pseudonymity, and Identity Management A ConsolidatedProposal for Terminology,” in Lecture Notes in Computer Science .
+Springer Berlin / Heidelberg, 2005.
+[12] K. Taipale, “Technology, Security and Privacy: The Fear of Frankenstein,
+the Mythology of Privacy and the Lessons of King Ludd,” International
+Journal of Communications Law & Policy , vol. 9, 2004.
+[13] R. L. Peterson, “Patent: Encryption system for allowing immediate
+universal access to medical records while maintaining complete patient
+control over privacy,” US Patent US 2003/0074564 A1 , 2003.
+[14] C. Thielscher, M. Gottfried, S. Umbreit, F. Boegner, J. Haack, and
+N. Schroeders, “Patent: Data processing system for patient data,” Int.
+Patent, WO 03/034294 A2 , 2005.
+[15] G. de Moor, B. Claerhout, and F. de Meyer, “Privacy enhancing
+technologies: the key to secure communication and management of
+clinical and genomic data,” Methods of information in medicine , vol. 42,
+pp. 148–153, 2003.
+[16] J. Gulcher, K. Kristjansson, H. Gudbjartsson, K., and Stefanson, “Protec-
+tion of privacy by third-party encryption in genetic research,” European
+journal of human genetics , vol. 8, pp. 739–742, 2000.
+[17] K. Pommerening, “Medical Requirements for Data Protection,” in
+Proceedings of IFIP Congress, Vol. 2 , 1994, pp. 533–540. [Online].
+Available: citeseer.ist.psu.edu/330589.html
+[18] K. Pommerening and M. Reng, Medical And Care Compunetics 1 .I O S
+Press, 2004, ch. Secondary use of the Electronic Health Record via
+pseudonymisation, pp. 441–446.
+[19] D. Lobach and D. Detmer, “Research challenges for electronic health
+records,” American Journal of Preventive Medicine , vol. 32, Issue 5, pp.
+104–111, 2007.
+[20] B. Riedl, T. Neubauer, G. Goluch, O. Boehm, G. Reinauer, and A. Krum-
+boeck, “A secure architecture for the pseudonymization of medical data,”
+inProceedings of the Second International Conference on Availability,
+Reliability and Security , 2007, pp. 318–324.
+[21] A. Rector, J. Rogers, A. Taweel, D. Ingram, D. Kalra, J. Milan,
+P. Singleton, R. Gaizauskas, M. Hepple, D. Scott, and R. Power, “Clef
+- joining up healthcare with clinical and post-genomic research,” inProceedings of UK e-Science All Hands Meeting , 2003, pp. 203–211.
+[Online]. Available: citeseer.ist.psu.edu/rector03clef.html
+[22] A. Lysyanskaya, R. L. Rivest, A. Sahai, and S. Wolf, “Pseudonym
+systems,” in Proceedings of the Sixth Annual Workshop on Selected
+Areas in Cryptography (SAC ’99) . [Online]. Available: citeseer.ist.psu.
+edu/lysyanskaya99pseudonym.html
+[23] U. Flegel, “Pseudonymizing unix log ﬁles,” in Proceedings of the
+International Conference on Infrastructure Security . London, UK:
+Springer-Verlag, 2002, pp. 162–179.
+[24] J. Daemen and V . Rijmen, The Design of Rijndael: AES - The Advanced
+Encryption Standard . Springer; 1 Edition, 2002.
+[25] R. L. Rivest, A. Shamir, and L. Adleman, “A method for obtaining digital
+signatures and public-key cryptosystems,” Commun. ACM , vol. 21, no. 2,
+pp. 120–126, 1978.
+[26] V . S. Miller, “Use of elliptic curves in cryptography,” Lecture notes in
+computer sciences , vol. 218 on Advances in cryptology—CRYPTO 85,
+pp. 417–426, 1986.
+[27] B. Schneier, Applied Cryptography: Protocols, Algorithms, and Source
+Code in C . Wiley; 2 edition, 1995.
+[28] M. Hendry, Smart Card Security and Applications, Second Edition .
+Norwood, MA, USA: Artech House, Inc., 2001.
+[29] W. Rankl and W. Efﬁng, Smart Card Handbook . New York, NY , USA:
+John Wiley & Sons, Inc., 1997.
+[30] A. Avizienis, J.-C. Laprie, B. Randell, and C. Landwehr, “Basic concepts
+and taxonomy of dependable and secure computing,” IEEE Transactions
+on Dependable and Secure Computing , vol. 1, no. 1, pp. 11–33, 2004.
+[31] R. Russell, D. Kaminsky, R. F. Puppy, J. Grand, D. Ahmad, H. Flynn,
+I. Dubrawsky, S. W. Manzuik, and R. Permeh, Hack Prooﬁng Your
+Network (Second Edition) . Syngress Publishing, 2002.
+[32] T. Westran, M. Mack, and R. Enbody, “The last line of defense: a host-
+based, real-time, kernel-level intrusion detection system,” in submitted
+to IEEE Symposium on Security and Privacy , 2003.
+[33] T. Thornburgh, “Social engineering: the ”Dark Art”,” in Proceedings of
+the 1st annual conference on Information security curriculum develop-ment . New York, NY , USA: ACM Press, 2004, pp. 133–135.
+[34] A. Shamir, “How to share a secret,” Commun. ACM , vol. 22, no. 11,
+pp. 612–613, 1979.
+[35] J. Han and M. Kamber, Data mining: concepts and techniques .S a n
+Francisco, CA, USA: Morgan Kaufmann Publishers Inc., 2000.
+[36] K. Maris, “The Human Factor,” in Proceedings of Hack.lu, Luxembourg ,
+2005.
+[37] V . Schmidt, W. Striebel, H. Prihoda, M. Becker, and G. D. Lijzer,
+“Patent: Verfahren zum be- oder verarbeiten von daten,” German Patent,
+DE 199 25 910 A1 , 2001.
+[38] B. Riedl, V . Grascher, and T. Neubauer, “Pseudonymization for securing
+e-health applications,” in to appear in the proceedings of the 13th
+IEEE Paciﬁc Rim International Symposium on Dependable Computing
+(PRDC07) , 2007.
+[39] D. C. Wherry, “Secure your public key infrastructure with hardware
+security modules,” SANS Institute, Tech. Rep., 2003.
+[40] B. Riedl and O. Jorns, “Granting access to emergency data in a
+pseudonymized e-health architecture,” in submitted to the Proceedings
+of the 9th International Conference on Information Integration and Web-based Application & Services , 2007.

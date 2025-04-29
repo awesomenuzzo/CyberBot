@@ -1,0 +1,379 @@
+international journal of medical informatics 80 (2011) 190–204
+journal homepage: www.intl.elsevierhealth.com/journals/ijmi
+A methodology for the pseudonymization of medical data
+Thomas Neubauera,∗, Johannes Heurixb
+aInstitute of Software Technology and Interactive Systems, Vienna University of Technology , Favoritenstrasse 9-11, 1040 Vienna, Austria
+bSBA Research, Favoritenstrasse 16, 1040 Vienna, Austria
+article info
+Article history:
+Received 6 July 2010Received in revised form18 October 2010Accepted 19 October 2010
+Keywords:Computer securityInformation managementElectronic medical recordPrivacyPseudonymizationabstract
+Purpose: E-health enables the sharing of patient-related data whenever and wherever neces-
+sary. Electronic health records (EHRs) promise to improve communication between healthcare providers, thus leading to better quality of patients’ treatment and reduced costs. How-ever, as highly sensitive patient information provides a promising goal for attackers and isalso frequently demanded by insurance companies and employers, there is increasing socialand political pressure regarding the prevention of health data misuse. This work addressesthis problem and introduces a methodology that protects health records from unauthorizedaccess and lets the patient as data owner decide who the authorized persons are, i.e., whothe patient discloses her health information to. Therefore, the methodology prevents datadisclosure that negatively inﬂuences the patient’s life (e.g., by being denied health insuranceor employment).Methods: This research uses a combination of conceptual-analytical, artifact-building
+and artifact-evaluating research approaches. The article starts with a detailed explo-ration of existing privacy protection mechanisms, such as encryption, anonymizationand pseudonymization, by comparing and analyzing related work (conceptual-analyticalapproach). Based on these results and the identiﬁed shortcomings, a pseudonymizationmethodology is deﬁned and evaluated by means of a threat analysis. Finally, the researchresults are validated with the design and implementation of a prototype (artifact buildingand artifact evaluation).Results: This paper presents a new methodology for the pseudonymization of medical data
+that stores health data decoupled from the corresponding patient-identifying information,allowing privacy-preserving secondary use of the health records in clinical studies withoutadditional anonymization steps. In contrast to clinical studies, where it is not necessary toidentify the individual participants, insurance companies and employers are interested inthe health status of individuals such as potential insurance or job applicants. In this case,pseudonymized records are practically useless for these parties as the patient controls whois able to reestablish the link between health records and patient for primary use – usuallyonly trusted health care providers.Conclusions: The framework provides health care providers with a unique solution that guar-
+antees data privacy (e.g., according to HIPAA) and allows primary and secondary use of thedata at the same time. The security analysis showed that the methodology is secure andprotected against common intruder scenarios.
+© 2010 Elsevier Ireland Ltd. All rights reserved.
+∗Corresponding author . Tel.: +43 1 58801 18801.
+E-mail address: neubauer@ifs.tuwien.ac.at (T . Neubauer).
+1386-5056/$ – see front matter © 2010 Elsevier Ireland Ltd. All rights reserved.
+doi: 10.1016/j.ijmedinf.2010.10.016
+international journal of medical informatics 80 (2011) 190–204 191
+1. Introduction
+In today’s health care system, the availability of reliable infor-
+mation has a tremendous impact on decisions regarding thepatients’ care and, as a result, on the quality of treatmentand patients’ health. Over the past years, electronic healthrecords (EHRs) have been introduced as a method for improv-ing communication between health care providers and accessto data and documentation, potentially leading to better clini-cal and service quality (cf. [1]). The EHR promises the reduction
+of adverse drug events, which are estimated to account forabout $175 billion a year in the US [2], and a reduction of
+the very high number of more than 150,000 cases of deathsrelated to adverse drug reactions each year in the US [2]as it
+provides physicians and their health care teams with deci-sion support systems and guidelines for drug interactions.The EHR could achieve massive savings with the digitizingof the results of diagnostic tests and images. A study by theRand Corporation found that adopting the EHR could result inmore than $81 billion in annual savings in the US if 90% ofthe health care providers used it [2]. However, the electronic
+storage of health data raises considerable privacy concerns. Infact, the discussion of privacy is one of the fundamental issuesin health care today and is often seen as a trade-off betweenthe patient’s requirement for privacy and the society’s needsfor improving efﬁciency and reducing costs in the health caresystem. With informative and interconnected health-relateddata comes highly sensitive and personal information. Dueto the high sensitivity of the data, there is increasing socialand political pressure to prevent the misuse of health data. Itis the fundamental right of every citizen to demand privacy,because the disclosure of medical data can cause serious prob-lems for the patient. Insurance companies or employers coulduse the information to deny health coverage or employment.The disclosure of sensitive data, such as a history of sub-stance abuse or HIV infection, could result in discrimination orharassment. In addition to social and political pressure, legalacts demand the protection of health data. The Health Insur-ance Portability and Accountability Act (HIPAA) [3] demands
+the protection of patients’ data that is shared from its originalsource of collection. In the EU the processing and movementof personal data has been legally regulated by the EU withDirective 95/46/EC [4]. A citizen’s right to privacy is also rec-
+ognized in Article 8 [5] of the European Convention for the
+Protection of Human Rights and Fundamental Freedoms. Inorder to protect patients’ privacy when using, transferring andstoring medical records, a variety of privacy enhancing tech-nologies (cf. [6]for a deﬁnition) have been proposed. However,
+existing approaches often (i) do not comply with the currentlegal requirements (cf. [4,7,8,9,10] ), (ii) do not fulﬁll basic secu-
+rity requirements (cf. [11,12,13] ), and (iii) are not suitable for
+use with clinical studies (cf. Section 2). This work presents
+the pseudonymization methodology PIPE (Pseudonymizationof Information for Privacy in e-Health). PIPE is used for decou-pling the medical data from the patient-identifying data aswell as restoring the link for authorized parties, while theactual medical records are maintained and accessed by exter-nal (health) applications. The pseudonymization methodologyis based on cryptographic operations and, therefore, usesa server-side hardware security module (HSM, cf. [14] ), a
+specially protected piece of hardware, for the execution ofcryptographic operations, which ensures that the encryptionand decryption operations are executed within a secure envi-ronment and that no secret key is present outside the HSMin plaintext at any time. Unlike other HSM applications thatrely on the device as both a specially secured environmentfor encryption and decryption operations and a secure key-store, in PIPE the HSM is employed as trusted cryptographicprocessor only.
+This research uses a combination of conceptual-analytical,
+artifact-building and artifact-evaluating research approaches.The article starts with a detailed exploration of existingpseudonymization protection mechanisms, such as encryp-tion, anonymization and pseudonymization, by comparingand analyzing related work (conceptual-analytical approach).Based on these results and the identiﬁed shortcomings, apseudonymization methodology is deﬁned and evaluated bymeans of a threat analysis. Finally, the research results arevalidated with the design and implementation of a prototype(artifact building and artifact evaluation).
+2. Background
+Protection of the patients’ privacy can be achieved withtwo different techniques, anonymization and encryption,which unfortunately both suffer from major drawbacks: Whileanonymization – the removal of the identiﬁer from the medi-cal data – cannot be reversed and therefore prevents primaryuse of the records by health care providers who obviously needto know the corresponding patient (as a minor point, patientscannot beneﬁt from the results gained in clinical studiesbecause they cannot be informed about new ﬁndings), encryp-tion of the medical records prevents them from being used forclinical research (secondary use) without the explicit permis-sion of the patient, who has to decrypt the data and, in doingso, reveals her identity. Considering that some medical recordstend to be very large (up to hundreds of MB [15] ), encryption
+could also be a very time-consuming operation [16] . A method
+that resolves these issues is pseudonymization, where iden-tiﬁcation data is transformed and then replaced by a speciﬁerthat cannot be associated with the identiﬁcation data with-out knowing a certain secret [17,12,18] . Pseudonymization
+allows the data to be associated with a patient only underspeciﬁed and controlled circumstances. A pseudonymizeddatabase must contain at least two tables, one where all thepersonal data is stored, and one where the pseudonyms andthe pseudonymized data are stored. The process of identifyingand separating personal from other data is called deperson-alization (cf. [19] ). After depersonalization and subsequent
+pseudonymization, a direct association between individualsand their data can only be established under strictly deﬁnedcircumstances.
+2.1. Pseudonymization
+However, existing pseudonymization approaches and sys-tems have a variety of shortcomings: Thielscher et al. (cf. [20] )
+developed a system consisting of two databases, one for the
+192 international journal of medical informatics 80 (2011) 190–204
+patient’s personal identiﬁcation data and the other for the
+medical data. While the datasets are stored in a decoupledway, the relationship between the patient and her medicalrecords can be restored with secret keys stored on a smartcard. The secret keys generate unique data identiﬁcationcodes, which are also stored in the database and do notcontain any patient-identifying information. Authorizationsare granted by sharing these codes between the patient andhealth care providers where these authorizations are validfor only a certain period of time. As a fallback mechanismin case a patient loses her smart card, a centralized patient-pseudonym list is maintained, as otherwise there would beno way to recover the identiﬁer. This centralized patient-pseudonym list could be the target of intrusion attacks.Thielscher et al. circumvent this security ﬂaw by operatingthe list ofﬂine. This organizational work-around seems topromise a higher level of security until an insider attack isconducted (cf. [21,22,23] ) or an attacker gains physical access
+to the computer that holds the list.
+The approaches developed by Pommerening (cf. [24,25] )
+are only applicable for secondary use, pseudonymizing thedata for transport, and rely on a combination of hashingand encryption techniques. The different approaches applyto different scenarios: (i) Beginning with medical data fromoverlapping sources for one-way secondary use, a uniquepatient identiﬁer is replaced by a pseudonym generated by aone-time encryption operation conducted at a pseudonymiza-tion service provided by a trusted third party. Furthermore,the medical data is encrypted with the public key of thesecondary user to ensure one-time secondary use. (ii) T oextend this scenario with the possibility of re-identiﬁcation,the one-way pseudonymization is replaced by a reversibleencryption. An important prerequisite for this scenario isthat the unique patient identiﬁer is not available publicly, butgenerated speciﬁcally for the project in question by a secondtrusted third-party service. (iii) The ﬁnal model involves mul-tiple secondary users in a research network, where a centralresearch database is introduced containing the medical dataand the unique patient identiﬁer, again generated by a trustedthird-party service. Each secondary user accesses the medicaldata using the pseudonymization service. The drawback ofthe Pommerening approaches are the trusted third partyservices. While they provide security against external attacks,an insider, perhaps bribed by an attacker, could still abuse theservice.
+El Kalam et al. [26] propose a very similar approach
+that involves hashing and encryption for the secondaryuse of pseudonymized data. In this case, a unique patientidentiﬁer, which may not be publicly known, is used forderiving an anonymized identiﬁer. Unlike in the Pommeren-ing approaches, this patient identiﬁer is not generated by atrusted third party but within the secured environment of asmart card. The identiﬁer also stays within the smart cardand should never be disclosed. Furthermore, a unique projectidentiﬁer is required as input, so that the anonymized iden-tiﬁer is the result of a one-way hashing procedure with theconcatenation of the unique patient identiﬁer stored on thesmart card and the unique project identiﬁer as input. Thatway, the patient has to explicitly consent to each secondaryuse of her data in each individual project. In order to pre-vent attacks where an external adversary tries to link data
+held by two different hospitals by knowing the ﬁngerprint(hash value) of a certain patient/project and gaining unau-thorized access to the database of the hospital where theproject is conducted, the anonymized identiﬁer is encryptedwith a secret key only known to the hospital. The correspond-ing decryption key is only known to the project. Althoughthis concept provides protection against external attackers,a malicious insider can still link the medical data to the cor-responding patient by knowing the ﬁngerprint. Another issueis the smart card as generator and storage provider for theunique patient key. As this key never leaves the smart card, itsuniqueness cannot be ensured. Furthermore, lacking a suit-able backup mechanism for the unique identiﬁer, the medicaldata cannot be tracked back to the patient if she loses thesmart card.
+Noumeir et al. [27] describe the pseudonymization of radi-
+ology data encoded as DICOM [28] ﬁles for secondary use.
+The unique patient identiﬁcation numbers in the DICOMimages are replaced with pseudonyms and the ﬁles arestored in a separate research database. Here, the authorsdistinguish between two kinds of pseudonyms: irreversibleone-way pseudonyms (i.e., anonymization) and reversiblepseudonyms. One-way pseudonyms are generated by pro-cessing the patient identiﬁcation number with a hashingalgorithm. As hashing is prone to collisions, the authors pro-pose to additionally hash the patient’s medical history. Inorder to prevent dictionary attacks, the technique of salt-ing, i.e., concatenating a random value to the input, canbe applied. Alternatively, hash-based message authenticationcode techniques requiring a secret key may be used. Reversiblepseudonyms also involve a secret key for the encryption ofthe patient identiﬁcation number. Noumeir et al. proposethe application of the DES algorithm using 64 bits of input,which is especially suitable for the DICOM patient identiﬁca-tion ﬁeld that is constrained to a maximum of 64 characters.Although the authors state that the secret keys need to be pro-tected, no suggestion is made concerning how to protect thekeys.
+The approach developed by Peterson [29] involves the use
+of multiple encryption keys and three data tables to makepersonal medical data available without compromising thepatient’s privacy. During registration, the patient is issued aunique global key (GK) and a server side key (SSID). Further-more, she has to provide a unique personal encryption key(PEK) and a password. This information is stored in the usertable. The security table contains the reference to the user(SSID), a server side encryption key (SSEK) and the referenceto the personal data in the personal data table. The personaldata is doubly encrypted with the PEK and the SSEK. Dataretrieval requires the knowledge of either the PEK or the GK(can be printed on an ID card), which is transferred to theserver, which looks up the referenced SSID. With the SSID,the personal data record can be retrieved and decrypted withthe corresponding keys. Data addition, deletion, and modiﬁ-cation require the knowledge of the password in addition tothe PEK or GK. As a fallback mechanism in case of a lost smartcard, the patient can log in with the PEK and password andis issued a new GK, which can be printed on a new ID card,invalidating the old GK. This approach comes with some seri-
+international journal of medical informatics 80 (2011) 190–204 193
+ous drawbacks: As all keys needed for decrypting the medical
+data are stored in the database, an attacker gaining access tothe database could decrypt all information. Even more impor-tantly, as the password and the keys are stored in the database,the attacker could change data stored in the database. Fur-thermore, the PEK poses a security ﬂaw as the user is requiredto enter new PEKs during registration until a unique one hasbeen found. This mechanism allows a possible attacker toimmediately gain access to the medical data related to thiskey.
+The architecture for the realization of the German Elec-
+tronic Health Card (EHC) proposed by the Fraunhofer Institutefor Software and System Engineering [30,31] and supported by
+the German Federal Ministry of Health is designed as a service-oriented architecture divided into ﬁve layers realizing differentservice applications, such as emergency data, electronic pre-scription, or electronic health record retrieval. Access to themedical data stored in a virtual ﬁle system is handled with theticket toolkit concept involving hybrid encryption: The medi-cal data is encrypted with a unique session key, and this key,in turn, is encrypted with the public key of the authorizeduser. The asymmetric keypair is stored on the health card.The ticket toolkit contains a ticket builder, a ticket veriﬁer,access policy information and an encrypted link to the ﬁle(or directory) in the virtual ﬁle system. Each ﬁle and directoryis assigned a default ticket toolkit and a number of privateticket toolkits deﬁned by the patient for authorized users. Ifno private ticket toolkit is available for the user requesting acertain ﬁle, the system returns the default ticket toolkit basedon a challenge that the data requestor has to solve in order togain access rights. As the asymmetric keypair is stored on thehealth card, which is prone to loss or damage, a second privateticket toolkit is generated for each entry relying on a secondasymmetric keypair stored on an emergency card (e.g., a rel-ative’s card). This second keypair can then be used to decryptthe session keys in order to re-key them with the new publickey stored on the new health card. While the ticket conceptensures conﬁdentiality, fully encrypting the medical data istime-consuming, especially for large medical images, as wellas unsuitable for secondary use.
+Stingl et al. [32] also rely on the encryption of medical data
+in order to realize a centralized and secure health data repos-itory. Similarly to the EHC concept, the actual medical datais encrypted with a symmetric key and the patient sharesthis key with her trusted associates, encrypted with the pub-lic key of their individual asymmetric keypair representingtheir data access authorizations as clearance packages. Thedocuments are stored in a hierarchical manner and the datarepository is pseudonymized by obscuring the master/detailrelationship by encryption. Thus, only those who are in pos-session of the correct key are able to establish the link betweenpatient and health data. The scheme also speciﬁcally dis-tinguishes between data creator, owner, access grantor, andgrantee. Like the EHC, this approach suffers from the problemof fully encrypted medical data. In [33,34] , Stingl and Slamanig
+adapt this concept to be used in a pseudonymized e-healthportal where the same roles are applied and the medical datais encrypted in a hybrid manner. In addition, the e-healthportal concept introduces an identity management systemwhere each user is in possession of multiple sub-identities,one publicly known and several private sub-identities. Each
+sub-identity is related to an asymmetric keypair stored on asmart card and accessed by individual PINs. The public sub-identity is used for data access authorizations (involving thepublic sub-identity of the access grantor and grantee, cre-ator, and patient) where the public sub-identity of the receiveris then replaced by a private one. The publicly known sub-identity and the corresponding public key, however, open thearchitecture to impersonation attacks, e.g., for sending fakemedical documents.
+2.2. Hardware security module
+The cryptographic operations required in the proposedpseudonymization procedures are best provided by a dedi-cated and secure hardware-based cryptographic system, i.e., ahardware security module (HSM) [14] . An HSM is an encapsu-
+lated and tamper-resistant hardware module that is designedto withstand logical as well as physical attacks [35,36] . The
+protection measures range from solid metal casings to spe-cial switches that zeroize the memory when tampering isdetected [37] . HSMs provide standardized interfaces to com-
+municate with their host computers such as PKCS#11 [38] and
+serve as secure keystore and cryptographic processors, oftenalso providing secure key generation. HSMs are deployed inmultiple application areas where security is of utmost impor-tance: Anderson et al. [37] identify the application of HSMs
+in automated teller machines for PIN management includingPIN acquisition/veriﬁcation/generation, in electronic paymentschemes as an integral part of the back-end systems atbanks processing the transactions, or in military applicationsas encryption and decryption modules for highly sensi-tive communication or as nuclear command and controltools.
+Wherry [39] recognizes the need for an HSM in public key
+infrastructures (PKIs) to protect the most important entities inPKIs, the cryptographic keys. Lorch et al. [40] utilize an HSM
+as a secured online credential repository in a grid PKI. Rössleret al. [41] apply the HSM to e-voting as an electronic ballot
+box. In this scheme, the voter receives a ballot and a vot-ing token containing her voting ID after authentication witha signature card (smart card). The ballot is then encryptedand transferred to the election authority where the votes aredecrypted only in the HSM during the counting procedure.The private decryption key is only available within the HSMso that the vote cannot be decrypted insecurely outside theHSM. Baldwin and Shiu extend the concept of HSMs to notonly provide a secure keystore and secure cryptographic oper-ations, but to provide complete security services, resulting inhardware security appliances (HSAs) as demonstrated in [42]
+to secure Web services. Another example of securing Web ser-vices is given by Mont et al. in [43] , while Baldwin and Shiu
+apply HSAs to enhancing trust relationships in an outsourcingscenario of a merchant’s online presence [44] .I n [45] , Ferreira
+et al. propose the application of an HSA in an accountabilitymodel suitable for health care environments where the HSAencapsulates the accountability service responsible for record-ing events and providing access for retrieving the recordedevents only for authorized roles.
+194 international journal of medical informatics 80 (2011) 190–204
+3. The PIPE methodology
+PIPE (Pseudonymization of Information for Privacy in e-Health)
+is a novel protocol for the pseudonymization of health datathat differs from existing approaches in its ability to securelyintegrate primary and secondary use of health data. PIPEprovides a form of “traceable anonymity” to ensure the conﬁ-dentiality of health records.
+3.1. Overview
+Patient-identifying details are separated from the actualhealth data, resulting in decoupled data records, i.e., iden-tiﬁcation and health records. The relationship between thepatient represented by her identiﬁcation record and herhealth data is established with pseudonyms (identiﬁcationand health pseudonyms) whose link is identiﬁable onlyunder speciﬁc conditions. The links between identiﬁcationand health pseudonyms are encrypted with secret keys thatcan only be used by authenticated and authorized per-sons, who can use them to re-link the personal patientdata with the health data for primary use. Pseudonyms arealso used for data access permissions, i.e., deﬁning newpseudonyms for access authorizations (shared pseudonyms).Revoking access rights is easily accomplished by deletingthese pseudonyms.
+Because of the decoupled storage scheme, secondary use of
+the medical records for research is privacy-preserving in thatthe secondary user is not able to trace the individual healthrecords back to the patient in question. The same is true forany external or internal attackers (e.g., database administra-tors) who may gain access to the database system.
+In order to authenticate registered users, each user is
+issued a security token containing the authentication cre-dentials that grant access to the secret cryptographic keys.As hardware security tokens are prone to loss or damage,a backup mechanism is provided based on the principle ofthreshold schemes [46] .
+A server-side HSM acts as cryptographic module for exe-
+cuting the necessary cryptographic steps within a trustedsecure environment. The cryptographic operations includeall encryption and decryption operations required for func-tions such as user authorizations and authentications. Theclient-side cryptographic operations required for the chal-lenge/response style authentication procedure are carried outwith the user-owned security token acting as secure keystorefor the authentication credentials and as trusted client-sidecryptographic module. In this context, a security token isa secured (contact) micro controller smart card (cf. [47,48] )
+that has similar properties to an HSM, i.e., tamper resistance,secured key storage area, and dedicated hardware-based cryp-tographic engines for common algorithms such as RSA or3DES. Due to these properties, the token is used as user-ownedPIN-protected secure keystore for the authentication creden-tials as well as a trusted client-side cryptographic engine. Thesmart card requires a certiﬁed card reader (Common Crite-ria EAL3+) with an integrated keypad. The integrated keypadensures the secured entry of the required PIN, preventing itsexposure to potential malicious code installed on the hostcomputer (malware, viruses, etc.). As an alternative to the
+smart card, the authentication credentials can be stored ina secured area of the user’s computer’s hard disk or on a com-parable storage device (e.g., a USB stick), while the necessaryclient-side cryptographic operations during authenticationneed to be executed by a client application. In contrast tothe smart card solution, this alternative is less secure dueto the software-based implementation of the cryptographicalgorithm.
+Aimed to provide a pseudonymization service, PIPE can
+be applied to different scenarios (cf. Fig. 1 ): In the local sce-
+nario, the PIPE server pseudonymizes only records stored inthe local (health) data repository and makes them available toa local (health care provider’s) workstation where both patientand health care provider interact with the pseudonymiza-tion server as part of a health care provider environment(e.g., with a hospital information system). In an alternativecentral scenario, the PIPE pseudonymization server is respon-sible for providing linking information to different healthrecords stored at distributed locations. In Fig. 1 , two sep-
+arate health care provider environments exist where theindividual workstations have direct access to their local datarepositories. Via the pseudonymization service, the healthcare providers are able to access records of other domains ifthey are explicitly authorized to do so. In this scenario, thepatient also has the opportunity to retrieve the records athome.
+3.2. Security model
+The PIPE protocol uses a combination of symmetric and asym-metric cryptographic keys to realize a logical multi-tier hullmodel with three different layers (cf. Fig. 2 ), where each layer
+is responsible for one step in the data access process. The userhas to pass all layers in order to retrieve the actual health datarecords.
+The outer public and outer private keys form the outer
+layer, the authentication layer , which is responsible for unam-
+biguously identifying the corresponding user. T ogether withthe user’s identiﬁer, the outer private key represents theauthentication credentials, which are stored along with theserver’s public key on the user’s smart card. In combina-tion with the correct PIN, the smart card provides two-factorauthentication, where the authentication procedure involvesboth the user’s and the PIPE server’s outer keypair, the user’sidentiﬁer, and two randomly selected challenges. The mid-dle layer, the authorization layer , consists of the user’s inner
+asymmetric keypair and the inner symmetric key. While theuser’s outer private key is created on the smart card whenthe card is issued to the user and never actually leavesthe card, the other keys are stored in the pseudonymiza-tion database where the secret keys are stored encrypted:the inner symmetric key is encrypted with the inner pub-lic key, while the inner private key is encrypted with theouter public key. Thus, the outer private key is requiredto decrypt the inner symmetric key, which ﬁnally decryptsthe pseudonyms and thus provides access to the innermostlayer, the pseudonymized data layer . Encrypting the pseudonyms
+with a secret symmetric key instead of the inner publickey is more powerful and also prevents chosen-plaintext
+international journal of medical informatics 80 (2011) 190–204 195
+Fig. 1 – PIPE application scenarios.
+Fig. 2 – Layer-based security model.
+196 international journal of medical informatics 80 (2011) 190–204
+attacks when using deterministic asymmetric cryptographic
+algorithms.1
+The use of HSMs and smart cards as cryptographic mod-
+ules works as follows: While the cryptographic functions ofthe smart card are required only for client-side authentica-tion steps and encryptions/decryptions involving the sessionkey used for protecting the communication channel betweenuser/workstation and pseudonymization server, the HSM han-dles the major cryptographic tasks, including the serverpart of the user authentication, encryption/decryption of thepseudonyms, the decryption of the user’s inner symmetric keywith her inner private key, and the calculation and encryptionof the backup shares. These shares are created for securelydistributing parts of the user’s inner private key to dedi-cated share holders (operators, see below) so that it can bereconstructed should the smart card be unavailable (lost ordamaged). Storing the user’s keys (with the exception of theouter private keys) in the database and loading them whenrequired instead of keeping them in the HSM at all timesmakes replacing the HSM easier in the case of failure or theft.The server’s outer private key still needs to be backed up by,e.g., threshold secret sharing similar to backing up the user’sinner private keys.
+As depicted in Fig. 2 , we support three different main roles,
+the data owner, the afﬁliated, and the authorized. The dataowner is represented by the patient who is in full control ofher health data in that she can create data access authoriza-tions for speciﬁc health records (for authorized users) as wellas granting full access rights equivalent to root access (forafﬁliated users). Authorizations in this context do not referto access authorizations in the traditional sense but rather toproviding the authorization grantee with the ability to re-linkidentiﬁcation with health pseudonyms, thus allowing them toreconnect the patient with the corresponding health records.The data owner relies on pseudonyms which are initially
+2
+known only to her, the root pseudonyms, as her primaryhealth record retrieval means.
+An authorized user, e.g., a trusted health care provider, is
+provided with the knowledge of the link between a particu-lar health record and the corresponding identiﬁcation record.This is realized by introducing a new set of pseudonyms,the so-called shared pseudonyms. As their name implies,the shared pseudonyms are shared between the data ownerand the authorized person and are encrypted with both theirinner symmetric keys so that both are able to decrypt thisauthorization relation. For each individual authorization, i.e.,for each authorized user/health record combination, a newshared pseudonym is created, ensuring unobservability ofaccess rights.
+In contrast to authorized users, an afﬁliated user, e.g., a
+close relative, is entrusted with the data owner’s inner privatekey and is therefore able to decrypt the data owner’s innersymmetric key, granting the afﬁliated user full access to all
+1Pseudonyms are stored in cleartext when mapped to a partic-
+ular record while the link between them is hidden by storing thepseudonyms encrypted in a single relation.
+2By afﬁliations via key-sharing, the afﬁliated user is granted
+access to the root pseudonyms as well.data corresponding to the data owner. Therefore, the afﬁliated
+user is able to decrypt the links between all root and sharedpseudonyms related to the data owner. The conceptual datamodel is depicted in Fig. 3 .
+The identiﬁcation and health pseudonyms always form
+a 1:1 relationship and are referenced with their correspond-ing document type where this reference is stored in cleartext(record/pseudonym mapping). The link between the identiﬁ-cation and health pseudonyms is stored encrypted with theuser’s inner symmetric key (pseudonym/pseudonym map-ping): while the root pseudonyms are encrypted with thedata owner’s (patient’s) inner symmetric key only, the sharedpseudonyms are encrypted with both the data owner’s and theauthorized user’s (health professional’s) inner symmetric keyso that both users are able to decrypt them using their corre-sponding ciphertexts. The link between the identiﬁcation andhealth record is hidden and represented by the link betweenidentiﬁcation and health pseudonyms. Each health record isassigned exactly one root health pseudonym while each iden-tiﬁcation record has multiple root pseudonyms, dependingon the number of health records, due to the 1:1 relation-ship. The health record is assigned a number of shared healthpseudonyms according to the number of individual authoriza-tions for that particular health record.
+T o query for particular pseudonyms (and thus records),
+each health pseudonym is assigned a particular keyword (thesame keyword is assigned to the root and health pseudonymsthat are referenced with the same health record), whichcan also be used for different health pseudonyms/recordsif applicable. T o prevent the processing overhead of query-ing within encrypted data, we propose to store the keywordsin cleartext to be usable/shared by all users, while the linkbetween the health pseudonyms and keywords is realizedby the keyword identiﬁer. Again, the link (keyword iden-tiﬁer/pseudonym mapping) is encrypted with the owner’sand/or authorized user’s inner symmetric keys. As arbitrarykeywords are ill-suited for range queries and may include con-ﬁdential or patient-identifying information, the keywords arehighly structured and constructed from pre-speciﬁed keywordtemplates: document type (image, text, etc.), disease type (e.g.,International Statistical Classiﬁcation of Diseases and RelatedHealth Problems (ICD) [49] ), and date.
+Note that depersonalization (i.e., decoupling identiﬁcation
+data from health data records) is an important factor to allowthe effective pseudonymization of medical data. In certaincases it is not sufﬁcient to just remove the patient’s namefrom the medical record to depersonalize them. Some med-ical areas (e.g., genomics) require more in-depth inspection,because genome sequences, which have identifying proper-ties per se, may require splitting up the records for effectivedepersonalization. However, in-depth discussion of this topicis outside the scope of this work. For this paper we assumethat the medical data records have already been depersonal-ized.
+4. Workﬂows
+In this section, we describe the main PIPE workﬂows includ-ing authentication, user authorization, user afﬁliation, health
+international journal of medical informatics 80 (2011) 190–204 197
+Fig. 3 – Data model.
+Table 1 – Abbreviations.
+OPuK Outer public key
+OPK Outer private keyIPuK Inner public keyIPK Inner private keySK Session keyISK Inner symmetric keyID Identiﬁcation (pseudonym or record)HE Health (pseudonym or record)u Userow Data ownerau Authorized useraf Afﬁliated user
+data storage, and retrieval. Abbreviations used in the workﬂow
+diagrams are summarized in Table 1 .
+Session key encryption/decryption is actually needed only
+when transferring data over an untrusted network. Alter-natively, established security mechanisms such as TLS
+3can
+be applied. In the local scenario with trusted communica-tion channels, SK encryption is not required and may involveunnecessary cryptographic overhead, especially when recordsare fully encrypted for transport. For the sake of complete-ness, all workﬂow descriptions in this section involve theSK.
+4.1. User authentication
+User authentication ( Fig. 4 ) involves the mutual authentica-
+tion of the user using the smart card and the server, involvingtheir outer keypair and two nonces (randomly selected num-bers used once) as user/server challenges. Once both identitiesare conﬁrmed, the user’s inner private key is retrieved fromthe pseudonymization database and transferred to the user’ssmart card to be decrypted with the user’s outer private
+3Transport Layer Security.key. With the decrypted inner private key, the user’s innersymmetric key can be decrypted within the HSM at thepseudonymization server and be cached for further opera-tions along with the user’s inner private key. In addition,a session key is generated at the HSM and securely (viaencryption) transported to the user’s smart card so thatthe key appears in cleartext only on the smart card andHSM.
+4.2. Health data retrieval
+T o retrieve a particular health record ( Fig. 5 ), the user ﬁrst
+needs to query for the particular encrypted pseudonyms bycreating a keyword using the keyword templates, retrievingthe corresponding keyword identiﬁer, and querying for theencrypted identiﬁer to ﬁnd matching encrypted pseudonyms,i.e., the encrypted pseudonym mappings associated withthe encrypted keyword identiﬁer. The pseudonym pairs arethen decrypted with the user’s inner symmetric key andthe plaintext pseudonyms then used to retrieve the cor-responding identiﬁcation and health records, which aretransferred to the user to be displayed (possibly merged).Optionally, the pseudonyms and keyword identiﬁer are alsotransferred to the user (root pseudonyms for authoriza-tions). The record retrieval procedure is the same for thepatient as data owner, health care provider as authorizeduser, and relative as afﬁliated user, with the difference thatthe patient and relative both query for the patient’s rootpseudonyms, while the health care provider relies on theshared pseudonyms.
+4.3. User authorization
+T o provide a trusted health care provider with the knowledgeof the link between the patient’s identiﬁcation record and aparticular health record ( Fig. 6 ), a new shared pseudonym pair
+is created as authorization relation. The patient ﬁrst has to
+198 international journal of medical informatics 80 (2011) 190–204
+Fig. 4 – User authentication.
+retrieve the root pseudonym pair and keyword identiﬁer cor-
+responding to the health record he or she intends to sharewith the health care provider. Furthermore, both the patientas data owner and the health care provider as authorized userhave to be authenticated at the same workstation so that bothuser identiﬁers are available at the client side, while both innersymmetric keys are cached at the HSM of the pseudonymiza-tion server.
+The root pseudonym pair is then transferred to the
+pseudonymization server along with both user identiﬁersand the keyword identiﬁer, and the corresponding record
+identiﬁers retrieved using the cleartext record/pseudonymmappings.
+The server then randomly selects a new shared pseudonym
+pair, which is ﬁrst encrypted with both users’ inner sym-metric keys (along with both identiﬁers and the keywordidentiﬁer) and then stores them in the database as autho-rization relation. Finally, the cleartext pseudonyms are thenreferenced with the retrieved record identiﬁers to create twonew record/pseudonym mappings.
+Fig. 5 – Health data retrieval.
+international journal of medical informatics 80 (2011) 190–204 199
+Fig. 6 – User authorization.
+4.4. User afﬁliation
+As with authorizations, a user afﬁliation ( Fig. 7 ) requires that
+both the patient as data owner and the trusted relative as afﬁl-iated user are authenticated at the same workstation. Thenboth user identiﬁers are transferred to the pseudonymizationserver where they are encrypted with both users’ inner sym-metric keys. In addition, the patient’s inner private key is alsoencrypted with the relative’s inner symmetric key, and all ele-ments are stored in the pseudonymization metadata storageas afﬁliation relation.
+4.5. Health data storage
+From the viewpoint of the patient as data owner, healthdata storage ( Fig. 8 ) ﬁrst requires that an ‘old’ root identiﬁca-
+tion pseudonym is retrieved as reference to the identiﬁcationrecord. Furthermore, the patient creates a new keyword andenters the new health record into the workstation. Thenthe pseudonym, new keyword, new health record, and useridentiﬁer are transferred to the pseudonymization server,where the keyword is stored (and its identiﬁer determined
+by the database engine) and the identiﬁcation record identi-ﬁer retrieved. The new record is stored in the health recordsdatabase and its record identiﬁer returned to the server. Then,the server creates a new root pseudonym pair and stores itencrypted with the keyword identiﬁer and user identiﬁer asroot access, as well as the cleartext record/pseudonym map-pings.
+4.6. Health professional as health record provider
+While in the previous section the patient is described as dataprovider, in most cases, the main health care provider isactually a trusted health professional. The PIPE frameworkrequires a particular data adding authorization where thehealth care provider is speciﬁcally authorized in advance toadd new records for the patient. A data adding authorization isbasically a combination of user authorization and health datastorage in that both a new root and shared pseudonym pair iscreated and stored as authorization and root access relations.Instead of referencing the health pseudonyms with an exist-
+Fig. 7 – User afﬁliation.
+200 international journal of medical informatics 80 (2011) 190–204
+Fig. 8 – Health data storage.
+ing health record, they are assigned to a placeholder that is
+stored instead. When the new health record becomes avail-able, the health care provider needs to query for the particularshared pseudonym (via keyword) to replace the placeholderwith the actual new health record.
+5. Prototype
+As a proof-of-concept, we implemented a prototype for theMicrosoft
+®Windows platform using .NET technology. As cryp-
+tographic algorithms, RSA with 2048 bit keys and AES with 256bit keys are used and pseudonymization metadata is stored ina relational database (MS SQL Server). This prototype realizesthe core functionality of user management, record storage andretrieval, and authorization and de-authorizations, but alsoincludes several advanced functions such as asynchronousauthorizations and a notiﬁcation system. The prototype wasimplemented with the following requirements in mind:
+•Storage of health data in an anonymized state to comply
+with legal requirements.
+•Conﬁdentiality/privacy protection against attackers (espe-
+cially insiders).
+•Data access for selected authorized personnel (external
+employees).
+•Anonymized secondary use for internal statistics and
+research studies.Our case study is established in the area of predictive
+genetic testing. In this scenario, the data owner is representedby the patient who orders a particular test concerning thehealth issues she is interested in (e.g., cardiovascular diseases)and stores the medical history. Depending on the selectedtest type, different genetic loci of the patient’s genetic sam-ple are analyzed for single nucleotide polymorphisms (SNP),which are then recorded by a lab technician in a lab resultrecord. This record containing SNP compositions is then madeavailable to a domain specialist via authorization (possiblymultiple specialists depending on the domain area(s) thatneed to be covered), who provides the medical interpretationin the form of a medical report. The complete set of recordsis then made accessible to the trusted general practitionerwho works out an individual health plan. This scenario cov-ers all pseudonymization-related operations including datastorage (patient, lab technician, domain specialist), retrieval(all), authorizations (lab technician, domain specialist), andafﬁliations (general practitioner).
+The health documents include samples of medical histo-
+ries, lab results, and medical reports, and were encoded ina custom HL7 CDA [50] based scheme: The header sections
+containing patient-related and administrative information areused as identiﬁcation records
+4and the body sections contain-
+4In our test scenario, the same header section was used for all
+body elements corresponding to the same patient. However, our
+international journal of medical informatics 80 (2011) 190–204 201
+Fig. 9 – PIPE test interface with retrieved medical report.
+ing the actual health data as health records. As keywords, we
+used ICD10-encoded disease types and simple document des-ignators (identiﬁcation, medical history, lab results, medicalreport).
+In Fig. 9 , our test interface is shown, where the query
+returned three root pseudonym pairs representing three doc-uments; the currently selected pair relates to the patient JohnSmith and a medical report containing medical interpreta-tions.
+The prototype met the requirements stated above as fol-
+lows:
+•Legal requirements : The pseudonymized data structure con-
+tains the genetic information in an anonymized state bysplitting the headers from the body sections of the docu-ments, thus complying with legal requirements.
+•Insider attackers : Access to the de-pseudonymized records
+is limited to a need-to-know basis decided by the patient,limiting the impact of potential data leakages.
+•Data access : Valid users are issued personal security tokens
+that uniquely identiﬁes and authenticate them. Recordretrieval operations require authorizations resol vable by
+these tokens only.
+•Anonymized secondary use : As the records are already stored
+in a pseudonymized state, privacy-preserving statisticalinquiries are possible without further anonymization.
+Performing tests involving query and retrieval operations of
+pseudonymized documents revealed the following results: As
+data model and the workﬂows can be easily adapted to a true 1:1
+relationship between identiﬁcation and health record to supportmore complex CDA documents with unique header sections.expected, pseudonymization resulted in a measurable impact
+on retrieval times due to the increased overhead of encryp-tion/decryption and additional database operations. However,while we expected cryptography to have a major impact,the main performance hit was caused by the additionaldatabase lookups, especially that of retrieving the encryptedpseudonyms. While the database engine is able to internallyoptimize JOIN queries, we cannot proﬁt from these optimiza-tion mechanisms due to the pseudonymized data schemewhere the links between the tables are literally broken up,i.e., all critical relations are hidden by encryption. Using SSDsinstead of traditional disk-based hard drives consider ably
+improved overall performance.
+Due to the calculation performances of HSMs, cryptogra-
+phy only added a minor overhead to the overall retrieval, asdid the actual pseudonymization algorithm, which was rathermodest in terms of computational requirements. At the clientside, the smart card performance as cryptographic environ-ment proved to be a limiting factor. While the authenticationoperation is executed only once for each session, session keyencryption had a considerable impact on the overall retrievaloperation, especially when encrypting documents. Thus, host-based encryption, i.e., workstation instead of smart card, ismore appropriate (either SK encryption/decryption at the hostor TLS). As the critical inner symmetric key is still kept securewithin the HSM, the impact in security is therefore minimal.
+6. Threat scenarios
+We identiﬁed multiple threat scenarios that need to beaddressed by security mechanisms of the PIPE framework.Security is typically veriﬁed by evaluation against the secu-rity attributes conﬁdentiality (C), integrity (I), and availability
+202 international journal of medical informatics 80 (2011) 190–204
+T a b l e2–T h r e a t scenarios.
+Attack scenario Security
+attributeLevel of
+protection
+Cryptanalysis C, I Full
+Trafﬁc interception/manipulation C, I, A FullMan-in-the-middle/impersonation C, I, A FullSocial engineering C PartialHardware theft C, A FullDatabase theft C FullUnauthorized data retrieval C FullMalicious code C, I Partial
+(A) [51] . As privacy is paramount in PIPE, we primarily focus
+on conﬁdentiality, and, in second place, on integrity. The sce-narios are summarized in Table 2 .
+5
+As we rely on standard cryptographic algorithms that
+can be easily replaced when required, we assume perfectcryptography. Authentication with two random nonces andsession key encryption protects against trafﬁc interceptionand man-in-the-middle attacks in untrusted communicationenvironments. Because the smart cards are protected by theuser-owned PIN and the secret keys currently in use are auto-matically erased from the HSM when removed from its powersource, hardware theft is not an issue. Database theft can-not be fully prevented but information leakage is limitedby the pseudonymized storage structure. Unauthorized dataretrieval, i.e., knowledge of the correct link between identi-ﬁcation and health record, is prevented by encryption withthe users’ inner symmetric keys. Social engineering cannot betechnically prevented, but its consequences are limited by theuser-based encryption. Malicious code is a serious issue, espe-cially when the pseudonymization logic is compromised. Thetamper resistance of the smart card and the HSM provides areasonable level of security and ensures that the secret keyscannot be leaked, but the pseudonymization server and theworkstation still need to be protected against malicious codewith malware scanners with up-to-date signatures.
+7. Conclusion
+Electronic health records allow the structured and expandablecollection of medical data to be shared between authorizedhealth care providers to improve the quality of patients’ treat-ment and to reduce costs. The problem with electronicallystored health data are the arising privacy concerns, espe-cially with centrally stored health data. The disclosure ofsensitive patient information may result in serious problemsfor the patient, including harassment or denied services. Inthis paper, we have presented a novel protocol for the cen-tralized pseudonymization of health data and provided anoverview of the concept and a detailed description of theprotocol. This approach allows the unlinked storage of med-ical data and related patient-identifying information, whilestill making it possible to reestablish the patient/health datarelationship for authorized users. We carried out a detailedsecurity veriﬁcation comprising scenario-based threat analy-
+5Details on the threat scenarios can be found as
+supplementary material on the publisher’s website .Summary points
+What is known:
+•The availability of reliable information has a tremen-
+dous impact on decisions regarding the patients’ care.
+•Electronic health records allow the improvement of
+communication between health care providers and oftheir access to data and documentation, leading to bet-ter clinical and service quality.
+•The electronic storage of health data raises consider-
+able privacy concerns.
+What this work adds:•Identiﬁes shortcomings of existing approaches and
+methodologies.
+•Provides a methodology for the pseudonymization of
+medical data to guarantee patients’ privacy.
+•The proposed PIPE architecture allows primary and
+secondary use of the data at the same time.
+sis and prototyping to show that the methodology provides
+a high level of security through the application of a dedicatedhardware security module for the secured cryptographic oper-ations.
+Author contributions
+The manuscript was written jointly by the both authors, beinga result of a 2,5 years research project.
+Conﬂict of interest statement
+There are NO conﬂicts of interest.
+Acknowledgments
+This work was supported by grants of the Austrian Govern-ment’s BRIDGE Research Initiative (contract 824884) and wasperformed at the research center Secure Business Austriafunded by the Federal Ministry of Economy, Family and Y outhof the Republic of Austria and by the City of Vienna.
+Appendix A. Supplementary data
+Supplementary data associated with this article can be found,in the online version, at doi:10.1016/j.ijmedinf.2010.10.016 .
+references
+[1] S. Märkle, K. Köchy, R. Tschirley, H.U. Lemke, The PREPaRe
+system—patient oriented access to the personal electronicmedical record, in: Proceedings of the 17th InternationalCongress and Exhibition on Computer Assisted Radiology
+international journal of medical informatics 80 (2011) 190–204 203
+and Surgery, ser. International Congress Series, no. 1256,
+2001, pp. 849–854.
+[2] F .R. Ernst, A.J. Grizzle, Drug-related morbidity and mortality:
+updating the cost-of-illness model, Journal of the AmericanPharmacists Association 41 (2) (2001) 192–199.
+[3] United States Department of Health Human Service, HIPAA
+administrative simpliﬁcation: enforcement; ﬁnal rule,Federal Register/Rules and Regulations 71 (32) (2006).
+[4] European Union, Directive 95/46/EC of the European
+Parliament and of the Council of 24 October 1995 on theprotection of individuals with regard to the processing ofpersonal data and on the free movement of such data,Ofﬁcial Journal of the European Communities L 281 (1995)31–50.
+[5] Council of Europe, European Convention on Human Rights,
+Martinus Nijhoff Publishers, 1987.
+[6] S. Fischer-Hübner, IT -Security and Privacy: Design and Use
+of Privacy-Enhancing Security Mechanisms, Springer, 2001.
+[7] S. Hinde, Privacy legislation: a comparison of the US and
+European approaches, Computers and Security 22 (5) (2003)378–387.
+[8] G. Hornung, C.F .-J. Goetz, A.J.W . Goldschmidt, Die künftige
+Telematik-Rahmenarchitektur im Gesundheitswesen,Wirtschaftsinformatik 47 (2005) 171–179.
+[9] U.S. Department of Health & Human Services Ofﬁce for Civil
+Rights, “Summary of the HIPAA Privacy Rule”, 2003. [Online].Available: http://www.hhs.gov/ocr/privacy/hipaa/
+understanding/summary/ .
+[10] U.S. Congress, “Health Insurance Portability and
+Accountability Act of 1996”, 104th Congress, 1996. [Online].Available: http://www.cms.hhs.gov/HIPAAGenInfo/
+Downloads/HIPAALaw.pdf .
+[11] T . Schabetsberger, E. Ammenwerth, G. Göbel, G. Lechleitner,
+R. Penz, R. Vogl, F . Wozak, What are functional requirementsof future shared electronic health records? ConnectingMedical Informatics and Bio-Informatics (2005) 1070–1075.
+[12] B. Riedl, T . Neubauer, G. Goluch, O. Boehm, G. Reinauer, A.
+Krumboeck, A secure architecture for the pseudonymizationof medical data, in: Proceedings of the Second InternationalConference on Availability Reliability and Security, 2007, pp.318–324.
+[13] R.C. Barrows, P .D. Clayton, Privacy, conﬁdentiality, and
+electronic medical records, Journal of the American MedicalInformatics Association 13 (1996) 139–148.
+[14] J Attridgde, An Overview of Hardware Security Modules,
+SANS Institute, Tech. Rep., 2002.
+[15] J. Montagnat, F . Bellet, H. Benoit-Cattin, V . Breton, L. Brunie,
+H. Duque, Y . Legré, I.E. Magnin, L. Maigne, S. Miguet, J.M.Pierson, L. Seitz, T . T weed, Medical images simulation,storage, and processing on the European DataGrid Testbed,Journal of Grid Computing 2 (4) (2004) 387–400.
+[16] R Sharp, Principles of Protocol Design, Springer, 2008.[17] A. Pﬁtzmann, M. Koehntopp, Anonymity, unobservability
+and pseudeonymity—a proposal for terminology, in:International Workshop on Designing Privacy EnhancingTechnologies, Springer-Verlag, Inc., New Y ork, 2001, pp. 1–9.
+[18] K.A. Taipale, Technology, security and privacy: the fear of
+Frankenstein, the mythology of privacy and the lessons ofKing Ludd, International Journal of Communications Law &Policy 9 (2004).
+[19] A Rector, J. Rogers, A. Taweel, D. Ingram, D. Kalra, J. Milan, P .
+Singleton, R. Gaizauskas, M. Hepple, D. Scott, R. Power,Clef—joining up healthcare with clinical and post-genomicresearch, in: Proceedings of UK e-Science All Hands Meeting,2003, pp. 203–211.
+[20] C. Thielscher, M. Gottfried, S. Umbreit, F . Boegner, J. Haack,
+N. Schroeders, Patent: data processing system for patientdata, Int. Patent, WO 03/034294 A2, 2005.[21] K. Maris, The human factor in information technology, in:
+Proceedings of Hack.lu, Luxembourg, 2005.
+[22] T . Thornburgh, Social engineering: The “Dark Art”, in:
+Proceedings of the First Annual ACM Conference onInformation Security Curriculum Development, ACM Press,2004, pp. 133–135.
+[23] M. Bishop, D. Gollmann, J. Hunker, C.W . Probst, Countering
+insider threats, in: Dagstuhl Seminar Proceedings 08302,2008.
+[24] K. Pommerening, Medical requirements for data protection,
+in: Proceedings of IFIP Congress, vol. 2, 1994, pp. 533–540.
+[25] K. Pommerening, M. Reng, Secondary use of the electronic
+health record via pseudonymisation Medical and CareCompunetics, vol. 1, IOS Press, 2004, pp. 441–446.
+[26] A.A.E. Kalam, Y . Deswarte, G. Trouessin, E. Cordonnier,
+A generic approach for healthcare data anonymization,2004.
+[27] R. Noumeir, A. Lemay, J. Lina, Pseudonymization of radiology
+data for research purposes, 2007.
+[28] Digital Imaging Communications in Medicine, National
+Electrical Manufacturers Association Std., 2008.
+[29] R.L. Peterson, Patent: encryption system for allowing
+immediate universal access to medical records whilemaintaining complete patient control over privacy, USPatent US 2003/0074564 A1, 2003.
+[30] J. Caumanns, Der Patient bleibt Herr seiner Daten:
+Realisierung des eGK-Berechtigungskonzepts über einticketbasiertes, virtuelles Dateisystem,Informatik-Spektrum 29 (5) (2006) 323–331.
+[31] Fraunhofer Institut, Speziﬁkation der Lösungsarchitektur
+zur Umsetzung der Anwendungen der elektronischenGesundheitskarte, March 2005.
+[32] C.D. Stingl, D. Slamanig, D. Rauner-Reithmayer, H. Fischer,
+Realisierung eines sicheren zentralen Datenrepositories, in:Tagungsband, DACH Security, 2006, pp. 1–15.
+[33] C. Stingl, D. Slamanig, Berechtigungskonzept für ein
+e-health-portal, in: G. Schreier, D. Hayn, E. Ammenwerth(Eds.), eHealth 2007—Medical Informatics Meets eHealth, no.227, Österreichische Computer Gesellschaft, 2007, pp.135–140.
+[34] C. Stingl, D. Slamanig, Privacy aspects of e-health, in:
+Proceedings of the Third International Conference onAvailability, Reliability and Security, 2008, pp. 1226–1233.
+[35] M.K. Bond, Understanding Security APIs, Ph.D. dissertation,
+University of Cambridge, Computer Laboratory, EmmanuelCollege, 2004.
+[36] Federal information processing standards publication,
+“Security requirements for cryptographic modules (Fips pub140-2),” Institute of Standards and Technology (NIST), Tech.Rep., 05 2001.
+[37] R. Anderson, M. Bond, J. Clulow, S. Skorobogatov,
+Cryptographic Processors—A Survey, University ofCambridge, Computer Laboratory Tech. Rep., 2005.
+[38] PKCS#11 v2.20: Cryptographic T oken Interface Standard, RSA
+Laboratories Std., 2004.
+[39] D.C. Wherry, Secure Y our Public Key Infrastructure with
+Hardware Security Modules, SANS Institute, Tech. Rep.,2003.
+[40] M. Lorch, J. Basney, D. Kafura, A hardware-secured credential
+repository for grid PKIs, in: Proceedings of the 4th IEEE/ACMInternational Symposium on Cluster Computing and theGrid, 2004.
+[41] T . Rössler, H. Leithold, R. Posch, E-voting: a scalable
+approach using XML and hardware security modules, in:Proceedings of the 2005 IEEE International Conference one-Technology, e-commerce and e-Service EFF’05, 2005.
+[42] A. Baldwin, S. Shiu, Hardware encapsulation of security
+services, in: 8th European Symposium on Research in
+204 international journal of medical informatics 80 (2011) 190–204
+Computer Security (ESORICS), ser. LNCS, vol. 2808, Springer,
+Berlin/Heidelberg, 2003.
+[43] M. Casassa-Mont, A. Baldwin, J. Pato, Secure
+Hardware-based Distributed Authorisation Underpinning aWeb Service Framework, Trusted Systems Laboratory, HPLaboratories Bristol, Tech. Rep., 2003.
+[44] A. Baldwin, S. Shiu, Hardware security appliances for trust,
+in: First International Conference on First InternationalConference, ser. LNCS, vol. 2692, Springer, 2003.
+[45] A. Ferreira, S. Shiu, A. Baldwin, T owards accountability for
+electronic patient records, in: Proceedings of the 16th IEEESymposium on Computer-Based Medical Systems(CBMS’03), 2003, pp. 189–194.
+[46] A. Shamir, How to share a secret, Communications of the
+ACM 22 (11) (1979) 612–613.[47] T . Jurgensen, S. Guthery, Smart Cards: The Developer’s
+T oolkit, Pearson Education, Inc. Prentice Hall PTR, UpperSaddle River, 2002.
+[48] B. Holcombe, Government Smart Card Handbook, U.S.
+General Services Administration (GSA), 2004.
+[49] International Statistical Classiﬁcation of Diseases and
+Related Health Problems (ICD), World Health OrganizationStd., 2007.
+[50] R.H. Dolin, L. Alschuler, C. Beebe, The HL7 clinical document
+architecture, Journal of the American Medical InformaticsAssociation 8 (6) (2001) 552–569.
+[51] A. Avizienis, J.-C. Laprie, B. Randell, C. Landwehr, Basic
+concepts and taxonomy of dependable and securecomputing, IEEE Transactions on Dependable and SecureComputing 1 (1) (2004) 11–33.

@@ -1,0 +1,1267 @@
+Journal of Internet Services
+and ApplicationsNeumann etal. JournalofInternetServicesandApplications            (2019) 10:1 
+https://doi.org/10.1186/s13174-018-0098-z
+RESEARCH OpenAccess
+Pseudonymizationriskanalysisin
+distributedsystems
+GeoffreyK.Neumann,PaulGrace*,DanielBurnsandMikeSurridge
+Abstract
+In aneraofbigdata,onlineservicesarebecomingincreasinglydata-centric;theycollect,process,analyzeand
+anonymouslydisclosegrowingamountsofpersonaldataintheformofpseudonymizeddatasets.Itiscrucialthat
+suchsystemsareengineeredtobothprotectindividualuser(datasubject)privacyandgivebackcontrolofpersonal
+datatotheuser.Intermsofpseudonymizeddatathismeansthatunwantedindividualsshouldnotbeabletodeduce
+sensitiveinformationabouttheuser.However,theplethoraofpseudonymizationalgorithmsandtuneable
+parametersthatcurrentlyexistmakeitdifficultforanonexpertdeveloper(datacontroller)tounderstandandrealise
+strongprivacyguarantees.InthispaperweproposeaprincipledModel-DrivenEngineering(MDE)frameworkto
+modeldataservicesintermsoftheirpseudonymizationstrategiesandidentifytheriskstobreachesofuserprivacy.A
+developercanexplorealternativepseudonymizationstrategiestodeterminetheeffectivenessoftheir
+pseudonymizationstrategyintermsofquantifiablemetrics:i)violationsofprivacyrequirementsforeveryuserinthe
+currentdataset;ii)thetrade-offbetweenconformingtotheserequirementsandtheusefulnessofthedataforits
+intendedpurposes.Wedemonstratethroughanexperimentalevaluationthattheinformationprovidedbythe
+frameworkisuseful,particularlyincomplexsituationswhereprivacyrequirementsaredifferentfordifferentusers,and
+caninformdecisionstooptimizeachosenstrategyincomparisontoapplyinganoff-the-shelfalgorithm.
+Keywords: Privacy,Pseudonymization,Riskanalysis
+1 Introduction
+Motivation .Thecreationofnovel,personalizedandopti-
+mized data-centered applications and services now typ-
+ically requires the collection, analysis and disclosure of
+increasing amounts of data. Such systems will leverage
+data-sets that include personal data and therefore their
+usageanddisclosurerepresentarisktoauser’s(datasub-
+ject)privacy.Thisdatamaybedisclosedtotrustedparties
+or released into the public domain for social good (e.g.
+scientificandmedicalresearch);itmayalsobeusedinter-
+nally within systems to improve the provision of a service
+(e.g. to better manage resources, or optimize a service for
+individual users). Importantly, users have different view-
+points of what privacy means to them. Westin’s privacy
+indexes provide evidence of this [ 1]. For example, users
+may wish to disclose sensitive information to support
+*Correspondence: pjgrace@gmail.com
+ITInnovation,UniversityofSouthampton,GammaHouse,EnterpriseRoad,
+SO167NSSouthampton,UKmedical research, but not allow an environmental moni-
+toringservicetotracktheirmovements.However,thereis
+aconcernthatindividualsmaysimplynotunderstandthe
+implicationsfortheirowndatawithinaservice[ 2];orthis
+mayreflectthecomplexityoftechnologyitself[ 3].Hence,
+systems should be developed to ensure that: i) each indi-
+vidual’sprivacypreferencesaretakenintoaccount,andii)
+riskstoeachandeveryuser’sprivacyareminimized.
+Dataanonymization is the process of removing directly
+identifying information from data. Anonymized datasets
+may contain both sensitive information, and information
+thatcouldidentifytheperson.Hence,concernsaboutpre-
+serving privacy has led to algorithms to pseudonymize
+data in such a way that personal information is not dis-
+closed to an unwanted party, e.g. k-anonymization [ 4],
+l-diversity [ 5]a n dt-closeness [ 6]. In general, developers’
+understanding of external privacy threats are limited [ 7].
+Non-experts in these algorithms will also find them diffi-
+cult to understand in terms of: i) the impact of the risk of
+re-identification, and ii) the effect of the pseudonymiza-
+tionontheusefulnessofthedataforitsintendedpurpose.
+©TheAuthor(s).2019 OpenAccess ThisarticleisdistributedunderthetermsoftheCreativeCommonsAttribution4.0
+InternationalLicense( http://creativecommons.org/licenses/by/4.0/ ),whichpermitsunrestricteduse,distribution,and
+reproductioninanymedium,providedyougiveappropriatecredittotheoriginalauthor(s)andthesource,providealinktothe
+CreativeCommonslicense,andindicateifchangesweremade.
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page2of16
+Hence,developmentframeworksthatguideaprivacy-by-
+design[8]processtoachievebetterprivacyprotectionare
+required.
+Contribution .InthispaperweproposeaModel-Driven
+Engineering (MDE) framework to model and analyze the
+privacy risks of a system employing pseudonymization.
+Thisprovidesthefollowingkeyfeatures:
+•Modelinguserprivacy .Theframeworktakesasinput
+modelsofthesystemintermsofthedataanditsflow
+betweensystemsandstakeholders(viadataflow
+diagrams)andautomaticallygeneratesaformal
+modelofuserprivacyinthesystem(intermsofa
+LabeledTransitionSystem).
+•Pseudonymizationriskanalysis .Theuser-centered
+privacymodelisthenanalyzedtoautomatically
+identifyandquantifyprivacyrisksbaseduponthe
+modeledchoicesofpseudonymization.Thisreturns
+thenumberofprivacyviolationsthata
+pseudonymizationstrategywillormayresultin,and
+anassessmentofwhetherthedatawillstillbeuseable
+foritsintendedpurposeswhentheviolationshave
+beeneliminatedtoanacceptablestandard.
+We argue that the framework can be used by non-
+pseudonymizationexpertsatdifferentstagesofthedevel-
+opment lifecycle to make informed decisions about:
+pseudonymization strategies, whether pseudonymized
+data is safe to release, and whether to impose restrictions
+onwhendatashouldbereleased.Asystemdesigner,using
+profiled user data, can understand privacy risks early in
+thedesignprocess,andensurethatuserprivacyisafoun-
+dational requirement to be maintained. The framework
+c a na l s ob eu s e db ys y s t e m sd e v e l o p e r s( o rd a t ac o n -
+trollers)tomakedecisionsaboutdatadisclosurebasedon
+theinformationfromtheusersintherealdataset.Outline.S e c t i o n 2first describes how the framework
+is used to model user-centred privacy-aware systems that
+leveragepseudonymization,beforedescribinghowpoten-
+tial pseudonymization risks are identified in Section 3.
+Section4reports how the framework carries out data
+utility analysis. Section 5describes how the framework
+is applied following privacy-by-design practice, and the
+framework is evaluated in Section 6.S e c t i o n 7describes
+related work, and Section 8provides a conclusion and
+indicatesareasoffuturework.
+2 Modellingprivacyawarepseudonymization
+systems
+Here we describe a framework to model privacy aware
+systems.Thisfollowstwosteps.First,thedevelopermod-
+elstheirsystem;second,aformalmodelofuserprivacyin
+thissystemisgenerated.
+2.1 Step1:modellingaprivacyawaresystem
+The developers of the system create a set of artifacts that
+modelthebehaviouroftheirsystem:
+•AsetofData-Flowdiagrams thatmodeltheflowof
+personaldatawithinasystem.Inparticularfocusing
+onhowdataisexchangedbetweentheactorsand
+datastores.Weutilizedata-flowdiagramsbecause
+theyareanexistingwell-understoodformof
+modelingthatsimplycapturesdatabehaviours.
+•Thedataschema associatedwitheachdatastore;this
+highlightstheindividualfieldsandalsothose
+containingpersonaldata,andpotentiallysensitive
+personaldata.
+We now consider a simple example to illustrate how
+these elements form the input to the modelling frame-
+work. Two data-flow diagrams are given in Fig. 1.T h e
+Fig.1Exampledata-flowdiagramforsharingondata
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page3of16
+nodesrepresenteitheran actor(oval) or a datastore
+(rectangle). The datastores are labelled by two objects:
+the first is the identifier for the datastore, and the second
+are the data schemas. The actual data flow is represented
+by directed arrows between the ovals and rectangles,
+henceforth referred to as flow arrows. Each flow arrow
+is labelled with three objects: the set of data fields which
+flows between the two nodes, the purpose of the flow,
+and a numeric value indicating the order in which the
+data flow is executed. We assume datastore interfaces
+that support querying and display of individual fields (as
+opposed to coarse-grained records). The example illus-
+trates the process where an administrator queries data
+fromanhealthcaredatabasetoproduceapseudonymized
+version that is stored in a data store; from which data is
+queriedbyresearchers.
+2.2 Step2:automaticallygeneratinganLTSprivacy
+model
+In this section we provide a formal model of user pri-
+vacy that is generated based upon the input data-flow
+diagrams (we do not detail the transformation algorithm
+in this paper, see [ 9]). User privacy is modeled in terms
+of how actor actions on personal data change the user’s
+s t a t eo fp r i v a c y .W ed e f i n ea n actorto be an individ-
+ual or role type which can identify the user’s personal
+data. Depending on the service provided, each actor may
+or may not have the capability to identify personal data.
+Hence, a user’s privacy changes if any of their personal
+datahasbeenorcanbeidentifiedbyanactor.Priormod-
+els following this approach are: a Finite State Machine
+(FSM) [10,11] or a Labelled Transition System (LTS)
+[12]. The common theme in both is that the user’s pri-
+vacy at any point in time is represented by a state, and
+that actions, executed by actors, taken on their per-
+sonal data can change this state. We build upon these
+approaches and extend them to label both states andtransitions in such a way that the model can be anal-
+ysed to understand how, and why, the user’s privacy
+changes. This novel contribution allows us to represent
+not only the sharing of a user’s personal information, but
+also the potential for a user’s personal information to
+be shared. This is the case when personal information
+is stored in a datastore that can be accessed by multiple
+individuals.
+Thekeyelementsofourmodel(illustratedinFig. 2)are:
+•States:arerepresentationsoftheuser’sprivacy.They
+arelabelledwithvariablestorepresenttwo
+pre-dominantfactors:whetheraparticularactor has
+identifiedaparticularfield,orwhetheranactor could
+identifyafield.Thesevariables,henceforthknownas
+statevariables ,taketheformofBooleans,andthere
+aretwoforeachactor-datafieldpair(has,could).The
+statelabels1isgiventhetablevaluesshowninFig. 2.
+•Transitions :represent actions (collect,create,
+read,disclose,anon,delete)onpersonaldata
+performedby actors.Theyarelabelledaccording
+to:i)an action,ii)thesetof data fields ,iii)
+thedata schema thatthedatafieldisapartof,iv)
+theactorperformingtheaction.Therearetwo
+optionalfields:i)a purpose thatexplainsthereason
+aparticularprivacyactionisbeingtaken,andii)a
+privacy risk measure toidentifyrisks
+associatedwiththisaction(whosevalueiscalculated
+andannotatedduringriskanalysis).
+•Pseudonymization :thedisclosureofpseudonymized
+versionsofeachsensitivefieldismodelledusingthe
+anontransition.Statevariables(i.e.canaccess,has
+accessed)canbedeclaredonthesefields.For
+exampleananalystmayhaveaccesspermissionfor
+thefieldweightanonbutmaynothavepermissionto
+accessweight.Thiswillmeanthattheymaybe
+allowedaccesstopseudonymizedweightdatafor
+Fig.2AState-basedModelofUserPrivacy
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page4of16
+statisticalpurposesbutshouldbepreventedfrom
+matchinganyvaluetoanindividual.
+2.3 Step3:consideringuserprivacypreferences
+Each user has a policy which controls all aspects of how
+their data is allowed to move through the system. This
+section will in brief outline how these policies operate.
+As they control more aspects of the system than just
+pseudonymization, for a more detailed description refer
+toliteraturedescribingthesystemoverall[ 12].Thesepoli-
+cies,whicharederivedfrominformationobtainedfroma
+questionnaire,havethreemainaspects:
+1 Whichservicestheuseragreestouse(basedupon
+thepurposeoftheservice,andoptionallytheirtrust
+ofactorsinthatservice).
+2 Thesensitivitiestheuserhasaboutcertainfields,
+representedbyeitherasensitivitycategory(low,
+medium,highforexample),oranumberwhichtakes
+avaluebetween0and1indicatinghowsensitivethe
+useristodisclosureofthatdata.
+3 Theoverall sensitivity preferencesofauser.Users
+arecategorisedashavingoneofthreepreference
+levels:unconcerned ,pragmatist andfundamentalist
+[1].Thesethreecategoriesindicate,respectively,that
+theuserrequiresalow,mediumorhighlevelof
+restrictionondataandwhichactionsareallowedon
+theirdata.An unconcerned userwillhavefew
+restrictionswhilea fundamentalist userwillhave
+manyrestrictions.
+Within the context of the LTS, user policy operates on
+transitions and is used to determine whether a transition
+should or should not be allowed. A transition that occurs
+despite not being permitted is referred to as a policy
+violation. An actor that is not permitted to access a given
+fieldwillbereferredtoasan unauthorisedactor whileone
+whoisallowedwillbereferredtoasan authorisedactor .
+3 Riskanalysis
+3.1 Identifyingpseudonymizationrisktransitions
+In the context of this paper riskrefers to a danger that a
+single piece of information about a user is obtained by an
+entity or individual that is not authorised to have access
+to that information. In the case of pseudonymization this
+danger takes the form of a quantifiable probability. Some
+r i s k sm a yb ea c c e p t a b l ea n di ti si m p o s s i b l et oe l i m i n a t e
+a l lr i s k.I nt h ec a s eo fp s e u d o n y m i z a t i o n ,r i s k sa s s o c i a t e d
+with a sufficiently low probability can be ignored. Which
+risks may be ignored is determined by a combination of
+systempolicyandthepreferencesoftheindividualuserto
+whichthedatarefers,their userpolicy .
+Pseudonymization is incorporated into the LTS via the
+anontransition. This creates pseudonymized versions ofeach field. State variables (i.e. can access, has accessed)
+can be declared on these fields in the same way as for
+non anonymized fields and are also subject to the same
+permissions. For example, an analyst may have access
+permission for the field weight.anon but may not
+have permission to access weight. This corresponds to
+an actor having access to a pseudonymized version of
+the database. When they are only permitted access to
+pseudonymizedversionsofsensitivesfieldstheyshouldbe
+prevented from attaching any sensitive values to specific
+users.
+Therearetwokeytypesofriskwhichareconsidered:
+1.Re-identification :Theriskthatapersonwhose
+personaldataispseudonymizedwithinadisclosed
+datasetcanbere-identified.
+2.ValuePrediction :Riskofasensitivevaluebeing
+matchedtoanindividual.
+Techniques such as k–anonymization [ 4] prevent re-
+identification but do not guarantee that there is not still
+a value prediction risk. For example, suppose that after
+k-anonymization a k-set about human physical attributes
+contains10records,9ofwhichhaveaweightover100kg.
+If an attacker knows their target is in that k-set they can
+be 90% certain that their target has a weight over 100kg.
+Thismeansthataprivacydiscl osureriskisstillpresent.
+In this version of the model, we focus on value
+prediction risk. Note that although alternatives to k-
+anonymization,forexamplel-variance,mayeliminatethe
+danger of value prediction, this framework is designed to
+provide an assessment of any pseudonymization parame-
+ters that the user wishesto use. As stated, this framework
+does not attempt to produce a definitive pseudonymiza-
+tiontechnique.
+The system will automatically discover and add to
+the LTS, transitions that correspond to a possibility of
+unauthorized value prediction due to pseudonymization,
+referred to as risk-transitions . A risk that a given actor
+(actor.A ) can access a given sensitive field ( field.F )
+is said to be present in every node in the LTS where the
+pseudonymized version of F(F.anonymized )h a sb e e n
+accessed by A.I fAonly has access rights to F.anon and
+notF,Risk-transitions will be added to the LTS starting
+fromeachoftheseat-risknodes.Thesewillbemarkedas
+not allowed and it will be possible to calculate risk scores
+or declare policy associated with these transitions. Each
+risk transition is uniquely identified by the set of quasi-
+identifierfieldswhichtheactorhasalreadyaccessed.
+3.2 Scoringrisktransitions-violations
+Tocompletethegeneratedprivacymodel,anumericvalue
+orvaluesarecalculatedandaddedtotheRiskTransitions;
+these state how concerned a user should be about this
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page5of16
+transition. To consider this, first a number of terms need
+tobedefined:
+•Riskisthedangerofanindividualvalueassociated
+withanindividualuserbeingpredicted.
+•Violations areriskswithinthedatasetwhichare
+higherthananacceptable threshold .
+•AThreshold isanumericlimitabovewhichariskis
+judgedtobeunacceptable.
+•AMarginspecifieshowclosevaluesinacontinuous
+fieldarerequiredtobetobejudgedtobeequalfor
+thepurposeofriskcalculation.
+Thresholds are associated with individual values and
+every single value may have a different threshold. This is
+because they are calculated from a combination of over-
+all system policy and an individual user’s policy. Initially,
+an individual’s preference level (unconcerned, pragmatist
+or fundamentalist as mentioned in the previous section)
+will dictate how high the default of their thresholds for
+each field should be set. Once these have been defined a
+user may specify particular sensitivities attached to cer-
+tain fields and this will decrease the threshold value for
+those fields. Overall system policy will define how these
+user dependent factors influence thresholds. Non expert
+users often state preferences about information privacy
+thatisdirectlyoppositetotheiractions[ 13],anditcannot
+be assumed that they are fully aware of the implications
+of revealing their data. Hence, it is the responsibility of
+t h es y s t e md e s i g n e rt oe n s u r et h a to v e r a l ls y s t e mp o l i c y
+does not allow thresholds outside of an acceptable range
+regardlessofuserpreference.
+The score used is simply the total count of violations
+within the data. It is calculated using the marginal prob-
+abilities of values within k-sets as illustrated in the pseu-
+docodeinAlgorithm1.Notethatthisprocessisassociated
+with a single risk transition and therefore, as risk transi-
+tions are associated with the danger of accessing a single
+sensitive field, what we are calculating is the violation
+countforjustonesensitivefield(denoted vasthesensitive
+fieldcorrespondstoaonedimensionalarrayof values).
+Algorithm1 CalculatingViolations
+calculate violations (recordSet ,v)
+forallr∈recordSet do
+violations =0
+set=kF−setr
+risk= |matches (kF−set,Ri)|÷|set|
+ifrisk>threshold rvthen
+violations =violations +1
+endif
+endfor
+returnviolationsThefollowingtermsareusedinthispseudocode:
+•recordSet .Thecompletesetofrecords.
+•Fisthesetoffieldsthattheattackerhasaccessto.
+•kF-set.Thisisthesetofrecordswhichappeartobe
+identicalgiventheinformationavailable.In
+k-anonymizationthe k-setisthesetofrecordsthat
+appeartobeidenticalwhenthequasiidentifierfields
+arepseudonymized.The kF-setisthesetofrecords
+whichappeartobeidenticalinthepseudonymized
+datawhenallquasiidentifiersexceptforthoseinset
+Faremasked.
+•kF-setiisthekF-setwhichrecord ibelongsto.The
+sizeofthissetisalsoreferredtoas/vextendsingle/vextendsinglekF−seti/vextendsingle/vextendsingle
+•|matches/parenleftbig
+kF−set,Ri/parenrightbig
+|isthenumberofrecords
+withinkF-setiwherethesensitivevalueinquestion
+matchestherealvalueinrecord itowithin margin.
+•threshold rvisthethresholdassociatedwithvalue vin
+recordr.
+•margin visthemarginassociatedwithsensitive
+field/setofvalues s.Thiswillbe0ifthefieldisnot
+continuous.
+4 Statisticalutility
+Once violations have been detected they will normally
+needtoberemoved.Itmaybepossibletoleavesomevio-
+lations in the data depending on whether policy defines
+hard restrictions or soft restrictions. Removing will affect
+the statistical properties of the data and so will affect the
+results of experiments that researchers carry out on the
+data.Theissueiscompoundedbythefactthatitisharder
+to protecttheprivacyofoutliersinthedata[ 14].Because
+of this, violations are not likely to be evenly spread across
+the data distribution which increases the possible impact
+onthedataofremovingthem.Toaddressthis,whendata-
+setsareappliedtothemodeltransitionsa utilityreport for
+each risk transition is produced that shows both the vio-
+lation count and a utility score which gives an indication
+of the impact that removing data has had on the dataset’s
+statisticalutility.
+4.1 Statisticsintheutilityreport
+It is impossible to define what being usable from a
+research point of view actually entails as this depends on
+the purpose for which the data is intended. The intention
+in our system is that the data from which violations have
+beenremoved,the trimmeddata ,issufficientlysimilarto
+theoriginal data that the difference in results from any
+testorstatisticalanalysisisnotsufficienttoaffectconclu-
+sions.Thisisimpossibletoguaranteeandsoourapproach
+is to remove as few records as possible and to provide a
+listofstatisticsforboththeoriginaldataandthetrimmed
+data that is reasonably comprehensive and enables the
+data controller to make their own decision. The use of a
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page6of16
+standard set of statistics may also provide some reassur-
+ance. It is important to note, that differential privacy [ 15]
+is privacy-preserving method that provides such strong
+privacy guarantees for certain statistical operations. The
+approach differs from pseudonymization in that noise is
+added to the results of statistical queries on the data. A
+system designer may choose to engineer this solution,
+but our tool considers cases where system designer have
+chosenpseudonymizationmethods.
+With these considerations in mind it was decided that
+the utility report should for now provide the following
+information:
+•Howmanyvaluesneedtobeeliminatedforthe
+numberviolationstoreachzero.Notethatthis
+numberisnotnecessarilyequaltothenumberof
+violations.Thisnumbershallbereferredtoas Rvfor
+removedviolations andthetotalnumberofviolations
+shallbereferredtoas Nvfornumberofviolations .
+•Thecompletesetofstatisticscalculatedforeach
+datasetprovidedbytheApachecommonsstatistics
+function1thatincludesthestatisticsshowninTable 1.
+The assumption of independence Currently the pro-
+cess of violation removal and utility reporting operates
+on a single sensitive field. The means that a violation
+is a single value at danger of prediction rather than an
+entire record. When a violation is removed only the rel-
+evant value is removed and the rest of the record is left
+untouched. This also means that the statistics above are
+calculated from the vector of values associated with the
+relevant field. Correlations between fields may be impor-
+tant for research purposes and so the intention is that
+this will be introduced into the utility report at a later
+stage.
+4.2 Removingviolations
+Removing violations is not as simple as removing every
+value which is in violation. This strategy may, in certain
+Table1StatisticalvaluesusedinUtilityReport
+Name Definition
+Maximum Themaximumvalueinthedata-set
+Minimum Theminimumvalueinthedata-set.
+Skewness Theasymmetryofafrequency-distribution
+curve.
+Kurtosis Thesharpnessofthepeakofa
+frequency-distributioncurve.
+Median Themiddlevalueinadata-set’svalues.
+Mean Theaveragevalueofthedata-set.
+Standarddeviation Themeasureofspreadordispersionofa
+data-set.circumstances, involve the removal of an unnecessary
+numberofvaluesandmayalsonotbesufficienttoremove
+all violations. This is because, on one hand, removing
+onlyasubsetofviolationsmaypushthenumberofvalues
+withinacertainrangebelowtheviolationthresholdwhile,
+ontheotherhand,removingallviolationsreducesthesize
+ofthek-setandsomaycreateasituationwherepreviously
+nonviolatingvaluesbecomeviolations.Furthercomplica-
+tions are created as two or more sensitive values do not
+have to be exactly equal to be considered identical from a
+violation point of view, due to the use of margins. Addi-
+tionally the fact that different values may have different
+thresholds attached to them based on user policies makes
+theproblemevenmorecomplex.
+Table2providesanexampleofbothofthesesituations.
+The sensitive field we are operating on is the weightfield,
+thethreshold is0.75forallvaluesandthe marginis5kilo-
+grams.Thedatahasbeendividedinto2 kF−setsasshown
+below. Violating values are highlighted in blue. In set 1 it
+is only necessary to remove one value for violations to be
+eliminated.Ifallviolationsareremovedthennotonlywill
+an unnecessary number of values be removed, but the set
+will only have one remaining member, item 1. This will
+nowbeclassedasaviolationasitis,bydefinition,identical
+to100%ofmembersofitsset.
+Anintuitiveresponsemightbetoremove k−n+1vio-
+lations at random where kis the number of violations in
+thesetand nistheminimumnumberofvaluesforagiven
+value to be identical to (or close to given the use of mar-
+gin) including itself in order to be considered a violation
+basedonitsthreshold.Forexample,ifthethresholdis0.75
+for value vand there are 10 values in v’s set then vwould
+be in violation if it is close to 8 or more values (including
+itself).Inthiscase nwouldbeequalto8.
+There are two problems with this approach. Firstly, dif-
+ferent values may have different thresholds based on user
+policy and therefore there isn’t a single nvalue for an
+entire group of violations and secondly, the fact that we
+use margins also means that this approach would some-
+timesproducethewrongresult.
+This second problem is illustrated by set 2 in Table 2.
+This set contains 4 violations in a set of size 6. As we are
+Table2Riskvaluesfor2-anonymizationdatarecords
+Set1 Set2
+No Weight(kg) No Weight(kg)
+17 0 17 0
+27 7 28 0
+37 8 37 4
+47 5 47 4
+57 9 57 4
+67 6
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page7of16
+assumingathresholdof0.75forallvaluesand4 /6<0.75
+thenkisalreadylowerthan n.According totheapproach
+described above no values should need removing at all
+and the set should already be free of violations. How-
+ever, the set clearly does contain violations and this is
+due to the use of margins. Values 3 to 5 are in violation
+as they are each close (within 5 kg) to 5 other members
+of their set. They are each close to the other violating
+values as well as to value 1 (70 kg). Value 6 is also in vio-
+lation as it is close to each of the other violating values
+a n dt ov a l u e2( 8 0k g ) .V a l u e1a n dv a l u e2a r en o ti n
+violation themselves but they must be considered in any
+violation removal process as their presence is responsi-
+ble for other values being in violation. In this situation
+not just the number of violating values removed but also
+which violating values are removed is important. If value
+6 is removed then the set will be left with 4 violating val-
+ues, all values within the range 70 to 74. If value 3, 4 or
+5 is removed then the set will be left with only 2 violat-
+ing values as neither a value of 70 nor 76 will lead to a
+violation.
+As it is clearly non-trivial predicting exactly how many
+and which violations should be removed in all situations
+that may occur, the process of removing violations was
+made iterative. It was achieved through a modification
+of thek−n+1 technique described above. As thresh-
+olds vary based on user preferences, a default threshold
+defined in the system is used to approximate how many
+violations should be removed. As this may not succeed
+in removing all violations it is followed by checking each
+value individually for violation and repeating this process
+ifnecessary.
+Algorithm 2 describes the process in detail. The terms
+usedinthispseudocodearedefinedinthefollowinglist:
+Algorithm 2 Removing Violations removeViolations
+(recordSet ,v)
+do
+violations [recordSet ]=
+calculateViolations (recordSet ,v)
+forallr∈recordSet do
+set=KF−setr
+ifsetnotalreadycleaned then
+numRemove r=((1−threshold )∗|set|)−
+(|set|−|violations [set]|)
+⊿randomlyselect(withoutreplacement)
+violatingvaluestoremoveandremovethem
+returncleanSet( set,violations [set],
+numRemove r)
+endif
+endfor
+whileviolationsexistin recordSet•recordSet .Thecompletesetofrecords.
+•violations [data].Recordswithinthedataset data
+containingaviolation.
+•Fisthesetoffieldsthattheattackerhasaccessto.
+•kF-set.Thisisthesetofrecordswhichappeartobe
+identicalgiventheinformationavailable.
+•KF-setiistheKF-setwhichrecord ibelongsto.
+•threshold Thedefaultthresholdvaluethateachvalue
+hasasitsthresholdbeforeindividualuserpoliciesare
+applied.
+Ascanbeseeninthepseudocode,foreachsetviolations
+are removed, the set is rechecked, and this is repeated
+untilnoviolationsremain.
+Note that, although techniques such as l-diversity [ 5]
+can eliminate the risk of value re-identification, this sys-
+tem is not designed to be an alternative to such tech-
+niques.Itallowsfinercontrolinthesituationwhereevery
+singlevaluehasitsownassociatedriskthreshold.Itallows
+greater transparency for a non expert user. We assume
+that a data controller has pseudonymized using a tech-
+niquethattheyunderstandandhavereasonsforchoosing.
+Theresultingdataismodifiedasminimallyandtranspar-
+entlyaspossibleinoursystem.
+5 Pseudonymizationanalysisframework
+Wehaveimplementedthepriordescribedfunctionalityin
+asoftwareframework(developedinJava);thisisavailable
+fordownload2.Thissectionoutlinestheusecasesforsys-
+temsunderdesignthatwishtoanalyzethepseudonymiza-
+tion strategies employed; and importantly the steps that
+a developer follows to use this tool. For this description
+we assume that the data-flow model has been created,
+and the LTS has been generated (note, this must contain
+at least one instance in which the data is pseudonymized
+for the tool to be useful). The main use cases are as
+follows:
+1 Theuser,describedasa DataController ,isworking
+onalivesystemandwishestocheckthedata
+currentlyinthesystemtoensurethatan
+unacceptablelevelofpolicyviolationsisn’toccurring
+andrethinkthepseudonymizationapproachifitis.
+2 Theuser,describedasa SystemDesigner ,is
+designingasystemandwishestodevisea
+pseudonymizationstrategythatisunlikelytoleadto
+anunacceptablelevelofpolicyviolations.
+3 Theuser,eithera SystemDesigner oraData
+Controller ,wishestoimposeconditionsonany
+movementofpseudonymizeddatainthesystemso
+thattransitionsareautomaticallydisallowedwhen
+thenumberofviolationsisaboveathreshold.An
+errorwillbedisplayedifthesystemattemptstosend
+datathatisaviolationoftheserestrictions.
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page8of16
+The overall workflow is shown in Fig. 3.A c t i o n sa r e
+marked with a "UC" caption to indicate which use case
+theyareassociatedwith.
+For use case 3, which may well be performed after use
+cases1or2,theuserprovidesrulesoftheform:
+IFnumberOfViolations >acceptableLimit [OR/AND]
+utilityThreshold <acceptableLimit ...THEN block
+transition action
+There may be multiple utility threshold parameters
+and any combination may be used. These will generally
+take the form of differences between the key statistics
+describedinSection 4.
+Forusecases1and2theprocessisessentiallythesame.
+The user starts by viewing the risk transition in the LTS
+ofmostconcerntothem,thisisthe maximumrisktransi-
+tioni.e.thetransitionthathasthemostviolations.Ashas
+alreadybeenstated,risktransitionsareuniquelyidentified
+by the quasi identifiers that have already been accessed
+and the maximum risk transition will always be the one
+inwhichallquasiidentifiershavebeenaccessed.Theuser
+will view the utility report associated with that transition
+and will then select an action based on that report. As
+analternativetoautomaticallyviewingthemaximumrisk
+transitionausermayalsoselectrisktransitionsontheLTS
+manually.
+This action may consist of either accepting the
+pseudonymizationstrategyasitisorexploringalternativepseudonymization strategies. Alternative pseudonymiza-
+tion strategies may involve either exploring alterna-
+tivepseudonymizationtechniques,forexampleswitching
+fromk-anonymizationto l-diversity,orconsideringallow-
+ing access to only a subset of fields. The latter option is
+equivalent to choosing a different risk transition. A list of
+allrisktransitionsassociatedwiththetargetsensitivefield
+will be displayed alongside the associated number of vio-
+lations for each. The user selects one of these to generate
+the utility report associated with this new risk transition.
+The ability to see different subsets of fields accompanied
+by their violation count addresses the problem of high
+dimensionality in pseudonymization techniques such as
+k-anonymity [ 16]. This provides an easy to understand
+metricforcomparingdifferentsubsetsoffieldsandunder-
+standing which fields have the greatest cost in terms of
+re-identification risk. While most solutions attempt to
+address the question of whether it is possible to reduce
+violationcostwhilestillsendingallfieldstotheresearcher
+thismaynotbepossibleandtheresearchermaynotneed
+allfields.
+If the user chooses to accept a pseudonymization strat-
+egy they may do so either before or after violations have
+been removed. Clearly this depends on the nature of
+these violations with regard to user policy and system
+policy as any hard violation or violation associated with
+legally required policy must be removed. In a live system,
+Fig.3OverallWorkflowDiagram
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page9of16
+accepting a pseudonymization strategy will lead to data
+being disclosed as the risk is judged to be acceptable. In
+a system being designed accepting a pseudonymization
+strategy will mean defining that, either before or after
+violation removal, this transition will be part of the sys-
+tem and will always occur unless this rule is subsequently
+changed. The only difference between use cases 1 and 2
+is how the utility report is generated. In a live system it
+will be generated with live data while in a system being
+designedsampledatawillbeused.
+6 Evaluation
+To evaluate we apply the framework to particular use
+casesandobservetheextenttowhichauseroftheframe-
+work is informed about the risks of pseudonymization.
+The following use cases are described in turn and show
+howutilityandviolationsmaybeconsidered.Forboth,we
+preparedahealthrecordsettoundergo2-anonymization.
+A researcher has access to this anonymizeddata but does
+not and should not have access to the original data. The
+policy violation that we wish to avoid is the researcher
+being able to predict an individual’s weight to within 5kg
+(margin=5).
+6.1 Uniformprivacyusecase
+In this case we assume that the threshold is 0.9 for all
+users; all users are considered to have the same privacy
+preferences. This means that an attacker predicting any
+individual’sweightwitha90%oraboveconfidenceiscon-
+sidered a violation. Age and height are quasi identifiers.
+Table3provides six sample records input to the model
+analysisprocessandshowshow,asmoreidentifyingfields
+become available to the researcher, the number of vio-
+lations of this policy increases. The risk columns show
+the proportion of records with matching quasi identifiers
+(considering only those that the attacker has access to)
+where weight is within 5kg of the weight of the current
+record.Ifthisproportionisabove0.9thenitishighlighted
+asaviolation.
+Table3Riskvaluesfor2-anonymizationdatarecords
+Age Height Weight Height Age Ageheight
+(cm) (kg) risk risk risk
+30-40 180-200 100 2/4 2/2 2/2
+30-40 180-200 102 2/4 2/2 2/2
+20-30 180-200 110 2/4 3/4 2/2
+20-30 180-200 111 2/4 3/4 2/2
+20-30 160-180 80 1/2 1/4 1/2
+20-30 160-180 110 1/2 3/4 1/2
+Violations: 0 2 4The framework generated the LTS as shown in Fig. 4.
+Dottedlinesindicatepotentialpolicyviolations.Asystem
+administrator has the option of loading the six records
+given as examples above into the LTS. They would then
+see the violation scores 0, 2 and 4 as shown in this figure.
+A utility report would be generated showing the cost
+to statistics of eliminating these violations. If the num-
+ber of violations or the utility cost is unacceptable the
+data controller can consider increasing their k value or
+reconsidertheirpseudonymizationentirely.Alternatively,
+at the design phase, a system designer could declare that
+a number of violations above 50% is unacceptable. The
+system would now throw an error if the above data was
+used,forcingtheadministratortochooseanotherformof
+pseudonymization.
+Note that this situation assumes a uniform threshold
+for all users. If this is not the case the number of vio-
+lations will change. Suppose, for example, that we know
+fromauserquestionnairethattheownerofrow4isadata
+fundamentalist while all other users are pragmatists. The
+system designer may have created a rule that fundamen-
+talists should, by default, have their threshold level set to
+0.7 rather than 0.9. In row 4 Risk w/height is at 3/4. This
+is not a violation in the default situation as it is below 0.9
+butnowthattheuserisafundamentalistitbecomesavio-
+lation. Similarly, the owner of row 3 may be a pragmatist
+but may have declared that weight is an especially sensi-
+tivefieldforthem.Thesystemdesignermayhavecreated
+arulethatespeciallysensitivefieldswhentheirownerisa
+pragmatistalsohaveathresholdof0.7,leadingtothesame
+outcomeforrow3.
+6.2 Realisticprivacydistribution
+This use case features a larger dataset with 1103 realistic
+records; we show that the framework can be utilised to
+make decisions about data disclosure taking into account
+userprivacypreferences.
+6.2.1 Generatingsampledata
+The data used was randomly generated to approximate
+data from the United States national health survey of
+2007-2010[ 17].Amongotherthings,thissurveyprovides
+the height, BMI (Body Mass Index), sex, race (including
+non hispanic white, non hispanic black and hispanic) and
+age of 11039 adults categorised by race, sex and age. For
+eachofthesecategoriesthemeanheightandBMIandthe
+standardforeachisprovided.Wehavegeneratedadataset
+thatis10%ofthesizeoftheoriginalsurveyusingthesame
+distributions.Thenumberofindividualsineachcategory
+inourdatasetisexactly10%ofthenumberintheoriginal
+dataandforeachcategoryitsownuniquemeanandstan-
+dard error is used to generate these individuals. Table 4
+describes our dataset. In this case weight is the sensitive
+fieldandage,sex,raceandheightareallquasiidentifiers.
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page10of16
+Fig.4Pseudonymizationriskanalysisoutput
+Table4Datadistribution
+Sample Sex Age Race Mean Height Mean bmi
+size range height(cm) standarderror bmi standarderror
+80 Male 20-39 White 178.4 0.35 27.7 0.25
+83 Male 40-59 White 178.3 0.28 29.2 0.22
+110 Male 60+ White 174.6 0.22 29.2 0.18
+36 Male 20-39 Black 176.9 0.39 28.7 0.39
+37 Male 40-59 Black 176.7 0.53 29.4 0.38
+36 Male 60+ Black 174.4 0.42 28.8 0.32
+57 Male 20-39 hispanic 171.1 0.48 28.5 0.33
+58 Male 40-59 hispanic 170.3 0.36 29.5 0.24
+39 Male 60+ hispanic 167.3 0.45 29.2 0.32
+82 Female 20-39 White 164.9 0.25 27.5 0.41
+86 Female 40-59 White 163.8 0.27 28.3 0.24
+108 Female 60+ White 160.3 0.22 28.7 0.2
+40 Female 20-39 Black 163.7 0.32 31.4 0.46
+38 Female 40-59 Black 163.5 0.38 33.1 0.49
+37 Female 60+ Black 160.6 0.28 31.1 0.33
+67 Female 20-39 hispanic 158.2 0.23 28.8 0.23
+58 Female 40-59 hispanic 157.1 0.33 30.2 0.34
+51 Female 60+ hispanic 153.7 0.31 29.9 0.17
+Total=1103
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page11of16
+Policy Distributions Each record is associated with an
+imagined individual through a one to one mapping and
+each imagined individual has their own privacy level.
+Some of these hypothetical data owners also consider
+the weight field to be extra sensitive. The 3 by 2 matrix
+g i v e ni nT a b l e 5shows how a user’s privacy level con-
+trols the threshold used both for fields they consider to
+beextra‘’sensitive”andfor‘’normal”sensitivefieldsinour
+example. The number of users that fall into each sensi-
+tivity category is taken directly from our own survey of
+the general population3.T a b l e6shows the proportion of
+usersfallingintoeachcategoryinourdataandalsoshows
+howmanyconsiderweighttobeanextrasensitivefield.
+6.2.2 Results
+The sample dataset was pseudonymized initially using k-
+anonymity (carried out using the arx software [ 18]a n d
+using its default settings). As expected, a utility report
+wasfirstgeneratedforthetransitioninwhicheveryquasi
+identifier had been accessed. A screenshot of this report
+inthek-anonymityscenarioisshowninFig. 5.
+In this case 116 violations were detected and 117 val-
+ues (about 1% of values) needed to be removed. This has
+had no effect on the maximum and minimums and has
+had a slight effect on the standard deviation, the skew
+and kurtosis. The data controller or system designer may
+decide that this is an acceptable statistical impact and
+improve the sending of the data with violations removed,
+they may approve the sending of the original data or they
+may opt instead to try an alternative pseudonymization
+algorithm.
+Removing Fields Choosing the “try removing fields”
+option will result in a dialog box as shown in Fig. 6.T h i s
+dialog box allows the data controller to generate a utility
+reportforasmallersubsetoffieldsandclearlyshowshow
+variablethenumberofviolationsarefordifferentsubsets.
+Even for subsets containing three out of the four fields
+this varies from 29, if only age is unknown, to 107, if sex
+is unknown. In this case it is perhaps not surprising that
+sexhaslittleimpactontheeffectivenessofpseudonymiza-
+tionasitonlycontainstwocategorieswhileagecontainsa
+large number of unique values and so would be expected
+to contribute significantly to disclosures risks. It may be
+more significant in this case that removing height leaves
+38 violations and so has somewhat less of an impact than
+age, possibly due to a greater correlation between height
+and weight. It is perhaps most interesting that removing
+Table5Overallpolicy
+Unconcerned Pragmatist Fundamentalist
+Normal 1 0.9 0.8
+Sensitive 0.9 0.8 0.7Table6Userpolicydistribution
+Pragmatist 49%
+Fundamentalist 30%
+Unconcerned 21%
+Regardweightassensitive 10%
+Regardweightasnormal 90%
+race has a much greater impact than removing sex (down
+to 67 violations) despite only containing 3 categories and
+despitesexbeing,onewouldassume,correlatedtoweight
+to a greater extent than race. This may be due to the
+unequalnumbersofindividualsineachracialgroup.
+Theusefulnessofthisinformationwillofcoursedepend
+on the purpose of the data and whether any fields can
+reasonably be removed. It could, however, also be used
+to inform decisions such as weight placed on different
+fields when tuning pseudonymization algorithms or indi-
+cate which fields may need their hierarchical categories
+rethought. These results may seem relatively straightfor-
+wardandpredictableinthisexamplebutthisfunctionality
+becomes more useful as the number of fields increase
+and in situations where removing, partially obscuring or
+reconsidering multiple fields at once is a possibility. This
+is especially true with multiple fields as they may interact
+witheachotherinunpredictableways.
+6.3 Comparingwith l-diversityandotheralgorithms
+In this use case we assess the extent to which the
+framework can be used to make decisions about
+the pseudonymization algorithm chosen. An alternative
+pseudonymization algorithm that a data controller may
+consider is l-diversity. Unlike k-anonymity, l-diversity [ 5]
+protects against value prediction by guaranteeing a range
+of different values in every set. Entropy based l-diversity
+goes one step further in ensuring that no single value
+dominates so as to protect against probabilistic predic-
+tions. Using l-diversity would therefore seem a logical
+strategy if the framework has revealed that using k-
+a n o n y m i t yr e s u l t si nal a r g en u m b e ro fv i o l a t i o n s .F o r
+this reason we applied l-diversity using Shannon entropy
+to the data, again using the arx framework and default
+settings.
+As before, a utility report was generated initially on the
+scenario where all fields have been read. As the key met-
+ric of utility is the difference between statistics calculated
+from the unmodified data and statistics from data which
+has been pseudonymized and had violations removed,
+the differences (or α) between each pair of statistics
+was recorded. This was done for both k-anonymity and
+l-diversityinordertocomparetheutilitylossbetweenthe
+twoalgorithms.TheresultsareshowninTable 7.
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page12of16
+Fig.5ScreenshotofUtilityReport
+Fig.6ScreenshotofViolationScores
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page13of16
+Table7Riskvaluesfor2-anonymizationdatarecords
+Statistic k-anonymity l-diversity
+Numberofviolations 116 67
+Numberremoved 117 68
+Original α
+Minimum 46 0 0
+Maximum 134 0 0
+Mean 81.87 -0.39 -0.32
+Standarddeviation 13.06 -0.31 -0.15
+Median 81 1 1
+Skewness 0.22 0.06 0.05
+Kurtosis -0.04 0.06 0.03
+As would be expected, less violations need to be
+removed when l-diversity is used. However, the over-
+all effect on utility is similar between the two algo-
+rithms.l-diversity also doesn’t eliminate the need to
+remove violations altogether and the number of viola-
+tionsremovedisstillmorethanhalfthenumberremoved
+when using k-anonymity. This is despite the fact that
+l-diversity, Shannon entropy l-diversity in particular, is
+designed for precisely this scenario when we are attempt-
+ing to eliminate value predictions. Note that probabilistic
+valuepredictionsinparticulararethefocusofthissystem
+and entropy based l-diversity is not expected to elim-
+inate probabilistic value predictions and so l-diversity
+based on recursion, which is designed for this purpose,
+was also used [ 5]. This did not work for our data. Using
+the default arx settings it failed to produce any results.
+t-closeness was also tried and this, similarly, did not pro-
+duce any results [ 19]. Both of these techniques would
+presumablyrequire finetuning to beeffective andhowto
+do this is not always clear. In our scenario values having
+different probability thresholds complicates the issue of
+avoidingprobabilisticvaluepredictions.Eliminatingvalue
+predictiontotheprobabilitythresholdrequiredbyfunda-
+mentalist users on their most sensitive fields would be so
+restrictive if applied to every value that l-diversity would
+be unlikely to be successful. The use of a fixed margin to
+define equality in continuous values may further compli-
+cate matters. More generally, we are operating on a large
+datasetwithalotofvaluesforheight,weightandage,sev-
+eralquasiidentifiersandalotofcorrelationbetweenfields
+andsoitseemslikelythatmorerestrictivepseudonymiza-
+tion algorithms would tend to need tuning before being
+successful.
+This study has shown our framework’s ability to give
+detailedinformationonwhichpseudonymizationstrategy
+is preferable to just choosing an individual strategy. This
+demonstrates that in a situation such as this one simplychoosing a more restrictive algorithm such as l-diversity
+ort-closenessisnotsufficientforprotectinguserprivacy.
+7 Relatedwork
+The system discussed here incorporates pseudonymiza-
+tionintoawiderframework.Asweaimtoprovidenovelty
+in how an easy to use but thorough pseudonymization
+framework is integrated into a wider privacy framework
+this section will discuss both comparable pseudonymiza-
+tiontechniquesandcomparableprivacyframeworksfrom
+theliterature.
+7.1 Pseudonymizationanddifferentialprivacy
+Manypseudonymizationalgorithmshavebeendeveloped
+beginning with k-anonymity [ 4,20]. This method divides
+data into groups such that no record is uniquely identifi-
+able. It does not, however, address the issue that groups
+maycontainonlyasinglevalueforasensitivefieldandso
+fails to eliminate the risk of value prediction. It also suf-
+fersfromthecurseofhighdimensionality.Withtoomany
+fieldsdividingdataintosetscanbecomeimpossible[ 16].
+To address the issue of value prediction l-diversity was
+proposed by Machanavajjhala et al [ 5]. This extends k-
+anonymity by also ensuring that each individual sensitive
+valueiswellrepresentedineachset. l-diversityguarantees
+that each q-set will contain at least l values for a sensi-
+tive field. This is, however, insufficient to protect against
+probabilistic attacks. Although multiple values are guar-
+anteed to exist in each q-set there is no guarantee that
+a single value won’t still dominate. To address this, alter-
+native versions of l-diversity such as entropy l-diversity
+and recursive l- d i v e r s i t yt h a ta i mt oe n s u r et h a tn ov a l u e
+dominates. This objective does, however, remain hard to
+achieveinpracticeandmaybeoverlylimiting. t-closeness
+ensures that the distribution of an attribute is each sensi-
+tive attribute in each set is close to its distribution in the
+overalltable[ 19].Alimitationof t-closenessisthatitdoes
+notprotectagainstidentitydisclosure.
+Alternatively, pseudonymization may be achieved
+through perturbation. Perturbation involves creating new
+values from the same distribution as the original values
+[21]. This suffers from the drawback that it assumes
+independence between variables and so potentially very
+useful correlation information is lost to researchers [ 22].
+Perturbationmethodsalsodonotguaranteethatarecord
+is indistinguishable from a quantifiable number of other
+recordsinthewaythat k-anonymitydoes[ 22].
+All of these approaches suffer from the disadvantage
+that they do not take account of individual data subjects
+havingdifferentrequirementsfordifferentsensitivefields.
+In order to address this the concept of personalized pri-
+vacy protection was developed by Xiao and Tao [ 23]. This
+approach is similar to the work described in this paper
+as it involves soliciting information from each user as to
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page14of16
+whichsensitivefieldsaremostimportantandgivingthese
+fields higher priority for protection. This goes some way
+towards what we are proposing but it defines sensitive
+fields in terms of their sensitivity relative to other fields.
+It does not allow the integration of a system of numeric
+sensitivity levels or allow for users to have a low or high
+sensitivitypreferenceoverall.
+An alternative method for incorporating user prefer-
+ence is the condensation based approach proposed by
+Aggarwal et al [ 24]. In this approach the data is divided
+intogroupsofrecordswhichareguaranteednottobedis-
+tinguishable from each other as with k-anonymity. The
+difference is that the size of each group is determined by
+the sensitivity level of the most sensitive value within it.
+Thatistosay,avaluethatadatasubjectspecifiesashighly
+sensitivewillbeallocatedtoalargegrouptominimisethe
+probabilityofvalueprediction.Thissolutionfacespoten-
+tialefficiencyissuesaslesssensitivevaluesmaybeplaced
+into groups with more sensitive values and therefore may
+receiveahigherlevelofpseudonymizationthannecessary.
+Thismethodalsousesperturbationandsoinvolvesmod-
+ifying sensitive values, possibly to a greater extent than is
+required.
+In terms of the presentation of pseudonymization for
+users there are a number of tools available to anonymize
+data, which also provide some risk analysis feedback.
+The ARX Tool [ 18] provides methods for analyzing re-
+identification risks following the prosecutor, journalist
+andmarketerattackermodelsonanumberofanonymiza-
+tion algorithms. The Cornell Anonymization Toolkit
+(CAT) [25] performs Risk Analysis by evaluating the dis-
+closureofrisksofeachvalueinpseudonymizeddatabased
+onuserspecifiedassumptionsabouttheadversary’sback-
+ground knowledge. These tools offer important insights
+to identify privacy risks; and in our approach we seek
+to integrate similar capabilities (alongside fine-grained
+user privacy consideration) into our privacy-by-design
+methodologyfordevelopingdistributeddataservices.
+Differential privacy [ 15] is a technique that provides
+strong formal guarantees of the privacy of users where
+personaldataisreleasedfromstatisticaldatabases.Rather
+than changing the dataset itself (as with pseudonymiza-
+tion methods), differential privacy adds noise to the out-
+put of queries performed on the data. This guarantees
+that for any query, or sequence of queries, a subject and
+their personal data cannot be identified. Hence, it is an
+alternative method to achieving the same results as using
+the pseudonymizationframework of this paper.However,
+there are downsides in the face of such strong privacy
+guarantees; i.e. the difficulty in developing the correct
+noisefunctions,thecaseswheretheneedtoaddtoomuch
+noisereducesthestatisticalutilityofthedata,andalsothe
+situations where data is released without knowing what
+functions will be performed on it. Hence, developers willcontinue to consider pseudonymization methods, which
+thistoolsupports.Therearetoolsandframeworkstohelp
+non-experts carry out differential privacy e.g. PSI [ 26]
+andAdaptiveFuzz[ 27],thereforeaninterestingavenueof
+future research is to consider privacy requirements and
+riskacrossthedifferingmethods.
+7.2 Privacyframeworks
+Both Fischer [ 11]a n dK o s a[ 10] define formal models of
+privacy in terms of state machine representations. Their
+purpose to demonstrate that a system complies with pri-
+vacy regulations and requirements. Such models offer
+strong building blocks that our formal privacy model
+buildsupon;inparticularmovingfromhand-craftedspec-
+ifications to auto-generated models that underpin the
+privacy engineering process and privacy risk analysis.
+MAPaS [ 28], is a model-based framework for the spec-
+ification and analysis of privacy-aware systems. Centred
+upon a UML Profile, purpose-based access control sys-
+temsaremodelledandtheframeworkallowsqueriestobe
+executedtoidentifyerrorsinthedesign.
+LINDDUN [ 29] is a framework for performing pri-
+vacy threat analysis on the design of a system in order
+to select privacy enforcing mechanisms that mitigate the
+threats. This combines a data flow model of the system
+with a privacy threat catalogue to provide a design-time
+methodologytoassessprivacyrisks.Wesimilarlyemploy
+a data-flow oriented methodology but explore the extent
+risk can be analysed automatically via the generation of
+an underpinning formal model. Further, we consider the
+use of MDE methods beyond the design phase (and in
+particularanalysisofrunningsystemswithrealusers).
+A system’s behaviour should be matched against it’s
+own privacy policy. [ 30] models a system’s behaviour in
+terms of a Business Processing Model Notation (BPMN)
+diagram and then the goal is to check whether this is
+compliant with the system’s P3P privacy policy. [ 31]i n t e -
+grate links to the privacy policy in the system’s workflow
+(e.g.theBPELspecification),thesearethencheckedbyan
+analysis tool at design time to determine if the workflow
+agreeswiththepolicy.[ 6]provideasimilarmethod;rather
+than having a designer merge the workflow and policy,
+the approach converts both models (a BPEL specification
+and P3P policy) into a graph representation before for-
+mallyanalyzingthecorrectnessofthegraph.However,all
+of these solutions only check if a system behaves accord-
+ing to its stated privacy policy (our LTS can be similarly
+analysed); there has been limited research into the eval-
+uation of a system in terms of privacy risk considering
+fine-graineduserpreferences.
+8C o n c l u s i o n
+Thispaperhasdiscussedthepseudonymizationaspectof
+asoftwareframeworkformeasuringprivacyriskinamulti
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page15of16
+actorsystem.Itidentifiespseudonymizationriskandpro-
+vides easily understandable information to help a user
+without expert knowledge choose a pseudonymization
+strategy. The concept of individual policy is central to
+this system to ensure that the preferences of individual
+data subjects are taken into account. Risk is quantified
+based on policy violation and also based on what impact
+removing these violations will make from a statistical
+point of view. Transparency is also key. By integrating
+these concerns into pseudonymization and integrating
+pseudonymization into a larger privacy framework the
+systemdevelopedgoesbeyondexistingpseudonymization
+techniques. We have demonstrated through an exper-
+imental evaluation) that, in variable policy scenarios,
+simply choosing a more thorough pseudonymizing tech-
+niques is not sufficient to eliminate violations and so
+more information is needed to help the user choose a
+pseudonymization strategy. This system may be useful
+either for a system designer designing a system or for a
+datacontrollersupervisingasystem.
+Future Work . A set of standard pseudonymization
+techniquescouldbeprovidedsothattheuserdoesn’thave
+to manually input pseudonymized data although with the
+existenceofmorecompletetoolssuchasarxthismaynot
+be necessary. Challenges here concern the huge number
+of tunable parameters involved in the pseudonymization
+process. Utility metrics will also ultimately be improved.
+In particular correlations will be incorporated as corre-
+lations between fields is often more important in data
+analysis than the statistical properties of individual fields.
+Risk (and consequently violation) calculations can be
+improvedbyincorporatingmoresituations,suchaswhen
+an attacker does not know the value of a quasi identifier
+exactly for their target but access to this quasi identifier,
+pseudonymized or not, may still provide clues for value
+prediction.
+We are also investigating the integration of the
+rule-based decision system (predicated on the util-
+ity reports) into distributed systems software; such
+as privacy-oriented middleware and cloud protection
+systems. Enabling fine-grained user privacy enforce-
+ment where the system automatically makes decisions
+as to whether a disclosure of pseudonymized data
+will be allowed for any occurring distributed system
+action.
+Endnotes
+1org.apache.commons.math3.stat.descriptive.
+DescriptiveStatistics
+2https://github.com/OPERANDOH2020/op-privacy-
+modelling
+3d e t a i l so ft h i su s e rp r i v a c ys t u d yi sc u r r e n t l yu n d e r
+submissionAbbreviations
+BMI:Bodymassindex;BPMN:Businessprocessingmodelnotation;BPEL:
+Businessprocessexecutionlanguage;CAT:Cornellanonymizationtoolkit;LTS:
+Labelledtransitionsystem;MDE:Modeldriveengineering
+Acknowledgements
+ThisworkwassupportedbytheEuropeanCommissionundertheHorizon
+2020Programme(H2020),aspartoftheOPERANDOproject(Grant
+Agreementsno.653704).
+Availabilityofdataandmaterials
+Thesoftwareanddatasupportingtheconclusionsofthisarticleareavailable
+fromhttps://github.com/OPERANDOH2020/op-privacy-modelling .
+Authors’contributions
+GNconceivedthepseudonymizationriskanalysisalgorithms,anddesigned
+andperformedtheexperiments.PG,DB,MSandGNconceivedand
+developedtheunderlyinguserprivacymodeltheoryandframeworkdesign.
+GNandPGimplementedthesoftwareframeworkusedinthepaper.MS
+supervisedtheresearchproject.Allauthorsdiscussedtheresults,contributed
+to,andapprovedthefinalmanuscript.
+Ethicsapprovalandconsenttoparticipate
+Notapplicable.
+Consentforpublication
+Notapplicable.
+Competinginterests
+Theauthorsdeclarethattheyhavenocompetinginterests.
+Publisher’sNote
+SpringerNatureremainsneutralwithregardtojurisdictionalclaimsin
+publishedmapsandinstitutionalaffiliations.
+Received:2May2018 Accepted:24October2018
+References
+1. KumaraguruP, CranorLF.Privacyindexes:asurveyofwestin’sstudies.
+2005.
+2. AcquistiA, BrandimarteL, LoewensteinG.Privacyandhumanbehavior
+intheageofinformation.Science.2015;347(6221):509–14.
+3. HildebrandtM.Profiletransparencybydesign?re-enablingdouble
+contingency;2013.
+4. SweeneyL.k-anonymity:Amodelforprotectingprivacy.IntJUncertain
+FuzzinessKnowl-BasedSyst.2002;10(05):557–70.
+5. MachanavajjhalaA, GehrkeJ, KiferD, VenkitasubramaniamM.
+L-diversity:privacybeyondk-anonymity.In:22ndInternational
+ConferenceonDataEngineering(ICDE’06);2006. p.24.
+6. LiYH, PaikH-Y, BenatallahB.Formalconsistencyverificationbetween
+bpelprocessandprivacypolicy.In:Proceedingsofthe2006International
+ConferenceonPrivacy,SecurityandTrust.ACM;2006. p.26.
+7. HadarI, HassonT, AyalonO, TochE, BirnhackM, ShermanS, BalissaA.
+Privacybydesigners:softwaredevelopers’privacymindset.EmpirSoftw
+Eng.2018;23(1):259–89.
+8. CavoukianA.Privacybydesign.Takethechallenge.Informationand
+privacycommissionerofOntario,Canada.2009.
+9. GraceP, BurnsD, NeumannG, PickeringB, MelasP, SurridgeM.
+Identifyingprivacyrisksindistributeddataservices:Amodel-driven
+approach.In:Proceedingsofthe2018IEEEInternationalConferenceon
+DistributedComputingSystems.ICDCS’18;2018.
+10. KosaTA.Towardsmeasuringprivacy.PhDthesis,UniversityofOntario
+InstituteofTechnology. 2015.
+11. Fischer-HübnerS, OttA.Fromaformalprivacymodeltoits
+implementation.In:Proceedingsofthe21stNationalInformation
+Systems;1998.
+12. GraceP, SurridgeM.Towardsamodelofuser-centeredprivacy
+preservation.In:Proceedingsofthe12thInternationalConferenceon
+Neumann etal. JournalofInternetServicesandApplications            (2019) 10:1 Page16of16
+Availability,ReliabilityandSecurity.ARES’17.NewYork:ACM;2017. p.
+91–1918.
+13. NorbergPA, HorneDR, HorneDA.Theprivacyparadox:Personal
+informationdisclosureintentionsversusbehaviors.JConsumAff.41(1):
+100–126.
+14. HayM, MiklauG, JensenD, TowsleyD, WeisP.Resistingstructural
+re-identificationinanonymizedsocialnetworks.ProcVLDBEndowment.
+2008;1(1):102–14.
+15. DworkC.Differentialprivacy:Asurveyofresults.In: AgrawalM, DuD,
+DuanZ, LiA,editors.TheoryandApplicationsofModelsofComputation.
+Berlin:Springer;2008. p.1–19.
+16. AggarwalCC.Onk-anonymityandthecurseofdimensionality.In:
+Proceedingsofthe31stInternationalConferenceonVeryLargeData
+Bases;2005. p.901–9.VLDBEndowment.
+17. FryarCD, GuQ, OgdenCL.Anthropometricreferencedataforchildren
+andadults:Unitedstates,2007-2010.Vitalhealthstatistics.Series11,Data
+fromthenationalhealthsurvey.2012;252:1–48.
+18. PrasserF, KohlmayerF, Gkoulalas-DivanisA, LoukidesG.Putting
+StatisticalDisclosureControlintoPractice:TheARXDataAnonymization
+Tool.Cham:Springer;2015,pp.111–48.
+19. LiN, LiT, VenkatasubramanianS.t-closeness:Privacybeyond
+k-anonymityandl-diversity.In:2007IEEE23rdInternationalConference
+onDataEngineering;2007. p.106–15.
+20. SamaratiP, SweeneyL.Protectingprivacywhendisclosinginformation:
+k-anonymityanditsenforcementthroughgeneralizationand
+suppression.Technicalreport,Technicalreport,SRIInternational.1998.
+21. AgrawalR, SrikantR.Privacy-preservingdatamining.In:ACMSigmod
+Record,vol.29.ACM;2000. p.439–50.
+22. AggarwalCC, PhilipSY.Acondensationapproachtoprivacypreserving
+datamining.In:InternationalConferenceonExtendingDatabase
+Technology.Springer;2004. p.183–99.
+23. XiaoX, TaoY.Personalizedprivacypreservation.In:Proceedingsofthe
+2006ACMSIGMODInternationalConferenceonManagementofData,
+SIGMOD’06.NewYork:ACM;2006. p.229–40.
+24. AggarwalCC, YuPS.Onvariableconstraintsinprivacypreservingdata
+mining.In:Proceedingsofthe2005SIAMInternationalConferenceon
+DataMining.SIAM;2005. p.115–25.
+25. XiaoX, WangG, GehrkeJ.Interactiveanonymizationofsensitivedata.In:
+Proceedingsofthe2009ACMSIGMODInternationalConferenceon
+ManagementofData.SIGMOD’09.NewYork:ACM;2009. p.1051–4.
+26. MurtaghJ, TaylorK, KellarisG, VadhanS.UsableDifferentialPrivacy:A
+CaseStudywithPSI.ArXive-prints.2018.
+27. Winograd-CortD, HaeberlenA, RothA, PierceBC.Aframeworkfor
+adaptivedifferentialprivacy.ProcACMProgramLang.2017;1(ICFP):
+10–11029.
+28. ColomboP, FerrariE.Towardsamodelingandanalysisframeworkfor
+privacy-awaresystems.In:2012InternationalConferenceonPrivacy,
+Security,RiskandTrustand2012InternationalConferneceonSocial
+Computing;2012. p.81–90.
+29. DengM, WuytsK, ScandariatoR, PreneelB, JoosenW.Aprivacythreat
+analysisframework:supportingtheelicitationandfulfillmentofprivacy
+requirements.JRequirEng.2011;16(1):3–32.
+30. ChinosiM, TrombettaA,etal.Integratingprivacypoliciesintobusiness
+processes.JResPractInfTechnol.2009;41(2):155.
+31. ShortS, KaluvuriSP.Adata-centricapproachforprivacy-awarebusiness
+processenablement.In:InternationalIFIPWorkingConferenceon
+EnterpriseInteroperability.Springer;2011. p.191–203.
