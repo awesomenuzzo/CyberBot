@@ -1,0 +1,1394 @@
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+Shengjia Zhao 1 Jiaming Song 1 Stefano Ermon 1
+
+arXiv:1706.02262v3 [cs.LG] 30 May 2018
+
+Abstract
+A key advance in learning generative models is
+the use of amortized inference distributions that
+are jointly trained with the models. We find
+that existing training objectives for variational
+autoencoders can lead to inaccurate amortized inference distributions and, in some cases, improving the objective provably degrades the inference
+quality. In addition, it has been observed that
+variational autoencoders tend to ignore the latent
+variables when combined with a decoding distribution that is too flexible. We again identify the
+cause in existing training criteria and propose a
+new class of objectives (InfoVAE) that mitigate
+these problems. We show that our model can significantly improve the quality of the variational
+posterior and can make effective use of the latent
+features regardless of the flexibility of the decoding distribution. Through extensive qualitative
+and quantitative analyses, we demonstrate that
+our models outperform competing approaches on
+multiple performance metrics.
+
+1. Introduction
+Generative models have shown great promise in modeling
+complex distributions such as natural images and text (Radford et al., 2015; Zhu et al., 2017; Yang et al., 2017; Li
+et al., 2017). These are directed graphical models which
+represent the joint distribution between the data and a set of
+hidden variables (features) capturing latent factors of variation. The joint is factored as the product of a prior over the
+latent variables and a conditional distribution of the visible variables given the latent ones. Usually a simple prior
+distribution is provided for the latent variables, while the
+distribution of the input conditioned on latent variables is
+complex and modeled with a deep network.
+Both learning and inference are generally intractable. However, using an amortized approximate inference distribution
+it is possible to use the evidence lower bound (ELBO) to
+1
+
+Computer Science Department, Stanford University. Correspondence to: Shengjia Zhao <sjzhao@stanford.edu>, Stefano
+Ermon <ermon@stanford.edu>.
+
+efficiently optimize both (a lower bound to) the marginal
+likelihood of the data and the quality of the approximate
+inference distribution. This leads to a very successful
+class of models called variational autoencoders (Kingma
+& Welling, 2013; Jimenez Rezende et al., 2014; Kingma
+et al., 2016; Burda et al., 2015).
+However, variational autoencoders have several problems.
+First, the approximate inference distribution is often significantly different from the true posterior. Previous methods
+have resorted to using more flexible variational families to
+better approximate the true posterior distribution (Kingma
+et al., 2016). However we find that the problem is rooted
+in the ELBO training objective itself. In fact, we show
+that the ELBO objective favors fitting the data distribution
+over performing correct amortized inference. When the
+two goals are conflicting (e.g., because of limited capacity),
+the ELBO objective tends to sacrifice correct inference to
+better fit (or worse overfit) the training data.
+Another problem that has been observed is that when the
+conditional distribution is sufficiently expressive, the latent
+variables are often ignored (Chen et al., 2016). That is, the
+model only uses a single conditional distribution component to model the data, effectively ignoring the latent variables and fail to take advantage of the mixture modeling
+capability of the VAE. In addition, one goal of unsupervised learning is to learn meaningful latent representations
+but this fails because the latent variables are ignored. Some
+solutions have been proposed in (Chen et al., 2016) by limiting the capacity of the conditional distribution, but this requires manual and problem-specific design of the features
+we would like to extract.
+In this paper we propose a novel solution by framing both
+problems as explicit modeling choices: we introduce new
+training objectives where it is possible to weight the preference between correct inference and fitting data distribution,
+and specify a preference on how much the model should
+rely on the latent variables. This choice is implicitly made
+in the ELBO objective. We make this choice explicit and
+generalize the ELBO objective by adding additional terms
+that allow users to select their preference on both choices.
+Despite of the addition of seemingly intractable terms, we
+find an equivalent form that can still be efficiently optimized.
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+Our new family also generalizes known models including
+the β-VAE (Higgins et al., 2016) and Adversarial Autoencoders (Makhzani et al., 2015). In addition to deriving
+these models as special cases, we provide generic principles for hyper-parameter selection that work well in all
+the experimental settings we considered. Finally we perform extensive experiments to evaluate our newly introduced model family, and compare with existing models
+on multiple metrics of performance such as log-likelihood,
+sampling quality, and semi-supervised performance. An
+instantiation of our general framework called MMD-VAE
+achieves better or on-par performance on all metrics we
+considered. We further observe that our model can lead to
+better amortized inference, and utilize the latent variables
+even in the presence of a very flexible decoder.
+
+Z
+pθ (x) =
+
+pθ (x, z)dz
+
+Marginal of pθ (x, z) on x
+
+z
+
+pθ (z|x) ∝ pθ (x, z)
+Z
+qφ (z) =
+qφ (x, z)dx
+
+Posterior of pθ (x|z)
+Marginal of qφ (x, z) on z
+
+x
+
+qφ (x|z) ∝ qφ (x, z)
+
+Posterior of qφ (z|x)
+
+For the purposes of optimization, the ELBO objective can
+be written equivalently (up to an additive constant) as
+
+2. Variational Autoencoders
+A latent variable generative model defines a joint distribution between a feature space z ∈ Z, and the input space
+x ∈ X . Usually we assume a simple prior distribution
+p(z) over features, such as Gaussian or uniform, and model
+the data distribution with a complex conditional distribution pθ (x|z), where pθ (x|z) is often parameterized with a
+neural network. Suppose the true underlying distribution is
+pD (x) (that is approximated by a training set), then a natural training objective is maximum (marginal) likelihood
+EpD (x) [log pθ (x)] = EpD (x) [log Ep(z) [pθ (x|z)]]
+
+Note that the two definitions are symmetrical. In the former case we start from a known distribution p(z) and learn
+the conditional distribution on X , in the latter we start from
+a known (empirical) distribution pD (x) and learn the conditional distribution on Z. We also correspondingly define
+any conditional and marginal distributions as follows:
+
+LELBO ≡ −DKL (qφ (x, z)kpθ (x, z))
+= −DKL (pD (x)kpθ (x))
+
+(2)
+(3)
+
+− EpD (x) [DKL (qφ (z|x)kpθ (z|x))]
+= −DKL (qφ (z)kp(z))
+− Eqφ (z) [DKL (qφ (x|z)kpθ (x|z))] (4)
+We prove the first equivalence in the appendix. The second
+and third equivalence are simple applications of the additive property of KL divergence. All three forms of ELBO
+in Eqns. (2),(3),(4) are useful in our analysis.
+
+(1)
+
+However direct optimization Rof the likelihood is intractable
+because computing pθ (x) = z pθ (x|z)p(z)dz requires integration. A classic approach (Kingma & Welling, 2013)
+is to define an amortized inference distribution qφ (z|x) and
+jointly optimize a lower bound to the log likelihood
+LELBO (x) = −DKL (qφ (z|x)||p(z)) + Eqφ (z|x) [log pθ (x|z)]
+≤ log pθ (x)
+We further average this over the data distribution pD (x) to
+obtain the final optimization objective
+LELBO = EpD (x) [LELBO (x)] ≤ EpD (x) [log pθ (x)]
+2.1. Equivalent Forms of the ELBO Objective
+There are several ways to equivalently rewrite the ELBO
+objective that will become useful in our following analysis.
+We define the joint generative distribution as
+pθ (x, z) ≡ p(z)pθ (x|z)
+In fact we can correspondingly define a joint “inference distribution”
+qφ (x, z) ≡ pD (x)qφ (z|x)
+
+3. Two Problems of Variational Autoencoders
+3.1. Amortized Inference Failures
+Under ideal conditions, optimizing the ELBO objective
+using sufficiently flexible model families for pθ (x|z) and
+qφ (z|x) over θ, φ will achieve both goals of correctly capturing pD (x) and performing correct amortized inference.
+This can be seen by examining Eq. (3). This form indicates
+that the ELBO objective is minimizing the KL divergence
+between the data distribution pD (x) and the (marginal)
+model distribution pθ (x), as well as the KL divergence between the variational posterior qφ (z|x) and the true posterior pθ (z|x). However, with finite model capacity the
+two goals can be conflicting and subtle tradeoffs and failure
+modes can emerge from optimizing the ELBO objective.
+In particular, one limitation of the ELBO objective is that
+it might fail to learn an amortized inference distribution
+qφ (z|x) that approximates the true posterior pθ (z|x). This
+can happen for two different reasons:
+Inherent properties of the ELBO objective: the ELBO
+objective can be maximized (even to +∞ in pathological cases) even with a very inaccurate variational posterior
+qφ (z|x).
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+Implicit modeling bias: common modeling choices (such
+as the high dimensionality of X compared to Z) tend to
+sacrifice variational inference vs. data fit when modeling
+capacity is not sufficient to achieve both.
+We will explain in turn why these failures happen.
+
+family of all functions µqφ , σφq that map x ∈ X to a Gaussian N (µqφ (z), σφq (z)) on Z. Then LELBO can be maximized to +∞ when
+µqφ (x = 1) → +∞
+
+µqφ (x = −1) → −∞
+
+σφq (x = 1) → 0+
+
+σφq (x = −1) → 0+
+
+3.1.1. G OOD ELBO VALUES D O N OT I MPLY
+ACCURATE I NFERENCE
+
+and θ is optimally selected given φ. In addition the variational gap DKL (qφ (z|x)kpθ (z|x)) → +∞ for all x ∈ D.
+
+We first provide some intuition to this phenomena, then formally prove the result for a pathological case of continuous
+spaces and Gaussian distributions. Finally we justify in the
+experiments section that this happens in realistic settings
+on real datasets (in both continuous and discrete spaces).
+
+A proof can be found the in Appendix. This means that
+amortized inference has completely failed, even though
+the ELBO objective can be made arbitrarily large. The
+model learns an inference distribution qφ (z|x) that pushes
+all probability mass to ∞. This will become infinitely far
+from the true posterior pθ (z|x) as measured by DKL .
+
+The ELBO objective in original form has two components,
+a log likelihood (reconstruction) term LAE and a regularization term LREG :
+LELBO (x) = LAE (x) + LREG (x)
+≡ Eqφ (z|x) [log pθ (x|z)] − DKL (qφ (z|x)||p(z))
+Let us first consider what happens if we only optimize LAE
+and not LREG . The first term maximizes the log likelihood
+of observing data point x given its inferred latent variables
+z ∼ qφ (z|x). Consider a finite dataset {x1 , · · · , xN }. Let
+qφ be such that for xi 6= xj , qφ (z|xi ) and qφ (z|xj ) are
+distributions with disjoint supports. Then we can learn a
+pθ (x|z) mapping the support of each qφ (z|xi ) to a distribution concentrated on xi , leading to very large LAE (for continuous distributions pθ (x|z) may even tend to a Dirac delta
+distribution and LAE tends to +∞). Intuitively, the LAE
+component will encourage choosing qφ (z|xi ) with disjoint
+support when xi 6= xj .
+In almost all practical cases, the variational distribution
+family for qφ is supported on the entire space Z (e.g.,
+it is a Gaussian with non-zero variance, or IAF posterior (Kingma et al., 2016)), preventing disjoint supports. However, attempting to learn disjoint supports for
+qφ (z|xi ), xi 6= xj will ”push” the mass of the distributions
+away from each other. For example, for continuous distributions, if qφ maps each xi to a Gaussian N (µi , σi ), the
+LAE term will encourage µi → ∞, σi → 0+ .
+This undesirable result may be prevented if the LREG term
+can counter-balance this tendency. However, we show that
+the regularization term LREG is not always sufficiently
+strong to prevent this issue. We first prove this fact in the
+simple case of a mixture of two Gaussians. We will then
+evaluate this finding empirically on realistic datasets in the
+experiments section 5.1.
+Proposition 1. Let D be a dataset with two samples
+{−1, 1}, and pθ (x|z) be selected from the family of
+all functions µpθ , σθp that map z ∈ X to a Gaussian
+N (µpθ (z), σθp (z)) on X , and qφ (z|x) be selected from the
+
+3.1.2. M ODELING B IAS
+In the above example we indicated a potential problem with
+the ELBO objective where the model tends to push the
+probability mass of qφ (z|x) too far from 0. This tendency
+is a property of the ELBO objective and true for any X and
+Z. However this is made worse by the fact that X is often
+higher dimensional compared to Z, so any error in fitting
+X will be magnified compared to Z.
+For example, consider fitting an n dimensional distribution
+N (0, I) with N (, I) using KL divergence, then
+DKL (N (0, I), N (, I)) = n2 /2
+As n increases with some fixed , the Euclidean√
+distance
+between the means of the two distributions is Θ( n), yet
+the corresponding DKL becomes Θ(n). For natural images, the dimensionality of X is often orders of magnitude larger than the dimensionality of Z. Recall in
+Eq.(4) that ELBO is optimizing both DKL (qφ (z)kp(z))
+and DKL (qφ (x|z)kpθ (x|z)).
+Because the same perdimensional modeling error incurs a much larger loss in X
+space than Z space, when the two objectives are conflicting
+(e.g., because of limited modeling capacity), the model will
+tend to sacrifice divergences on Z and focus on minimizing
+divergences on X .
+Regardless of the cause (properties of ELBO or modeling
+choices), this is generally an undesirable phenomenon for
+two reasons:
+1) One may care about accurate inference more than generating sharp samples. For example, generative models are
+often used for down stream tasks such as semi supervised
+learning.
+2) Overfitting: Because pD is an empirical (finite) distribution in practice, matching it too closely can lead to poor
+generalization.
+Both issues are observed in the experiments section.
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+3.2. The Information Preference Property
+Using a complex decoding distribution pθ (x|z) such as PixelRNN/PixelCNN (van den Oord et al., 2016b; Gulrajani
+et al., 2016) has been shown to significantly improve sample quality on complex natural image datasets. However,
+this approach suffers from a new problem: it tends to neglect the latent variables z altogether, that is, the mutual
+information between z and x becomes vanishingly small.
+Intuitively, the reason is that the learned pθ (x|z) is the same
+for all z ∈ Z, implying that the z is not dependent on the
+input x. This is undesirable because a major goal of unsupervised learning is to learn meaningful latent features
+which should depend on the inputs.
+This effect, which we shall refer to as the information preference problem, was studied in (Chen et al., 2016) with a
+coding efficiency argument. Here we provide an alternative interpretation, which sheds light on a novel solution to
+solve this problem.
+We inspect the ELBO in the form of Eq.(3), and consider
+the two terms respectively. We show that both can be optimized to 0 without utilizing the latent variables.
+DKL (pD (x)||pθ (x)):
+Suppose the model family
+{pθ (·|z), θ ∈ Θ} is sufficiently flexible and there exists a θ∗ such that for every z ∈ Z, pθ∗ (·|z) and pD (·)
+are identical. R Then we select this θ∗ and the marginal
+pθ∗ (x) = z p(z)pθ∗ (x|z)dz = pD (x), hence this
+divergence DKL (pD (x)||pθ (x)) = 0 which is optimal.
+EpD (x) [DKL (qφ (z|x)||pθ (z|x))]: Because pθ∗ (·|z) is the
+same for every z (x is independent from z) we have
+pθ∗ (z|x) = p(z). Because p(z) is usually a simple distribution, if it is possible to choose φ such that qφ (z|x) =
+p(z), ∀x ∈ X , this divergence will also achieve the optimal
+value of 0.
+Because LELBO is the sum of the above divergences, when
+both are 0, this is a global optimum. There is no incentive
+for the model to learn otherwise, undermining our purpose
+of learning a latent variable model.
+
+4. The InfoVAE Model Family
+In order to remedy these two problems we define a new
+training objective that will learn both the correct model and
+amortized inference distributions. We begin with the form
+of ELBO in Eq. (4)
+LELBO = −DKL (qφ (z)kp(z))−
+Ep(z) [DKL (qφ (x|z)kpθ (x|z))]
+First we add a scaling parameter λ to the divergence between qφ (z) and p(z) to increase its weight and counter-act
+the imbalance between X and Z (cf. discussion in section
+
+3.1.1). Next we add a mutual information maximization
+term that prefers high mutual information between x and
+z. This encourages the model to use the latent code and
+avoids the information preference problem. We arrive at
+the following objective
+LInfoVAE = −λDKL (qφ (z)kp(z))−
+Eq(z) [DKL (qφ (x|z)kpθ (x|z))] + αIq (x; z)
+
+(5)
+
+where Iq (x; z) is the mutual information between x and z
+under the distribution qφ (x, z).
+Even though we cannot directly optimize this objective, we
+can rewrite this into an equivalent form that we can optimize more efficiently (We prove this in the Appendix)
+LInfoVAE ≡ EpD (x) Eqφ (z|x) [log pθ (x|z)]−
+(1 − α)EpD (x) DKL (qφ (z|x)||p(z))−
+(α + λ − 1)DKL (qφ (z)kp(z))
+
+(6)
+
+The first two terms can be optimized by the reparameterization trick as in the original ELBO objective. The last term
+DKL (qφ (z)kp(z)) is not easy to compute because we cannot tractably evaluate log qφ (z). However we can obtain
+unbiased samples from it by first sampling x ∼ pD , then
+z ∼ qφ (z|x), so we can optimize it by likelihood free optimization techniques (Goodfellow et al., 2014; Nowozin
+et al., 2016; Arjovsky et al., 2017; Gretton et al., 2007).
+In fact we may replace the term DKL (qφ (z)kp(z)) with
+anther divergence D(qφ (z)kp(z)) that we can efficiently
+optimize over. Changing the divergence may alter the
+empirical behavior of the model but we show in the following theorem that replacing DKL with any (strict) divergence is still correct. Let L̂InfoVAE be the objective
+where we replace DKL (qφ (z)kp(z)) with any strict divergence D(qφ (z)kp(z)). (Strict divergence is defined as
+D(qφ (z)kp(z)) = 0 iff qφ (z) = p(z))
+Proposition 2. Let X and Z be continuous spaces, and
+α < 1, λ > 0. For any fixed value of Iq (x; z), L̂InfoVAE
+is globally optimized if pθ (x) = pD (x) and qφ (z|x) =
+pθ (z|x), ∀z.
+Proof of Proposition 2. See Appendix.
+Note that in the proposition we have the additional requirement that the mutual information Iq (x; z) is bounded. This
+is inevitable because if α > 0 the objective can be optimized to +∞ by simply increasing the mutual information
+infinitely. In our experiments simply ensuring that qφ (z|x)
+does not have vanishing variance is sufficient to regularize
+the behavior of the model.
+Relation to VAE and β-VAE: This model family generalizes several previous models. When α = 0 and λ = 1
+we get back the original ELBO objective. When λ > 0
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+is freely chosen, while α + λ − 1 = 0, and we use the
+DKL divergences, we get the β-VAE (Higgins et al., 2016)
+model family. However, β-VAE models cannot effectively
+trade-off weighing of X and Z and information preference.
+In particular, for every λ there is a unique value of α that
+we can choose. For example, if we choose a large value
+of λ  1 to balance the importance of observed and latent
+spaces X and Z, we must also choose α  0, which forces
+the model to penalize mutual information. This in turn can
+lead to under-fitting or ignoring the latent variables.
+Relation to Adversarial Autoencoders (AAE): When
+α = 1, λ = 1 and D is chosen to be the Jensen Shannon divergence we get the adversarial autoencoders in (Makhzani
+et al., 2015). This paper generalizes AAE, but more importantly we provide a deeper understanding of the correctness
+and desirable properties of AAE. Furthermore, we characterize settings when AAE is preferable compared to VAE
+(i.e. when we would like to have α = 1).
+Our generalization introduces new parameters, but the
+meaning and effect of the various parameter choices is
+clear. We recommend setting λ to a value that makes the
+loss on X approximately the same as the loss on Z. We
+also recommend setting α = 0 when pθ (x|z) is a simple
+distribution, and α = 1 when pθ (x|z) is a complex distribution and information preference is a concern. The final
+degree of freedom is the divergence D(qφ (z)kp(z)) to use.
+We will explore this topic in the next section. We will also
+show in the experiments that this design choice is also easy
+to choose: there is a choice that we find to be consistently
+better in almost all metrics of performance.
+4.1. Divergences Families
+We consider and compare three divergences in this paper.
+Adversarial Training: Adversarial autoencoders (AAE)
+proposed in (Makhzani et al., 2015) use an adversarial discriminator to approximately minimize the Jensen-Shannon
+divergence (Goodfellow et al., 2014) between qφ (z) and
+p(z). However, when p(z) is a simple distribution such
+as Gaussian, there are preferable alternatives. In fact, adversarial training can be unstable and slow even when we
+apply recent techniques for stabilizing GAN training (Arjovsky et al., 2017; Gulrajani et al., 2017).
+Stein Variational Gradient: The Stein variational gradient (Liu & Wang, 2016) is a simple and effective framework for matching a distribution q to p by computing effectively ∇φ DKL (qφ (z)||p(z)) which we can use for gradient descent minimization of DKL (qφ (z)||p(z)). However a
+weakness of these methods is that they are difficult to apply
+efficiently in high dimensions. We give a detailed overview
+of this method in the Appendix.
+Maximum-Mean Discrepancy: Maximum-Mean Dis-
+
+crepancy (MMD) (Gretton et al., 2007; Li et al., 2015;
+Dziugaite et al., 2015) is a framework to quantify the distance between two distributions by comparing all of their
+moments. It can be efficiently implemented using the kernel trick. Letting k(·, ·) be any positive definite kernel, the
+MMD between p and q is
+DMMD (qkp) = Ep(z),p(z0 ) [k(z, z 0 )] − 2Eq(z),p(z0 ) [k(z, z 0 )]
++ Eq(z),q(z0 ) [k(z, z 0 )]
+DMMD = 0 if and only if p = q.
+
+5. Experiments
+5.1. Variance Overestimation with ELBO training
+We first perform some simple experiments on toy data and
+MNIST to demonstrate that ELBO suffers from inaccurate inference in practice, and adding the scaling term λ
+in Eq.(5) can correct for this. Next, we will perform a comprehensive set of experiments to carefully compare different models on multiple performance metrics.
+5.1.1. M IXTURE OF G AUSSIAN
+We verify the conclusions in Proposition 1 by using the
+same setting in that proposition. We use a three layer deep
+network with 200 hidden units in each layer to simulate the
+highly flexible function family. For InfoVAE we choose the
+scaling coefficient λ = 500, information preference α = 0,
+and divergence optimized by MMD.
+The results are shown in Figure 1. It can be observed that
+the predictions of the theory are reflected in the experiments: ELBO training leads to poor inference and a significantly over-estimated qφ (z), while InfoVAE demonstrates
+a more stable behavior.
+5.1.2. MNIST
+We demonstrate the problem on a real world dataset. We
+train ELBO and InfoVAE (with MMD regularization) on
+binarized MNIST with different training set sizes ranging
+from 500 to 50000 images; We use the DCGAN architecture (Radford et al., 2015) for both models. For InfoVAE,
+we use the scaling coefficient λ = 1000, and information
+preference α = 0. We choose the number of latent features
+dimension(Z) = 2 to plot the latent space, and 10 for all
+other experiments.
+First we verify that in real datasets ELBO over-estimates
+the variance of qφ (z), while InfoVAE does not (with recommended choice of λ). In Figure 2 we plot estimates
+for the log determinant of the covariance matrix of qφ (z),
+denoted as log det(Cov[qφ (z)]) as a function of the size
+of the training set. For standard factored Gaussian prior
+p(z), Cov[p(z)] = I, so log det(Cov[p(z)]) = 0. Values
+
+2
+
+1
+
+0
+
+latent space z
+
+1
+
+p (x|z)
+z q (z|x = 1)
+
+2
+
+2
+
+p (x|z)
+z q (z|x = 1)
+
+1
+
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+
+3
+
+p (x|z)
+z p(z)
+3
+
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+
+q (z|x = 1)
+p(z)
+
+3
+
+density
+
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+
+q (z|x = 1)
+
+density
+
+density
+
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+
+density
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+0
+
+input space x
+
+1
+
+2
+
+3
+
+q (z|x = 1)
+3
+
+2
+
+1
+
+0
+
+2
+
+1
+
+1
+
+latent space z
+
+p (x|z)
+z q (z|x = 1)
+
+3
+
+q (z|x = 1)
+
+p(z)
+
+p (x|z)
+z p(z)
+
+2
+
+3
+
+2
+
+3
+
+p (x|z)
+z q (z|x = 1)
+
+0
+
+1
+
+input space x
+
+InfoVAE (λ = 500)
+
+ELBO
+
+Figure 1: Verification of Proposition 1 where the dataset only contains two examples {−1, 1}. Top: density of the distributions qφ (z|x) when x = 1 (red) and x = −1 (green) compared with the true prior p(z) (purple). Bottom: The
+“reconstruction” pθ (x|z) when z is sampled from qφ (z|x = 1) (green) and qφ (z|x = −1) (red). Also plotted is pθ (x|z)
+when z is sampled from the true prior p(z) (purple). When the dataset consists of only two data points, ELBO (left) will
+push the density in latent space Z away from 0, while InfoVAE (right) does not suffer from this problem.
+
+4
+2
+0
+0
+
+10000 20000 30000 40000 50000
+number of train samples
+
+elbo
+mmd
+
+0
+
+10000 20000 30000 40000 50000
+number of train samples
+
+Figure 2: log det(Cov[qφ (z)]) for ELBO vs. MMD-VAE
+under different training set sizes. The correct prior p(z)
+has value 0 on this metric, and values above or below 0
+correspond to over-estimation and under-estimation of the
+variance respectively. ELBO (blue curve) shows consistent
+over-estimation while InfoVAE does not.
+above or below zero give us an estimate of over or underestimation of the variance of qφ (z), which should in theory
+match the prior p(z). It can be observed that the for ELBO,
+variance of qφ (z) is significantly over-estimated. This is especially severe when the training set is small. On the other
+hand, when we use a large value for λ, InfoVAE can avoid
+this problem.
+To make this more intuitive we plot in Figure 3 the contour plot of qφ (z) when training on 500 examples. It can
+be seen that with ELBO qφ (z) matches p(z) very poorly,
+while InfoVAE matches significantly better.
+To verify that ELBO trains inaccurate amortized inference
+we plot in Figure 4 the comparison between samples from
+the approximate posterior qφ (z|x) and samples from the
+true posterior pθ (z|x) computed by rejection sampling.
+The same trend can be observed. ELBO consistently gives
+very poor approximate posterior, while the InfoVAE posterior is mostly accurate.
+Finally show the samples generated by the two models
+in Figure 5. ELBO generates very sharp reconstructions,
+
+z2
+
+6
+
+z2
+
+logdet of covariance
+
+logdet of covariance
+
+8
+
+test
+
+10
+8
+6
+4
+2
+0
+
+z2
+
+train
+
+10
+
+z1
+
+z1
+
+z1
+
+Prior p(z)
+
+InfoVAE qφ (z)
+
+ELBO qφ (z)
+
+Figure 3: Comparing the prior, InfoVAE qφ (z) and ELBO
+qφ (z). InfoVAE qφ (z) is almost identical to the true prior,
+while the ELBO qφR(z) is very far off. qφ (z) for both models is computed by x pD qφ (z|x) where pD is the test set.
+but very poor samples when sampled ancestrally x ∼
+p(z)pθ (x|z). InfoVAE, on the other hand, generates samples of consistent quality, and in fact, produces samples of
+reasonable quality after only training on a dataset of 500
+examples. This reflect InfoVAE’s ability to control overfitting and demonstrate consistent training time and testing
+time behavior.
+5.2. Comprehensive Comparison
+In this section, we perform extensive qualitative and quantitative experiments on the binarized MNIST dataset to evaluate the performance of different models. We would like to
+answer these questions:
+1) Compare the models on a comprehensive set of numerical metrics of performance. Also compare the stability and
+training speed of different models.
+2) Evaluate and compare the possible types of divergences
+(Adversarial, Stein, MMD).
+For all two questions, we find InfoVAE with MMD regularization to perform better in almost all metrics of performance and demonstrate the best stability and training
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+ELBO Posterior
+
+InfoVAE Posterior
+
+Figure 4: Comparing true posterior pθ (z|x) (green, generated by importance sampling) with approximate posterior
+qφ (z|x) (blue) on testing data after training on 500 samples.
+For ELBO the approximate posterior is generally further
+from the true posterior compared to InfoVAE. (All plots
+are drawn with the same scale)
+speed. The details are presented in the following sections.
+For models we use ELBO, Adversarial autoencoders, InfoVAE with Stein variational gradient, and InfoVAE with
+MMD (α = 1 because information preference is a concern,
+λ = 1000 which can put the loss on X and Z on the same
+order of magnitude). In this setting we also use a highly
+flexible PixelCNN as the decoder pθ (x|z) so that information preference is also a concern. Detailed experimental
+setup is explained in the Appendix.
+We consider multiple quantitative evaluations, including
+the quality of the samples generated, the training speed
+and stability, the use of latent features for semi-supervised
+learning, and log-likelihoods on samples from a separate
+test set.
+Distance between qφ (z) and p(z): To measure how well
+qφ (z) approximates p(z), we use two numerical metrics.
+The first is the full batch MMD statistic over the full data.
+Even though MMD is also used during training of MMDVAE, it is too expensive to train using the full dataset, so we
+only use mini-batches for training. However during evaluation we can use the full dataset to obtain more accurate estimates. The second is the log determinant of the covariance
+matrix of qφ (z). Ideally when p(z) is the standard Gaussian
+Σqφ should be the identity matrix, so log det(Σqφ ) = 0. In
+our experiments we plot the log determinant divided by the
+dimensionality of the latent space. This measures the average under/over estimation per dimension of the learned
+covariance.
+The results are plotted in Figure 6 (A,B). This is different from the experiments in Figure 2 because in this case
+the decoder is a highly complex pixel recurrent model and
+the concern that we highlight is failure to use latent features rather than inaccurate posterior. MMD achieves the
+best performance except for ELBO. Even though ELBO
+
+reconstruction
+
+generation
+
+Figure 5: Samples generated by ELBO vs. MMD InfoVAE
+(λ = 1000) after training on 500 samples (plotting mean of
+pθ (x|z)). Top: Samples generated by ELBO. Even though
+ELBO generates very sharp reconstruction for samples on
+the training set, model samples p(z)pθ (x|z) is very poor,
+and differ significantly from the reconstruction samples,
+indicating over-fitting, and mismatch between qφ (z) and
+p(z). Bottom: Samples generated by InfoVAE. The reconstructed samples and model samples look similar in quality
+and appearance, suggesting better generalization in the latent space.
+achieves extremely low error, this is trivial because for this
+experimental setting of flexible decoders, ELBO learns a
+latent code z that does not contain any information about
+x, and qφ (z|x) ≈ p(z) for all z.
+Sample distribution: If the generative model p(z)pθ (x|z)
+has true marginal pdata (x), then the distribution of different object classes should also follow the distribution of
+classes in the original dataset. On the other hand, an incorrect generative model is unlikely to generate a class distribution that is identical to the ground truth. We let c
+denote the class distribution in the real dataset, and ĉ denote the class distribution of the generated images, computed by a pretrained classifier. We use cross entropy loss
+lce (c, ĉ) = −cT (log ĉ − log c) to measure the deviation
+from the true class distribution.
+The results for this metric are plotted in Figure 6 (C).
+In general, Stein regularization performs well only with
+a small latent space with 2 dimensions, whereas the adversarial regularization performs better with larger dimensions; MMD regularization generally performs well in all
+the cases and the performance is stable with respect to the
+latent code dimensions.
+Training Speed and Stability: In general we would prefer a model that is stable, trains quickly and requires little
+hyperparameter tuning. In Figure 6 (D) we plot the change
+of MMD statistic vs. the number of iterations. In this respect, adversarial autoencoder becomes less desirable because it takes much longer to converge, and sometimes con-
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+mmd
+
+10 2
+10 3
+10 4
+2
+
+5 10 20 40
+latent dimension
+
+(D) MMD Loss Training Curve
+
+mmd
+
+10 1
+10 2
+10 3
+10 4
+0
+
+10000 20000 30000
+iterations
+
+0.8
+0.6
+0.4
+0.2
+0.0
+100
+
+semi-supervised error
+
+100
+
+10 5
+
+80
+
+class dist. cross entropy
+
+(B) Covariance Logdet per Dimension
+
+logdet of covaraince
+
+(A) MMD Distance
+
+2
+
+5 10 20 40
+latent dimension
+
+80
+
+2
+
+(E) Semi-supervised Classification Error
+
+5 10 20 40
+latent dimension
+
+80
+
+Stein
+MMD
+Adversarial
+ELBO
+Unregularized
+
+10 1
+
+10 2
+
+(C) Class Distribution Mismatch
+
+0.07
+0.06
+0.05
+0.04
+0.03
+0.02
+0.01
+
+2
+
+5 10 20 40
+latent dimension
+
+80
+
+Figure 6: Comparison of numerical performance. We evaluate MMD, log determinant of sample covariance, cross entropy
+with correct class distribution, and semi-supervised learning performance. ‘Stein’, ‘MMD’, ‘Adversarial’ and ‘ELBO’
+corresponds to the VAE where the latent code are regularized with the respective methods, and ‘Unregularized’ corresponds
+to the vanilla autoencoder without regularization over the latent dimensions.
+verges to poor results even if we consider more power GAN
+training techniques such as Wasserstein GAN with gradient
+penalty (Gulrajani et al., 2017).
+Semi-supervised Learning: To evaluate the quality of the
+learned features for other downstream tasks such as semisupervised learning, we train a SVM directly on the learned
+latent features on MNIST images. We use the M1+TSVM
+in (Kingma et al., 2014), and use the semi-supervised performance over 1000 samples as an approximate metric to
+verify if informative and meaningful latent features are
+learned by the generative models. Lower classification error would suggest that the learned features z contain more
+information about the data x. The results are shown in Figure 6 (E). We observe that an unregularized autoencoder
+(which does not use any regularization LREG ) is superior when the latent dimension is low and MMD catches
+up when it is high. Furthermore, the latent code with the
+ELBO objective contains almost no information about the
+input and the semi-supervised learning error rate is no better than random guessing.
+Log likelihood: To be consistent with previous results,
+we use the stochastically binarized version first used in
+(Salakhutdinov & Murray, 2008). Estimation of log likelihood is achieved by importance sampling. We use 5dimensional latent features in our log likelihood experiments. The values are shown in Table 1. Our results are
+slightly worse than reported in PixelRNN (van den Oord
+et al., 2016b), which achieves a log likelihood of 79.2.
+However, all the regularizations perform on-par or supe-
+
+Table 1: Log likelihood estimates for different models on
+the MNIST dataset. MMD-VAE achieves the best results,
+even though it is not explicitly optimizing a lower bound to
+the true log likelihood.
+
+ELBO
+MMD-VAE
+Stein-VAE
+Adversarial VAE
+
+Log likelihood estimate
+82.75
+80.76
+81.47
+82.21
+
+rior compared to our ELBO baseline. This is somewhat
+surprising because we do not explicitly optimize a lower
+bound to the true log likelihood, unless we are using the
+ELBO objective.
+
+6. Conclusion
+Despite the recent success of variational autoencoders, they
+can fail to perform amortized inference, or learn meaningful latent features. We trace both issues back to the ELBO
+learning criterion, and modify the ELBO objective to propose a new model family that can fix both problems. We
+perform extensive experiments to verify the effectiveness
+of our approach. Our experiments show that a particular
+subset of our model family, MMD-VAEs perform on-par
+or better than all other approaches on multiple metrics of
+performance.
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+7. Acknowledgements
+We thank Daniel Levy, Rui Shu, Neal Jean, Maria Skoularidou for providing constructive feedback and discussions.
+
+References
+Arjovsky, M., Chintala, S., and Bottou, L. Wasserstein GAN.
+ArXiv e-prints, January 2017.
+Burda, Y., Grosse, R., and Salakhutdinov, R. Importance
+weighted autoencoders. arXiv preprint arXiv:1509.00519,
+2015.
+
+Li, Y., Swersky, K., and Zemel, R. Generative moment matching
+networks. In International Conference on Machine Learning,
+pp. 1718–1727, 2015.
+Li, Y., Song, J., and Ermon, S. Inferring the latent structure of
+human decision-making from raw visual inputs. 2017.
+Liu, Q. and Wang, D. Stein variational gradient descent: A
+general purpose bayesian inference algorithm. arXiv preprint
+arXiv:1608.04471, 2016.
+Makhzani, A., Shlens, J., Jaitly, N., and Goodfellow, I. Adversarial autoencoders. arXiv preprint arXiv:1511.05644, 2015.
+
+Chen, X., Kingma, D. P., Salimans, T., Duan, Y., Dhariwal, P.,
+Schulman, J., Sutskever, I., and Abbeel, P. Variational lossy
+autoencoder. arXiv preprint arXiv:1611.02731, 2016.
+
+Nowozin, S., Cseke, B., and Tomioka, R. f-gan: Training generative neural samplers using variational divergence minimization. In Advances in Neural Information Processing Systems,
+pp. 271–279, 2016.
+
+Dziugaite, G. K., Roy, D. M., and Ghahramani, Z. Training generative neural networks via maximum mean discrepancy optimization. arXiv preprint arXiv:1505.03906, 2015.
+
+Radford, A., Metz, L., and Chintala, S. Unsupervised representation learning with deep convolutional generative adversarial
+networks. arXiv preprint arXiv:1511.06434, 2015.
+
+Goodfellow, I., Pouget-Abadie, J., Mirza, M., Xu, B., WardeFarley, D., Ozair, S., Courville, A., and Bengio, Y. Generative
+adversarial nets. In Advances in Neural Information Processing Systems, pp. 2672–2680, 2014.
+
+Salakhutdinov, R. and Murray, I. On the quantitative analysis of
+deep belief networks. In Proceedings of the 25th international
+conference on Machine learning, pp. 872–879. ACM, 2008.
+
+Gretton, A., Borgwardt, K. M., Rasch, M., Schölkopf, B., and
+Smola, A. J. A kernel method for the two-sample-problem. In
+Advances in neural information processing systems, pp. 513–
+520, 2007.
+Gulrajani, I., Kumar, K., Ahmed, F., Taiga, A. A., Visin, F.,
+Vázquez, D., and Courville, A. C. Pixelvae: A latent variable model for natural images. CoRR, abs/1611.05013, 2016.
+URL http://arxiv.org/abs/1611.05013.
+Gulrajani, I., Ahmed, F., Arjovsky, M., Dumoulin, V., and
+Courville, A. Improved training of wasserstein gans. arXiv
+preprint arXiv:1704.00028, 2017.
+Higgins, I., Matthey, L., Pal, A., Burgess, C., Glorot, X.,
+Botvinick, M., Mohamed, S., and Lerchner, A. beta-vae:
+Learning basic visual concepts with a constrained variational
+framework. 2016.
+Jimenez Rezende, D., Mohamed, S., and Wierstra, D. Stochastic
+Backpropagation and Approximate Inference in Deep Generative Models. ArXiv e-prints, January 2014.
+Kingma, D. and Ba, J. Adam: A method for stochastic optimization. arXiv preprint arXiv:1412.6980, 2014.
+Kingma, D. P. and Welling, M. Auto-Encoding Variational Bayes.
+ArXiv e-prints, December 2013.
+Kingma, D. P., Rezende, D. J., Mohamed, S., and Welling, M.
+Semi-supervised learning with deep generative models. CoRR,
+abs/1406.5298, 2014. URL http://arxiv.org/abs/
+1406.5298.
+Kingma, D. P., Salimans, T., and Welling, M. Improving variational inference with inverse autoregressive flow. arXiv
+preprint arXiv:1606.04934, 2016.
+Krizhevsky, A. and Hinton, G. Learning multiple layers of features from tiny images. 2009.
+
+Salimans, T., Karpathy, A., Chen, X., and Kingma, D. P. Pixelcnn++: Improving the pixelcnn with discretized logistic
+mixture likelihood and other modifications. arXiv preprint
+arXiv:1701.05517, 2017.
+van den Oord, A., Kalchbrenner, N., Espeholt, L., Vinyals, O.,
+Graves, A., et al. Conditional image generation with pixelcnn
+decoders. In Advances in Neural Information Processing Systems, pp. 4790–4798, 2016a.
+van den Oord, A., Kalchbrenner, N., and Kavukcuoglu, K. Pixel
+recurrent neural networks. CoRR, abs/1601.06759, 2016b.
+URL http://arxiv.org/abs/1601.06759.
+Yang, Z., Hu, Z., Salakhutdinov, R., and Berg-Kirkpatrick, T. Improved variational autoencoders for text modeling using dilated
+convolutions. CoRR, abs/1702.08139, 2017. URL http:
+//arxiv.org/abs/1702.08139.
+Zhu, J., Park, T., Isola, P., and Efros, A. A. Unpaired image-toimage translation using cycle-consistent adversarial networks.
+CoRR, abs/1703.10593, 2017. URL http://arxiv.org/
+abs/1703.10593.
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+A. Proofs
+
+sian conditional distributions. We have
+
+Proof of Equivalence of ELBO Objectives.
+
+LAE (x = 1) ≡ Eq(z|x=1) [log p(x = 1|z)]
+= q(z ≥ 0|x = 1) log p(x = 1|z ≥ 0)+
+
+LELBO = EpD Eqφ (z|x) [log pθ (x|z)]−
+
+q(z < 0|x = 1) log p(x = 1|z < 0)
+
+EpD KL(qφ (z|x)kp(z))
+
+= q(z ≥ 0|x = 1)(−1/2 log(2π) − log σ)+
+
+= Eqφ (x,z) [log pθ (x|z) + log p(z) − log qφ (z|x)]
+
+
+pθ (x, z)
+= Eqφ (x,z) log
++ log pD (x)
+qφ (x, z)
+= −DKL (qφ (x, z)kpθ (x, z)) + EpD [log pD (x)]
+
+But EpD [log pD (x)] is a constant with no trainable parameters.
+Proof of Equivalence of InfoVAE Objective Eq.(5) to Eq.(6).
+
+q(z < 0|x = 1)(−1/2 log(2π) − log σ − 2/σ 2 )
+= − log σ − 2q(z < 0|x = 1)/σ 2 − 1/2 log(2π)
+The optimal solution for LAE (x = 1) is achieved when
+∂LAE (x = 1)
+= −1/σ + 4/σ 3 q(z < 0|x = 1) = 0
+∂σ
+p
+where the unique valid solution is σ = 2 q(z < 0|x = 1),
+therefore optimally
+L∗AE (x = 1) = −1/2 log q(z < 0|x = 1) + C
+where C ∈ R is a constant independent of c, λ and σ, and
+q(z < 0|x = 1) is the tail probability of a Gaussian. In the
+limit λ → 0, c → ∞, we have
+
+LInfoVAE
+
+L∗AE (x = 1) = Θ(c2 /λ2 )
+
+= −λDKL (qφ (z)kp(z))−
+Eq(z) [DKL (qφ (x|z)kpθ (x|z))] + αIq (x; z)
+
+
+qφ (x|z)
+qφ (z)
+qφ (z)
+− log
+− α log
+= Eqφ (x,z) −λ log
+p(z)
+pθ (x|z)
+qφ (z|x)
+
+
+λ+α−1
+qφ (z)
+pD (x)
+= Eqφ (x,z) log pθ (x|z) − log
+p(z)λ qφ (z|x)α−1
+= Eqφ (x,z) [log pθ (x|z)−
+qφ (z)λ+α−1 qφ (z|x)1−α pD (x)
+log
+p(z)λ+α−1 p(z)1−α
+
+
+
+= EpD (x) Eqφ (z|x) [log pθ (x|z)]−
+
+Furthermore we have
+LREG (x = 1) = −DKL (q(z|x = 1)||p(z))
+= log λ − λ2 /2 − c2 /2 + 1/2
+In addition because LREG has no dependence on σ, so the
+σ that maximizes LAE also maximizes LELBO . Therefore
+in the limit of λ → 0, c → ∞, and σ chosen optimally, we
+have
+lim
+
+λ→0,c→∞
+
+LELBO (x = 1)
+
+(1 − α)EpD (x) DKL (qφ (z|x)||p(z))−
+
+= L∗AE (x = 1) + LREG (x = 1)
+
+(α + λ − 1)DKL (qφ (z)kp(z)) − EpD [log pD (x)]
+
+= Θ(c2 /λ2 + log λ − λ2 /2 − c2 /2)
+
+while the last term EpD [log pD (x)] is a constant with no
+trainable parameters.
+Proof of Proposition 1. Let the dataset contain two samples {−1, 1}. Denote LAE (x) as Eqφ (z|x) [log pθ (x|z)], and
+LREG (x) as DKL (qφ (z|x)kp(z)). Due to the symmetricity
+in the problem, we constrict p(x|z), q(z|x) to the following
+Gaussian distribution family: let σ, c, λ ∈ R be the parameters to optimize over, and
+
+
+N (1, σ 2 )
+z≥0
+N (−1, σ 2 ) z < 0
+
+
+
+N (c, λ2 )
+x≥0
+N (−c, λ2 ) x < 0
+
+p(x|z) =
+q(z|x) =
+
+If LELBO can be maximized to +∞ with this restricted
+family, then it can be maximized to +∞ for arbitrary Gaus-
+
+→ +∞
+This means that the growth rate of the LELBO (x = 1) far
+exceeds the growth rate of LREG (x = 1), and their sum is
+still maximized to +∞. We can obtain similar conclusions
+for the symmetric case of x = −1. Therefore over-fitting to
+LELBO has unbounded reward when c → ∞ and λ → 0.
+To prove that the variational gap tends to +∞, observe that
+when x = 1, for any z ∈ R,
+p(x = 1|z)
+p(z)
+p(x = 1)
+p(x = 1|z)
+=R
+p(z)
+p(x = 1|z 0 )p(z 0 )dz 0
+z0
+
+p(z|x = 1) =
+
+p(x = 1|z)
+p(z)
+1/2p(x = 1|z ≥ 0) + 1/2p(x = 1|z < 0)
+2p(x = 1|z)
+≤
+p(z) ≤ 2p(z)
+p(x = 1|z ≥ 0)
+
+=
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+This means that the variational gap
+DKL (q(z|x = 1)kp(z|x = 1))
+
+
+q(z|x = 1)
+= Eq(z|x=1) log
+p(z|x = 1)
+
+
+q(z|x = 1)
+≥ Eq(z|x=1) log
+2p(z)
+= DKL (q(z|x = 1)kp(z)) − log 2
+→∞
+The same argument holds for x = −1.
+Proof of Proposition 1. Let the dataset contain two samples {−1, 1}, and p(x|z), q(z|x) be arbitrary one dimensional Gaussians, then by symmetry of the problem, at optimality for LELBO , we have
+
+N (1, σ 2 )
+z>0
+p(x|z) =
+N (−1, σ 2 ) z ≤ 0
+
+N (c, λ2 )
+x>0
+q(z|x) =
+N (−c, λ2 ) x ≤ 0
+
+We can obtain similar conclusions for the symmetric case
+of x = −1. Therefore over-fitting to LELBO has unbounded reward when c → ∞ and λ → 0. In addition, because c → ∞, but the true posterior p(z|x)
+has bounded second order moments, the variational gap
+DKL (q(z|x)kp(z|x)) → ∞.
+Proof of Proposition 2. We first rewrite the modified
+L̂InfoVAE objective
+L̂InfoVAE = Eqφ (z,x) [log pθ (x|z)]
+− (1 − α)EpD [DKL (q(z|x)kp(z))]
+− (α + λ − 1)D(qφ (z)||p(z))
+= Eqφ (z,x) [log pθ (x|z)] − (1 − α)Iqφ (x; z)
+− (1 − α)DKL (qφ (z)kp(z))
+− (α + λ − 1)D(qφ (z)||p(z))
+
+Notice that by our condition of α < 1, λ > 0, we have
+1 − α > 0, α + λ − 1 > 0. For convenience we will rename
+
+Then we have
+
+β ≡1−α>0
+
+LLL (x = 1) ≡ Eq(z|x=1) [log p(x = 1|z)]
+
+γ ≡α+λ−1>0
+
+= q(z ≥ 0|x = 1) log p(x = 1|z ≥ 0)+
+q(z < 0|x = 1) log p(x = 1|z < 0)
+= q(z ≥ 0|x = 1)(−1/2 log(2π) − log σ)+
+q(z < 0|x = 1)(−1/2 log(2π) − log σ − 2/σ 2 )
+= − log σ − 2q(z < 0|x = 1)/σ 2 − 1/2 log(2π)
+∗
+
+The optimal solution σ is achieved where
+∂LLL
+= −1/σ + 4/σ 3 = 0
+∂σ
+p
+where the unique valid solution is σ = 2 q(z < 0|x = 1),
+therefore optimally
+L∗LL (x = 1) = −1/2 log q(z < 0|x = 1)−log 2−1/2 log(2π)
+Where q(z < 0|x = 1) is the tail probability of a Gaussian.
+In the limit λ → 0, c → ∞, we have
+L∗LL (x = 1) = Θ(c2 /λ2 )
+Furthermore we have
+DKL (q(z|x = 1)||p(z)) = − log λ + λ2 /2 + c2 /2 − 1/2
+Then in the limit of λ → 0, c → ∞
+lim
+
+λ→0,c→∞
+
+LELBO (x = 1)
+= −LLL (x = 1) + DKL (q(z|x = 1)||p(z))
+= Θ(−c2 /λ2 − log λ + λ2 /2 + c2 /2)
+→ −∞
+
+In addition we consider our objective in two separate terms
+L1 = Eqφ (z,x) [log pθ (x|z)] − βIqφ (x; z)
+L2 = −βDKL (qφ (z)kp(z)) − γD(qφ (z)||p(z))
+We will prove that whenever β > 0, γ > 0, the two terms
+are maximized under the condition in the proposition respectively. First consider L1 , because Iqφ (x, z) = I0 :
+L1 = Eqφ (z,x) [log pθ (x|z)] − βI0
+= Eqφ (z) Eqφ (x|z) [log pθ (x|z)] − βI0
+
+
+= Eqφ (z) −DKL (qφ (x|z)||pθ (x|z)) + Hqφ (x|z)
+− βI0
+Therefore for any qφ (z|x), pθ∗ (x|z) that optimizes L1 satisfies ∀z, pθ∗ (x|z) = qφ (x|z), and we have for any given
+qφ , the optimal L1 is
+L∗1 = Eqφ (x,z) [log pθ∗ (x|z)] − βI0
+= Eqφ (z) Eqφ (x|z) [log qφ (x|z)] − βI0
+= Eqφ (z) [−Hqφ (x|z)] − βI0
+= (1 − β)I0 − HpD (x)
+where we use Hp (x) to denote the entropy of p(x). Notice that L1 is dependent on qφ only by Iqφ (x; z) therefore when Iqφ (x; z) = I0 , L1 is maximized regardless of
+the choice of qφ . So we only have to independently maximize L2 subject to fixed I0 . Notice that L1 is maximized
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+when qφ (z) = p(z), and we show that this can be achieved.
+When {qφ } is sufficiently flexible we simply have to partition the support set A of p(z) into N = RdeI0 e subsets
+{A1 , · · · , AN }, so that each subset satisfies Ai p(z)dz =
+1/N . Similarly we partition the support set B of pD (x)
+into
+R N subsets {B1 , · · · , BN }, so that each subset satisfies
+p (x)dx = 1/N . Then we construct qφ (z|x) mapping
+Bi D
+each Bi to Ai as follows
+
+N p(z) z ∈ Ai
+q(z|x) =
+0
+otherwise
+such that for any xi ∈ Bi . It is easy to see that this distribution is normalized because
+Z
+Z
+q(z|x)dz =
+N p(z)dz = 1
+Ai
+
+z
+
+Also it is easy to see that p(z) = qφ (z). In addition
+Iq (x; z) = Hq (z) − Hq (z|x)
+Z
+Z
+= Hq (z) +
+pD (x)
+q(z|x) log q(z|x)dzdx
+B
+A
+Z Z
+1 X
+q(z|x) log q(z|x)dzdx
+= Hq (z) +
+N i Bi A
+Z
+1 X
+= Hq (z) +
+N q(z) log(N q(z))dz
+N i Ai
+XZ
+q(z) (I0 + log q(z)) dz
+= Hq (z) +
+Zi
+= Hq (z) +
+
+Ai
+
+q(z) (I0 + log q(z)) dz
+A
+
+= Hq (z) + I0 − Hq (z) = I0
+Therefore we have constructed a qφ (z|x), pθ (x|z) so that
+we have reached the maximum for both objectives
+L∗1 = (1 − β)I0 − HpD (x)
+L∗2 = 0
+so there sum must also be maximized. Under this optimal solution we have that qφ (x|z) = pθ (x|z) and qφ (z) =
+p(z), this implies qφ (x, z) = pθ (x, z), which implies that
+both pθ (z|x) = qφ (z|x) and pθ (x) = pD (x).
+
+B. Stein Variational Gradient
+The Stein variational gradient (Liu & Wang, 2016) is
+a simple and effective framework for matching a distribution q to p by descending the variational gradient of
+DKL (q(z)||p(z)). Let q(z) be some distribution on Z,  be
+a small step size, k be a positive definite kernel function,
+and φ(z) be a function Z → Z. Then T (z) = z + φ(z)
+defines a transformation, and this transformation induces a
+new distribution q[T ] (z 0 ) on Z where z 0 = T (z), z ∼ q(z).
+
+Then the φ∗ that minimizes DKL (q[T ] (z)||p(z)), as  → 0
+is
+φ∗q,p (·) = Ez∼q [k(z, ·)∇z log p(z) + ∇z k(z, ·)]
+as shown in Lemma 3.2 in (Liu & Wang, 2016). Intuitively
+φ∗q,p is the steepest direction that transforms q(z) towards
+p(z). In practice, q(z) can be represented by the particles
+in a mini-batch.
+We propose to use Stein variational gradient to regularize
+variational autoencoders using the following process. For
+a mini-batch x, we compute the corresponding mini-batch
+features z = qφ (x). Based on this mini-batch we compute
+the Stein gradients by empirical samples
+n
+
+φ∗qφ ,p (zi ) ≈
+
+1X
+k(zi , zj )∇zj log p(zj ) + ∇zj k(zj , zi )
+n j=1
+
+The gradients wrt. the model parameters are
+n
+
+∇φ DKL (qφ (z)||p(z)) ≈
+
+1X
+∇φ qφ (zi )T φ∗qφ ,p (zi )
+n i=1
+
+In practice we can define a surrogate loss
+D̂(qφ (z), p(z)) = z T stop gradient(φ∗qφ ,p (z))
+where stop gradient(·) indicates that this term is treated as
+a constant during back propagation. Note that this is not really a divergence, but simply a convenient loss function that
+we can implement using standard automatic differentiation
+software, whose gradient is the Stein variational gradient
+of the true KL divergence.
+
+C. Experimental Setup
+In all our experiments in Section 5.2, we choose the prior
+p(z) to be a Gaussian with zero mean and identity covariance, pθ (x|z) to be a PixelCNN conditioned on the latent
+code (van den Oord et al., 2016a), and qφ (z|x) to be a CNN
+where the final layer outputs the mean and standard deviation of a factored Gaussian distribution.
+For MNIST we use a simplified version of the conditional
+PixelCNN architecture (van den Oord et al., 2016a). For
+CIFAR we use the public implementation of PixelCNN++
+(Salimans et al., 2017). In either case we use a convolutional encoder with the same architecture as (Radford et al.,
+2015) to generate the latent code, and plug this into the conditional input for both models. The entire model is trained
+end to end by Adam (Kingma & Ba, 2014). PixelCNN on
+ImageNet take about 10h to train to convergence on a single
+Titan X, and CIFAR take about two days to train to convergence. We will make the code public upon publication.
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+D. CIFAR Samples
+We additional perform experiments on the CIFAR
+(Krizhevsky & Hinton, 2009) dataset. We show samples
+from models with different regularization methods - ELBO,
+MMD, Stein and Adversarial in Figure 7. In all cases, the
+model accurately matches qφ (z) with p(z), and samples
+generated with Stein regularization and MMD regularization are more coherent globally compared to the samples
+generated with ELBO regularization.
+
+InfoVAE: Balancing Learning and Inference in Variational Autoencoders
+
+ELBO-2
+
+ELBO-10
+
+MMD-2
+
+MMD-10
+
+Stein-2
+
+Stein-10
+
+Figure 7: CIFAR samples. We plots samples for ELBO, MMD, and Stein regularization, with 2 or 10 dimensional latent
+features. Samples generated with Stein regularization and MMD regularization are more coherent globally than those
+generated with ELBO regularization.
+
+
