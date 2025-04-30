@@ -1,0 +1,1942 @@
+Qingrong Chen, Chong Xiang, Minhui Xue, Bo Li, Nikita Borisov, Dali Kaafar, and Haojin
+Zhu
+
+arXiv:1812.02274v1 [cs.CR] 6 Dec 2018
+
+Differentially Private Data Generative Models
+Abstract: Deep neural networks (DNNs) have recently been
+widely adopted in various applications, and such success is
+largely due to a combination of algorithmic breakthroughs,
+computation resource improvements, and access to a large
+amount of data. However, the large-scale data collections required for deep learning often contain sensitive information,
+therefore raising many privacy concerns. Prior research has
+shown several successful attacks in inferring sensitive training data information, such as model inversion [24, 26], membership inference [57], and generative adversarial networks
+(GAN) based leakage attacks against collaborative deep learning [36]. In this paper, to enable learning efficiency as well as
+to generate data with privacy guarantees and high utility, we
+propose a differentially private autoencoder-based generative
+model (DP-AuGM) and a differentially private variational
+autoencoder-based generative model (DP-VaeGM). We evaluate the robustness of two proposed models. We show that
+DP-AuGM can effectively defend against the model inversion,
+membership inference, and GAN-based attacks. We also show
+that DP-VaeGM is robust against the membership inference attack. We conjecture that the key to defend against the model
+inversion and GAN-based attacks is not due to differential privacy but the perturbation of training data. Finally, we demonstrate that both DP-AuGM and DP-VaeGM can be easily integrated with real-world machine learning applications, such as
+machine learning as a service and federated learning, which
+are otherwise threatened by the membership inference attack
+and the GAN-based attack, respectively.
+Keywords: Differential privacy; Generative models; Robustness
+
+Qingrong Chen: University of Illinois at Urbana-Champaign, Email:
+qc16@illinois.edu;
+Chong Xiang: Shanghai Jiao Tong University, Email:
+danco2015@sjtu.edu.cn;
+Minhui Xue: Macquarie University and Data61-CSIRO, Email: minhui.xue@mq.edu.au;
+Bo Li: University of Illinois at Urbana-Champaign, Email: lxbosky@gmail.com;
+Nikita Borisov: University of Illinois at Urbana-Champaign, Email:
+nikita@illinois.edu;
+Dali Kaafar: Macquarie University and Data61-CSIRO, Email:
+dali.kaafar@mq.edu.au;
+Haojin Zhu: Shanghai Jiao Tong University, Email: zhuhaojin@gmail.com.
+
+1 Introduction
+Advanced machine learning techniques, and in particular deep
+neural networks (DNNs), have been applied with great success
+to a variety of areas, including speech processing [35], medical diagnostics [17], image processing [16], and robotics [64].
+Such success largely depends on massive collections of data
+for training machine learning models. However, these data
+collections often contain sensitive information and therefore
+raise many privacy concerns. Several privacy violation attacks
+have been proposed to show that it is possible to extract sensitive and private information from different learning systems.
+Specifically, Fredrikson et al. [26] proposed to infer sensitive patients’ genomic markers by actively probing the outputs
+from the model and auxiliary demographic information about
+them. In a follow-up study, Fredrikson et al. [24] developed
+a more robust model inversion attack using predicted confidence values to recover confidential information of a training
+set (e.g., human faces). Shokri and Shmatikov [57] proposed
+a membership inference attack, which tries to predict whether
+a data point belongs to the training set. More recently, a generative adversarial network (GAN) based attack against collaborative deep learning [36] was proposed against distributed
+machine learning systems, where users collaboratively train
+a model by sharing gradients of their locally trained models through a parameter server. The GAN-based attack has
+shown that even when the training process is differentially
+private [8, 48], it is still possible to mount an attack to extract sensitive information from original training data [36] as
+trusted servers may leak information unintentionally. Given
+the fact that Google has proposed federated learning based on
+distributed machine learning [47] and has already deployed it
+to mobile devices, such a GAN based attack [36] raises serious
+privacy concerns.
+In this paper, we propose to use differentially private data
+generative models to publish differentially private synthetic
+data that can both protect privacy and retain high data utility.
+Such data generative models are trained over private/sensitive
+data (we will denote it as private data to be aligned with the
+definition in [49]) in a differentially private manner, and are
+able to generate new surrogate data for later learning tasks. As
+a result, the generated data preserves the statistical properties
+of the private data, which enables high learning efficacy, while
+also protecting the privacy of the private data. The approach
+of using differentially private data generative models has sev-
+
+Differentially Private Data Generative Models
+
+eral advantages. First, with the generative models, privacy can
+be preserved even if the entire trained model or the generated
+data is accessible to an adversary. Second, it can be easily integrated with other learning tasks without adding much overhead, since only the training data is changed. Third, the data
+generation process can be done locally on the user side, which
+eliminates the need for a trusted server (that can be attacked
+and compromised) for protecting the private data from users.
+Finally, we can prove that any machine learning model trained
+over the generated data is also differentially private w.r.t. the
+private data.
+To achieve this, we build two distinct differentially private generative models. First, we propose a differentially
+private autoencoder-based generative model (DP-AuGM).
+DP-AuGM works for the scenario when private data is sensitive (i.e., not suitable for releasing to public) while sharing it
+with other parties will facilitate data analytics. As motivation,
+consider a hospital not allowed to release its private medical
+data to public for use, but wants to share the data with universities for, say, data-driven disease diagnosis studies [34, 55].
+Under this scenario, instead of publishing the medical data directly, the hospital could locally use the private medical data to
+train an autoencoder in a differentially private way [8] and then
+publish it. Any university interested in researching disease diagnosis independently feeds into the autoencoder their own
+small amounts of sanitized/public medical data for generating
+new data for machine learning tasks. Here, the sanitized/public
+data often refers to the publicly available data, such as [4, 7].
+Ultimately, the private medical data owned by the hospital are
+successfully synthesized with public data owned by each university in a differentially private manner, so that the privacy of
+the private medical data is preserved and the utility of the datadriven disease study is retained. Another motivating example
+is two companies that want to collaborate on a data intelligence
+task. A data-rich company X may wish to aid company Y in
+developing a model that helps maximize revenue, but is unwilling or legally unable to share its data with Y directly due
+to their sensitive nature. Again, company X can train a differentially private autoencoder (i.e., DP-AuGM), on its large data
+set and share it with company Y. Then company Y could use
+its own, smaller, dataset along with the autoencoder to train a
+model that synthesizes information from both datasets.
+The key advantage of the DP-AuGM approach is that the
+representation-learning task performed on the private data significantly boosts the accuracy of the machine learning task, as
+compared to using the public1 data alone, in cases where the
+
+1 For simplicity, we refer to the dataset that is passed through the autoencoder as public. In the second motivating example, if company Y only uses
+the trained model internally, both X’s and Y’s datasets remain private, but
+
+2
+
+public data has too few samples to successfully train a deep
+learning model [40]. We demonstrate this using extensive experiments on four datasets (i.e., MNIST, Adult Census Data,
+Hospital Data, and Malware Data), showing that DP-AuGM
+can achieve high data utility even under a small privacy budget (i.e.,  < 1) for private data.
+Second, we propose a differentially private variational
+autoencoder-based generative model (DP-VaeGM). Compared
+with the ordinary autoencoder, the VAE [39] has an extra sampling layer which can sample data from a Gaussian distribution. Using this feature, DP-VaeGM is capable of generating an arbitrary amount of data by feeding Gaussian noise to
+the model. Similar to DP-AuGM, the proposed DP-VaeGM is
+trained on the private data in a differentially private way [8]
+and is then released to public for use. Although imposing
+Gaussian noise on the sampling layer is useful in generating
+new data (i.e., capable of generating infinite data), we identify that the VAE does not perform stably in generating highquality data points. Thus, in our paper, we only evaluate DPVaeGM on the image dataset MNIST. We show that the data
+generated from DP-VaeGM can successfully retain high utility and preserve data privacy. Under the setting of  = 8 and
+δ = 10−3 , the prediction accuracy of DP-VaeGM is more than
+97% on MNIST.
+To further demonstrate the robustness of our two proposed
+models, we evaluate both DP-AuGM and DP-VaeGM with
+three existing attacks—model inversion attack [24, 26], membership inference attack [57], and GAN-based attack against
+collaborative deep learning [36]. The results show that DPAuGM can effectively mitigate all of the aforementioned attacks and DP-VaeGM is robust against the membership inference attack. As both DP-AuGM and DP-VaeGM satisfy differential privacy, while only DP-AuGM is robust to the model
+inversion and GAN-based attacks, we conjecture that the key
+to defend against these two attacks is not due to differential
+privacy but the perturbation of training data.
+Finally, we integrate our proposed generative models with
+two real-world applications, which are threatened by the aforementioned attacks. The first application is machine learning
+as a service (MLaaS). Traditionally, users need to upload all
+of their data to the MLaaS (such as Amazon Machine Learning [1]) to train a model, due to the lack of computational resources on the user side. However, if these platforms are compromised, all of the users’ data will be leaked. Thus, we propose to integrate DP-AuGM and DP-VaeGM with this application, so that even if the platforms are compromised, the privacy of users’ data can still be protected. We empirically show
+
+from an analysis perspective, we focus on the potential privacy leaks of
+X’s data through either the shared autoencoder or the final trained model.
+
+Differentially Private Data Generative Models
+
+that after being integrated with DP-AuGM and DP-VaeGM,
+this application still maintains high utility. The second application is federated learning [47], which has been recently shown
+to be vulnerable to GAN-based attacks [36]. As DP-AuGM
+is more effective in defending against this attack, we try to
+combine DP-AuGM with this application. We show that for
+federated learning, even under small privacy budgets ( = 1,
+δ = 10−5 ), DP-AuGM only decreases original utility by 5%.
+The contributions of this paper are as follows:
+– We propose two differentially private data generative
+models DP-AuGM and DP-VaeGM, which can provide
+differential privacy guarantees for the generated data, and
+retain high data utility for various machine learning tasks.
+In addition, we compare the learning efficiency of the
+generated data with state-of-the-art private training methods. We show that the utility of DP-AuGM outperforms
+Deep Learning with Differential Privacy (DP-DL) [8] and
+Scalable Private Learning with PATE (sPATE) [49] under
+any given privacy budget. We also show that DP-VaeGM
+can achieve comparable learning efficiency in comparison
+with DP-DL.
+– We empirically evaluate and demonstrate that the proposed model DP-AuGM is robust against existing privacy attacks—model inversion attack, membership inference attack, and GAN-based attack against collaborative
+deep learning; DP-VaeGM is robust against the membership inference attack. We conjecture that the key to defend
+against model inversion and GAN-based attacks is to distort the training data while differential privacy is targeted
+to protect membership privacy.
+– We integrate the proposed generative models with machine learning as a service and federated learning to protect data privacy. We show that such integration can retain
+high utility for these real-world applications, which are
+currently threatened by privacy attacks.
+To the best of our knowledge, this is the first paper to build
+and systematically examine differentially private data generative models that can defend against contemporary privacy attacks on learning systems.
+
+3
+
+2.1 Privacy Attacks on Learning Systems
+Model Inversion Attack. This attack was first introduced by
+Fredrikson et al. [26] and further developed in [24]. The goal
+of this attack is to recover sensitive attributes within original
+training data. For example, an attacker can infer the genome
+type of patients from medical records data or recover distinguishable photos by attacking a facial recognition API. Such
+a vulnerability mainly results from the rich information captured by the machine learning models, which can be leveraged
+by the attacker to recover original training data by constructing data records with high confidence. In this paper, we mainly
+focus on a strong adversarial scenario where attackers have
+white-box access to the model so as to evaluate the robustness
+of our proposed differentially private mechanisms. In this context, an attacker aims to reconstruct data used in the training
+phase by minimizing the difference between hypothesized and
+obtained confidence vectors from the machine learning models.
+Membership Inference Attack. Shokri and Shmatikov [57]
+proposed the membership inference attack to determine
+whether a specific data record is within the training set. This
+attack also takes advantage of rich information recorded in machine learning models. An attacker first generates data with
+similar distribution as the original data by querying machine
+learning models and then uses the generated data to train local
+models (termed shadow models in [57]) to mimic the behavior
+of the original models. Finally, the attacker can apply the data
+provided by the local models to training a classifier and determine whether a given record belongs to the original training
+dataset.
+GAN-based Attack against Collaborative Deep Learning.
+Hitaj et al. [36] proposed a GAN-based attack targeting differentially private collaborative deep learning [56]. They showed
+that an attacker may use GANs to generate instances which
+well approximate data from other parties in a collaborative
+setting. The adversarial generator is improved based on the
+information returned from the trusted entity, and eventually
+achieves high attack success rate in the collaborative scenario
+even when differential privacy is guaranteed for each party.
+
+2.2 Differential Privacy
+
+2 Background
+In this section, we introduce some details about privacy attacks, differential privacy, and data generative models.
+
+Differential privacy provides strong privacy guarantees for
+data privacy analysis [22]. It ensures that attackers cannot infer sensitive information about input datasets merely based on
+the algorithm outputs. The formal definition is as follows.
+Definition 1. A randomized algorithm A : D → R with domain D and range R, is (, δ)-differentially private if for any
+
+Differentially Private Data Generative Models
+
+two adjacent training datasets d, d0 ⊆ D, which differ by at
+most one training point, and any subset of outputs S ⊆ R, it
+satisfies that:
+Pr[A(d) ∈ S] ≤ e Pr[A(d0 ) ∈ S] + δ.
+The  parameter is often called a privacy budget: smaller budgets yield stronger privacy guarantees. The second parameter δ
+is a failure rate for which it is tolerated that the privacy bound
+defined by  does not hold.
+Deep Learning with Differential Privacy (DP-DL) [8]. DPDL achieves DP by injecting random noise in stochastic gradient descent (SGD) algorithm. At each step of SGD, DP-DL
+computes the gradient for a random subset of training points,
+followed by clipping, averaging out each gradient, and adding
+noise in order to protect privacy. DP-DL provides a differentially private training algorithm with tight DP guarantees based
+on moments accountant analysis [8].
+
+2.3 Data Generative Models
+Autoencoder. An autoencoder is a widely used unsupervised
+learning model in many scenarios, such as natural language
+processing [19] and image recognition [46]. Its goal is to learn
+a representation of data, typically for the purpose of dimensionality reduction [29, 61, 62]. It simultaneously trains an encoder, which transforms a high-dimenstional data point to a
+low-dimensional representation, and a decoder, which reconstructs a high-dimensional data point from the representation,
+while trying to minimize the 2-norm distance l2 between the
+original and reconstructed data. Through this process, the autoencoder is able to discard those irrelevant features and enhance the performance of machine learning models when facing high-dimensional input data.
+Variational Autoencoder (VAE). Resembling the autoencoder, an variational autoencoder also comprises two parts: the
+encoder and the decoder [39, 54] with a latent variable z sampled from a prior distribution p(z) = pnoise . Different from
+the autoencoder of which the encoder only tries to reduce the
+data into lower dimensions, the encoder inside VAE tries to
+encode the input data into a Gaussian probability density domain [39]. Mathematically, the encoder approximates q(z|x),
+which is also a neural network (encoder), with input z conditioned on the data x. Then, a representation of the data will be
+sampled based on the output from the encoder. Finally, the decoder tries to reconstruct a data point based on sampled noise,
+which approximates the posterior p(x|z). The two neural networks, encoder and decoder, are trained to maximize a lower
+bound of the log-likelihood of the data log p(x):
+Eq(z|x) [log p(x|z)] − KL(q(z|x)||p(z)),
+
+4
+
+where KL is the Kullback-Leibler divergence [18].
+Sampling from the VAE is achieved by sampling from
+the (typically Gaussian) prior p(z) and passing the samples
+through the decoder network.
+
+3 Differentially Private Data
+Generative Models
+3.1 Problem Statement
+Let X be the set of training data containing sensitive information, and we will denote it as private data similarly with [48].
+We denote M as a data generative model which is trained on
+the private data, and is able to generate new data X 0 for later
+training usage, as shown in Figure 1. To protect privacy of the
+private data, the goal of the generative model is to prevent an
+attacker from recovering X , or inferring sensitive information
+from X based on X 0 . Formally, we give the definition of the
+differentially private generative model as below.
+Definition 2. A generative model M : D → Z with domain D
+and range Z, is (, δ)-differentially private, if for any adjacent
+private datasets X , X̂ ⊆ D which only differ by one entry, and
+any subset of output space S ⊆ Z, it satisfies that:
+Pr[M(X ) ∈ S] ≤ e Pr[M(X̂ ) ∈ S] + δ.
+The goal of the proposed differentially private generative
+model is to generate data with high utility while protecting
+sensitive information within the data. Current research shows
+that even algorithms proved to be differentially private can also
+leak private information in the face of certain carefully crafted
+attacks on different levels. Therefore, in this paper, we will
+also analyze several existing attacks to show that the proposed
+differentially private generative models can defend against the
+state-of-the-art attacks.
+
+3.2 Approach Overview
+To protect private data privacy, we propose to use the private
+data to train a differentially private generative model and use
+this generative model to generate new synthetic data for further learning tasks, which can both protect privacy of original
+data and retain high data utility. As the newly generated data
+is differentially private w.r.t. the private data, it will be hard
+for attackers to recover or synthesize the private data, or infer other information about the private data in learning tasks.
+Specifically, we choose an autoencoder and a variational autoencoder (VAE) as our two generative models. The overview
+
+Differentially Private Data Generative Models
+
+5
+
+Client
++
+DP Training
+
+Private data
+
+DP-AuGM
+
+High utility!
+Public data
+
+1
+
+Generate
+
+Or
+
+DP generated data
+
++
+DP-VaeGM
+
+Learning
+
+Attacker
+
+Gaussian noise
+
+DP generative model
+
+Robust against
+privacy violation!
+
+Learning tasks
+
+Fig. 1. Overview of proposed differentially private data generative models. Sensitive private training data X is fed into the generative
+model M to generate private surrogate dataset X 0 . After publishing X 0 , different learning models can be trained on X 0 to protect privacy of X while achieving high learning accuracy (data utility).
+
+of our proposed differentially private data generative models
+is shown in Figure 1. First, the private data is used to train
+the generative model with differential privacy, which is either an autoencoder (DP-AuGM) or a variational autoencoder
+(DP-VaeGM) based model. Then the generated data from the
+trained differentially private generative model is published and
+sent to targeted learning tasks. It should be noted that DPAuGM requires the users to hold a small amount of data (denoted as public data in the figure) to generate new data while
+DP-VaeGM is able to directly generate an arbitrary number
+of new data points by feeding Gaussian noise into the model.
+The goal of our design is to ensure that the learning accuracy
+on the generated data is high for ordinary users (high data utility), while the attackers cannot obtain sensitive information
+from the private data.
+
+P L as follows:
+
+3.3 Privacy and Utility Metrics
+
+Here we introduce how to apply the differentially private
+autoencoder-based generative model (DP-AuGM) to protect
+privacy of the private data while retaining high utility for the
+generated data.
+For DP-AuGM, we first train an autoencoder with our
+private data using a differentially private training algorithm.
+Then, we publish the encoder and drop the decoder. New data
+will be generated (encoded) by feeding the users’ own data
+(i.e., public data) into the encoder. These newly generated data
+can be used to train the targeted learning systems in the future with privacy guarantees for the private data. In this way,
+the generated data could synthesize the information from both
+private data and public data which enables high learning efficiency, and provide privacy guarantees for private data at the
+same time. As we will show in the evaluation section, the user
+only needs a small amount of data to achieve good learning efficiency and we also compare the learning efficiency when the
+user only uses his own data to do the training. During inference
+time, the encoder will also be used to encode the test data for
+model predictions. Since the encoder is differentially private
+
+Here we will briefly introduce privacy and data utility metrics
+used throughout the paper.
+Privacy Metric. We refer to the privacy budget (, δ) as the
+privacy metric during evaluation. We then evaluate how robust
+the proposed generative models are against three state-of-theart attacks—model inversion attack [25], membership inference attack [57], and GAN-based attack against collaborative
+deep learning [36]. Specifically, to quantitatively evaluate how
+our models deal with the membership inference attack, we use
+the metric privacy loss as defined in [51].
+Privacy Loss (PL). Within membership inference attack, we
+measure the privacy loss as the inference precision increment
+over random guessing baseline (e.g., 0.5), where the adversary’s attack precision rate P is defined as the fraction of
+records that are correctly inferred as members of the training
+set among all the positive predictions. We define privacy loss
+
+(
+PL =
+
+P −0.5
+0.5 ,
+
+if P > 0.5
+
+0,
+
+otherwise
+
+Utility Metric. We use the prediction accuracy to measure
+utility for different models. Considering the goal of machine
+learning is to build an effective prediction model, it is natural to evaluate how our proposed model performs in terms of
+prediction accuracy. To be specific, we will evaluate the prediction model which is trained on the generated data from the
+differentially private generative model.
+
+3.4 DP autoencoder-based Generative
+Model (DP-AuGM)
+
+Differentially Private Data Generative Models
+
+w.r.t. private data, publishing the encoder does not compromise privacy.
+DP-AuGM proceeds as below:
+– First, it is trained with private data using a differentially
+private algorithm.
+– Second, it generates new differentially private data by
+feeding the public data to the encoder.
+– Third, it uses the generated data to train any machine
+learning model.
+DP Analysis for DP-AuGM. In this paper, we adopt the
+training algorithm developed by Abadi et al. [8] to achieve
+differential privacy. Based on the moments accountant technique applied in [8], we obtain that the training algorithm is
+√
+(O(q T ), δ)-differentially private. Here T is the number of
+training steps, q is the sampling probability, and (, δ) denotes the privacy budget [8]. Further, by applying the postprocessing property of differential privacy [22], we can guarantee that the generated data is also differentially private w.r.t.
+the private data and shares the same privacy bound with the
+training algorithm. In addition, we will also prove that any
+machine learning model which is trained on the generated data
+from DP-AuGM, is also differentially private w.r.t. the private
+data and shares the same privacy bound. This also shows the
+benefit of training a differentially private generative model: we
+only need to train one DP generative model and all the machine learning models which are trained over the generated
+data will be differentially private w.r.t. the private data.
+Theorem 1. Let M denote the differentially private generative model and X be the private data. Any machine learning
+model trained over the generated data M(X ), is also differentially private w.r.t. the private data X .
+Proof. We denote F(X ) the machine learning model trained
+on X , and F(M(X )) the learning model trained over the generated data. Then the proof is immediate by directly applying
+the post-processing property of differential privacy [22].
+
+3.5 DP Variational autoencoder-based
+Generative Model (DP-VaeGM)
+In this section, we will propose DP-VaeGM which could generate an arbitrary number of data points for usage.
+DP-VaeGM proceeds as below:
+– First, it initializes with n variational autoencoders (VAEs),
+where n is the number of the classes for the specific data.
+Each model Mi is responsible for generating the data of
+
+6
+
+a specific class 1 ≤ i ≤ n. We empirically observe that
+training n generative models results in higher utility than
+training a single model; we expect this is because a single
+model would need to capture the class label latent variables
+following a Gaussian distribution. Using n separate models
+can also be used to generate a balanced dataset even if the
+original data are imbalanced.
+– Second, it uses a differentially private training algorithm
+(such as DP-DL) to train each generative model Mi .
+– Third, it samples data from Gaussian distribution N (0, 1)
+for the sampling layer of each variational autoencoder. It
+returns the entire generated data X 0 by taking the union of
+generated data from each generative model Mi .
+DP Analysis for DP-VaeGM. We have adopted the algorithm developed by Abadi et al. [8] to train each VAE. Thus
+√
+each training algorithm is (O(q T ), δ)-differentially private.
+Next we prove that each variational autoencoder (VAE) is a
+differentially private generate model (see Theorem 2) and the
+√
+entire DP-VaeGM is also (O(q T ), δ)-differentially private
+(see Theorem 3). Formally, to show proofs, we let X be the
+private data, Θ be model parameters, and X 0 be the generated
+data (the output of a single VAE).
+Theorem 2. Let T : X → Θ be a VAE training algorithm
+that is (, δ)-differentially private based on [8]. Let f : Θ →
+X 0 be a mapping that maps model parameters to output, with
+Gaussian noise generated from a sampling layer of VAE as
+input. Then f ◦ T : X → X 0 is (, δ)-differentially private.
+Proof. The proof is immediate by applying the post processing property of differential privacy [22].
+Theorem 3. Let a generative model (VAE) of class i Mi :
+Xi → Xi0 be (, δ)-differentially private. Then if Gn : X →
+Sn
+0
+Πn
+i=1 Xi is defined to be Gn =
+i=1 Mi , Gn is (, δ)differentially private, for any integer n.
+
+S
+Proof. Given two adjacent datasets X1 and X2 = X1 {b},
+without loss of generalization, assume b belongs to
+0
+class k (1 ≤ k ≤ n). Fix any subset of events S ⊆ Πn
+i=1 Xi .
+Since the n generative models are pairwise independent, we
+1
+obtain Pr[Gn (X1 ) ∈ S] = Πn
+i=1 Pr[Mi (xi ) ∈ S], where
+S
+n
+x1i ⊆ X1 = i=1 x1i denotes the training data of Xi for
+the ith generative model. Similarly, Pr[Gn (X2 ) ∈ S] =
+2
+Πn
+i=1 Pr[Mi (xi ) ∈ S]. Since X1 and X2 only differ in b, we
+1
+2
+have xi = xi and Pr[Mi (x1i ) ∈ S] = Pr[Mi (x2i ) ∈ S],
+for any i 6= k. Since Mk is (, δ)-differentially private, then
+we have Pr[Mk (x1k ) ∈ S] ≤ e Pr[Mk (x2k ) ∈ S] + δ.
+1
+Therefore, we obtain Pr[Gn (X1 ) ∈ S] = Πn
+i=1 Pr[Mi (xi ) ∈
+2
+1
+S] = Pr[M1 (x1 ) ∈ S] × · · · × Pr[Mk (xk ) ∈ S] × · · · ×
+
+Differentially Private Data Generative Models
+
+2
+Pr[Mn (x2n ) ∈ S] ≤ e Πn
+i=1 Pr[Mi (xi ) ∈ S] + δ =
+e Pr[Gn (X2 ) ∈ S] + δ. The inequality derives from the fact
+that any probability is no greater than 1. Hence, Gn is (, δ)differentially private, for any n.
+
+Remark. Both DP-VaeGM and DP-AuGM can realize differentially private generative models w.r.t. the private data. The
+main difference is that DP-AuGM requires users’ own data
+(i.e., public data) to generate new data while DP-VaeGM can
+generate infinite number of data points just based on Gaussian
+noise. Although the feature of DP-VaeGM is pretty good, we
+do notice that the generated data quality is not always stable
+while DP-AuGM is always stable in terms of utility. More details are presented in the evaluation section.
+
+4 Experimental Evaluation
+In this section, we first describe datasets used for evaluation,
+followed by the empirical results of two data generative models. Note that all the structures of generative models and machine learning model involved in the experiments are specified
+in Appendix A.
+
+4.1 Datasets
+MNIST. MNIST [41] is the benchmark dataset containing
+handwritten digits from 0 to 9, comprised of 60,000 training
+and 10,000 test examples. Each handwritten grayscale image
+of digits is centered in a 28×28 or 32×32 image. To be consistent with [36], we choose to use the 32×32 version of
+MNIST dataset when evaluating our generative models against
+the GAN-based attack.
+Adult Census Data. The Adult Census Dataset [43] includes
+48,843 records with 14 sensitive attributes, including gender,
+education level, marital status, and occupation. This dataset is
+commonly used to predict whether an individual makes over
+50K dollars in a year. 32,561 records serve as a training set
+and 16,282 records are used for testing.
+Hospital Data. This dataset is based on the Public Use Data
+File released by the Texas Department of State Health Services in 2010Q1 [5]. Within the data, there are personal sensitive information, such as gender, age, race, length of stay,
+and surgery procedure. We focus on the 10 most frequent
+main surgery procedures, and exploit part of categorical features to make inference for each patient. The resulting dataset
+has 186,976 records with 776 binary features. We randomly
+choose 36,000 instances as testing data and the rest serves as
+the training data.
+
+7
+
+Malware Data. To demonstrate the generality of the proposed models, we also include the Android mobile malware
+dataset [15] for diversity purposes. This dataset is previously
+used to determine whether an Android application is benign or
+malicious based on 142 binary features, such as user permission request. We randomly choose 3,240 instances as training
+data and 2,000 as testing data.
+
+4.2 Evaluation of DP-AuGM
+In this subsection, we first show how DP-AuGM performs
+in terms of utility under different privacy budgets on four
+datasets. To evaluate performance, for MNIST, we split the
+test data into two parts: 90% is used as public data and the
+rest 10% is used as a hold out to evaluate test performance
+as in [49]. For Adult Census Data, Hospital Data, and Malware Data, the test data is evenly split into two halves: the first
+serves as public data and the second is used for evaluating test
+performance. All the training data is regarded as private data
+of which the privacy we aim to protect. Then we analyze how
+public data size influences DP-AuGM on MNIST dataset and
+we also compare the learning efficacy between when only using public data for training and combining it with DP-AuGM.
+In addition, we compare DP-AuGM with some state-of-art differentially private learning methods.
+Effect of Different Privacy Budgets. To evaluate the effects
+of privacy budgets (i.e.,  and δ) on prediction accuracy for
+machine learning models, we vary (, δ) to test learning efficiency (i.e., the utility metric) on different datasets. The results
+are shown in Figure 2(a)-(d). In these figures, each curve corresponds to the best accuracy achieved given fixed δ, as  varies
+between 0.2 and 8. In addition, we also show the baseline accuracy (i.e., without DP-AuGM) on each dataset for the comparison. From Figure 2, we can see that the prediction accuracy decreases as the noise level increases ( decreases), while
+we see DP-AuGM can still achieve comparable utility with the
+baseline even when  is tight (i.e., around 1). When  = 8, for
+all the datasets, the accuracy lags behind the baseline within
+3%. This demonstrates that data generated by DP-AuGM can
+preserve high data utility for subsequent learning tasks.
+Efficacy of DP-AuGM. We further examine how DP-AuGM
+helps boost the learning efficacy. We compare the learning accuracy between only public data is used for training and by
+combining both DP-AuGM and public data. For DP-AuGM,
+we set the private budge  and δ to be 1 and 10−5 , respectively. We do the comparisons on all the datasets and the result is presented in Table 1. As we can see from Table 1,
+after using DP-AuGM, the learning accuracy increases by at
+least 6% on all the datasets and by 34% on Malware Data
+dataset. This actually demonstrates the significance of using
+
+8
+
+Differentially Private Data Generative Models
+
+Delta=1e-02
+Delta=1e-03
+Delta=1e-04
+Delta=1e-05
+Baseline
+
+0.9
+
+0.85
+10-1
+
+100
+
+0.85
+0.8
+
+Delta=1e-02
+Delta=1e-03
+Delta=1e-04
+Delta=1e-05
+Baseline
+
+0.75
+
+101
+
+(a) Accuracy of machine learning
+models trained on generated data
+by DP-AuGM and pristine data
+(Baseline) under different levels of
+privacy on MNIST
+
+0.7
+10-1
+
+100
+
+101
+
+(b) Accuracy of machine learning
+models trained on generated data
+by DP-AuGM and pristine data
+(Baseline) under different levels
+privacy on Adult Census Data
+
+0.65
+
+1
+
+0.6
+
+0.95
+
+Delta=1e-02
+Delta=1e-03
+Delta=1e-04
+Delta=1e-05
+Baseline
+
+0.55
+
+0.5
+10-1
+
+100
+
+Accuracy
+
+0.95
+
+Accuracy
+
+0.9
+
+Accuracy
+
+Accuracy
+
+1
+
+0.85
+10-1
+
+101
+
+(c) Accuracy of machine learning
+models trained on generated data
+by DP-AuGM and pristine data
+(Baseline) under different levels
+privacy on Hospital Data
+
+Delta=1e-02
+Delta=1e-03
+Delta=1e-04
+Delta=1e-05
+Baseline
+
+0.9
+
+100
+
+101
+
+(d) Accuracy of machine learning
+models trained on generated data
+by DP-AuGM and pristine data
+(Baseline) under different levels
+privacy on Malware Data
+
+1
+
+1
+
+0.95
+
+0.95
+
+Accuracy
+
+Accuracy
+
+Fig. 2. Evaluation of DP-AuGM
+
+0.9
+DP-AuGM
+DPDL
+
+0.85
+10
+
+0
+
+10
+
+1
+
+(a) Comparison between DP-AuGM and DP-DL on MNIST with
+δ = 10−5
+
+0.9
+DP-VaeGM
+DP-DL
+
+0.85
+10
+
+0
+
+10
+
+1
+
+(b) Comparison between DP-VaeGM and DP-DL on MNIST with
+δ = 10−5
+
+Fig. 3. DP-AuGM and DP-VaeGM versus DP-DL
+
+DP-AuGM for sharing the information of private data. Since
+the amount of private data is huge, DP-AuGM trained over
+the private data can better capture the inner representations of
+the dataset, which further boosts the following learning accuracy of machine learning models. In addition, we also examine
+how utility is affected when different amounts of public data is
+available on the dataset MNIST. We vary the public data size
+from 1,000 to 9,000 in steps of 1,000. The privacy budget  and
+δ is set as 1 and 10−5 , respectively. As we can see from Figure 4, the public data size affects test accuracy slightly, only
+within 7% dropping. This suggests that private data plays a
+major role in generating high-utility data for learning efficacy.
+In Comparison with the Differentially Private Training Algorithm (DP-DL). Although our method leverages DP-DL as
+the differentially private training algorithm, we show that our
+method better performs in training the machine learning model
+under the same privacy budget. For comparison, we choose the
+feed-forward neural network model with the architecture and
+
+Datasets
+
+With DP-AuGM
+
+Without DP-AuGM
+
+MNIST
+Adult Census Data
+Hospital Data
+Malware Data
+
+0.95
+0.78
+0.56
+0.96
+
+0.89
+0.64
+0.42
+0.62
+
+Table 1. Comparisons of training accuracy between using only
+public data for training and using both DP-AuGM and public data
+
+MNIST dataset specified in [8]. In addition, we use 90% of
+the test data as public data and the rest acts as the test data
+for both methods. For DP-DL, the public data simply serves
+as its training data. As for the privacy budget, we fix δ as 10−5
+and vary  from 0.5 to 8. The result is shown in Figure 3(a).
+As we can see from Figure 3(a), under different , our method
+outperforms DP-DL consistently. Furthermore, DP-DL needs
+to be performed each time on a new model while DP-AuGM
+
+9
+
+Differentially Private Data Generative Models
+
+4.3 Evaluation of DP-VaeGM
+
+0.96
+
+Accuracy
+
+0.94
+
+0.92
+
+0.9
+
+0.88
+
+2000
+
+4000
+
+6000
+
+8000
+
+Public data size
+Fig. 4. Accuracy of DP-AuGM by different sizes of public data
+
+Models
+
+Privacy budget 
+
+Privacy budget δ
+
+Accuracy
+
+Baseline
+
+sPATE [49]
+DP-AuGM
+
+1.97
+1.97
+
+10−5
+10−5
+
+0.985
+0.987
+
+0.992
+0.992
+
+In this subsection, we empirically evaluate utility performance
+of our proposed data generative model DP-VaeGM. As VAE
+is usually used to generate high quality images, now we only
+evaluate DP-VaeGM on the image dataset MNIST.
+Effect of Different Privacy Budgets. We vary the privacy
+budget to test DP-VaeGM on MNIST dataset. The result is
+shown in Figure 5, where each curve corresponds to the best
+accuracy given fixed δ, and  varies between 0.2 and 8. We
+show the baseline accuracy (i.e., without DP-VaeGM) using
+the red line. From this figure, we can see that DP-VaeGM
+can achieve comparable utility w.r.t. the baseline. For instance,
+when  is greater than 1, the accuracy is always higher than
+92%. When  is 8 and δ is 10−2 , the accuracy is over 97%
+which is lower than the baseline by 2%. Thus, we can see that
+DP-VaeGM has the potential to generate data with high training utility while providing privacy guarantees for private data.
+
+1
+
+only needs to be trained once. Then any model which is trained
+over the generated data from DP-AuGM is differentially private w.r.t. the private data (i.e., with the same property of differential privacy achieved by DP-DL). Hence, we can see that
+DP-AuGM outperforms DP-DL both in accuracy and computational efficiency.
+In Comparison with Scalable Private Learning with PATE.
+Scalable Private Learning with PATE (sPATE) [49] is recently
+proposed by Papernot et al., which can also realize a differentially private training algorithm w.r.t. the private data and
+provides privacy protection for partial data. We try to compare sPATE with DP-AuGM on MNIST in terms of the utility
+metric. Here, the baseline denotes the scenario where no privacy protection mechanism is used. We follow [49] to split
+the test data into two parts. One part serves as public data
+while the second serves as test data. We also use the same
+CNN machine-learning model as specified in [49]. As we can
+see from Table 2, DP-AuGM outperforms sPATE by 0.2% in
+terms of prediction accuracy and only sits below the baseline
+by 0.5%. Note that the reason of making a comparison at a
+specific pair of the privacy budget is that sPATE [49] only
+presents the result on MNIST for a specific pair of differential
+privacy parameters. Furthermore, DP-AuGM surpasses sPATE
+in terms of computational efficiency since 250 teacher models
+are used in sPATE while DP-AuGM only needs to be trained
+once.
+
+Accuracy
+
+Table 2. Comparisons between DP-AuGM and sPATE on MNIST
+
+0.95
+0.9
+
+Delta=1e-02
+Delta=1e-03
+Delta=1e-04
+Delta=1e-05
+Baseline
+
+0.85
+0.8
+10-1
+
+100
+
+101
+
+Fig. 5. Accuracy of DP-VaeGM under various privacy budgets on
+MNIST dataset
+
+In Comparison with the Differentially Private Training Algorithm (DP-DL). We compare DP-VaeGM with DP-DL on
+MNIST. As for the privacy budget, we fix δ as 10−5 and vary
+ from 0.5 to 8. From Figure 3(b), we can see that DP-VaeGM
+achieves comparable utility with DP-DL. In addition, we want
+to stress that for DP-VaeGM, once the data is generated, all
+machine learning models trained on the generated data will become differentially private w.r.t the private data while for DPDL, we need to rerun the algorithm for each new model. Thus,
+DP-VaeGM outperforms DP-DL in computation efficiency.
+In Comparison with Scalable Private Learning with PATE.
+We also compare Scalable Private Learning with PATE
+(sPATE) [49] with DP-VaeGM on MNIST in terms of the utility metric (i.e., prediction accuracy). The learning model applies the CNN structure as specified in [49]. As sPATE requires
+
+10
+
+Differentially Private Data Generative Models
+
+Models
+sPATE [49]
+DP-VaeGM
+
+Privacy budget 
+
+Privacy budget δ
+
+Accuracy
+
+1.97
+1.97
+
+10−5
+
+0.985
+0.968
+
+10−5
+
+Table 3. Comparisons between DP-VaeGM and sPATE on MNIST
+
+the presence of public data, we split the test data into two parts
+in the same way as specified by [49]. Considering DP-VaeGM
+does not need public data, private data is discarded for DPVaeGM. In addition, the privacy budget  and δ is set to be
+1.97 and 10−5 , respectively. From Table 3, we can see that
+DP-VaeGM falls behind sPATE by approximately 2%. This is
+because that sPATE trains the model using both public and private data while DP-VaeGM is only trained with private data.
+Remark. We have empirically shown that DP-AuGM and DPVaeGM can achieve high data utility and protect privacy of
+private data at the same time.
+
+5 Defending against Existing
+Attacks
+
+(a) Original attack
+
+(b) Attack with DPAuGM
+
+Fig. 6. The efficiency of the model inversion attack on MNIST
+dataset before and after deploying DP-AuGM
+
+Original attack (MNIST)
+
+0.2
+
+0.6
+
+0.2
+
+0.2
+
+0.1
+
+0.2
+
+0.1
+
+0.1
+
+0.2
+
+0.0
+
+With DP-AuGM
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+With DP-VaeGM
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+0.0
+
+Table 4. Privacy loss for the membership inference attack
+
+the model inversion attack effectively. However, we find that
+DP-VaeGM is not robust enough in mitigating the model inversion attack. We will discuss this in Section 5.4.
+
+5.2 Membership Inference Attack
+To demonstrate the robustness of proposed generative models,
+here we evaluate the models against three state-of-the-art privacy violation attacks—model inversion attack, membership
+inference attack, and the GAN-based attack against collaborative deep learning.
+
+5.1 Model Inversion Attack
+We choose to use the one-layer neural network to mount the
+model inversion attack [24] over MNIST dataset setting because it is easier to check the effectiveness of the model inversion attack on image dataset. Note that Hitaj et al. [36] claimed
+that the model inversion attack might not work on convolutional neural networks (CNN). For the original attack, we use
+all the training data to train the one-layer neural network and
+then try to recover digit 0 by exploiting the confidence values [24]. As we can see from Figure 6a, the digit 0 is almost
+recovered. Then, we try to evaluate how DP-AuGM performs
+in defending against the attack. We use the generated data from
+DP-AuGM to train the one-layer neural network. The privacy
+budget  and δ for DP-AuGM is set to be 1 and 10−5 , respectively. We then mount the same model inversion attack on the
+one-layer neural network. Figure 6b shows the result after deploying DP-AuGM. We can clearly see that after deploying
+DP-AuGM, nothing can be learned from the attack result as
+shown in Figure 6b. So we can see DP-AuGM can mitigate
+
+We evaluate how DP-AuGM and DP-VaeGM perform in mitigating membership inference attack on MNIST using onelayer neural networks. The training set size is set to be 1,000
+and the number of shadow models [57] is set to be 50. We
+have set the privacy budget  and δ to be 1 and 10−5 , respectively. For this attack, we mainly consider whether this attack
+can predict the existence of private data in the training set. To
+evaluate the attack, we use the standard metric—precision, as
+specified in [57] that the fraction of the records inferred as
+members of the private training dataset that are indeed members. The result is shown in Figure 7. As we can see from
+Figure 7, after deploying DP-AuGM, the attack precision for
+all the classes drops at least 10% and for some classes, the
+attack precision is approaching zero, such as classes 2 and 5.
+Similarly for DP-VaeGM, the attack precision drops over 20%
+for all the classes. Thus, we conclude that, with DP-AuGM
+and DP-VaeGM, the membership inference attack can be effectively defended against. The privacy loss on MNIST is also
+tabulated in Table 4. As we can see, with our proposed generative models, the privacy loss for each class can be reduced to
+zero.
+
+Attack precision
+
+Differentially Private Data Generative Models
+
+1
+0.9
+0.8
+0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+0.1
+0
+
+Original attack
+DP-AuGM
+DP-VaeGM
+
+1 2 3 4 5 6 7 8 9 10
+
+Classes
+Fig. 7. Evaluation of DP-AuGM, and DP-VaeGM against the membership inference attack on MNIST
+
+5.3 GAN-based Attack against
+Collaborative Deep Learning
+We choose to use the MNIST dataset to analyze GAN-based
+attack since the simplicity of the dataset can boost the success rate for the attacker. We create two participants in this
+setting, where one serves as an adversary and the other serves
+as an honest user, as suggested in [36]. We follow the same
+model structure as specified in [36], where the CNN is used as
+a discriminator and the DCGAN [52] is used as a generator.
+Users can apply the proposed differentially private generated
+data or original data to train their local models. We show defense results for DP-AuGM in Figures 8 and 9, where Figure 8
+represents the images obtained by adversaries without deploying generative models, while Figure 9 shows the obtained images which have been protected by DP-AuGM. As we can see
+from Figure 9, the proposed model DP-AuGM significantly
+thwarts the attacker’s attempt to recover anything from the private data. However, similar with the results from model inversion attack, DP-VaeGM is not robust enough to defend against
+this attack. We will also discuss in detail in Section 5.4.
+
+5.4 Discussion
+Although both DP-VaeGM and DP-AuGM are differentially
+private generative models, the results show that DP-AuGM is
+robust against all the attacks while DP-VaeGM can only defend against the membership inference attack. The main difference between these two models is that DP-AuGM uses the
+output of the encoder (a part of the autoencoder) as the generated data while DP-VaeGM uses the output of the VAE. As
+the encoder functions can reduce the dimensions of the input data, we can envision that this operation will incur a big
+norm distance between the input data and the generated data in
+
+11
+
+DP-AuGM. Considering the model inversion attack and GAN
+attack both target at recovering part of the training data of a
+model, the best result on DP-AuGM will be successfully recovering those encoded data while for DP-VaeGM, the result
+will be recovering all. Therefore, it seems that the key to defend against these two attacks is not only differential privacy,
+but also the appearance of the generated data. This is also mentioned by Hitaj et al. [36], as they asserted that differential
+privacy is not effective in mitigating the developed GAN attack because differential privacy is not designed to solve such
+a problem. Differential privacy in deep learning targets at protecting the specific elements of training data, while the goal of
+these two attacks is to construct a data point which is similar
+to the training data. Even if the attacks are successful, differential privacy is not violated since the specific data points are
+not recovered.
+Models
+DP-AuGM
+DP-VaeGM
+DP-DL
+sPATE
+
+Model Inversion
+Attack
+#
+#
+#
+
+Membership
+Inference Attack
+
+GAN-based Attack against
+Collaborative Deep Learning
+
+: Robust #: Not Robust
+
+#
+#
+#
+
+Table 5. Robustness of privacy preserving learning methods
+against different privacy attacks
+
+Remark. Extensive experiments have shown that DP-AuGM
+can mitigate all the three attacks. DP-VaeGM is only robust
+against the membership inference attack (see Table 5).
+
+6 Deploying Data Generative
+Models on Real-World
+Applications
+To demonstrate the applicability of DP-AuGM and DPVaeGM, we will show how they can be easily integrated with
+Machine Learning as a Service (MLaaS) commonly supported
+by major Internet companies and federated learning supported
+by Google. We integrate DP-AuGM with both MLaaS and federated learning over all the datasets. We mainly focus on the
+utility performance of DP-AuGM when integrated with federated learning, since federated learning is threatened by the
+GAN-based attack but can be effectively defended against by
+DP-AuGM. We integrate DP-VaeGM with MLaaS alone and
+evaluate it on the image dataset MNIST, as currently VAEs are
+usually used for generating images.
+
+Differentially Private Data Generative Models
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+(e)
+
+(f)
+
+(g)
+
+(h)
+
+(i)
+
+12
+
+(j)
+
+Fig. 8. With the original attack (images generated by the GAN-based attack against collaborative deep learning on the MNIST dataset)
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+(e)
+
+(f)
+
+(g)
+
+(h)
+
+(i)
+
+(j)
+
+Fig. 9. With DP-AuGM (images generated by the GAN-based attack against collaborative deep learning on the MNIST dataset)
+
+6.1 Machine Learning as a Service
+MLaaS platforms are cloud-based systems that provide simple
+APIs as a web service for users who are interested in training and querying machine learning models. For a given task,
+a user first submits the private data through a web page interface or an mobile application created by developers, and
+selects the features for the task. Next, the user chooses a machine learning model from the platform, tunes the parameters of the model, and finally obtains the trained model. All
+these processes can be completed inside the mobile application. However, the private data submitted by innocent users
+can be maliciously exploited if the platform is compromised,
+which raises serious privacy concerns. In this paper, our DPAuGM and DP-VaeGM can serve as a data privacy protection module to protect privacy of the private data. To this end,
+users can first build DP-AuGM or DP-VaeGM locally, train
+the generative models with the private data, and then upload
+the generated data for later training. As we will show in the
+experiment, this will incur negligible utility loss for training,
+while significantly protecting data privacy. With DP-AuGM
+and DP-VaeGM, even if these platforms are compromised, the
+privacy of sensitive data can still be preserved. In addition, we
+will show that training DP-AuGM and DP-VaeGM locally requires only a few computational resources.
+When applying the proposed DP-AuGM and DP-VaeGM
+to MLaaS, we choose to examine three mainstream MLaaS
+platforms, which are Google Prediction API [2], Amazon
+Machine Learning [1], and Microsoft Azure Machine Learning [3]. We then set the differential privacy budget  and δ to
+be 1 and 10−5 , respectively, for DP-VaeGM and DP-AuGM.
+Similar with the evaluation section, we regard all the training
+data as private data and for DP-AuGM, we split the test data
+the same way as we do in Section 4.2. As we can see from
+Figure 10, using the generated data by DP-AuGM for training,
+we can achieve comparatively high accuracy (accuracy deteriorating within 8%) on all three platforms for all datasets. Strikingly, we find that the model trained with generated data some-
+
+times even outperforms the one trained with original data (see
+trained models on Amazon over MNIST). For DP-VaeGM, the
+result is shown in Figure 10a. We can see that DP-VaeGM can
+achieve comparable utility (accuracy deteriorating within 3%)
+on all the three platforms on MNIST. This clearly shows that
+DP-VaeGM and DP-AuGM have the potential to be well integrated into MLaaS platforms and provide privacy guarantees
+for users’ private data and retain high data utility at the same
+time.
+Furthermore, we show the time cost of training DPAuGM (58.2s) and DP-VaeGM (27.9s) under 10 epochs on
+MNIST dataset. The evaluation is done with Intel Xeon CPU
+with 2.6GHZ, GPU of GeForce GTX 680, Ubuntu 14.04 and
+Tensorflow. Most recently, Tensorflow Mobile [6] has been
+proposed to deploy machine learning algorithms on mobile devices. We, therefore, believe it will cost much less to train such
+generative models locally on mobile devices.
+
+6.2 Federated Learning
+Federated learning [47], which is proposed by Google, enables
+mobile users to collaboratively train a shared prediction model
+and keep all their distributed training data local. Users typically train the model locally on their own device, upload the
+summarized parameters as a small focused update, and download the parameters averaged with other users’ updates collaboratively using secure multiparty computation (MPC), without
+needing to share their personal training data in the cloud.
+Federated learning is demonstrated to be private since the
+individual users’ data is stored locally and the updates are securely aggregated by leveraging MPC to compute model parameters. However, the recent paper [36] declares that federated learning is secure only if we consider the attacker is the
+cloud provider who scrutinizes individual updates. If the attackers are the casual colluding participants, private data of
+one participant can still be recovered by other users who aim
+to attack. Hitaj et al. [36] have shown that only applying differ-
+
+Differentially Private Data Generative Models
+
+1
+
+0.9
+
+0.7
+
+DP-AuGM
+DP-VaeGM
+Original data
+
+Google
+
+Amazon
+
+0.6
+
+Accuracy
+
+0.7
+
+Accuracy
+
+0.8
+
+Accuracy
+
+Accuracy
+
+Accuracy
+
+0.7
+
+0.5
+
+0.9
+
+0.9
+
+0.8
+
+0.6
+
+1
+
+1
+
+0.9
+
+0.8
+0.7
+
+Microsoft
+
+(a) MNIST (MLaaS)
+
+0.6
+
+DP-AuGM
+Original data
+
+Google
+
+Amazon
+
+Microsoft
+
+(b) Adult Census Data
+(MLaaS)
+
+0.5
+
+DP-AuGM
+Original data
+
+Google
+
+Amazon
+
+Microsoft
+
+(c) Hospital Data (MLaaS)
+
+0.6
+
+13
+
+Amazon
+
+0.7
+0.6
+
+DP-AuGM
+Original data
+
+Google
+
+0.8
+
+Microsoft
+
+(d) Malware Data
+(MLaaS)
+
+0.5
+
+DP-AuGM
+Original model
+
+MNIST
+
+Adult Malware Hospital
+
+(e) Accuracy on four
+datasets (federated learning)
+
+Fig. 10. Accuracy of trained models when integrating proposed generative models with MLaaS and federated learning
+
+ential privacy in federated learning is not sufficient to mitigate
+the GAN-based attack, and a malicious user is able to successfully recover private data of others.
+In Section 5, we show that DP-AuGM is robust enough to
+mitigate the GAN attack. Thus, in this section, we will mainly
+consider whether DP-AuGM can be well integrated into the
+federated learning to protect privacy and retain high data utility. We show the concrete steps toward integrating DP-AuGM
+as below. Note that the first two steps are added to the original
+federated learning platform.
+1. Users first train DP-AuGM locally with the private data.
+2. After training DP-AuGM, users use DP-AuGM and public
+data to generate new training data.
+3. Users train the local model with generated data locally and
+upload the summarized parameters to the server.
+Next we will empirically show that DP-AuGM can be well
+integrated into federated learning over four datasets.
+Settings. The structure of an autoencoder and differential privacy parameters can be specified by a central server such as
+Google, and will be publicly available to any user. As a proof
+of concept, we hereby set the differential privacy parameters 
+and δ to be 1 and 10−5 , respectively. For each user in the federated learning, we evenly split the private data and public data
+for usage.
+Hyper-parameters. We set the default learning rate to be
+0.001, the batch size to be 100, the number of users to be 10,
+and the uploading fraction to be 0.1. We will also test how
+DP-AuGM performs across different parameters later.
+In Comparison with the Original Federated Learning. We
+apply DP-AuGM to federated learning and compare it with the
+original setting without DP-AuGM. As we can see from Figure 10e, after we add DP-AuGM model to the pipeline, the accuracy drops only within 5% for all datasets. Hence, it shows
+the proposed DP-AuGM can be well integrated into federated
+learning without affecting its utility too much. In the following part, we study in detail about the model sensitivity on the
+MNIST dataset.
+
+Effect of Other Parameters. We further examine the effect of
+the number of users and the upload fraction over the differentially private federated learning model.
+(a) Number of Users. We choose the number of users to be
+10, 20, and 40. From Figure 11a, we can see the difference in
+number of users will only affect the speed of convergence a bit
+without affecting the final data utility. We find that although
+more users will take slightly more time for the model to converge, the accuracy of the differentially private model actually
+converges to the same result within 50 epochs.
+(b) Upload Fraction. We choose the upload fraction as 0.001,
+0.01, and 0.1 to analyze the proposed method. As we can see
+from Figure 11b, different learning rates only have negligible
+impacts on the trained model.
+Remark. We have shown that DP-AuGM can be well integrated with MLaaS and federated learning, and DP-VaeGM
+can be well integrated with MLaaS. The integrated models can
+protect privacy and preserve high data utility at the same time.
+
+7 Related Work
+7.1 Privacy Attacks on Machine Learning
+Models
+Specifically, Homer et al. [37] show that it is possible to learn
+whether a target individual was related to certain disease by
+comparing the target’s profile against the aggregated information obtained from public sources. This attack was then extended by Wang et al. [63] by performing correlation attacks,
+without prior knowledge about the target. Backes et al. [11]
+propose to conduct the membership inference attack against
+individuals contributing their microRNA expressions to scientific studies. If an attacker can learn information about individual’s genome expression, he can potentially infer/profile the
+victim’s future/historical health records, which can lead to severe consequences. Shokri and Shmatikov [57] later show that
+machine learning models can leak information about medical
+data records by performing membership attack against well
+
+Differentially Private Data Generative Models
+
+1
+0.98
+
+Accuracy
+
+Accuracy
+
+0.96
+0.94
+0.92
+0.9
+n=10
+n=20
+n=40
+
+0.88
+0.86
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Epoch
+(a) Accuracy on MNIST with different number of users
+
+1
+0.95
+0.9
+0.85
+0.8
+0.75
+0.7
+0.65
+0.6
+0.55
+0.5
+0.45
+0.4
+0
+
+14
+
+Upload fraction=0.001
+Upload fraction=0.01
+Upload fraction=0.1
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Epoch
+(b) Accuracy on MNIST across different upload fraction
+
+Fig. 11. The performance of federated learning integrated DP-AuGM under different hyper-parameters
+
+trained models. Recently, Hitaj et al. [36] show that a GANbased attack can compromise user privacy in the collaborative
+learning setting [56], where each participant collaboratively
+trains his or her own model with private data locally. Hitaj
+et al. [36] also warn that simply adding differentially private
+noise is not robust enough to mitigate the attack. In addition,
+Hayes et al. [33] investigate the membership inference attack
+for generative models by using GANs [30] to detect overfitting
+and recognize training inputs. More recently, Liu et al. [44]
+define the co-membership inference attack against generative
+models.
+Given these existing privacy attacks, learning with generated data from DP generative models can potentially defend against them, such as the representative model inversion
+attack, membership inference attack, and GAN-based attack
+against collaborative deep learning. To the best of our knowledge, the learning method that can defend against all these attacks has not been proposed or systematically examined before.
+
+7.2 Differentially Private Learning
+Methods
+The goal of differentially private learning models is to protect sensitive information of individuals within the training
+set. Differential privacy is a strong and common notion to
+protect the data privacy [22]. Differential privacy can also
+be used to mitigate membership inference attacks, as its
+indistinguishability-based definition formally proves that the
+presence or absence of an instance does not affect the output
+of the learned model significantly [57]. A common approach
+to achieving differential privacy is to add noise from Laplacian [20] or Gaussian distribution [21] whose variance is determined by the privacy budget. In practice, differentially pri-
+
+vate schemes are often tailored to the spatio-temporal location
+privacy analysis [9, 45, 53, 58, 60].
+To protect the privacy of machine learning models, random noise can be injected to input, output, and objectives of
+the models. Erlingsson et al. [23] propose to randomize the
+input and show that the randomized input still allows data collectors to gather meaningful statistics for training. Chaudhuri
+et al. [14] show that by adding noise to the cost function minimized during learning, -differential privacy can be achieved.
+In terms of perturbing objectives, Shokri et al. [56] show that
+deep neural networks can be trained with multi-party computations from perturbed model parameters to achieve differential privacy guarantees. Deep learning with differential privacy is proposed [8] by adding noise to the gradient during
+each iteration. They further use moment accountant to keep
+track of the spent privacy budget during the training phase.
+However, the prediction accuracy of the deep learning system will degrade more than 13% over the CIFAR-10 dataset
+when large differential privacy noise is added [8], which is
+unacceptable in many real-world applications where high prediction accuracy is pursued, such as autonomous driving [27]
+and face recognition [31]. This is also aligned with the warning proposed by Hitaj et al. [36] that using differential privacy
+to provide strong privacy guarantees cannot be applied to all
+scenarios, especially where the GAN-based attack can be applied. Later, private aggregation of teacher ensembles (PATE)
+has been proposed, which first learns an ensemble of teacher
+models on a disjoint subset of training data, and aggregates
+the output of these teacher models to train a differentially private student model for prediction [48]. The queries performed
+on the teacher models are designed to minimize the privacy
+cost of these queries. Once the student models are trained, the
+teacher models can be discarded. PATE is within the scope
+of knowledge aggregation and transfer for privacy [32, 50].
+An improved version of PATE, scalable PATE, is proposed by
+
+Differentially Private Data Generative Models
+
+introducing new aggregation algorithm to achieve better data
+utility [49].
+At inference, random noise can also be introduced to
+the output to protect privacy. However, this severely decays
+the test accuracy, because the amount of noise introduced increases with the number of inference queries answered by
+the machine learning model. Note that homomorphic encryption [28] can also be applied to protect the confidentiality of
+each individual input. The main limitations are the performance overhead and the restricted set of arithmetic operations
+supported by homomorphic encryption.
+Various approaches have been proposed for the automatic
+discovery of sensitive entities, such as identifiers, and redact
+them to protect privacy. The simplest of these rely on a large
+collection of rules, dictionaries, and regular expressions (e.g.,
+[12, 59]). Chakaravarthy et al. [13] proposed an automated
+data sanitization algorithm aimed at removing sensitive identifiers while inducing the least distortion to the contents of
+documents. However, this algorithm assumes that sensitive entities, as well as any possible related entities, have already
+been labeled. Similarly, Jiang et al. [38] have developed the
+t-plausibility algorithm to replace the known (labeled) sensitive identifiers within the documents and guarantee that the
+sanitized document is associated with at least t documents.
+Li et al. [42] have proposed a game theoretic framework for
+automatic redacting sensitive information. In general, finding
+and redacting sensitive information with high accuracy is still
+challenging.
+In addition, there has been recent work on making generative neural networks differentially private [10]. It achieved
+their differentially private generative models on VAEs by using
+differentially private kernel k-means and differentially private
+gradient descent. Different from their work, we realize differentially private generative models on both autoencoders and
+VAEs. We further show that our proposed methods can mitigate realistic privacy attacks and can seamlessly be applied to
+real-world applications.
+In general, unlike previously proposed techniques, our
+proposed differentially private generative models can guarantee differential privacy while maintaining data utility for learning tasks. Our proposed models achieve all three goals: protect
+privacy of training data; enable users to locally customize the
+privacy preference by configuring the generative models; retain high data utility for generated data. The proposed models achieve these goals at a much lower computation cost than
+aforementioned differentially private mechanisms and cryptographic techniques, such as secure multi-party computation or
+homomorphic encryption [28]. Our generative models can also
+seamlessly be integrated with MLaaS and federated learning in
+practice.
+
+15
+
+8 Conclusion
+We have designed, implemented, and evaluated two differentially private data generative models—a differentially private autoencoder-based generative model (DP-AuGM) and a
+differentially private variational autoencoder-based generative
+model (DP-VaeGM). We show that both models can provide
+strong privacy guarantees and retain high data utility for machine learning tasks. We empirically demonstrate that DPAuGM is robust against the model inversion attack, membership inference attack, and GAN-based attack against collaborative deep learning, and DP-VaeGM is robust against the
+membership inference attack. We conjecture that the key to
+defend against model inversion and GAN-based attacks is to
+distort the training data while differential privacy is targeted
+to protect membership privacy. Furthermore, we show that
+the proposed generative models can be easily integrated with
+two real-world applications—machine learning as a service
+and federated learning, which are previously threatened by the
+membership inference attack and GAN-based attack, respectively. We demonstrate that the integrated system can both protect privacy of users’ data and retain high data utility.
+Through the study of privacy attacks and corresponding
+defensive methods, we here emphasize that it is important to
+generate differentially private synthetic data for various machine learning systems to secure current learning tasks. As we
+are the first to propose differentially private data generative
+models that can defend against the contemporary privacy violation attacks, we hope that our work will help pave the way
+toward designing more effective differentially private learning
+methods.
+
+References
+[1]
+[2]
+[3]
+[4]
+[5]
+[6]
+[7]
+[8]
+
+[9]
+
+Amazon machine learning. https://aws.amazon.com/
+machine-learning/.
+Google prediction api. https://cloud.google.com/prediction/.
+Microsoft azure machine learning. https://studio.azureml.net/.
+Alzheimer’s disease neuroimaging initiative, 2018.
+Hospital discharge data public use data file, 2018.
+Introduction to tensorflow mobile, 2018.
+Symptom disease sorting, 2018.
+M. Abadi, A. Chu, I. Goodfellow, H. B. McMahan, I. Mironov,
+K. Talwar, and L. Zhang. Deep learning with differential privacy. In Proceedings of the 2016 ACM SIGSAC Conference
+on Computer and Communications Security, pages 308–318.
+ACM, 2016.
+G. Acs and C. Castelluccia. A case study: Privacy preserving
+release of spatio-temporal density in Paris. In Proceedings of
+the 20th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, pages 1679–1688. ACM,
+
+Differentially Private Data Generative Models
+
+2014.
+[10] G. Acs, L. Melis, C. Castelluccia, and E. De Cristofaro. Differentially private mixture of generative neural networks. IEEE
+Transactions on Knowledge and Data Engineering, 2018.
+[11] M. Backes, P. Berrang, M. Humbert, and P. Manoharan.
+Membership privacy in MicroRNA-based studies. In Proceedings of the 2016 ACM SIGSAC Conference on Computer and
+Communications Security, pages 319–330. ACM, 2016.
+[12] B. A. Beckwith, R. Mahaadevan, U. J. Balis, and F. Kuo. Development and evaluation of an open source software tool for
+deidentification of pathology reports. BMC Medical Informatics and Decision Making, 6:12, 2006.
+[13] V. T. Chakaravarthy, H. Gupta, P. Roy, and M. K. Mohania.
+Efficient techniques for document sanitization. In Proceedings of the 17th ACM conference on Information and knowledge management, pages 843–852. ACM, 2008.
+[14] K. Chaudhuri, C. Monteleoni, and A. D. Sarwate. Differentially private empirical risk minimization. Journal of Machine
+Learning Research, 12(Mar):1069–1109, 2011.
+[15] S. Chen, M. Xue, Z. Tang, L. Xu, and H. Zhu. Stormdroid: A
+streaminglized machine learning-based system for detecting
+android malware. In Proceedings of the 11th ACM on Asia
+Conference on Computer and Communications Security,
+pages 377–388. ACM, 2016.
+[16] D. Ciregan, U. Meier, and J. Schmidhuber. Multi-column deep
+neural networks for image classification. In IEEE Conference
+on Computer Vision and Pattern Recognition (CVPR), pages
+3642–3649. IEEE, 2012.
+[17] D. Ciresan, A. Giusti, L. M. Gambardella, and J. Schmidhuber. Deep neural networks segment neuronal membranes in
+electron microscopy images. In Advances in Neural Information Processing Systems, pages 2843–2851, 2012.
+[18] T. Cover. Information theory and statistics. Wiley„ 1959.
+[19] L. Deng, M. L. Seltzer, D. Yu, A. Acero, A.-r. Mohamed, and
+G. Hinton. Binary coding of speech spectrograms using a
+deep auto-encoder. In Eleventh Annual Conference of the
+International Speech Communication Association, 2010.
+[20] C. Dwork. Differential privacy: A survey of results. In International Conference on Theory and Applications of Models of
+Computation, pages 1–19. Springer, 2008.
+[21] C. Dwork, K. Kenthapadi, F. McSherry, I. Mironov, and
+M. Naor. Our data, ourselves: Privacy via distributed noise
+generation. In Eurocrypt, volume 4004, pages 486–503.
+Springer, 2006.
+[22] C. Dwork, A. Roth, et al. The algorithmic foundations of
+differential privacy. Foundations and Trends® in Theoretical
+Computer Science, 9(3–4):211–407, 2014.
+[23] Ú. Erlingsson, V. Pihur, and A. Korolova. Rappor: Randomized aggregatable privacy-preserving ordinal response. In
+Proceedings of the 2014 ACM SIGSAC Conference on Computer and Communications Security, pages 1054–1067.
+ACM, 2014.
+[24] M. Fredrikson, S. Jha, and T. Ristenpart. Model inversion
+attacks that exploit confidence information and basic countermeasures. In Proceedings of the 22nd ACM SIGSAC
+Conference on Computer and Communications Security,
+2015.
+[25] M. Fredrikson, S. Jha, and T. Ristenpart. Model inversion
+attacks that exploit confidence information and basic countermeasures. In Proceedings of the 22nd ACM SIGSAC
+
+16
+
+Conference on Computer and Communications Security,
+pages 1322–1333. ACM, 2015.
+[26] M. Fredrikson, E. Lantz, S. Jha, S. Lin, D. Page, and T. Ristenpart. Privacy in pharmacogenetics: An end-to-end case
+study of personalized warfarin dosing. In USENIX Security
+Symposium, 2014.
+[27] A. Geiger, P. Lenz, and R. Urtasun. Are we ready for autonomous driving? The KITTI vision benchmark suite. In
+Computer Vision and Pattern Recognition (CVPR), 2012
+IEEE Conference on, pages 3354–3361. IEEE, 2012.
+[28] R. Gilad-Bachrach, N. Dowlin, K. Laine, K. Lauter,
+M. Naehrig, and J. Wernsing. Cryptonets: Applying neural
+networks to encrypted data with high throughput and accuracy. In International Conference on Machine Learning,
+pages 201–210, 2016.
+[29] I. Goodfellow, Y. Bengio, and A. Courville. Deep learning.
+MIT press, 2016.
+[30] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. WardeFarley, S. Ozair, A. Courville, and Y. Bengio. Generative adversarial nets. In Advances in Neural Information Processing
+Systems, pages 2672–2680, 2014.
+[31] D. B. Graham and N. M. Allinson. Characterising virtual
+eigensignatures for general purpose face recognition. In
+Face Recognition, pages 446–456. Springer, 1998.
+[32] J. Hamm, Y. Cao, and M. Belkin. Learning privately from
+multiparty data. In International Conference on Machine
+Learning, pages 555–563, 2016.
+[33] J. Hayes, L. Melis, G. Danezis, and E. De Cristofaro. Logan:
+Membership inference attacks against generative models.
+Proceedings on Privacy Enhancing Technologies (PoPETs),
+2019(1), 2008.
+[34] K. Hett, V.-T. Ta, J. V. Manjón, and P. Coupé. Graph of hippocampal subfields grading for Alzheimer’s disease prediction. In International Workshop on Machine Learning in
+Medical Imaging, pages 259–266. Springer, 2018.
+[35] G. Hinton, L. Deng, D. Yu, G. E. Dahl, A.-r. Mohamed,
+N. Jaitly, A. Senior, V. Vanhoucke, P. Nguyen, T. N. Sainath,
+et al. Deep neural networks for acoustic modeling in speech
+recognition: The shared views of four research groups. IEEE
+Signal Processing Magazine, 29(6):82–97, 2012.
+[36] B. Hitaj, G. Ateniese, and F. Perez-Cruz. Deep models under the GAN: Information leakage from collaborative deep
+learning. CCS, 2017.
+[37] N. Homer, S. Szelinger, M. Redman, D. Duggan, W. Tembe,
+J. Muehling, J. V. Pearson, D. A. Stephan, S. F. Nelson, and
+D. W. Craig. Resolving individuals contributing trace amounts
+of DNA to highly complex mixtures using high-density SNP
+genotyping microarrays. PLoS Genetics, 4(8):e1000167,
+2008.
+[38] W. Jiang, M. Murugesan, C. Clifton, and L. Si. t-plausibility:
+semantic preserving text sanitization. In International Conference on Computational Science and Engineering, volume 3,
+pages 68–75, 2009.
+[39] D. P. Kingma and M. Welling. Auto-encoding variational
+bayes. ICLR, 2014.
+[40] Y. LeCun, Y. Bengio, and G. Hinton. Deep learning. nature,
+521(7553):436, 2015.
+[41] Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner. Gradientbased learning applied to document recognition. Proceedings of the IEEE, 86(11):2278–2324, 1998.
+
+Differentially Private Data Generative Models
+
+[42] B. Li, Y. Vorobeychik, M. Li, and B. Malin. Scalable iterative
+classification for sanitizing large-scale datasets. IEEE transactions on knowledge and data engineering, 29(3):698–711,
+2017.
+[43] M. Lichman. UCI machine learning repository, 2013.
+[44] K. S. Liu, B. Li, and J. Gao. Performing co-membership
+attacks against deep generative models. arXiv preprint
+arXiv:1805.09898, 2018.
+[45] A. Machanavajjhala, D. Kifer, J. Abowd, J. Gehrke, and L. Vilhuber. Privacy: Theory meets practice on the map. In IEEE
+24th International Conference on Data Engineering (ICDE),
+pages 277–286. IEEE, 2008.
+[46] J. Masci, U. Meier, D. Cireşan, and J. Schmidhuber. Stacked
+convolutional auto-encoders for hierarchical feature extraction. Artificial Neural Networks and Machine Learning–
+ICANN 2011, pages 52–59, 2011.
+[47] B. McMahan and D. Ramage. Federated learning: Collaborative machine learning without centralized training data.
+Technical report, Technical report, Google, 2017.
+[48] N. Papernot, M. Abadi, U. Erlingsson, I. Goodfellow, and
+K. Talwar. Semi-supervised knowledge transfer for
+deep learning from private training data. arXiv preprint
+arXiv:1610.05755, 2016.
+[49] N. Papernot, S. Song, I. Mironov, A. Raghunathan, K. Talwar,
+and U. Erlingsson. Scalable private learning with PATE. International Conference on Learning Representations, 2018.
+[50] M. Pathak, S. Rane, and B. Raj. Multiparty differential privacy
+via aggregation of locally trained classifiers. In Advances in
+Neural Information Processing Systems, pages 1876–1884,
+2010.
+[51] A. Pyrgelis, C. Troncoso, and E. D. Cristofaro. Knock knock,
+who’s there? membership inference on aggregate location
+data. In 25th Annual Network and Distributed System Security Symposium, NDSS 2018, San Diego, California, USA,
+February 18-21, 2018, 2018.
+[52] A. Radford, L. Metz, and S. Chintala. Unsupervised representation learning with deep convolutional generative adversarial networks. arXiv preprint arXiv:1511.06434, 2015.
+[53] V. Rastogi and S. Nath. Differentially private aggregation of
+distributed time-series with transformation and encryption. In
+Proceedings of the 2010 ACM SIGMOD International Conference on Management of Data, pages 735–746. ACM, 2010.
+[54] D. J. Rezende, S. Mohamed, and D. Wierstra. Stochastic
+backpropagation and approximate inference in deep generative models. ICML, 2014.
+[55] P. Schulam and S. Saria. A framework for individualizing predictions of disease trajectories by exploiting multi-resolution
+structure. In Advances in Neural Information Processing
+Systems, pages 748–756, 2015.
+[56] R. Shokri and V. Shmatikov. Privacy-preserving deep learning. In Proceedings of the 22nd ACM SIGSAC Conference
+on Computer and Communications Security, pages 1310–
+1321. ACM, 2015.
+[57] R. Shokri, M. Stronati, C. Song, and V. Shmatikov. Membership inference attacks against machine learning models. In
+IEEE Symposium on Security and Privacy (SP), pages 3–18.
+IEEE, 2017.
+[58] R. Shokri, G. Theodorakopoulos, C. Troncoso, J.-P. Hubaux,
+and J.-Y. Le Boudec. Protecting location privacy: Optimal
+strategy against localization attacks. In Proceedings of the
+
+17
+
+2012 ACM Conference on Computer and Communications
+Security, pages 617–627. ACM, 2012.
+[59] L. Sweeney. Replacing personally-identifying information in
+medical records, the scrub system. In AMIA Fall Symposium,
+page 333, 1996.
+[60] H. To, K. Nguyen, and C. Shahabi. Differentially private
+publication of location entropy. In Proceedings of the 24th
+ACM SIGSPATIAL International Conference on Advances in
+Geographic Information Systems, page 35. ACM, 2016.
+[61] P. Vincent, H. Larochelle, Y. Bengio, and P.-A. Manzagol.
+Extracting and composing robust features with denoising
+autoencoders. In Proceedings of the 25th International Conference on Machine learning, pages 1096–1103. ACM, 2008.
+[62] P. Vincent, H. Larochelle, I. Lajoie, Y. Bengio, and P.-A. Manzagol. Stacked denoising autoencoders: Learning useful
+representations in a deep network with a local denoising
+criterion. Journal of Machine Learning Research, 11, 2010.
+[63] R. Wang, Y. F. Li, X. Wang, H. Tang, and X. Zhou. Learning
+your identity and disease from research papers: Information
+leaks in genome wide association study. In Proceedings of
+the 16th ACM Conference on Computer and communications
+Security, pages 534–544. ACM, 2009.
+[64] F. Zhang, J. Leitner, M. Milford, B. Upcroft, and P. Corke.
+Towards vision-based deep reinforcement learning for robotic
+motion control. arXiv preprint arXiv:1511.03791, 2015.
+
+Differentially Private Data Generative Models
+
+Appendix
+
+MNIST
+
+A Model Architectures
+MNIST
+
+Adult Census Data
+
+Texas Hospital Stays Data
+
+Malware Data
+
+FC(400)+Sigmoid
+FC(256)+Sigmoid
+FC(400)+Sigmoid
+FC(784)+Sigmoid
+
+FC(6)+Sigmoid
+FC(100)+Sigmoid
+
+FC(400)+Sigmoid
+FC(776)+Sigmoid
+
+FC(50)+Sigmoid
+FC(142)+Sigmoid
+
+Conv(5x5,1,32)+Relu
+MaxPooling(2x2,2,2)
+Conv(5x5,32,64)+Relu
+MaxPooling(2x2,2,2)
+Reshape(7x7x64)
+FC(1024)
+FC(10)
+Table 9. Structures of machine learning models over different
+datasets with DP-VaeGM
+
+Table 6. Model structures of DP-AuGM over different datasets
+
+MNIST
+FC(500)+Sigmoid
+FC(500)+Sigmoid
+FC(20)+Sigmoid ; FC(20)+Sigmoid
+Sampling Vector(20)
+FC(500)+Sigmoid
+FC(500)+Sigmoid
+FC(784)+Sigmoid
+Table 7. Model structures of DP-VaeGM over MNIST
+
+MNIST
+
+Adult Census Data
+
+Texas Hospital Stays Data
+
+Malware Data
+
+Conv(5x5,1,32)+Relu
+MaxPooling(2x2,2,2)
+Conv(5x5,32,64)+Relu
+MaxPooling(2x2,2,2)
+Reshape(4x4x64)
+FC(10)
+
+FC(16)+Relu
+FC(16)+Relu
+FC(2)
+
+FC(200)+Relu
+FC(100)+Relu
+FC(10)
+
+FC(4)+Relu
+FC(3)+Relu
+FC(2)
+
+Table 8. Structures of machine learning models over different
+datasets with DP-AuGM
+
+18
+
+
