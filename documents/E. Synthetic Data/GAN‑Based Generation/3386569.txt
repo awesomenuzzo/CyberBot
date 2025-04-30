@@ -1,0 +1,1862 @@
+Learning Temporal Coherence via Self-Supervision for GAN-based
+Video Generation
+MENGYU CHU∗ , YOU XIE∗ , JONAS MAYER, LAURA LEAL-TAIXÉ, and NILS THUEREY,
+Technical University of Munich, Germany
+
+Temporal Self-Supervision
+For Unpaired Video Translation (UVT)
+
+For Video Super-Resolution (VSR)
+Input
+
+TecoGAN
+
+Input
+
+TecoGAN
+
+Input
+
+TecoGAN
+
+Fig. 1. Using the proposed approach for temporal self-supervision, we achieve realistic results with natural temporal evolution for two inherently different
+video generation tasks: unpaired video translation (left) and video super-resolution (right). While the resulting sharpness can be evaluated via the still images
+above, the corresponding videos in our supplemental web-page (Sec. 1 and Sec.2) highlight the high quality of the temporal changes. Obama and Trump video
+courtesy of the White House (public domain).
+Our work explores temporal self-supervision for GAN-based video generation tasks. While adversarial training successfully yields generative models
+for a variety of areas, temporal relationships in the generated data are much
+less explored. Natural temporal changes are crucial for sequential generation
+tasks , e.g. video super-resolution and unpaired video translation. For the
+former, state-of-the-art methods often favor simpler norm losses such as
+𝐿 2 over adversarial training. However, their averaging nature easily leads
+to temporally smooth results with an undesirable lack of spatial detail. For
+unpaired video translation, existing approaches modify the generator networks to form spatio-temporal cycle consistencies. In contrast, we focus
+on improving learning objectives and propose a temporally self-supervised
+algorithm. For both tasks, we show that temporal adversarial learning is key
+to achieving temporally coherent solutions without sacrificing spatial detail.
+We also propose a novel Ping-Pong loss to improve the long-term temporal
+∗ Both authors contributed equally to the paper
+
+Authors’ address: Mengyu Chu, mengyu.chu@tum.de; You Xie, you.xie@tum.de; Jonas
+Mayer, jonas.a.mayer@tum.de; Laura Leal-Taixé, leal.taixe@tum.de; Nils Thuerey,
+nils.thuerey@tum.de,
+Technical University of Munich, Department of Computer Science, Munich, Germany.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+© 2020 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+0730-0301/2020/7-ART75 $15.00
+https://doi.org/10.1145/3386569.3392457
+
+consistency. It effectively prevents recurrent networks from accumulating
+artifacts temporally without depressing detailed features. Additionally, we
+propose a first set of metrics to quantitatively evaluate the accuracy as well
+as the perceptual quality of the temporal evolution. A series of user studies
+confirm the rankings computed with these metrics. Code, data, models, and
+results are provided at https://github.com/thunil/TecoGAN.
+CCS Concepts: • Computing methodologies → Neural networks; Image
+processing.
+Additional Key Words and Phrases: Generative adversarial network, temporal cycle-consistency, self-supervision, video super-resolution, unpaired
+video translation.
+ACM Reference Format:
+Mengyu Chu, You Xie, Jonas Mayer, Laura Leal-Taixé, and Nils Thuerey.
+2020. Learning Temporal Coherence via Self-Supervision for GAN-based
+Video Generation. ACM Trans. Graph. 39, 4, Article 75 (July 2020), 13 pages.
+https://doi.org/10.1145/3386569.3392457
+
+1
+
+INTRODUCTION
+
+Generative adversarial networks (GANs) have been extremely successful at learning complex distributions such as natural images [Isola
+et al. 2017; Zhu et al. 2017]. However, for sequence generation,
+directly applying GANs without carefully engineered constraints
+typically results in strong artifacts over time due to the significant difficulties introduced by the temporal changes. In particular,
+conditional video generation tasks are very challenging learning
+problems where generators should not only learn to represent the
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+75:2
+
+•
+
+Chu, M.; Xie, Y.; Mayer, J.; Leal-Taixé, L.; Thuerey, N.
+
+data distribution of the target domain but also learn to correlate the
+output distribution over time with conditional inputs. Their central
+objective is to faithfully reproduce the temporal dynamics of the
+target domain and not resort to trivial solutions such as features
+that arbitrarily appear and disappear over time.
+In our work, we propose a novel adversarial learning method
+for a recurrent training approach that supervises both spatial contents as well as temporal relationships. As shown in Fig. 1, we
+apply our approach to two video-related tasks that offer substantially different challenges: video super-resolution (VSR) and unpaired
+video translation (UVT). With no ground truth motion available, the
+spatio-temporal adversarial loss and the recurrent structure enable
+our model to generate realistic results while keeping the generated structures coherent over time. With the two learning tasks
+we demonstrate how spatio-temporal adversarial training can be
+employed in paired as well as unpaired data domains. In addition to
+the adversarial network which supervises the short-term temporal
+coherence, long-term consistency is self-supervised using a novel
+bi-directional loss formulation, which we refer to as “Ping-Pong”
+(PP) loss in the following. The PP loss effectively avoids the temporal
+accumulation of artifacts, which can potentially benefit a variety
+of recurrent architectures. We also note that most existing image
+metrics focus on spatial content only. We fill the gap of temporal
+assessment with a pair of metrics that measures the perceptual similarity over time and the similarity of motions with respect to a
+ground truth reference. User studies confirm these metrics for both
+tasks.
+The central contributions of our work are:
+• a spatio-temporal discriminator unit together with a careful
+analysis of training objectives for realistic and coherent video
+generation tasks,
+• a novel PP loss supervising long-term consistency,
+• in addition to a set of metrics for quantifying temporal coherence based on motion estimation and perceptual distance.
+Together, our contributions lead to models that outperform previous
+work in terms of temporally-coherent detail, which we qualitatively
+and quantitatively demonstrate with a wide range of content.
+
+2
+
+RELATED WORK
+
+Deep learning has made great progress for image generation tasks.
+While regular losses such as 𝐿 2 [Kim et al. 2016; Lai et al. 2017] offer
+good performance for image super-resolution (SR) tasks in terms of
+PSNR metrics, previous work found adversarial training [Goodfellow et al. 2014] to significantly improve the perceptual quality in
+multi-modal settings such as image generation [Brock et al. 2019],
+colorization [He et al. 2018], super-resolution [Ledig et al. 2016],
+and translation [Isola et al. 2017; Zhu et al. 2017] tasks. Besides representing natural images, GAN-based frameworks are also successful
+at static graphic representations including geometry synthesis [Wu
+et al. 2019] and city modeling [Kelly et al. 2018].
+Sequential generation tasks, on the other hand, require the generation of realistic content that changes naturally over time [Kim
+et al. 2019; Xie et al. 2018]. It is especially so for conditional video
+generation tasks [Jamriška et al. 2019; Sitzmann et al. 2018; Wronski
+et al. 2019; Zhang et al. 2019], where specific correlations between
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+the input and the generated spatio-temporal evolution are required
+when ground-truth motions are not provided. Hence, motion estimation [Dosovitskiy et al. 2015; Liu et al. 2019] and compensation
+become crucial for video generation tasks. The compensation can
+take various forms, e.g., explicitly using variants of optical flow
+networks [Caballero et al. 2017; Sajjadi et al. 2018; Shi et al. 2016]
+and implicitly using deformable convolution layers [Wang et al.
+2019a; Zhu et al. 2019] or dynamic up-sampling [Jo et al. 2018]. In
+our work, a network is trained to estimate the motion and we show
+that it can help generators and discriminators in spatio-temporal
+adversarial training.
+For VSR, recent work improve the spatial detail and temporal
+coherence by either using multiple low-resolution (LR) frames as
+inputs [Haris et al. 2019; Jo et al. 2018; Liu et al. 2017; Tao et al.
+2017] or recurrently using previously estimated outputs [Sajjadi
+et al. 2018]. The latter has the advantage to re-use high-frequency
+details over time. In general, adversarial learning is less explored for
+VSR and applying it in conjunction with a recurrent structure gives
+rise to a special form of temporal mode collapse, as we will explain
+below. For video translation tasks, GANs are more commonly used
+but discriminators typically only supervise the spatial content. E.g.,
+Zhu et al. [2017] focuses on images without temporal constrains
+and generators can fail to learn the temporal cycle-consistency for
+videos. In order to learn temporal dynamics, RecycleGAN [Bansal
+et al. 2018] proposes to use a prediction network in addition to a
+generator, while a concurrent work [Chen et al. 2019] chose to learn
+motion translation in addition to the spatial content translation.
+Being orthogonal to these works, we propose a spatio-temporal adversarial training for both VSR and UVT and we show that temporal
+self-supervision is crucial for improving spatio-temporal correlations without sacrificing spatial detail.
+While 𝐿 1 and 𝐿 2 temporal losses based on warping are generally used to enforce temporal smoothness in video style transfer
+tasks [Chen et al. 2017; Ruder et al. 2016] and concurrent GAN-based
+VSR [Pérez-Pellitero et al. 2018] and UVT [Park et al. 2019] work,
+it leads to an undesirable smooth over spatial detail and temporal
+changes in outputs. Likewise, the 𝐿 2 temporal metric represents a
+sub-optimal way to quantify temporal coherence. For image similarity evaluation, perceptual metrics [Prashnani et al. 2018; Zhang et al.
+2018] are proposed to reliably consider semantic features instead of
+pixel-wise errors. However, for videos, perceptual metrics that evaluate natural temporal changes are unavailable up to now. To address
+this open issue, we propose two improved temporal metrics and
+demonstrate the advantages of temporal self-supervision over direct
+temporal losses. Due to its complexity, VSR has also led to workshop challenges like NTIRE19 [Nah et al. 2019], where algorithms
+such as EDVR [Wang et al. 2019a] perform best w.r.t. PSNR-based
+metrics. We compare to these methods and give additional details
+in Appendix A.
+Previous work, e.g. tempoGAN for fluid flow [Xie et al. 2018]
+and vid2vid for video translation [Wang et al. 2018a], has proposed
+adversarial temporal losses to achieve time consistency. While tempoGAN employs a second temporal discriminator with multiple
+aligned frames to assess the realism of temporal changes, it is not
+suitable for videos, as it relies on ground truth motions and employs
+single-frame processing that is sub-optimal for natural images. On
+
+Learning Temporal Coherence via Self-Supervision for GAN-based Video Generation
+
+the other hand, vid2vid focuses on paired video translations and
+proposes a video discriminator based on a conditional motion input
+that is estimated from the paired ground-truth sequences. We focus
+on more difficult unpaired translation tasks instead and demonstrate
+the gains in the quality of our approach in the evaluation section.
+Bashkirova et al. [2018] solve UVT tasks as a 3D extension of the
+2D image translation. In DeepFovea [Kaplanyan et al. 2019], a 3D
+discriminator is used to supervise video in-painting results with 32
+frames as a single 3D input. Since temporal evolution differs from a
+spatial distribution, we show how a separate handling of the temporal dimension can reduce computational costs, remove training
+restrictions, and most importantly improve inference quality.
+For tracking and optical flow estimation, 𝐿 2 -based time-cycle
+losses [Wang et al. 2019b] were proposed to constrain motions and
+tracked correspondences using symmetric video inputs. By optimizing indirectly via motion compensation or tracking, this loss
+improves the accuracy of the results. For video generation, we propose a PP loss that also makes use of symmetric sequences. However,
+we directly constrain the PP loss via the generated video content,
+which successfully improves the long-term temporal consistency in
+the video results. The PP loss is effective by offering valid information in forward as well as backward passes of image sequences. This
+concept is also used in robotic control algorithms, where reversed
+trajectories starting from goal positions have been used as training
+data [Nair et al. 2018].
+
+3 LEARNING TEMPORALLY COHERENT CONDITIONAL
+VIDEO GENERATION
+We first propose the concepts of temporal self-supervision for GANbased video generation (Sec. 3.1 and Sec. 3.2), before introducing
+solutions for VSR and UVT tasks (Sec. 3.3 and Sec. 3.4) as example
+applications.
+
+3.1
+
+Spatio-Temporal Adversarial Learning
+
+G
+
+𝑎𝑡
+
+𝑔𝑡
+a)
+
+b)
+
+D
+
+0/1
+
+𝑏𝑡
+𝑔𝑡−1
+
+𝑔𝑡
+
+𝑔𝑡+1
+
+𝑔𝑡−1
+𝑤
+
+𝑔𝑡
+
+𝑔𝑡+1
+
+𝑏𝑡−1
+
+𝑏𝑡
+
+𝑏𝑡+1
+
+𝑏𝑡−1
+
+𝑏𝑡
+
+𝑏𝑡+1
+
+c)
+
+Generated Triplets
+
+𝑎𝑡
+
+FrameMotion
+Recurrent
+Compensation Generator
+
+𝑔𝑡−1
+
+𝑤
+
+𝑔𝑡
+
+𝑤
+
+𝐷𝑠,𝑡
+
+0/1
+
+Target Triplets
+
+𝑤
+
+𝑤
+
+Fig. 2. a) A spatial GAN for image generation. b) A frame recurrent
+Generator. c) A spatio-temporal Discriminator. In these figures, letter 𝑎,
+𝑏, and 𝑔, stand for the input domain, the output domain and the generated
+results respectively. 𝐺 and 𝐷 stand for the generator and the discriminator.
+
+While GANs are popular and widely used in image generation tasks
+to improve perceptual quality, their spatial adversarial learning
+inherently introduces temporal problems for tasks such as video
+
+•
+
+75:3
+
+generation. Thus, we propose an algorithm for spatio-temporal
+adversarial learning that is easy to integrate into existing GANbased image generation approaches. Starting from a standard GAN
+for images, as shown in Fig. 2 a), we propose to use a frame-recurrent
+generator (b) together with a spatio-temporal discriminator (c).
+As shown in Fig. 2 b), our generator produces an output 𝑔𝑡 from an
+input frame 𝑎𝑡 and recursively uses the previously generated output
+𝑔𝑡 −1 . Following previous work [Sajjadi et al. 2018], we warp this
+frame-recurrent input to align it with the current frame. This allows
+the network to more easily re-use previously generated details. The
+high-level structure of the generator can be summarized as:
+𝑣𝑡 = F(𝑎𝑡 −1, 𝑎𝑡 ),
+
+𝑔𝑡 = G(𝑎𝑡 ,𝑊 (𝑔𝑡 −1, 𝑣𝑡 )).
+
+(1)
+
+Here, the network 𝐹 is trained to estimate the motion 𝑣𝑡 from frame
+𝑎𝑡 −1 to 𝑎𝑡 and 𝑊 denotes warping.
+The central building block of our approach is a novel spatiotemporal discriminator 𝐷𝑠,𝑡 that receives triplets of frames, shown
+in Fig. 2 c). This contrasts with typically used spatial discriminators that supervise only a single image. By concatenating multiple
+adjacent frames along the channel dimension, the frame triplets
+form an important building block for learning as they can provide
+networks with gradient information regarding the realism of spatial
+structures as well as short-term temporal information, such as firstand second-order time derivatives.
+We propose a 𝐷𝑠,𝑡 architecture that primarily receives two types
+of triplets: three adjacent frames and the corresponding warped
+ones. We warp later frames backward and previous ones forward.
+The network 𝐹 is likewise used to estimate the corresponding motions. While original frames contain the full spatio-temporal information, warped frames more easily yield temporal information
+with their aligned content. For the input variants we use the following notations: I𝑔 = {𝑔𝑡 −1, 𝑔𝑡 , 𝑔𝑡 +1 }, I𝑏 = {𝑏𝑡 −1, 𝑏𝑡 , 𝑏𝑡 +1 }; I𝑤𝑔 =
+{𝑊 (𝑔𝑡 −1, 𝑣𝑡 ), 𝑔𝑡 ,𝑊 (𝑔𝑡 +1, 𝑣𝑡′ )}, I𝑤𝑏 = {𝑊 (𝑏𝑡 −1, 𝑣𝑡 ), 𝑏𝑡 ,𝑊 (𝑏𝑡 +1, 𝑣𝑡′ )}.
+A subscript 𝑎 denotes the input domain, while the 𝑏 subscript denotes the target domain. The quotation mark in 𝑣 ′ indicates that
+quantities are estimated from the backward direction.
+Although the proposed concatenation of several frames seems
+like a simple change that has been used in a variety of other contexts, we show that it represents an important operation that allows
+discriminators to understand spatio-temporal data distributions. As
+will be shown below, it can effectively reduce temporal problems
+encountered by spatial GANs. While 𝐿 2 −based temporal losses are
+widely used in the field of video generation, the spatio-temporal
+adversarial loss is crucial for preventing the inference of blurred
+structures in multi-modal data-sets. Compared to GANs using multiple discriminators, the single 𝐷𝑠,𝑡 network that we propose can
+learn to balance the spatial and temporal aspects according to the
+reference data and avoid inconsistent sharpness as well as overly
+smooth results. Additionally, by extracting shared spatio-temporal
+features, it allows for smaller network sizes.
+
+3.2
+
+Self-Supervision for Long-term Temporal Consistency
+
+When relying on a previous output as input, i.e., for frame-recurrent
+architectures, generated structures easily accumulate frame by frame.
+In adversarial training, generators learn to heavily rely on previously generated frames and can easily converge towards strongly
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+75:4
+
+•
+
+Chu, M.; Xie, Y.; Mayer, J.; Leal-Taixé, L.; Thuerey, N.
+
+𝑎0
+
+𝑎1
+
+…
+
+𝑎𝑡
+
+…
+
+𝑎𝑛−1
+
+𝑃𝑖𝑛𝑔 𝐴
+
+𝑎𝑛
+𝑎0
+
+𝑎1
+
+…
+
+a)
+
+𝑎𝑡
+
+…
+
+𝑎𝑛−1
+
+𝐺
+
+𝑔𝑡−1
+
+b)
+
+𝑔0 ′
+
+…
+
+𝑔𝑡
+
+…
+
+𝑔𝑛−1
+
+-
+
+-
+
+-
+
+-
+
+-
+
+𝑔1 ′
+
+…
+
+𝑔𝑡 ′
+
+…
+
+𝑔𝑛−1 ′
+
+𝑔𝑡
+
+𝑎𝑡+1
+
+𝑔𝑡+1 + 𝑏𝑡−1
+
+𝑔𝑡
+
+𝑏𝑡
+
+𝑏𝑡+1
+
+Original Triplet 𝐼𝑏
+
+𝑔𝑡+1
+𝑏𝑡−1
+𝑤 +
+𝑤
+
+𝑏𝑡
+
+𝑏𝑡+1
+𝑤
+
+Warped Triplet 𝐼𝑤𝑏
+
+Warped Triplet 𝐼𝑤𝑔
+
+VSR 𝐷𝑠,𝑡
+
+𝑔𝑛
+
+a)
+
+𝑃𝑜𝑛𝑔 𝐴2𝐵
+
+reinforcing spatial features over longer periods of time. For videos,
+this especially occurs along directions of motion and these solutions
+can be seen as a special form of temporal mode collapse, where
+the training converges to a mostly constant temporal signal as a
+sub-optimal, trivial equilibrium. We have noticed this issue in a
+variety of recurrent architectures, examples are shown in Fig. 3 a)
+and the Dst version in Fig. 8.
+While this issue could be alleviated by training with longer sequences, it is computationally expensive and can fail for even longer
+sequences, as shown in Appendix D. We generally want generators
+to be able to work with sequences of arbitrary length for inference.
+To address this inherent problem of recurrent generators, we propose a new bi-directional “Ping-Pong” loss. For natural videos, a
+sequence with the forward order as well as its reversed counterpart
+offer valid information. Thus, from any input of length 𝑛, we can construct a symmetric PP sequence in form of 𝑎 1, ...𝑎𝑛−1, 𝑎𝑛 , 𝑎𝑛−1, ...𝑎 1
+as shown in Fig. 3 c). When inferring this in a frame-recurrent manner, the generated result should not strengthen any invalid features
+from frame to frame. Rather, the result should stay close to valid
+information and be symmetric, i.e., the forward result 𝑔𝑡 = 𝐺 (𝑎𝑡 ,
+𝑔𝑡 −1 ) and the one generated from the reversed part, 𝑔𝑡′ = 𝐺 (𝑎𝑡 , 𝑔𝑡′ +1 ) ,
+should be identical.
+Based on this observation, we train our networks with extended
+PP sequences and constrain the generated outputs from both “legs”
+Í
+′
+to be the same using the loss: L𝑝𝑝 = 𝑛−1
+𝑡 =1 ∥𝑔𝑡 − 𝑔𝑡 ∥ 2 . Note that
+2
+in contrast to the generator loss, the 𝐿 norm is a correct choice
+here: We are not faced with multi-modal data where an 𝐿 2 norm
+would lead to undesirable averaging, but rather aim to constrain the
+recurrent generator to its own, unique version over time without
+favoring smoothness. The PP terms provide constraints for short
+term consistency via ∥𝑔𝑛−1 − 𝑔𝑛−1 ′ ∥ 2 , while terms such as ∥𝑔1 − 𝑔1 ′ ∥ 2
+prevent long-term drifts of the results. This bi-directional loss
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+𝑔𝑡−1
+𝑤
+
+𝑃𝑖𝑛𝑔 𝐴2𝐵
+
+Fig. 3. a) Result without PP loss. The VSR network is trained with a recurrent frame-length of 10. When inference on long sequences, frame 15 and
+latter frames of the foliage scene show the drifting artifacts. b) Result
+trained with PP loss. These artifacts are removed successfully for the latter.
+c) When inferring a symmetric PP sequence with a forward pass (Ping)
+and its backward counterpart (Pong), our PP loss constrains the output
+sequence to be symmetric. It reduces the 𝐿 2 distance between 𝑔𝑡 and 𝑔𝑡′ ,
+the corresponding frames in the forward and backward passes, shown via
+red circles with a minus sign. The PP loss reduces drifting artifacts and
+improves temporal coherence.
+
+𝑎𝑡
+
+Original Triplet 𝐼𝑔
+
+FrameRecurrent
+Generator
+
+recurrent
+
+𝑔1
+
+𝑎𝑡−1
+
+Conditional LR Triplet 𝐼𝑎
+
+𝑤
+
+𝑃𝑜𝑛𝑔 𝐴
+
+c)
+𝑔0
+
+𝑔𝑡−1
+
+𝑎𝑡
+
+𝑔𝑡
+
+b)
+
+Fig. 4. a) The frame-recurrent VSR Generator.
+
+0/1
+
+b) Conditional VSR 𝐷𝑠,𝑡 .
+
+formulation also helps to constrain ambiguities due to disocclusions
+that can occur in regular training scenarios.
+As shown in Fig. 3 b), the PP loss successfully removes drifting
+artifacts while appropriate high-frequency details are preserved. In
+addition, it effectively extends the training data set, and as such
+represents a useful form of data augmentation. A comparison is
+given in Appendix D to disentangle the effects of the augmentation
+of PP sequences and the temporal constraints. The results show that
+the temporal constraint is the key to reliably suppressing the temporal accumulation of artifacts, achieving consistency, and allowing
+models to infer much longer sequences than seen during training.
+The majority of related work for video generation focuses on
+network architectures. Being orthogonal to architecture improvements, our work explores temporal self-supervision. The proposed
+spatio-temporal discriminator and the PP loss can be used in video
+generation tasks to replace simple temporal losses, e.g. the ones
+based on 𝐿 2 differences and warping. In the following subsections,
+solutions for VSR and UVT are presented as examples in paired and
+unpaired data domains.
+
+3.3
+
+Network Architecture for VSR
+
+For video super-resolution (VSR) tasks, the input domain contains
+LR frames while the target domain contains high-resolution (HR)
+videos with more complex details and motions. Since one pattern
+in low-resolution can correspond to multiple structures in highresolution, VSR represents a multimodal problem that benefits from
+adversarial training. In the proposed spatio-temproal adversarial
+training, we use a ResNet architecture for the VSR generator G.
+Similar to previous work, an encoder-decoder structure is applied
+to 𝐹 for motion estimation. We intentionally keep the generative
+part simple and in line with previous work, in order to demonstrate
+the advantages of the temporal self-supervision.
+The VSR discriminator 𝐷𝑠,𝑡 should guide the generator to learn
+the correlation between the conditional LR inputs and HR targets.
+Therefore, three LR frames I𝑎 = {𝑎𝑡 −1, 𝑎𝑡 , 𝑎𝑡 +1 } from the input
+domain are used as a conditional input. The input of 𝐷𝑠,𝑡 can be
+summarized as I𝑏𝑠,𝑡 = {I𝑏 , I𝑤𝑏 , I𝑎 } labelled as real and the generated
+𝑔
+inputs I𝑠,𝑡 = {I𝑔 , I𝑤𝑔 , I𝑎 } labelled as fake, as shown in Fig. 4. We
+concatenate all triplets together. In this way, the conditional 𝐷𝑠,𝑡
+will penalize 𝐺 if I𝑔 contains less spatial details or unrealistic artifacts
+in comparison to I𝑎 , I𝑏 . At the same time, temporal relationships
+
+Learning Temporal Coherence via Self-Supervision for GAN-based Video Generation
+
+𝑔𝑡𝑎→𝑏→𝑎
+𝑎𝑡
+
+𝐺𝑏→𝑎
+𝐺𝑎→𝑏
+
+Domain A
+𝑏→𝑎
+𝑔𝑡−1
+
+{ 𝑔𝑡 }x3
+
+𝑎→𝑏
+𝑔𝑡−1
+
+Domain B
+
+𝐺𝑏→𝑎
+𝑔𝑡𝑏→𝑎
+
+𝑏𝑡
+
+𝑔𝑡−1
+
+𝑔𝑡+1
+
+Original Triplet 𝐼𝑔
+
+𝑔𝑡−1
+𝑤
+
+𝑔𝑡
+
+or
+
+Static Triplet 𝐼𝑠𝑏
+
+𝑏𝑡−1
+
+𝑏𝑡
+
+𝑏𝑡+1
+
+Original Triplet 𝐼𝑏
+
+𝑔𝑡+1
+𝑏𝑡−1
+𝑤 or
+𝑤
+
+𝑏𝑡
+
+𝑏𝑡+1
+𝑤
+
+Warped Triplet 𝐼𝑤𝑏
+
+Warped Triplet 𝐼𝑤𝑔
+
+𝑔𝑡𝑏→𝑎→𝑏
+
+UVT 𝐷𝑠,𝑡
+
+𝐺𝑎→𝑏
+a)
+
+𝑔𝑡
+
+{ 𝑏𝑡 }x3
+
+or
+
+Static Triplet 𝐼𝑠𝑔
+
+𝑔𝑡𝑎→𝑏
+
+b)
+
+0/1
+
+Fig. 5. a) The UVT cycle link formed by two recurrent generators. b)
+Unconditional UVT 𝐷𝑠,𝑡 .
+
+between the generated images I𝑤𝑔 and those of the ground truth
+I𝑤𝑏 should match. With our setup, the discriminator profits from the
+warped frames to classify realistic and unnatural temporal changes,
+and for situations where the motion estimation is less accurate, the
+discriminator can fall back to the original, i.e. not warped, images.
+
+3.4
+
+Network Architecture for UVT
+
+While one generator is enough to map data from A to B for tasks
+such as VSR, unpaired generation tasks require a second generator
+to establish cycle consistency [Zhu et al. 2017]. For the UVT task, we
+use two recurrent generators, mapping from domain A to B and back.
+As shown in Fig. 5 a), given 𝑔𝑡𝑎→𝑏 = Gab (𝑎𝑡 ,𝑊 (𝑔𝑡𝑎→𝑏
+−1 , 𝑣 𝑡 )), we can
+use 𝑎𝑡 as the labeled data of 𝑔𝑡𝑎→𝑏→𝑎 = Gba (𝑔𝑡𝑎→𝑏 ,𝑊 (𝑔𝑡𝑎→𝑏→𝑎
+, 𝑣𝑡 ))
+−1
+to enforce consistency. An encoder-decoder structure is applied to
+UVT generators and 𝐹 .
+In UVT tasks, we demonstrate that the temporal cycle-consistency
+between different domains can be established using the supervision
+of unconditional spatio-temporal discriminators. This is in contrast
+to previous work which focuses on the generative networks to form
+spatio-temporal cycle links. Our approach actually yields improved
+results, as we will show below. In practice, we found it crucial to
+ensure that generators first learn reasonable spatial features, and
+only then improve their temporal correlation. Therefore, different
+to the 𝐷𝑠,𝑡 of VST that always receives 3 concatenated triplets as
+an input, the unconditional 𝐷𝑠,𝑡 of UVT only takes one triplet at a
+time. Focusing on the generated data, the input for a single batch
+can either be a static triplet of I𝑠𝑔 = {𝑔𝑡 , 𝑔𝑡 , 𝑔𝑡 }, the warped triplet
+I𝑤𝑔 , or the original triplet I𝑔 . The same holds for the reference data
+of the target domain, as shown in Fig. 4 b). Here, the warping is
+again performed via 𝐹 . With sufficient but complex information
+contained in these triplets, transition techniques are applied so that
+the network can consider the spatio-temporal information step by
+step, i.e., we initially start with 100% static triplets I𝑠𝑔 as the input.
+Then, over the course of training, 25% of them transit to I𝑤𝑔 triplets
+with simpler temporal information, with another 25% transition to I𝑔
+afterwards, leading to a (50%,25%,25%) distribution of triplets. Details
+of the transition calculations are given in Appendix C. Sample
+triplets are visualized in the supplemental web-page (Sec. 7).
+While non-adversarial training typically employs loss formulations with static goals, the GAN training yields dynamic goals due
+to discriminators discovering learning objectives over the course
+
+•
+
+75:5
+
+of the training run. Therefore, their inputs have a strong influence
+on the training process and the final results. Modifying the inputs
+in a controlled manner can lead to different results and substantial
+improvements if done correctly, as will be shown in Sec. 4.
+
+3.5
+
+Loss Functions
+
+Perceptual Loss Terms. As perceptual metrics, both pre-trained
+NNs [Johnson et al. 2016; Wang et al. 2018b] and GAN discriminators [Xie et al. 2018] were successfully used in previous work.
+Here, we use feature maps from a pre-trained VGG-19 network [Simonyan and Zisserman 2014], as well as 𝐷𝑠,𝑡 itself. In the VSR
+task, we can encourage the generator to produce features similar to
+the ground truth ones by increasing the cosine similarity of their
+feature maps. In UVT tasks without paired ground truth data, the
+generators should match the distribution of features in the target
+domain. Similar to a style loss for traditional style transfer tasks
+[Johnson et al. 2016], we thus compute the 𝐷𝑠,𝑡 feature correlations
+measured by the Gram matrix for UVT tasks. The 𝐷𝑠,𝑡 features contain both spatial and temporal information and hence are especially
+well suited for the perceptual loss.
+Loss and Training Summary . We now explain how to integrate
+the spatio-temporal discriminator into the paired and unpaired tasks.
+We use a standard discriminator loss for the 𝐷𝑠,𝑡 of VSR and a leastsquare discriminator loss for the 𝐷𝑠,𝑡 of UVT. Correspondingly, a
+non-saturated L𝑎𝑑𝑣 is used for the 𝐺 and 𝐹 of VSR and a leastsquares one is used for the UVT generators. As summarized in
+Table 1, 𝐺 and 𝐹 are trained with the mean squared loss Lcontent ,
+adversarial losses L𝑎𝑑𝑣 , perceptual losses L𝜙 , the PP loss LPP ,
+and a warping loss Lwarp , where again 𝑔, 𝑏 and Φ stand for generated
+samples, ground truth images and feature maps of VGG or 𝐷𝑠,𝑡 . We
+only show losses for the mapping from A to B for UVT tasks, as
+the backward mapping simply mirrors the terms. We refer to our
+full model for both tasks as TecoGAN below. The UVT data-sets
+are obtained from previous work [Bansal et al. 2018] and each data
+domain has around 2400 to 3600 unpaired frames. For VSR, we
+download 250 short videos with 120 frames each from Vimeo.com.
+In line with other VSR projects, we down-sample these frames by
+a factor of 2 to get the ground-truth HR frames. Corresponding
+LR frames are achieved by applying a Gaussian blur and sampling
+every fourth pixel. A Gaussian blur step is important to mimic the
+information loss due to the camera sensibility in a real-life capturing
+scenario. Although the information loss is complex and not unified,
+a Gaussian kernel with a standard deviation of 1.5 is commonly
+used for a super-resolution factor of 4. Training parameters and
+details are given in Appendix F.
+
+4
+
+ANALYSIS AND EVALUATION OF LEARNING
+OBJECTIVES
+
+In the following section, we illustrate the effects of temporal supervision using two ablation studies. In the first one, models trained with
+ablated loss functions show how Ladv and LPP change the overall
+learning objectives. Next, full UVT models are trained with different
+𝐷𝑠,𝑡 inputs. This highlights how differently the corresponding discriminators converge to different spatio-temporal equilibriums and
+the general importance of providing suitable data distributions from
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+75:6
+
+•
+
+Chu, M.; Xie, Y.; Mayer, J.; Leal-Taixé, L.; Thuerey, N.
+
+ENet
+
+DsOnly
+
+ENet
+
+DsDt
+
+FRVSR
+
+Foliage scene, full frame
+
+DUF
+
+GTa
+
+Temporal profiles
+
+𝑡
+
+GTa
+
+FRVSR
+
+DsOnly
+
+DsDt
+
+DsDtPP
+
+TecoGAN
+
+TecoGANaa
+
+TecoGAN
+
+Ours:
+
+DUF
+
+Ours:
+
+𝑦
+
+DsDtPP
+
+Fig. 6. In VSR of the foliage scene, adversarial models (ENet, DsOnly, DsDt, DsDtPP, TecoGAN⊖ and TecoGAN) yield better perceptual quality than methods using 𝐿 2 loss (FRVSR
+and DUF). In temporal profiles on the right, DsDt, DsDtPP and TecoGAN show significantly less temporal discontinuities compared to ENet and DsOnly. The temporal information
+of our discriminators successfully suppresses these artifacts. Corresponding video clips can be found in Sec. 4.1-4.6 of the supplemental web-page.
+Temporal profiles
+
+𝑥
+
+Ours:
+
+𝑡
+
+DsDt
+
+Table 1. Summary of loss terms.
+L𝐷𝑠,𝑡 for
+𝑔
+VSR, 𝐷𝑠,𝑡 −E𝑏∼𝑝 b (𝑏) [log 𝐷 (I𝑏𝑠,𝑡 ) ] − E𝑎∼𝑝 a (𝑎) [log(1 − 𝐷 (I𝑠,𝑡 )) ]
+𝑔
+𝑏
+𝑏
+2
+2
+UVT, 𝐷𝑠,𝑡
+E𝑏∼𝑝 (𝑏) [𝐷 (I𝑠,𝑡 ) − 1] + E𝑎∼𝑝 (𝑎) [𝐷 (I𝑠,𝑡 ) ]
+Loss for
+L𝐺,𝐹
+Lwarp
+LPP
+
+DsDtPP
+
+VSR, G & 𝐹
+
+UVT, 𝐺𝑎𝑏
+
+𝜆𝑤 Lwarp + 𝜆𝑝 LPP + 𝜆𝑎 Ladv + 𝜆𝜙 L𝜙 + 𝜆𝑐 Lcontent
+Í
+∥𝑎𝑡 − 𝑊 (𝑎𝑡 −1 , F(𝑎𝑡 −1 , 𝑎𝑡 )) ∥ 2
+Í𝑛−1
+′
+𝑡 =1 ∥𝑔𝑡 − 𝑔𝑡 ∥ 2
+𝑔
+
+Ladv −E𝑎∼𝑝 a (𝑎) [log 𝐷𝑠,𝑡 (I𝑠,𝑡 ) ]
+L𝜙
+TecoGANΘ
+
+TecoGAN
+
+GTa
+
+Lcontent
+
+FRVSR
+
+ENet
+
+Fig. 7. VSR temporal profile comparisons of the calendar scene (time shown along
+y-axis), cf. Sec. 4.1-4.6 of the supplemental web-page. TecoGAN models lead to natural
+temporal progression, and our final model closely matches the desired ground truth
+behavior over time.
+
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+∥𝑔𝑡 − 𝑏𝑡 ∥ 2
+
+) ]2
+
+𝑔
+
+𝐺𝑀 (Φ(I𝑠,𝑡 )) − 𝐺𝑀 (Φ(I𝑏𝑠,𝑡 ))
+
+2
+
+𝑔𝑡𝑎 )𝑏 )𝑎 − 𝑎𝑡 2 + 𝑔𝑏𝑡 )𝑎 )𝑏 − 𝑏𝑡 2
+
+the target domain. While we provide qualitative and quantitative
+evaluations below, we also refer the reader to our supplemental material which contains a web-page with video clips that more clearly
+highlight the temporal differences.
+
+4.1
+DUF
+
+1.0 -
+
+𝑔
+Φ(I𝑠,𝑡 ) ∗Φ(I𝑏
+𝑠,𝑡 )
+𝑔
+Φ(I𝑠,𝑡 ) ∗ Φ(I𝑏
+𝑠,𝑡 )
+
+𝑔𝑎→𝑏
+
+𝑏 (I
+−E𝑎∼𝑝 a (𝑎) [𝐷𝑠,𝑡
+𝑠,𝑡
+
+Loss Ablation Study
+
+Below we compare variants of our full TecoGAN model to EnhanceNet (ENet) [Sajjadi et al. 2017], FRVSR [Sajjadi et al. 2018],
+and DUF [Jo et al. 2018] for VSR. CycleGAN [Zhu et al. 2017] and
+RecycleGAN [Bansal et al. 2018] are compared for UVT. Specifically,
+ENet and CycleGAN represent state-of-the-art single-image adversarial models without temporal information, FRVSR and DUF are
+state-of-the-art VSR methods without adversarial losses, and RecycleGAN is a spatial adversarial model with a prediction network
+learning the temporal evolution.
+Video Super-Resolution. For VSR, we first train a DsOnly model
+that uses a frame-recurrent 𝐺 and 𝐹 with a VGG loss and only the
+regular spatial discriminator. Compared to ENet, which exhibits
+strong incoherence due to the lack of temporal information, DsOnly
+
+Learning Temporal Coherence via Self-Supervision for GAN-based Video Generation
+
+Input
+
+CycleGAN
+
+DsOnly
+
+RecycleGAN
+
+STC-V2V
+
+TecoGAN
+
+Input
+
+CycleGAN
+
+DsOnly
+
+RecycleGAN
+
+STC-V2V
+
+TecoGAN
+
+Input
+
+CycleGAN
+
+DsOnly
+
+Dst
+
+DsDtPP
+
+TecoGAN
+
+•
+
+75:7
+
+Fig. 8. When learning a mapping between Trump and Obama, the CycleGAN model gives good spatial features but collapses to essentially static outputs of Obama. It manages to
+transfer facial expressions back to Trump using tiny differences encoded in its Obama outputs, without understanding the cycle-consistency between the two domains. Being able to
+establish the correct temporal cycle-consistency between domains, ours, RecycleGAN and STC-V2V can generate correct blinking motions, shown in Sec. 4.7 of the supplemental
+web-page. Our model outperforms the latter two in terms of coherent detail that is generated. Obama and Trump video courtesy of the White House (public domain).
+
+improves temporal coherence thanks to the frame-recurrent connection, but there are noticeable high-frequency changes between
+frames. The temporal profiles of DsOnly in Fig. 6 and 7, correspondingly contain sharp and broken lines.
+When adding a temporal discriminator in addition to the spatial one (DsDt), this version generates more coherent results, and
+its temporal profiles are sharp and coherent. However, DsDt often
+produces the drifting artifacts discussed in Sec. 3, as the generator
+learns to reinforce existing details from previous frames to fool 𝐷𝑠
+with sharpness, and satisfying 𝐷𝑡 with good temporal coherence in
+the form of persistent detail. While this strategy works for generating short sequences during training, the strengthening effect can
+lead to very undesirable artifacts for long-sequence inferences.
+By adding the self-supervision for long-term temporal consistency L𝑝𝑝 , we arrive at the DsDtPP model, which effectively suppresses these drifting artifacts with an improved temporal coherence.
+In Fig. 6 and Fig. 7, DsDtPP results in continuous yet detailed temporal profiles without streaks from temporal drifting. Although DsDtPP generates good results, it is difficult in practice to balance the
+generator and the two discriminators. The results shown here were
+achieved only after numerous runs manually tuning the weights of
+the different loss terms. By using the proposed 𝐷𝑠,𝑡 discriminator
+instead, we get a first complete model for our method, denoted
+as TecoGAN⊖ . This network is trained with a discriminator that
+achieves an excellent quality with an effectively halved network
+size, as illustrated on the right of Fig. 14. The single discriminator correspondingly leads to a significant reduction in resource
+
+usage. Using two discriminators requires ca. 70% more GPU memory, and leads to a reduced training performance by ca. 20%. The
+TecoGAN⊖ model yields similar perceptual and temporal quality to
+DsDtPP with a significantly faster and more stable training.
+Since the TecoGAN⊖ model requires less training resources, we
+also trained a larger generator with 50% more weights. In the following, we will focus on this larger single-discriminator architecture
+with PP loss as our full TecoGAN model for VSR. Compared to the
+TecoGAN⊖ model, it can generate more details, and the training
+process is more stable, indicating that the larger generator and 𝐷𝑠,𝑡
+are more evenly balanced. Result images and temporal profiles are
+shown in Fig. 6 and Fig. 7. Video results are shown in Sec. 4 of the
+supplemental web-page.
+Unpaired Video Translation. We carry out a similar ablation study
+for the UVT task. Again, we start from a single-image GAN-based
+model, a CycleGAN variant which already has two pairs of spatial
+generators and discriminators. Then, we train the DsOnly variant by
+adding flow estimation via 𝐹 and extending the spatial generators
+to frame-recurrent ones. By augmenting the two discriminators to
+use the triplet inputs proposed in Sec. 3, we arrive at the Dst model
+with spatio-temporal discriminators, which does not yet use the PP
+loss. By adding the PP loss we complete the TecoGAN model for
+UVT. Although UVT tasks substantially differ from VSR tasks, the
+comparisons in Fig. 8 and Sec. 4.7 of our supplemental web-page
+illustrate that UVT tasks profit from the proposed approach in a
+very similar manner to VSR.
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+75:8
+
+•
+
+Chu, M.; Xie, Y.; Mayer, J.; Leal-Taixé, L.; Thuerey, N.
+
+We use renderings of 3D fluid simulations of rising smoke as
+our unpaired training data. These simulations are generated with
+randomized numerical simulations using a resolution of 643 for
+domain A and 2563 for domain B, and both are visualized with
+images of size 2562 . Therefore, video translation from domain A to
+B is a tough task, as the latter contains significantly more turbulent
+and small-scale motions. With no temporal information available,
+the CycleGAN variant generates HR smoke that strongly flickers.
+The DsOnly model offers better temporal coherence by relying on
+its frame-recurrent input, but it learns a solution that largely ignores
+the current input and fails to keep reasonable spatio-temporal cycleconsistency links between the two domains. On the contrary, our
+𝐷𝑠,𝑡 enables the Dst model to learn the correlation between the
+spatial and temporal aspects, thus improving the cycle-consistency.
+However, without L𝑝𝑝 , the Dst model (like the DsDt model of VSR)
+reinforces detail over time in an undesirable way. This manifests
+itself as inappropriate smoke density in empty regions. Using our
+full TecoGAN model which includes L𝑝𝑝 , yields the best results,
+with detailed smoke structures and very good spatio-temporal cycleconsistency.
+For comparison, a DsDtPP model with a larger number of networks, i.e. four discriminators, two frame-recurrent generators and
+the 𝐹 , is trained. By weighting the temporal adversarial losses from
+Dt with 0.3 and the spatial ones from Ds with 0.5, we arrived at
+a balanced training run. Although this model performs similarly
+to the TecoGAN model on the smoke dataset, the proposed spatiotemporal 𝐷𝑠,𝑡 architecture represents a more preferable choice in
+practice, as it learns a natural balance of temporal and spatial components by itself, and requires fewer resources. Continuing along
+this direction, it will be interesting future work to evaluate variants,
+such as a shared 𝐷𝑠,𝑡 for both domains, i.e. a multi-class classifier
+network. Besides the smoke dataset, an ablation study for the Obama
+and Trump dataset from Fig. 8 shows a very similar behavior, as can
+be seen in the supplemental web-page (Sec. 4.7).
+
+4.2
+
+Spatio-temporal Adversarial Equilibriums
+
+Our evaluation so far highlights that temporal adversarial learning
+is crucial for achieving spatial detail that is coherent over time for
+VSR, and for enabling the generators to learn the spatio-temporal
+correlation between domains in UVT. Next, we will shed light on the
+complex spatio-temporal adversarial learning objectives by varying the information provided to the discriminator network. In the
+following tests, shown in Fig. 9 and Sec. 5 of the supplemental document, 𝐷𝑠,𝑡 networks are identical apart from changing inputs, and
+we focus on the smoke dataset.
+In order to learn the spatial and temporal features of the target domain as well as their correlation, the simplest input for 𝐷𝑠,𝑡 consists
+of only the original, unwarped triplets, i.e. {I𝑔 or I𝑏 }. Using these, we
+train a baseline model, which yields a sub-optimal quality: it lacks
+sharp spatial structures and contains coherent but dull motions.
+Despite containing the full information, these input triplets prevent
+𝐷𝑠,𝑡 from providing the desired supervision. For paired video translation tasks, the vid2vid network achieves improved temporal coherence by using a video discriminator to supervise the output sequence
+conditioned with the ground-truth motion. With no ground-truth
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+data available, we train a vid2vid variant by using the estimated
+motions and original triplets, i.e {I𝑔 + 𝐹 (𝑔𝑡 −1, 𝑔𝑡 ) + 𝐹 (𝑔𝑡 +1, 𝑔𝑡 ) or
+I𝑏 + 𝐹 (𝑏𝑡 −1, 𝑏𝑡 ) + 𝐹 (𝑏𝑡 +1, 𝑏𝑡 )}, as the input for 𝐷𝑠,𝑡 . However, the
+result do not significantly improve. The motions are only partially
+reliable, and hence don’t help for the difficult unpaired translation
+task. Therefore, the discriminator still fails to fully correlate spatial
+and temporal features.
+We then train a third model, concat, using the original triplets and
+the warped ones, i.e. {I𝑔 + I𝑤𝑔 or I𝑏 + I𝑤𝑏 }. In this case, the model
+learns to generate more spatial details with a more vivid motion.
+I.e., the improved temporal information from the warped triplets
+gives the discriminator important cues. However, the motion still
+does not fully resemble the target domain. We arrive at our final
+TecoGAN model for UVT by controlling the composition of the input
+
+Fig. 9. Adversarial training arrives at different equilibriums when discriminators use different inputs. The baseline model (supervised on original
+triplets) and the vid2vid variant (supervised on original triplets and estimated motions) fail to learn the complex temporal dynamics of a highresolution smoke. The warped triplets improve the result of the concat model
+and the full TecoGAN model performs better spatio-temporally. Video comparisons are shown in Sec 5. of the supplemental web-page.
+
+Input
+
+TecoGAN
+
+Fig. 10. Video translations between renderings of smoke simulations and
+real-world captures for smokes.
+
+Learning Temporal Coherence via Self-Supervision for GAN-based Video Generation
+
+ENet
+
+ENet
+FRVSR
+
+FRVSR
+DUF
+
+DUF
+RBPN
+
+RBPN
+EDVR
+
+EDVR
+Teco
+GAN
+
+Teco
+GAN
+GTa
+
+GTa
+Fig. 11. Additional VSR comparisons, with videos in Sec 2 of the supplemental web-page. The TecoGAN model generates sharp details in both
+scenes.
+
+•
+
+75:9
+
+data: as outlined above, we first provide only static triplets {I𝑠𝑔 or
+I𝑠𝑏 }, and then apply the transitions of warped triplets {I𝑤𝑔 or I𝑤𝑏 },
+and original triplets {I𝑔 or I𝑏 } over the course of training. In this
+way, the network can first learn to extract spatial features and build
+on them to establish temporal features. Finally, discriminators learn
+features about the correlation of spatial and temporal content by
+analyzing the original triplets and provide gradients such that the
+generators learn to use the motion information from the input and
+establish a correlation between the motions in the two unpaired
+domains. Consequently, the discriminator, despite receiving only a
+single triplet at once, can guide the generator to produce detailed
+structures that move coherently.
+
+5
+
+RESULTS AND METRIC EVALUATION
+
+For the VSR task, we test our model on a wide range of video data,
+including the widely used Vid4 dataset shown in Fig. 6, 7 and 12,
+detailed scenes from the movie Tears of Steel (ToS) [2011] shown in
+Fig. 12, and others shown in Fig. 11. Besides ENet, FRVSR and DUF as
+baselines, we further compare our TecoGAN model to RBPN [Haris
+et al. 2019] and EDVR [Wang et al. 2019a]. Note that in contrast
+to TecoGAN with 3 million trainable weights, the latter two use
+substantially larger networks which have more than 12 and 20
+million weights respectively, and EDVR is trained using bi-cubic
+down-sampling. Thus, in the following quantitative and qualitative
+comparisons, results and metrics for EDVR are calculated using
+bi-cubic down-sampled images, while other models use LR inputs
+with a Gaussian blur. In the supplemental web-page, Sec. 2 contains
+video results for the stills shown in Fig. 11, while Sec. 3 shows video
+comparisons of Vid4 scenes.
+Trained with down-sampled inputs with Gaussian blur, the VSR
+TecoGAN model can similarly work with original images that were
+not down-sampled or filtered, such as a data-set of real-world photos.
+In Fig. 13, we compared our results to two other methods [Liao et al.
+2015; Tao et al. 2017] that have used the same dataset. With the help
+of adversarial learning, our model is able to generate improved and
+realistic details in down-sampled images as well as captured images.
+For UVT tasks, we train models for Obama and Trump translations, LR- and HR- smoke simulation translations, as well as translations between smoke simulations and real-smoke captures. While
+smoke simulations usually contain strong numerical viscosity with
+details limited by the simulation resolution, the real smoke from
+Eckert et al. [2018] contains vivid motions with many vortices and
+high-frequency details. As shown in Fig. 10, our method can be used
+to narrow the gap between simulations and real-world phenomena.
+While visual results discussed above provide a first indicator of the
+quality our approach achieves, quantitative evaluations are crucial
+for automated evaluations across larger numbers of samples. Below
+we focus more on the VSR task as ground-truth data is available. We
+conduct user studies and present evaluations of the different models
+w.r.t. established spatial metrics. We also motivate and propose two
+novel temporal metrics to quantify temporal coherence.
+For evaluating image SR, Blau and Michaeli [2018] demonstrated
+that there is an inherent trade-off between the perceptual quality of
+the result and the distortion measured with vector norms or lowlevel structures such as PSNR and SSIM. On the other hand, metrics
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+75:10
+
+• Chu, M.; Xie, Y.; Mayer, J.; Leal-Taixé, L.; Thuerey, N.
+
+ENet
+
+FRVSR
+
+DUF
+
+RBPN
+
+EDVR
+
+TecoGAN
+
+GTa
+
+Fig. 12. Detail views of the VSR results of ToS scenes (first three columns) and Vid4 scenes (two right-most columns) generated with different methods: from top to bottom.
+ENet [Sajjadi et al. 2017], FRVSR [Sajjadi et al. 2018], DUF [Jo et al. 2018], RBPN [Haris et al. 2019], EDVR [Wang et al. 2019a], TecoGAN, and the ground truth. Tears of
+Steel (ToS) movie (CC) Blender Foundation | mango.blender.org.
+
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+Learning Temporal Coherence via Self-Supervision for GAN-based Video Generation
+
+[Liao et al. 2015]
+
+Ours
+
+[Liao et al. 2015]
+
+[Tao et al. 2017]
+
+Ours
+
+•
+
+75:11
+
+Ours
+
+Fig. 13. VSR comparisons for different captured images in order to compare to previous work [Liao et al. 2015; Tao et al. 2017].
+0.06
+
+tLP ↓
+
+0.05
+
+ENet
+
+ENet
+
+FRVSR
+
+DUF
+
+Bi-cubic
+
+TecoGAN
+
+EDVR
+
+0.025
+
+tLP ↓
+DsOnly
+
+0.02
+
+Num of Variables
+(K)
+
+DsOnly
+DsDt
+DsDtPP
+
+RBPN
+
+0.04
+
+TecoGAN
+Θ
+TecoGANΘ
+
+0.015
+
+G
+
+Ds
+
+Dt
+
+Ds,t
+
+794
+
+2M
+804
+
+0.03
+
+EDVR DUF
+RBPN
+TecoGAN
+
+0.01
+
+0.005
+
+LPIPS ←
+
+FRVSR
+
+0
+
+a)
+
+0.01
+
+Bi-cubic
+
+0.02
+
+0
+
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+b)
+
+TecoGAN
+
+792
+
+Teco
+GANΘ DsDt
+DsDtPP
+
+3M
+
+804
+
+792
+
+1M
+1287
+LPIPS
+
+844
+
+844
+
+844
+
+Ds
+
+DsDt
+DsDtPP
+
+Teco
+GANΘ
+
+←
+
+0
+0.155
+
+0.165
+
+0.175
+
+0.185
+
+c) Only
+
+Teco
+GAN
+
+Fig. 14. Visual summary of VSR models. a) LPIPS (x-axis) measures spatial detail and temporal coherence is measured by tLP (y-axis) and tOF (bubble
+size with smaller as better). b) The red-dashed-box region of a), containing our ablated models. c) The network sizes.
+Table 2. Averaged VSR metric evaluations for the Vid4 data set with the following metrics, PSNR: pixel-wise accuracy. LPIPS (AlexNet): perceptual distance
+to the ground truth. T-diff: pixel-wise differences of warped frames. tOF: pixel-wise distance of estimated motions. tLP: perceptual distance between
+consecutive frames. User study: Bradley-Terry scores [Bradley and Terry 1952]. Performance is averaged over 500 images up-scaled from 320x134 to
+1280x536. More details can be found in Appendix A and Sec. 3 of the supplemental web-page.
+
+Methods
+
+PSNR↑
+
+LPIPS↓
+×10
+
+T-diff↓
+×100
+
+tOF↓
+×10
+
+tLP↓
+×100
+
+DsOnly
+DsDt
+DsDtPP
+TecoGAN⊖
+TecoGAN
+
+24.14
+24.75
+25.77
+25.89
+25.57
+
+1.727
+1.770
+1.733
+1.743
+1.623
+
+6.852
+5.071
+4.369
+4.076
+4.961
+
+2.157
+2.198
+2.103
+2.082
+1.897
+
+2.160
+0.614
+0.489
+0.718
+0.668
+
+ENet
+FRVSR
+DUF
+Bi-cubic
+RBPN
+EDVR
+
+22.31
+26.91
+27.38
+23.66
+27.15
+27.34
+
+2.458
+2.506
+2.607
+5.036
+2.511
+2.356
+
+9.281
+3.648
+3.298
+3.152
+-
+
+4.009
+2.090
+1.588
+5.578
+1.473
+1.367
+
+4.848
+0.957
+1.329
+2.144
+0.911
+0.982
+
+based on deep feature maps such as LPIPS [Zhang et al. 2018] can
+capture more semantic similarities. We measure the PSNR and LPIPS
+using the Vid4 scenes. With a PSNR decrease of less than 2dB over
+DUF (which has twice the model size), the LPIPS score of TecoGAN
+shows an improvement of more than 40%. The other baselines are
+outperformed by similar margins. Even compared to the large EDVR
+model using down-sampled inputs without Gaussian blur, TecoGAN
+still yields a 30% improvement in terms of LPIPS.
+While traditional temporal metrics based on vector norm differences of warped frames, e.g. T-diff = ∥𝑔𝑡 − 𝑊 (𝑔𝑡 −1, 𝑣𝑡 )∥ 1 [Chen et al.
+
+3.258
+
+Model ↓
+Size(M)
+
+0.8(G)+1.7(F)
+1.3(G)+1.7(F)
+
+Processing
+↓
+Time(ms/frame)
+
+1.616
+2.600
+2.933
+0.0
+-
+
+0.8(SRNet)+1.7(F)
+6.2
+12.7
+20.7
+
+36.95
+942.21
+510.90
+299.71
+
+User ↑
+Study
+
+37.07
+41.92
+
+2017], can be easily deceived by very blurry results, e.g. bi-cubic
+interpolated ones, we propose to use a tandem of two new metrics,
+tOF and tLP, to measure the consistence over time. tOF measures
+the pixel-wise difference of motions estimated from sequences, and
+tLP measures perceptual changes over time using deep feature map:
+tOF = ∥𝑂𝐹 (𝑏𝑡 −1 , 𝑏𝑡 ) − 𝑂𝐹 (𝑔𝑡 −1 , 𝑔𝑡 ) ∥ 1
+tLP = ∥𝐿𝑃 (𝑏𝑡 −1 , 𝑏𝑡 ) − 𝐿𝑃 (𝑔𝑡 −1 , 𝑔𝑡 ) ∥ 1 .
+
+and
+
+(2)
+
+𝑂𝐹 represents an optical flow estimation with the Farneback [2003]
+algorithm and 𝐿𝑃 is the perceptual LPIPS metric. In tLP, the behavior of the reference is also considered, as natural videos exhibit a
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+75:12
+
+• Chu, M.; Xie, Y.; Mayer, J.; Leal-Taixé, L.; Thuerey, N.
+
+certain degree of change over time. In conjunction, both pixel-wise
+differences and perceptual changes are crucial for quantifying realistic temporal coherence. While they could be combined into a
+single score, we list both measurements separately, as their relative
+importance could vary in different application settings.
+Our evaluation with these temporal metrics in Table 2 shows
+that all temporal adversarial models outperform spatial adversarial
+ones and the full TecoGAN model performs very well: With a large
+amount of spatial detail, it still achieves good temporal coherence, on
+par with non-adversarial methods such as DUF, FRVSR, RBPN and
+EDVR. These results are also visualized in Fig. 14. For VSR, we have
+confirmed these automated evaluations with several user studies
+(details in Appendix B). Across all of them, we find that the majority
+of the participants considered the TecoGAN results to be closest to
+the ground truth, when comparing to bi-cubic interpolation, ENet,
+FRVSR and DUF.
+For the UVT tasks, where no ground-truth data is available,
+we can still evaluate tOF and tLP metrics by comparing the motion and the perceptual changes of the output data w.r.t. the ones
+𝑎→𝑏 )
+from the input data , i.e., tOF = 𝑂𝐹 (𝑎𝑡 −1 , 𝑎𝑡 ) − 𝑂𝐹 (𝑔𝑡𝑎→𝑏
+and
+−1 , 𝑔𝑡
+1
+𝑎→𝑏 ) . With sharp spatial features and
+tLP= 𝐿𝑃 (𝑎𝑡 −1 , 𝑎𝑡 ) − 𝐿𝑃 (𝑔𝑡𝑎→𝑏
+,
+𝑔
+𝑡
+−1
+1
+coherent motion, TecoGAN outperforms CycleGAN and RecycleGAN on the Obama&Trump dataset, as shown in Table 3, although
+it is worth pointing out that tOF is less informative in this case, as
+the motion in the target domain is not necessarily pixel-wise aligned
+with the input. While RecycleGAN uses an L2-based cycle loss that
+leads to undesirable smoothing, Park et al. [2019] propose to use
+temporal-cycle losses in together with a VGG-based content preserving loss (we will refer to this method as STC-V2V below). While the
+evaluation of temporal metrics for TecoGAN and STC-V2V is very
+close, Fig. 8 shows that our results contain sharper spatial details,
+such as the eyes and eyebrows of Obama as well as the wrinkles of
+Trump. This is illustrated in Sec. 2.2 of the supplemental web-page.
+Overall, TecoGAN successfully generates spatial details, on par with
+CycleGAN. TecoGAN also achieves very good tLP scores thanks
+to the supervision of temporal coherence, on par with previous
+work [Bansal et al. 2018; Park et al. 2019], despite inferring outputs
+with improved spatial complexity.
+In line with VSR, a perceptual evaluation by humans in a user
+study confirms our metric evaluations for the UVT task. The participants consistently prefer TecoGAN results over CycleGAN and
+RecycleGAN. The corresponding scores are given in the right column of Table 3.
+
+Table 3. For the Obama&Trump dataset, the averaged tLP and tOF evaluations closely correspond to our user studies. The table below summarizes
+user preferences as Bradley-Terry scores. Details are given in Appendix B
+and Sec. 3 of the supplemental web-page.
+UVT scenes Trump→Obama Obama→Trump
+metrics
+tLP ↓
+CycleGAN 0.0176
+RecycleGAN 0.0111
+STC-V2V
+0.0143
+TecoGAN
+0.0120
+
+tOF ↓
+0.7727
+0.8705
+0.7846
+0.6155
+
+tLP ↓
+tOF ↓
+0.0277 1.1841
+0.0248 1.1237
+0.0168 0.927
+0.0191 0.7670
+
+AVG
+
+User Studies↑,
+ref. to
+original arbitrary
+input target
+
+tLP ↓ tOF ↓
+0.0234 0.9784
+0.0
+0.0
+0.0179 0.9971 0.994 0.202
+0.0156 0.8561
+0.0156 0.6913 1.817 0.822
+
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+6
+
+DISCUSSION AND LIMITATIONS
+
+In paired as well as unpaired data domains, we have demonstrated
+that it is possible to learn stable temporal functions with GANs
+thanks to the proposed discriminator architecture and PP loss. We
+have shown that this yields coherent and sharp details for VSR
+problems that go beyond what can be achieved with direct supervision. In UVT, we have shown that our architecture guides the
+training process to successfully establish the spatio-temporal cycle
+consistency between two domains. These results are reflected in the
+proposed metrics and confirmed by user studies.
+While our method generates very realistic results for a wide range
+of natural images, our method can lead to temporally coherent yet
+sub-optimal details in certain cases such as under-resolved faces
+and text in VSR, or UVT tasks with strongly different motion between two domains. For the latter case, it would be interesting to
+apply both our method and motion translation from concurrent
+work [Chen et al. 2019]. This can make it easier for the generator
+to learn from our temporal self-supervision. The proposed temporal self-supervision also has potential to improve other tasks such
+as video in-painting and video colorization. In these multi-modal
+problems, it is especially important to preserve long-term temporal
+consistency. For our method, the interplay of the different loss terms
+in the non-linear training procedure does not provide a guarantee
+that all goals are fully reached every time. However, we found our
+method to be stable over a large number of training runs and we
+anticipate that it will provide a very useful basis for a wide range of
+generative models for temporal data sets.
+
+ACKNOWLEDGMENTS
+This work was supported by the ERC Starting Grant realFlow (StG2015-637014) and the Humboldt Foundation through the Sofja Kovalevskaja Award. We would like to thank Kiwon Um for helping
+with the user studies.
+
+REFERENCES
+Aayush Bansal, Shugao Ma, Deva Ramanan, and Yaser Sheikh. 2018. Recycle-GAN:
+Unsupervised Video Retargeting. In The European Conference on Computer Vision
+(ECCV).
+Dina Bashkirova, Ben Usman, and Kate Saenko. 2018. Unsupervised video-to-video
+translation. arXiv preprint arXiv:1806.03698 (2018).
+Yochai Blau and Tomer Michaeli. 2018. The perception-distortion tradeoff. In Proc. 2018
+IEEE/CVF Conference on Computer Vision and Pattern Recognition, Salt Lake City,
+Utah, USA. 6228–6237.
+Ralph Allan Bradley and Milton E Terry. 1952. Rank analysis of incomplete block
+designs: I. The method of paired comparisons. Biometrika 39, 3/4 (1952), 324–345.
+Andrew Brock, Jeff Donahue, and Karen Simonyan. 2019. Large Scale GAN Training
+for High Fidelity Natural Image Synthesis. In International Conference on Learning
+Representations. https://openreview.net/forum?id=B1xsqj09Fm
+Jose Caballero, Christian Ledig, Andrew P Aitken, Alejandro Acosta, Johannes Totz,
+Zehan Wang, and Wenzhe Shi. 2017. Real-Time Video Super-Resolution with SpatioTemporal Networks and Motion Compensation.. In CVPR, Vol. 1. 7.
+(CC) Blender Foundation | mango.blender.org. 2011. Tears of Steel. https://mango.
+blender.org/. Online; accessed 15 Nov. 2018.
+Dongdong Chen, Jing Liao, Lu Yuan, Nenghai Yu, and Gang Hua. 2017. Coherent online
+video style transfer. In Proc. Intl. Conf. Computer Vision (ICCV).
+Yang Chen, Yingwei Pan, Ting Yao, Xinmei Tian, and Tao Mei. 2019. Mocycle-GAN:
+Unpaired Video-to-Video Translation. arXiv preprint arXiv:1908.09514 (August 2019).
+Alexey Dosovitskiy, Philipp Fischer, Eddy Ilg, Philip Hausser, Caner Hazirbas, Vladimir
+Golkov, Patrick Van Der Smagt, Daniel Cremers, and Thomas Brox. 2015. Flownet:
+Learning optical flow with convolutional networks. In Proceedings of the IEEE international conference on computer vision. 2758–2766.
+M-L Eckert, Wolfgang Heidrich, and Nils Thuerey. 2018. Coupled fluid density and
+motion from single views. In Computer Graphics Forum, Vol. 37(8). Wiley Online
+
+Learning Temporal Coherence via Self-Supervision for GAN-based Video Generation
+
+Library, 47–58.
+Gunnar Farnebäck. 2003. Two-frame motion estimation based on polynomial expansion.
+In Scandinavian conference on Image analysis. Springer, 363–370.
+Gustav Theodor Fechner and Wilhelm Max Wundt. 1889. Elemente der Psychophysik:
+erster Theil. Breitkopf & Härtel.
+Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil
+Ozair, Aaron Courville, and Yoshua Bengio. 2014. Generative adversarial nets. In
+Advances in neural information processing systems. 2672–2680.
+Ishaan Gulrajani, Faruk Ahmed, Martin Arjovsky, Vincent Dumoulin, and Aaron C
+Courville. 2017. Improved training of wasserstein gans. In Advances in neural
+information processing systems. 5767–5777.
+Muhammad Haris, Gregory Shakhnarovich, and Norimichi Ukita. 2019. Recurrent backprojection network for video super-resolution. In Proceedings of the IEEE Conference
+on Computer Vision and Pattern Recognition. 3897–3906.
+Mingming He, Dongdong Chen, Jing Liao, Pedro V. Sander, and Lu Yuan. 2018. Deep
+Exemplar-Based Colorization. ACM Trans. Graph. 37, 4, Article 47 (July 2018),
+16 pages.
+Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A. Efros. 2017. Image-To-Image
+Translation With Conditional Adversarial Networks. In The IEEE Conference on
+Computer Vision and Pattern Recognition (CVPR).
+Ondřej Jamriška, Šárka Sochorová, Ondřej Texler, Michal Lukáč, Jakub Fišer, Jingwan
+Lu, Eli Shechtman, and Daniel Sýkora. 2019. Stylizing Video by Example. ACM
+Transactions on Graphics 38, 4, Article 107 (2019).
+Younghyun Jo, Seoung Wug Oh, Jaeyeon Kang, and Seon Joo Kim. 2018. Deep Video
+Super-Resolution Network Using Dynamic Upsampling Filters Without Explicit
+Motion Compensation. In Proceedings of the IEEE Conference on Computer Vision
+and Pattern Recognition. 3224–3232.
+Justin Johnson, Alexandre Alahi, and Li Fei-Fei. 2016. Perceptual losses for real-time
+style transfer and super-resolution. In European Conference on Computer Vision.
+Springer, 694–711.
+Anton S Kaplanyan, Anton Sochenov, Thomas Leimkühler, Mikhail Okunev, Todd
+Goodall, and Gizem Rufo. 2019. DeepFovea: neural reconstruction for foveated
+rendering and video compression using learned statistics of natural videos. ACM
+Transactions on Graphics (TOG) 38, 6 (2019), 1–13.
+Tero Karras, Timo Aila, Samuli Laine, and Jaakko Lehtinen. 2017. Progressive growing
+of gans for improved quality, stability, and variation. arXiv preprint arXiv:1710.10196
+(2017).
+T Kelly, P Guerrero, A Steed, P Wonka, and NJ Mitra. 2018. FrankenGAN: guided
+detail synthesis for building mass models using style-synchonized GANs. ACM
+Transactions on Graphics 37, 6 (November 2018).
+Byungsoo Kim, Vinicius C. Azevedo, Markus Gross, and Barbara Solenthaler. 2019.
+Transport-Based Neural Style Transfer for Smoke Simulations. ACM Trans. Graph.
+38, 6, Article 188 (Nov. 2019), 11 pages.
+Jiwon Kim, Jung Kwon Lee, and Kyoung Mu Lee. 2016. Accurate image super-resolution
+using very deep convolutional networks. In Proceedings of the IEEE conference on
+computer vision and pattern recognition. 1646–1654.
+Wei-Sheng Lai, Jia-Bin Huang, Narendra Ahuja, and Ming-Hsuan Yang. 2017. Deep
+laplacian pyramid networks for fast and accurate superresolution. In IEEE Conference
+on Computer Vision and Pattern Recognition, Vol. 2. 5.
+Christian Ledig, Lucas Theis, Ferenc Huszár, Jose Caballero, Andrew Cunningham,
+Alejandro Acosta, Andrew Aitken, Alykhan Tejani, Johannes Totz, Zehan Wang, et al.
+2016. Photo-realistic single image super-resolution using a generative adversarial
+network. arXiv:1609.04802 (2016).
+Renjie Liao, Xin Tao, Ruiyu Li, Ziyang Ma, and Jiaya Jia. 2015. Video super-resolution
+via deep draft-ensemble learning. In Proceedings of the IEEE International Conference
+on Computer Vision. 531–539.
+Ce Liu and Deqing Sun. 2011. A Bayesian approach to adaptive video super resolution.
+In Computer Vision and Pattern Recognition (CVPR), 2011 IEEE Conference on. IEEE,
+209–216.
+Ding Liu, Zhaowen Wang, Yuchen Fan, Xianming Liu, Zhangyang Wang, Shiyu Chang,
+and Thomas Huang. 2017. Robust video super-resolution with learned temporal
+dynamics. In Computer Vision (ICCV), 2017 IEEE International Conference on. IEEE,
+2526–2534.
+Pengpeng Liu, Michael Lyu, Irwin King, and Jia Xu. 2019. Selflow: Self-supervised
+learning of optical flow. In Proceedings of the IEEE Conference on Computer Vision
+and Pattern Recognition. 4571–4580.
+Xudong Mao, Qing Li, Haoran Xie, Raymond YK Lau, Zhen Wang, and Stephen
+Paul Smolley. 2017. Least squares generative adversarial networks. In Proceedings of the IEEE International Conference on Computer Vision. 2794–2802.
+Seungjun Nah, Sungyong Baik, Seokil Hong, Gyeongsik Moon, Sanghyun Son, Radu
+Timofte, and Kyoung Mu Lee. 2019. NTIRE 2019 Challenge on Video Deblurring and
+Super-Resolution: Dataset and Study. In The IEEE Conference on Computer Vision
+and Pattern Recognition (CVPR) Workshops.
+Suraj Nair, Mohammad Babaeizadeh, Chelsea Finn, Sergey Levine, and Vikash Kumar.
+2018. Time reversal as self-supervision. arXiv preprint arXiv:1810.01128 (2018).
+
+•
+
+75:13
+
+Kwanyong Park, Sanghyun Woo, Dahun Kim, Donghyeon Cho, and In So Kweon.
+2019. Preserving Semantic and Temporal Consistency for Unpaired Video-to-Video
+Translation. In Proceedings of the 27th ACM International Conference on Multimedia
+(Nice, France) (MM ’19). Association for Computing Machinery, New York, NY, USA,
+1248–1257. https://doi.org/10.1145/3343031.3350864
+Eduardo Pérez-Pellitero, Mehdi SM Sajjadi, Michael Hirsch, and Bernhard Schölkopf.
+2018. Photorealistic Video Super Resolution. arXiv preprint arXiv:1807.07930 (2018).
+Ekta Prashnani, Hong Cai, Yasamin Mostofi, and Pradeep Sen. 2018. PieAPP: Perceptual
+Image-Error Assessment through Pairwise Preference. In Proceedings of the IEEE
+Conference on Computer Vision and Pattern Recognition. 1808–1817.
+Manuel Ruder, Alexey Dosovitskiy, and Thomas Brox. 2016. Artistic style transfer for
+videos. In German Conference on Pattern Recognition. Springer, 26–36.
+Mehdi SM Sajjadi, Bernhard Schölkopf, and Michael Hirsch. 2017. Enhancenet: Single
+image super-resolution through automated texture synthesis. In Computer Vision
+(ICCV), 2017 IEEE International Conference on. IEEE, 4501–4510.
+Mehdi SM Sajjadi, Raviteja Vemulapalli, and Matthew Brown. 2018. Frame-Recurrent
+Video Super-Resolution. In The IEEE Conference on Computer Vision and Pattern
+Recognition (CVPR 2018).
+Wenzhe Shi, Jose Caballero, Ferenc Huszár, Johannes Totz, Andrew P Aitken, Rob
+Bishop, Daniel Rueckert, and Zehan Wang. 2016. Real-time single image and
+video super-resolution using an efficient sub-pixel convolutional neural network.
+In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition.
+1874–1883.
+Karen Simonyan and Andrew Zisserman. 2014. Very deep convolutional networks for
+large-scale image recognition. arXiv preprint arXiv:1409.1556 (2014).
+Vincent Sitzmann, Steven Diamond, Yifan Peng, Xiong Dun, Stephen Boyd, Wolfgang
+Heidrich, Felix Heide, and Gordon Wetzstein. 2018. End-to-end optimization of optics
+and image processing for achromatic extended depth of field and super-resolution
+imaging. ACM Transactions on Graphics (TOG) 37, 4 (2018), 1–13.
+Xin Tao, Hongyun Gao, Renjie Liao, Jue Wang, and Jiaya Jia. 2017. Detail-Revealing
+Deep Video Super-Resolution. In The IEEE International Conference on Computer
+Vision (ICCV).
+Kiwon Um, Xiangyu Hu, and Nils Thuerey. 2017. Perceptual evaluation of liquid
+simulation methods. ACM Transactions on Graphics (TOG) 36, 4 (2017), 143.
+Chaoyue Wang, Chang Xu, Chaohui Wang, and Dacheng Tao. 2018b. Perceptual
+adversarial networks for image-to-image transformation. IEEE Transactions on
+Image Processing 27, 8 (2018), 4066–4079.
+Ting-Chun Wang, Ming-Yu Liu, Jun-Yan Zhu, Guilin Liu, Andrew Tao, Jan Kautz,
+and Bryan Catanzaro. 2018a. Video-to-Video Synthesis. In Advances in Neural
+Information Processing Systems (NIPS).
+Xintao Wang, Kelvin C.K. Chan, Ke Yu, Chao Dong, and Chen Change Loy. 2019a.
+EDVR: Video restoration with enhanced deformable convolutional networks. In The
+IEEE Conference on Computer Vision and Pattern Recognition Workshops (CVPRW).
+Xiaolong Wang, Allan Jabri, and Alexei A Efros. 2019b. Learning correspondence from
+the cycle-consistency of time. In Proceedings of the IEEE Conference on Computer
+Vision and Pattern Recognition. 2566–2576.
+Bartlomiej Wronski, Ignacio Garcia-Dorado, Manfred Ernst, Damien Kelly, Michael
+Krainin, Chia-Kai Liang, Marc Levoy, and Peyman Milanfar. 2019. Handheld MultiFrame Super-Resolution. ACM Trans. Graph. 38, 4, Article 28 (July 2019), 18 pages.
+Zhijie Wu, Xiang Wang, Di Lin, Dani Lischinski, Daniel Cohen-Or, and Hui Huang.
+2019. SAGNet: Structure-aware Generative Network for 3D-Shape Modeling. ACM
+Transactions on Graphics (Proceedings of SIGGRAPH 2019) 38, 4 (2019), 91:1–91:14.
+You Xie, Erik Franz, Mengyu Chu, and Nils Thuerey. 2018. tempoGAN: A Temporally
+Coherent, Volumetric GAN for Super-resolution Fluid Flow. ACM Transactions on
+Graphics (TOG) 37, 4 (2018), 95.
+Bo Zhang, Mingming He, Jing Liao, Pedro V Sander, Lu Yuan, Amine Bermak, and
+Dong Chen. 2019. Deep Exemplar-based Video Colorization. In Proceedings of the
+IEEE Conference on Computer Vision and Pattern Recognition. 8052–8061.
+Richard Zhang, Phillip Isola, Alexei A Efros, Eli Shechtman, and Oliver Wang. 2018. The
+unreasonable effectiveness of deep features as a perceptual metric. arXiv preprint
+(2018).
+Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei A Efros. 2017. Unpaired image-toimage translation using cycle-consistent adversarial networks. In Proceedings of the
+IEEE international conference on computer vision. 2223–2232.
+Xizhou Zhu, Han Hu, Stephen Lin, and Jifeng Dai. 2019. Deformable convnets v2: More
+deformable, better results. In Proceedings of the IEEE Conference on Computer Vision
+and Pattern Recognition. 9308–9316.
+
+ACM Trans. Graph., Vol. 39, No. 4, Article 75. Publication date: July 2020.
+
+

@@ -1,0 +1,1809 @@
+Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Contents lists available at ScienceDirect
+
+Computer Methods and Programs in Biomedicine
+journal homepage: www.elsevier.com/locate/cmpb
+
+A GAN-based image synthesis method for skin lesion classiﬁcation
+Zhiwei Qin a, Zhao Liu b, Ping Zhu a,∗, Yongbo Xue a
+a
+b
+
+The State key laboratory of Mechanical System and Vibration, School of Mechanical Engineering, Shanghai Jiao Tong University, Shanghai 200240, China
+School of Design, Shanghai Jiao Tong University, Shanghai 200240, China
+
+a r t i c l e
+
+i n f o
+
+Article history:
+Received 31 January 2020
+Revised 20 May 2020
+Accepted 21 May 2020
+
+Keywords:
+Generative adversarial networks
+Image synthesis
+Data augmentation
+Transfer learning
+Skin lesion classiﬁcation
+
+a b s t r a c t
+Background and Objective: There are many types of skin cancer, and melanoma is the most lethal one.
+Dermoscopy is an important imaging technique to screen melanoma and other skin lesions. However,
+Skin lesion classiﬁcation based on computer-aided diagnostic techniques is a challenging task owing to
+the scarcity of labeled data and class-imbalanced dataset. It is necessary to apply data augmentation
+technique based on generative adversarial networks (GANs) to skin lesion classiﬁcation for helping dermatologists in more accurate diagnostic decisions.
+Methods: A whole process of using GAN-based data augmentation technology to improve the skin lesion classiﬁcation performance has been established in this article. First of all, the skin lesion style-based
+GANs is proposed according to the basic architecture of style-based GANs. The proposed model modiﬁes the structure of style control and noise input in the original generator, adjusts both the generator
+and discriminator to eﬃciently synthesize high-quality skin lesion images. As for image classiﬁcation, the
+classiﬁer is constructed on the pretrained deep neural network using transfer learning method. The synthetic images from the proposed skin lesion style-based GANs are ﬁnally added to the training set to help
+train the classiﬁer for better classiﬁcation performance.
+Results: The proposed skin lesion style-based GAN has been evaluated by Inception Score (IS), Fréchet
+Inception Distance (FID), Precision and Recall, and is superior to other compared GAN models in these
+quantitative evaluation metrics. By adding the synthesized images to the training set, the main classiﬁcation indicators like accuracy, sensitivity, speciﬁcity, average precision and balanced multiclass accuracy
+are 95.2%, 83.2%, 74.3%, 96.6% and 83.1% on the dataset of International Skin Imaging Collaboration (ISIC)
+2018 Challenge, which have been improved by 1.6%, 24.4%, 3.6%, 23.2% and 5.6% respectively compared to
+the CNN model.
+Conclusions: The proposed skin lesion style-based GANs can generate high-quality skin lesion images
+eﬃciently, leading to the performance improvement of the classiﬁcation model. This work provides a
+valuable reference for medical image analysis based on deep learning.
+© 2020 Elsevier B.V. All rights reserved.
+
+1. Introduction
+Skin cancer is a major public health problem in the world [1,2].
+As the most lethal skin cancer, melanoma causes over 7,0 0 0 deaths
+a year in the United States [2]. Early diagnosis of melanoma is an
+important issue that can greatly improve the survival rate of patients [3]. Skin lesions are primarily diagnosed visually, and most
+of them are ﬁrst recognized by patients [4]. Visual inspection of
+skin lesions is affected by the similarities among different categories and their complex appearances, making the diagnostic accuracy of dermatologists is only about 60% [5,6].
+Dermoscopy, an imaging technique that magniﬁes the skin and
+eliminates the skin surface reﬂection for a detailed view of the
+∗
+
+Corresponding author.
+E-mail addresses: hotlz@sjtu.edu.cn (Z. Liu), pzhu@sjtu.edu.cn (P. Zhu).
+
+https://doi.org/10.1016/j.cmpb.2020.105568
+0169-2607/© 2020 Elsevier B.V. All rights reserved.
+
+skin structure, helps improve recognition performance of skin lesions. The diagnostic accuracy based on dermoscopy imaging can
+be increased to 75%-84% [5,6]. Despite the improvement of diagnostic accuracy made by dermoscopy, it is still a time-consuming
+job to screen skin diseases through dermoscopy images, and the
+diagnosis is easily affected by subjective factors of different dermatologists, lacking stability [5]. Therefore, it is necessary to set
+up automated computer-aided diagnostic systems for skin lesion
+classiﬁcation to help dermatologists in decision making.
+Skin lesion classiﬁcation is a challenging job due to the ﬁnegrained variability of the skin lesion appearances. Deep learning
+algorithms, with the development of high-performance computing
+and the emergence of very large datasets, have shown great potential in different image processing applications. And one of the most
+prevalent deep learning algorithms is deep convolutional neural
+network (CNN), which usually conducts an end-to-end training
+
+2
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+based on the input of image pixels and labels. CNN can automatically extract prominent features from the input data, which is superior to the hand-crafted way. Lo et al. [7] ﬁrstly applied CNNs
+to the ﬁeld of medical image analysis in 1995. Suﬃcient labeled
+data are required to train a deep CNN model with good generalization ability. Nevertheless, the publicly available data for skin
+lesion classiﬁcation are very limited. Deep learning algorithms for
+skin lesion classiﬁcation can be summarized as two types: model
+transfer method via transfer learning [8] and learning from scratch.
+Limited by datasets bottleneck, many researchers choose the former. In transfer learning, a CNN model is pretrained on a large
+dataset, then the pretrained model is transferred to the target task
+and ﬁne-tuned to tackle the target problem.
+Esteva et al. [9] utilized the GoogleNet Inception v3 CNN architecture [10] pretrained on the ImageNet dataset [11] and ﬁnetuned it with a dataset of 129,450 clinical images. The dataset is
+organized in a tree-structured taxonomy with 2,032 kinds of diseases as its leaf nodes and the training classes are deﬁned by these
+leaf nodes via a partitioning algorithm. The performance of CNN
+model was compared with 21 dermatologists on two binary classiﬁcation problems. The results show that artiﬁcial intelligence has
+reached the level of human experts in some skin cancer classiﬁcation problems. This landmark work has attracted many follow-up
+researchers.
+Lopez et al. [12] modiﬁed a pretrained VGGNet [13] to solve
+the problem of skin lesion classiﬁcation, a binary classiﬁcation between malignant and benign using dermoscopic images. The authors augmented the data via random transformations like image
+re-scaling, horizontal shift and rotations so as to improve the capability of the classiﬁer. The approach achieved 78.66% for sensitivity and 79.74% for precision, which were higher than the compared methods on International Skin Imaging Collaboration (ISIC)
+2016 challenge dataset [14].
+Mahbod et al. [15] used pretrained AlexNet [16], VGG16
+[13] and ResNet-18 [17] for feature extraction, and trained three
+support vector machine (SVM) classiﬁers. The ﬁnal classiﬁcation
+was achieved by fusing the outputs of these three classiﬁers. The
+method achieved an area under the receiver operating characteristic curve (AUC) of 83.83% for melanoma and 97.55% for seborrheic
+keratosis on ISIC 2017 dataset [18].
+Hekler et al. [19] explored a combination of dermatologists and
+artiﬁcial intelligence for skin lesion classiﬁcation. The authors used
+a ResNet50 [17] model and 112 dermatologists to produce two sets
+of classiﬁcation results. The results then were fused via XGBoost
+[20] algorithm. The combination decisions of human beings and
+artiﬁcial intelligence showed the superiority over the independent
+systems.
+Although training a CNN model from scratch is limited by the
+scarcity of skin lesion datasets, a more targeted networks structure can be designed by learning from scratch. Ayan and Ünver
+[21] trained a CNN model with 4 convolutional layers for distinguishing of benign skin lesions from melanoma under a normal
+dataset and augmented data set, indicating that data augmentation is beneﬁt for classiﬁcation accuracy and avoiding overﬁtting.
+Zhang et al. [22] developed a novel skin lesion classiﬁcation model
+through training two dual deep CNNs and enabling them to facilitate each other. The proposed model gained the state-of-the-art
+results on the ISIC 2016 Challenge dataset [14].
+Since deep learning relies on the support of a vast amount
+of annotated data, which is often scarce in medicine. Researchers
+tend to use data augmentation techniques to improve the robustness and generalization capability of the models [12,15,21,22].
+As for image data augmentation, simple image modiﬁcations like
+rescaling, rotation, ﬂip and shift are the most common methods.
+In the ﬁeld of computer vision, these classic data augmentation
+methods have become a standard operation of the networks train-
+
+ing process [16,23]. However, with small modiﬁcations on original
+data, these methods cannot provide too much additional information. A more sophisticated data augmentation method, data synthesis, is promising and attracts a lot of attention. The most prominent approaches of data synthesis are variational autoencoders
+(VAEs) [24] and generative adversarial networks (GANs) [25]. VAEs
+are easy to train and have a highly structured, continuous latent
+representation. GANs have a hard and unstable training process,
+but can produce sharp and realistic images. GANs have showed effectiveness in medical imaging [26,27], yet there is still a lack of
+systematic research on the image synthesis of skin lesions.
+Yi et al. [28] proposed to use categorical generative adversarial network (catGAN) [29] assisted by Wasserstein distance [30] for
+feature learning of dermoscopy images. The catWGAN can generate
+images of size 64 × 64 and classify the input samples into speciﬁc classes. The proposed method scored 0.424 for average precision with only 140 labeled images from the ISIC 2016 Challenge
+dataset [14], much better than the denoising autoencoder and simple hand-crafted features.
+Baur et al. [31] aimed to increase the resolution of generated
+images and proposed deeply discriminated GAN (DDGAN). The authors synthesized realistically looking skin lesion images of size
+256 × 256 and presented a comparison of the DDGAN, DCGAN
+[32] and LAPGAN [33], showing both DDGAN and LAPGAN can
+learn the distribution of datasets and synthesize realistic samples.
+Furthermore, the authors [34] tried to synthesize high-quality and
+realistic skin lesion images with higher resolution. They used progressive growing of GANs (PGGAN) [35] to facilitate image synthesis from noise, which can generate images at resolution up to
+1024 × 1024 pixels. The images synthesized by DCGAN, LAPGAN,
+PGGAN were evaluated both in Visual Turing Test (qualitative way)
+and the Sliced Wasserstein Distance (quantitative way). The results
+of Visual Turing Test indicated that even dermatologists have diﬃculty identifying synthetic images from real ones.
+Bissoto et al. [36] employed pix2pixHD GAN [37] for image synthesis. Instead of generating images from random noise, they synthesized from semantic maps and instance maps. Although the
+proposed pix2pixHD GAN requires annotated data to generate images, it is still a novel method to utilize the meaningful skin lesion
+knowledge for synthesizing high-quality images, and is conductive
+to skin lesion classiﬁcation performance to some extent.
+Rashid et al. [38] utilized GANs for skin lesion images data
+augmentation, and the discriminator of the GANs also acted as
+the ﬁnal classiﬁer that learned to identify seven skin lesion categories from ISIC 2018 challenge dataset [39,40]. The authors
+also employed transfer learning to ﬁne-tune DenseNet [41] and
+ResNet [17] architectures and compared their classiﬁcation performance with the GAN-based data augmentation model. The proposed method delivered signiﬁcant performance gains of balance
+accuracy score.
+GANs technique develops rapidly and is applied in more and
+more medical applications, such as medical image synthesis, segmentation, detection, classiﬁcation and reconstruction [26]. However, data augmentation technique based on image synthesis has
+been applied to skin lesion images for only two years, and there
+are not many related studies and discussions according to previous
+literature review [28,31,34,36,38]. One of the biggest challenges in
+current research of skin lesion image synthesis is the low resolution of image generated by those most frequently used methods
+like DCGAN. Some more advanced architectures of GANs which can
+generate high-resolution images need to be further applied to skin
+lesion image synthesis. This work is devoted to handle this issue
+by proposing a skin lesion style-based GANs model on the basis
+of an excellent GANs architecture, which can generate high-quality
+skin lesion images. A basic classiﬁer is then constructed using
+transfer learning, which performs well on skin lesion classiﬁcation.
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+3
+
+Fig. 1. Block diagram of the proposed methodology.
+
+Ultimately the images synthesized by the proposed GANs model
+are added to the training set to help train the basic classiﬁer for
+better classiﬁcation performance.
+The main contributions of this article are outlined as follows:
+(1) For the synthesis of skin lesion images, a skin lesion stylebased GANs model is proposed on the basis of the style-based
+GANs architecture. The proposed model modiﬁes the structure
+of style control and noise input in the original generator, adjusts the progressive growing structures of the generator and
+discriminator. It is effective for generating skin lesion images
+with high resolution and rich diversity.
+(2) For the classiﬁcation of skin lesion images, the classiﬁcation
+model is constructed using the method of transfer learning, and
+its classiﬁcation accuracy is higher than that of the general convolution neural network. By adding the skin lesion images generated by the proposed skin lesion style-based GANs, the performance of the classiﬁcation model is further improved.
+(3) The process including image synthesis, classiﬁer construction
+and image classiﬁcation is established (see Fig. 1). The whole
+framework is suitable for medical image analysis, where the
+data is lack of annotation and the classes are imbalanced. It offers a valuable reference for the automatic diagnosis based on
+medical image data.
+The rest of this article is organized as follows. An overview
+on the dataset used in this work is presented in Section 2.
+Section 3 introduces the proposed framework and methods in detailed. Experiments on GANs evaluation and image classiﬁcation,
+along with their results are presented in Section 4. The discussion
+and conclusion are given in Section 5 and Section 6 respectively.
+
+called ISIC 2018 dataset. It consists of 10,015 dermatoscopic images of skin lesions and these images were collected from Austria
+and Australia. They are 24-bit RGB images with a uniform size of
+600 × 450 pixels and 96 dpi. Seven diagnostic categories are deﬁned in the ISIC 2018 dataset, brief descriptions of each category
+[40] are listed in Table 1 and the sample images of each category
+are shown in Fig. 2.
+These seven comprehensive diagnostic categories cover more
+than 95% of skin lesion types. There are signiﬁcant differences
+within the same class, while the similarity between classes may
+be large (see Fig. 2). In addition, it is a dataset with unbalanced categories, where more than two-thirds of images belong
+to melanocytic nevi while dermatoﬁbroma only accounts for 1.15%
+by contrast. In terms of image quality, these images have different perspectives and lighting conditions, and many images contain
+artifacts like hair, mark, etc. Therefore, it is a big challenge for a
+classiﬁer to distinguish these seven categories.
+3. Proposed approaches
+This work proposes an effective framework for medical image analysis, including image synthesis, classiﬁer construction and
+image classiﬁcation (see Fig. 1). The skin lesion images are synthesized via GAN-based data augmentation technology, and this
+methodology is elaborated in Section 3.1. The classiﬁer for skin
+lesion classiﬁcation is constructed using transfer learning method,
+which is introduced in Section 3.2. The synthesized images are ﬁnally added into the original training dataset to improve the capability of the classiﬁer.
+3.1. GAN-based data augmentation
+
+2. An overview on dataset
+An open dermoscopy dataset is utilized to evaluate the methods. The dataset is provided by International Skin Imaging Collaboration (ISIC) 2018 classiﬁcation challenge [39], so it is also
+
+3.1.1. Generative Adversarial Networks
+Generative Adversarial Networks (GANs) have become one of
+the most remarkable breakthroughs of generative deep learning
+techniques since the inception [25]. The basic framework of GANs
+
+Table 1
+Summary of the ISIC 2018 dataset.
+
+Category
+
+Description
+
+AKIEC
+
+Actinic Keratoses (Solar Keratoses) and Intraepithelial Carcinoma (Bowen’s disease) are
+usually caused by excessive sun exposure and can be treated without surgery.
+Basal cell carcinoma, a common variant of epithelial skin cancer, rarely metastasizes but it
+may grow destructively if untreated.
+Benign keratosis includes seborrheic keratoses ("senile wart"), solar lentigo and
+lichen-planus like keratoses (LPLK), usually requires biopsy and excision due to its similar
+features with melanoma.
+Dermatoﬁbroma is a kind of proliferation of ﬁbrous tissue, which belongs to benign skin
+lesion.
+Melanocytic nevi are benign neoplasms of melanocytes with numerous variants.
+Melanoma is a malignant neoplasm of melanocytes with different variants. It can be treated
+by surgical resection at its early stage.
+Vascular skin lesions include cherry angiomas, angiokeratomas and pyogenic granulomas.
+They usually look red or purple, with clear boundaries.
+
+BCC
+BKL
+
+DF
+NV
+MEL
+VASC
+
+Number of
+Samples
+
+Proportion
+
+327
+
+3.27%
+
+514
+
+5.13%
+
+1099
+
+10.97%
+
+115
+
+1.15%
+
+6705
+1113
+
+66.95%
+11.11%
+
+142
+
+1.42%
+
+4
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Fig. 2. Sample images from the seven diagnostic categories.
+
+include two neural networks trained simultaneously, a generator
+network G transforms random noise z from prior distribution pz to
+images, and a discriminator network D tries to distinguish between
+real images from training data distribution pdata and synthetic images produced by the generator G. The generator G and discriminator D paly a two-player minimax game by optimizing the following
+objective function:
+min max V (D, G ) = Ex∼pdata (x ) [log D(x )] + Ez∼pz (z ) [log(1 − D(G(z )))]
+G
+
+D
+
+(1)
+where, the discriminator D is trained to distinguish between real
+data samples and those generated ones by maximizing log D(x),
+meanwhile the generator G is trained to mislead the discriminator by minimizing log (1 − D(G(z))). During adversarial training,
+the generator learns the real data distribution and produces better samples, while the discriminator becomes a powerful classiﬁer
+in differentiating the real images from the synthesized ones.
+
+into a speciﬁc style. An aﬃne transformation is implemented
+to transform w to spatially invariant styles y = (ys ,yb ), and the
+styles control adaptive instance normalization (AdaIN) operations after each convolution layer of the synthesis network g.
+The AdaIN operation is deﬁned as the following:
+
+AdaIN(xi , y ) = ys,i
+
+xi − μ ( xi )
++ yb,i
+σ ( xi )
+
+(2)
+
+where xi is a feature map of one image, which is normalized and
+then scaled and biased through the style input y of another image,
+realizing the style transfer of two images.
+3) Style mixing: To further reduce style correlation between different layers, a mixing regularization is employed. That is, two
+latent codes z1 and z2 are mapped to w1 and w2 , w1 is ﬁrstly
+applied to control the styles of the generated images and at a
+random crossover point it will switch to w2 .
+4) Stochastic variation: In order to increase the variations of the
+synthesized images, per-pixel Gaussian noise is added to the
+feature maps after each convolution layer of the synthesis network g.
+
+3.1.2. Style-based Generative Adversarial Networks
+As a landmark technology of deep learning in recent years, GAN
+has attracted the attention of more and more researchers. Consequently, there have been numerous variants of GAN, with preﬁxes
+ranging from the letter A to the letter Z, and even Greek letters
+are needed to distinguish their names. In the application of image synthesis, GANs can generate realistic single image. However,
+these realistic images are limited to a low resolution, while GANs
+become unstable or even collapse in generating high-resolution
+images [42]. Another deﬁciency of GANs is the lack of effective
+control over image features and styles during the process of images generating. The Progressive GAN, also known as ProGAN or
+PGGAN [35], with progressive growing network structures of generator and discriminator during training, succeeds in synthesizing high-resolution images with 1024 × 1024 pixels. But the progressive GAN has very limited ability to control the speciﬁc features of the synthesized images like many other GANs. Recently,
+researchers from NVIDIA have proposed a style-based generator architecture for GANs [43], which provides an intuitive and scalespeciﬁc control during the image synthesis. This newly StyleGAN
+has made several improvements in generator architecture based
+on Progressive GAN [35] and its generator architecture is shown
+in Fig. 3 [43].
+
+3.1.3. Proposed skin lesion style-based GANs
+StyleGAN has made remarkable contributions to the synthesis
+of high-resolution images, as well as the ﬁne control of the styles
+and features of the synthetic images. Nevertheless, this architecture is mainly designed for natural images, there exist signiﬁcant
+differences between the skin lesion images and natural images.
+The color and details of skin lesion images are far less abundant
+than those of natural images, and the variations of skin lesion images are not as meaningful and continuous as those of face images.
+Therefore, some style variations applied to natural images are not
+suitable for skin lesion images. Another nonnegligible challenge is
+that the skin lesion image data that can be used to train GANs
+is far less than the natural image data. This limitation makes it
+diﬃcult to apply complicated architecture of GANs to the synthesis of skin lesion images directly. This work is dedicated to handling these issues by making some changes on the style controlling methods and some simpliﬁcations on the architectures of the
+generator and the discriminator according to the original StyleGAN.
+The modiﬁed architecture of skin lesion style-based GANs is shown
+in Fig. 4, and the proposed modiﬁcations are as follows:
+
+1) Non-linear mapping network: Instead of taking the latent code
+z as an input of the generator directly, the StyleGAN architecture ﬁrst maps the latent code z to an intermediate latent space
+W through an 8-layer MLP.
+2) Adaptive instance normalization (AdaIN): An adaptive style normalization technique, which helps to convert different images
+
+1) The structures of AdaIN and random noise in synthesis network
+g of each level are adjusted. The aﬃne transformation of w is
+a fully connected layer with He [44] normal distribution initialization. The application of noise to the constant input is removed without observable drawbacks. The ﬁrst synthesis network block contains only one convolution layer followed by a
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+5
+
+Fig. 3. Architecture of style-based generator.
+
+random noise and an AdaIN operation, while other synthesis
+network blocks have two convolution layers, each of them is
+also followed by a random noise and an AdaIN operation. The
+last layer of the generator is a 1 × 1 convolution that projects
+feature vectors to RGB colors.
+2) Different from StyleGAN, the mixing regularization is left out in
+this work. The trial found that style mixing could cause style
+overlap in the generated skin lesion images, resulting in poor
+image quality. Thus, there is only one latent code z being utilized in the modiﬁed architecture.
+3) In the case of the relatively low computer computing power
+and small amount of training data, the architectures of generator and discriminator are redesigned, omitting progressive
+growing process of the networks. As shown in Fig. 4, different
+scales of synthesis network units are concatenated, the image
+of predeﬁned size is generated from initial input directly after one training epoch. The generated image is then directly
+put into the discriminator to calculate the loss function. The
+discriminator consists of several D blocks, each of which has
+two convolution layers and one average pooling layer. And the
+discriminant results are output through the last two fully connected layers.
+3.2. Classiﬁer construction based on transfer learning
+3.2.1. Transfer learning
+Many classical machine learning methodologies work under a
+basic assumption that the training data and test data share the
+same feature space and follow the same data distribution [8,45,46].
+However, many scenarios in real world may violate this assump-
+
+tion. For instance, there is a supervised learning problem in a speciﬁc domain waiting to be solved, but adequate labeled data are
+only obtained in another domain, and the data there follow different data distribution. It is necessary to create a high-performance
+learner trained from another related domain for the domain of interest. Transfer learning, which reuses the knowledge in source domain to better solve the task in target domain [8], is proposed to
+deal with this issue.
+3.2.2. Classiﬁer construction based on deep transfer learning
+With AlexNet [16] winning the title of the ImageNet competition in 2012, deep learning began to shine in the machine learning
+community. Then Yosinski et al. [47] studied on the transferability of the deep neural networks, pointing out that the ﬁrst three
+layers of deep neural networks mainly learn general features and
+are suitable for transferring. Furthermore, with ﬁne-tuning operation, the deep transfer networks will get an improved performance.
+After that, deep transfer learning began to appear in various scenarios. In the application of image classiﬁcation, more and more
+powerful CNN models trained on ImageNet are designed, like VGGNet [13] proposed in 2014, GoogleNet [11] proposed in 2014 and
+ResNet [17] born in 2015. Deep transfer learning becomes more
+convenient to use based on these powerful pretrained CNN models.
+In this work, ResNet50 is chosen as pretrained model which
+is transferred to the skin lesion classiﬁcation task. ResNet (Deep
+Residual Networks) innovatively designs the residual learning unit,
+which uses identity mapping to ensure that the deep layer networks can at least maintain the performance of the shallow layer
+networks so that CNNs can become deeper. And ResNet50 is one
+of the forms of ResNet with 50 layers of networks and of which
+
+6
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Fig. 4. Architecture of skin lesion style-based GANs.
+
+Fig. 5. Construction of skin lesion classiﬁer based on Transfer-ResNet50.
+
+are 49 convolution layers. Fig. 5 demonstrates the ﬂow of transferring, ﬁne-tuning and classifying of the Transfer-ResNet50. Alter the
+output layer of ResNet to make the number of output categories
+equal to the number of diagnostic categories contained in the skin
+lesion dataset (the number of original output categories is 10 0 0).
+As shallow layers of the networks learn the general features, the
+weights of these layers can be kept as constants during training.
+The weights of other layers in the original ResNet50 are taken as
+initial values to start training on the skin lesion dataset, so as to
+construct the Transfer-ResNet50.
+
+4. Experiments and results
+In this section, experimental studies including quantitative assessment of GANs and evaluation of classiﬁers were conducted to
+analyze the performance of the proposed skin lesion style-based
+GANs in image synthesis and its promotion to image classiﬁcation.
+Procedural pre-processing steps were applied in the experiments,
+including normalization which normalizes the image pixel values
+to the range [0, 1] and image resizing using nearest interpolation
+method. The experiments were conducted on a 64-bit computer
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+with the hardware conﬁguration: Intel Xeon Gold 6144 with 192
+GB RAM, GPU of NVIDIA Quadro P40 0 0.
+4.1. Evaluation metrics of GANs
+The assessment of generative models is one of the research focuses, however, is also a challenging problem, because there is lack
+of a general and accurate method for GANs evaluation [48,49]. The
+evaluation of GANs can be categorized into quantitative method
+and qualitative method. Qualitative methods mainly rely on researchers’ perceptual judgments and are easy to be limited to the
+focus on the quality of a single image, but neglect the over ﬁtting,
+lack of diversity and mode dropping of the generative models. In
+this work, several quantitative methods are chosen to assess the
+GANs from different aspects, together with the demonstration of
+the examples of generated images which will be inspected visually.
+1) Inception Score (IS): The Inception Score [50] is one of the
+most common metrics in the literature. It uses a pretrained Inception networks [11] to extract the features of generated images by computing:
+
+IS = exp(Ex [KL( p(y|x )|| p(y ))])
+
+(3)
+
+IS measures the average KL divergence between p(y|x) and p(y),
+where p(y|x) denotes the conditional label distribution of samples,
+and p(y) denotes the marginal distribution obtained from all the
+samples. High IS indicates that the sample image is similar to a
+particular ImageNet category. Despite that, this evaluation metric
+compares the samples with natural images on ImageNet, but does
+not measure the distribution similarity between the samples and
+the original data, and it is unable to detect the mode collapse
+[48,49].
+2) Fréchet Inception Distance (FID): Fréchet Inception Distance
+[51] embeds a set of generated images into a feature space represented by a speciﬁc layer of Inception [11] or any CNN. It uses
+continuous multivariate Gaussian to represent the embedding
+feature distributions of the real data and the generated data,
+and compute the Fréchet distance between these two Gaussian
+distributions by:
+
+
+
+FID(r, g) = ||μr − μg ||
+
+2
+2 + Tr
+
+1/
+Cr + Cg − 2(CrCg ) 2
+
+
+
+(4)
+
+where (μr ,Cr ) and (μg ,Cg ) are the mean and covariance of the
+real data and generated data, respectively. FID serves as a good
+measure for GANs due to its good discriminability, robustness
+and computational eﬃciency.
+3) Precision and Recall: A data manifold is ﬁrstly constructed so
+that the distances from generated samples to the manifold can
+be computed eﬃciently. Precision [52] intuitively measures the
+quality of the generated images from a learned distribution Q.
+Recall [52] measures the proportion of real data distribution P
+covered by Q. High precision implies that the samples from the
+distribution of generator model are close to the manifold (high
+quality), and high recall implies that the generator can recover
+any sample from the manifold (rich diversity).
+The proposed skin lesion style-based GAN (SL-StyleGAN) was
+trained on the ISIC 2018 dataset introduced before and generated
+images of 256 × 256 pixels. As a comparison, GAN, DCGAN and
+the original style-based GAN (StyleGAN) were also trained on the
+same dataset to generate skin lesion images. These GAN-based image synthesis methods were evaluated quantitatively by the above
+evaluation metrics. The results in Table 2 illustrate that, the SLStyleGAN scores best in three metrics compared to the other three
+
+7
+
+Table 2
+Evaluation results of GANs.
+Model
+
+IS
+
+FID
+
+Precision
+
+Recall
+
+GAN
+DCGAN
+StyleGAN
+SL-StyleGAN
+
+1.727
+2.118
+3.125
+3.037
+
+3.275
+1.367
+2.796
+1.059
+
+0.263
+0.495
+0.134
+0.525
+
+0.037
+0.100
+0.184
+0.220
+
+IS score ranges from 1 to positive inﬁnity, and larger score
+means a better model. FID score ranges from 0 to positive
+inﬁnity, smaller score means a better model. The values of
+Precision and Recall are all from 0 to 1, and value close to
+1 means good result. Bold values represent the best score
+of the four compared models.
+
+models, and it is proved to be a better image synthesis model comprehensively. Fig. 6 demonstrates the random samples generated
+by GAN, DCGAN, StyleGAN and SL-StyleGAN respectively, as well
+as the images from the dataset. Fig. 7 provides a larger view of the
+generated image sample for better insight into details. The characteristics of each model can also be observed directly from the
+demonstrated pictures. The images generated by GAN have obvious noise (random distribution of pixels), which seriously affects
+the quality of the synthetic images. In addition, the mode of the
+images is quite monotonous, which is also conﬁrmed by the recall score. The DCGAN samples are much better than those of GAN,
+however, once the image pixel increases, the images synthesized
+by DCGAN are prone to checkerboard artifacts. The original StyleGAN is not suitable for generating skin lesion images directly despite its success in natural image applications. The evaluation results of StyleGAN are poor, especially the precision score is even
+worse than GAN, showing low quality of a single image. The most
+obvious defect of the images generated by StyleGAN is that the
+image is inﬂuenced by different styles, making the image lose authenticity and look more like oil painting. As a comparison, the SLStyleGAN samples seem more realistic and diverse, which proves
+that the proposed model has convincing effect on skin lesion image synthesis.
+Another interesting ﬁnding is that the style control and transfer
+module in the StyleGAN structure does help to ﬁlter the image artifacts, although the module is not designed for the image artifact
+removal. The possible reason is that, the style of an image can be
+represented by the statistical information (such as mean and variance) of the feature map, while most of the time, the artifacts are
+only a very small part of an image (like many images with hair
+artifact or tick marks), which cannot be part of the image styles.
+And the images are generated by calculating the mean and variance of the feature map of one image, and apply them to another
+style input image. The artifact of a single image is easily ﬁltered
+out or averaged out during this process. But it’s worth noting that,
+if the quality of input image is poor, like artifacts and noise occupy a large proportion of the image, the proposed structure cannot deal with this situation effectively. Fig. 8 provides some sample
+images to illustrate the effect of the artifact removal intuitively. It
+can be seen from these images that the proposed SL-StyleGAN can
+copy the main style of the original images and has a good effect
+on eliminating the artifacts in the original images.
+4.2. Properties of the skin lesion style-based GANs
+The original architecture of StyleGAN is mainly focused on natural image applications. Compared to skin lesion images, natural
+images contain more details and variations, besides, the dataset
+of natural image is much larger than that of skin lesion image.
+These characteristics make StyleGAN a model with complex structure and poor effect when it is directly utilized in skin lesion image synthesis. The proposed skin lesion style-based GANs has been
+
+8
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Fig. 6. Skin lesion images generated by different GANs. (a) Images generated by the original GAN model. (b) Images generated by DCGAN, which uses CNNs in generator
+and discriminator. (c) Images generated by the original style-based GANs. (d) Images generated by the proposed skin lesion style-based GANs. (e) Images from the training
+dataset.
+
+Fig. 7. Larger view of a single image generated by different models.
+
+transformed into a portable model suitable for skin lesion synthesis through several key modiﬁcations.
+4.2.1. Change of style mixing
+The original StyleGAN employs mixing regularization, which
+runs two random latent codes for generating image. It can randomly switch from one latent code to another to control the styles.
+For facial image synthesis, style mixing is conductive to style control of different scales, making features like hair style, face shape
+and glasses in source image can appear in the target image. How-
+
+ever, for skin lesion images, there are not so many features that
+can change continuously and meaningfully in different scales, style
+mixing is likely to lead to the overlap of skin lesion features or
+even the coverage of irrelevant styles.
+The ﬁrst row and the ﬁrst column of Fig. 9 (a) are source images generated by two latent codes, and the rest target images
+were generated by copying the speciﬁed features from vertical
+source images while retaining most of the features of horizontal source images. Although this style mixing technique provides
+a better control of the image features, it brings irrelevant styles
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+9
+
+Fig. 8. Images with artifacts and without artifacts.
+
+Table 3
+Evaluation results of SL-StyleGAN with different depths synthesis network.
+Structure
+
+IS
+
+FID
+
+Precision
+
+Recall
+
+Training time (s)
+
+StyleGAN structure
+SL-StyleGAN structure
+2 Convolution layers
+3 Convolution layers
+4 Convolution layers
+
+3.231
+2.843
+3.093
+2.847
+2.914
+
+1.213
+1.188
+1.154
+1.275
+1.180
+
+0.494
+0.537
+0.495
+0.507
+0.497
+
+0.154
+0.160
+0.148
+0.122
+0.118
+
+0.699
+0.692
+0.711
+0.840
+1.002
+
+Training time represents the time consumed by one epoch of model training.
+
+or even defects coverage when generating skin lesion images, resulting in poor quality of a single image. The synthesized images
+in Fig. 9 (a) look more like oil painting than skin lesions, and the
+precision score is the lowest in Table 2. The proposed skin lesion
+style-based GANs have limited the style mixing by inputting only
+one latent code into the mapping networks. Fig. 9 (b) demonstrates
+that, with one latent code as stochastic input, the synthesized images varied randomly without introducing strange styles. The evaluation results in Table 2 proves that the proposed SL-StyleGAN can
+be effectively used to generate skin lesion images.
+4.2.2. Structure pruning
+Limited by the training data and computer computing power,
+the architecture of StyelGAN needs to do some subtraction to adapt
+to the new data and computing environment. Different from the
+progressive growing process of the StyleGAN, which starts with
+4 × 4 pixels samples and progressively increases the image resolution to supplement details at different scales, the proposed SLStyleGAN adopts one step training. Image of predeﬁned size is generated from initial input directly after one training epoch and is
+then put into the discriminator to calculate the loss function. This
+modiﬁcation has provided great convenience and time reduction
+for training, making the SL-StyleGAN a portable and eﬃcient model
+for skin lesion data.
+The structure of synthesis network has been further pruned by
+optimizing the numbers of noise input, adaptive instance normalization, especially convolution layer in each block. A study on the
+depth of synthesis network was conducted. Fig. 10 lists the structure of synthesis network with different depths. Fig. 10 (a) is the
+original generator structure of StyleGAN, which consists of two
+noise inputs, two AdaIN operators, one convolution layer in the
+ﬁrst block, and two convolution layers in other blocks. However,
+the noise input and AdaIN seem unnecessary after a constant tensor rather than a convolution layer, so the modiﬁed structure runs
+without these operations as shown in Fig. 10 (b). Evaluation results
+in Table 3 also support the removal of the redundant operations
+at the beginning. Based on the structure of Fig. 10 (b), by adding
+convolution layers (usually followed by noise fusion and AdaIN) in
+
+Table 4
+Confusion matrix.
+Prediction
+Confusion Matrix
+
+True
+
+Positive
+Negative
+
+Positive
+
+Negative
+
+True Positive (TP)
+False Positive (FP)
+
+False Negative (FN)
+True Negative (TN)
+
+TP: The model correctly predicts positive class as positive class; FN: The
+model incorrectly predicts positive class as negative class; FP: The model
+incorrectly predicts negative class as positive class; TN: The model correctly
+predicts negative class as negative class.
+
+each block, the effect of different network depths on the performance of the generator was quantiﬁed. The precision and recall
+scores in Table 3 shows that by adding the number of convolution
+layers, the quality of generated image maintains a relatively stable
+level, slightly lower than SL-StyleGAN, and the diversity presents a
+downward trend. In addition, with the increase of convolution layers, the training time of the model cannot be ignored. The model
+training usually requires tens of thousands of epochs, leading to an
+increase in time consumption over hours. In general, the proposed
+SL-StyleGAN structure has both computational eﬃciency and accuracy on this image synthesis issue.
+
+4.3. Classiﬁcation metrics and results
+ISIC 2018 skin lesion classiﬁcation is a multi-classiﬁcation problem because the dataset contains seven diagnostic categories. The
+usage of a single classiﬁcation metric can be misleading since
+the classes are imbalanced. Here common classiﬁcation metrics
+like Accuracy, Sensitivity (Recall), Speciﬁcity, Precision are selected
+to evaluate the performances of the classiﬁcation models. Additionally, Average Precision (AP) and Balanced Multiclass Accuracy
+(BMA) are also calculated. The deﬁnitions of all these metrics are
+presented below and the relevant components are explained in
+Table 4:
+
+10
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Fig. 9. Different styles of images generated by models. (a) Style mixing images generated by StyleGAN. The ﬁrst row and the ﬁrst column are source images generated by
+two latent codes, and the rest target images were generated by copying the speciﬁed features from vertical source images while retaining most of the features of horizontal
+source images. (b) Images generated by SL-StyleGAN without style mixing. The ﬁrst row are 8 stochastic forms of the skin lesion, the image features varied without style
+interaction.
+
+Accuracy: Proportion of all correctly predicted samples to total
+samples.
+
+samples.
+
+TP + TN
+Accuracy =
+TP + FP + TN + FN
+
+Speci f icity =
+
+(5)
+
+Sensitivity: Also known as true positive rate in medicine. Proportion of all correctly predicted positive samples to real positive
+samples.
+
+TP
+Sensit ivit y =
+TP + FN
+
+(6)
+
+Speciﬁcity: Also known as true negative rate in medicine. Proportion of all correctly predicted negative samples to real negative
+
+TN
+FP + TN
+
+(7)
+
+Precision: Proportion of all correctly predicted positive samples
+to all predicted positive samples.
+
+P recision =
+
+TP
+TP + FP
+
+(8)
+
+Average Precision (AP): Average Precision summarizes a
+precision-recall curve as the weighted mean of precisions achieved
+at each probability threshold, with the increase in recall from the
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+11
+
+Fig. 10. Different depths of synthesis network. (a) The original generator structure of StyleGAN, which consists of two noise inputs, two AdaIN operators, one convolution
+layer in the ﬁrst block, and two convolution layers in other blocks. (b) The modiﬁed generator structure of SL-StyleGAN, mainly leaving out the operations after the constant
+tensor at the beginning. (c) Tow convolution layers in each block based on the SL-StyleGAN structure. (d) Three convolution layers in each block based on the SL-StyleGAN
+structure. (e) Four convolution layers in each block based on the SL-StyleGAN structure.
+Table 5
+Classiﬁcation results of different models.
+Classiﬁcation Model
+
+Accuracy
+
+Sensitivity
+
+Speciﬁcity
+
+Precision
+
+AP
+
+BMA
+
+CNN
+ResNet50
+Transfer-ResNet50
+Transfer-ResNet50+
+
+0.936
+0.936
+0.944
+0.952
+
+0.499
+0.544
+0.714
+0.743
+
+0.930
+0.941
+0.963
+0.966
+
+0.631
+0.563
+0.718
+0.769
+
+0.599
+0.535
+0.820
+0.831
+
+0.776
+0.777
+0.804
+0.832
+
+Transfer-ResNet50+ means Transfer-ResNet50 with data augmentation.
+
+previous threshold used as the weight:
+
+AP =
+
+
+
+(Rn − Rn−1 )Pn
+
+(9)
+
+n
+
+where Pn and Rn are the precision and recall at the nth threshold.
+Balanced Multiclass Accuracy (BMA): Mean recall (sensitivity)
+across classes, can be calculated as follows:
+
+BMA =
+
+n
+
+
+αi Ri
+
+(10)
+
+i=1
+
+where Ri and α i are the recall and proportion of class i.
+As for skin lesion classiﬁcation experiments, the ISIC 2018
+dataset was divided into training set and test set by the proportion of 8:2. A CNN with seven convolution layers, ResNet50 with
+random initial weights and the Transfer-ResNet50 presented above
+were selected to conduct the classiﬁcation. Data augmentation was
+realized by adding 800 synthetic images of MEL class to the original training set. And Transfer-ResNet50 was used as the basic classiﬁer to train on the augmented training data. Training was implemented for 50 epochs with the learning rate of 0.001. After the
+training, the results of different classiﬁers on the test set were used
+for comparison.
+According to the results in Table 5, the Transfer-ResNet50 based
+on transfer learning has signiﬁcantly improved the performance
+of skin lesion classiﬁcation compared to CNN and the original
+ResNet50, and it obtained higher scores in all six evaluation indexes. For instance, the classiﬁcation sensitivity and average precision based on Transfer-ResNet50 are 0.714 and 0.820 respectively,
+
+which are more than 20% higher than that of CNN. There is also
+a large gap between ResNet50 and Transfer-ResNet50 in classiﬁcation performance. It is diﬃcult to train a deep CNN architecture like ResNet50 from scratch with the relatively small skin lesion dataset. The parameters of ResNet50 are more than 23 million,
+which are far larger than the sample size of the training data, making the model cannot ﬁt the data well. Compared to CNN, the results of ResNet50 have no obvious advantages, and even precision
+and average precision are worse. In addition, the time consumption of training ResNet50 from scratch is much larger than that
+of training CNN and Transfer-ResNet50. The performance of the
+Transfer-ResNet50 indicates that classiﬁcation model construction
+based on deep transfer learning is a good choice for those classiﬁcation problems that lack of labeled data or with imbalanced data
+classes. Model pretrained on large dataset can be handily transferred to the target task, and the data from target task can be utilized for re-training to build the transfer model. The performance
+of the Transfer-ResNet50 has been further improved through the
+GAN-based data augmentation. The basic classiﬁer with data augmentation has been promoted in almost all evaluation indexes, of
+which the greatest improvement is the overall precision. The overall precision after data augmentation is more than 5% higher than
+that of the original Transfer-ResNet50. The proposed skin lesion
+style-based GANs, which provides additional high-quality synthetic
+images, helps to improve the capability of the basic classiﬁer.
+In order to observe how the class imbalance of ISIC 2018
+dataset affects the judgment of classiﬁers, Table 6 lists the detailed
+classiﬁcation results of seven diagnostic categories. Since the pro-
+
+12
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+Table 6
+Sensitivity and Precision for all the seven diagnostic categories.
+Diagnostic
+Category
+
+Sensitivity
+CNN
+ResNet50
+
+Transfer-ResNet50
+
+Transfer-ResNet50+
+
+Precision
+CNN
+ResNet50
+
+Transfer-ResNet50
+
+Transfer-ResNet50+
+
+Actinic keratoses
+Basal cell carcinoma
+Benign keratosis
+Dermatoﬁbroma
+Melanocytic nevi
+Melanoma
+Vascular lesions
+
+0.292
+0.651
+0.527
+0.044
+0.951
+0.242
+0.786
+
+0.323
+0.660
+0.823
+0.739
+0.843
+0.753
+0.857
+
+0.354
+0.699
+0.796
+0.870
+0.878
+0.785
+0.821
+
+0.559
+0.598
+0.598
+0.500
+0.834
+0.514
+0.815
+
+0.840
+0.800
+0.519
+0.567
+0.967
+0.535
+0.800
+
+0.885
+0.809
+0.603
+0.645
+0.956
+0.565
+0.920
+
+0.462
+0.680
+0.596
+0.087
+0.913
+0.354
+0.714
+
+0.455
+0.625
+0.548
+0.400
+0.874
+0.573
+0.465
+
+Transfer-ResNet50+ means Transfer-ResNet50 with data augmentation. Bold values represent the maximum of the three compared models.
+
+Fig. 11. Confusion matrix of the classiﬁcation results. (a) CNN model. (b) Original ResNet50 model. (c) Transfer-ResNet50 model. (d) Transfer-ResNet50 model with data
+augmentation. The vertical axis of confusion matrix is the real label, and the horizontal axis is the predicted label. Each value represents the number of predicted samples,
+and the diagonal is the correctly predicted sample number of each class. The darker the color, the larger the value.
+
+portion of Melanocytic nevi samples is more than two-thirds, a
+predictable result is that classiﬁers tend to predict this class, resulting in high sensitivity and precision of this class. When CNN
+and ResNet50 are used for classifying, sensitivity of Dermatoﬁbroma, the diagnostic category with the least number of sam-
+
+ples, is extremely low. The confusion matrix in Fig. 11 shows that,
+CNN merely correctly predicted one sample of Dermatoﬁbroma
+class and ResNet50 correctly predicted two. As a comparison, the
+Transfer-ResNet50 model, with deep and ﬁne-tuned network structure, learned better feature representations of these skin lesion
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+13
+
+Table 7
+Parameters and training time of different classiﬁcation models.
+Classiﬁcation Model
+
+Trainable parameters
+
+FLOPs
+
+Training time (s)
+
+CNN
+ResNet50
+Transfer-ResNet50
+Transfer-ResNet50+
+
+1.772 × 106
+23.549 × 106
+15.846 × 106
+15.846 × 106
+
+2.614 × 109
+6.525 × 109
+6.525 × 109
+6.525 × 109
+
+66
+122
+72
+77
+
+Transfer-ResNet50+ represents Transfer-ResNet50 with data augmentation. FLOPs is
+the abbreviation of ﬂoating-point operations. Training time represents the time consumed by one epoch of model training.
+
+images. The classiﬁcation true positive rate (sensitivity) based on
+Transfer-ResNet50 is more than 20% higher than that of CNN and
+17% higher than ResNet50, and this improvement is mainly contributed by the recognition improvements of Benign keratosis, Dermatoﬁbroma, Melanoma and Vascular lesions. On the basis of
+Transfer-ResNet50, by adding 800 Melanoma images generated by
+the proposed skin lesion style-based GANs, both the sensitivity
+and precision of Melanoma category have been promoted. Moreover, the supplementary data also improves the recognition performance of some other categories. The 5% increasement of overall precision is reﬂected in the 6 diagnostic categories increasement of their own precision scores. As shown in Fig. 11, compared
+to Transfer-ResNet50, the model with data augmentation tends
+to predict some samples of Benign keratosis as Melanocytic nevi,
+making a lower sensitivity of Benign keratosis and a higher sensitivity of Melanocytic nevi. This denotes that classiﬁer can learn
+more discriminative features between similar categories and adjust
+the classiﬁcation capacity in different categories to make an overall
+improvement through GAN-based data augmentation.
+The proposed method has shown obvious advantages in terms
+of classiﬁcation performance. Due to the different structures between models, the trainable parameters, ﬂoating-point operations
+(FLOPs) and training time of each model are listed in Table 7.
+FLOPs is chosen to measure the time complexity of the model, and
+can be calculated according to NVIDIA’s work [53]. For each convolution layer:
+
+FLOPsConv = 2HW × (Cin Kh KwCout + Cout )
+
+(11)
+
+where Cin is the number of channels of input feature map, Kh and
+Kw are kernel height and kernel width, H, W and Cout are height,
+width and number of channels of the output feature map. 2 represents 2 ﬂoating-point operations are needed for each MAC (Multiply Accumulate). And Cin Kh Kw Cout + Cout is the calculation formula
+for the number of parameters of each convolution layer.
+For each fully connected layer:
+
+FLOPsF C = 2IO
+
+(12)
+
+where I and O are the number of neurons of input layer and
+output layer respectively. And IO + O is the calculation formula for the number of parameters of each fully connected
+layer.
+The total FLOPs are the sum of the FLOPs of all convolution layers and fully connected layers.
+
+FLOPs =
+
+
+
+FLOPsConv +
+
+
+
+FLOPsF C
+
+(13)
+
+Table 7 provides a quantitative reference for the analysis of
+the complexity and computational eﬃciency of the model. Generally, transfer learning is very suitable for the task. By applying
+the method of transfer learning and freezing the ﬁrst several layers of the pre-trained network, the network structure remains unchanged, but the number of trainable parameters can be effectively reduced and the training time can be shortened as well. The
+Transfer-ResNet50 with data augmentation shares the same classiﬁer with Transfer-ResNet50 model, the only difference is that more
+
+Table 8
+Evaluation results of mapping network with different fully connected
+layers.
+Mapping network layers
+
+IS
+
+FID
+
+Precision
+
+Recall
+
+2 fully connected layers
+4 fully connected layers
+6 fully connected layers
+8 fully connected layers
+
+3.268
+3.074
+3.188
+2.843
+
+1.090
+0.979
+1.197
+1.188
+
+0.374
+0.597
+0.532
+0.537
+
+0.209
+0.263
+0.146
+0.160
+
+training data has been supplemented. Adding 11.7 million trainable
+parameters in the SL-StyleGAN model, the proposed framework has
+a total of 27.5 million trainable parameters. The SL-StyleGAN model
+has been greatly simpliﬁed to adapt to the skin lesion dataset. As
+a comparison, the generator of the original StyleGAN has 26.2 million trainable parameters [43]. The proposed two models can be
+used separately and can also be integrated as an eﬃcient image
+synthesis and classiﬁcation framework.
+5. Discussion
+In statistical deep learning, all data can be represented as mappings. As for the style-based GANs, there is a critical mapping network mapping the latent code z to an intermediate latent space W.
+The mapping network of the generator is simply formed by several
+fully connected layers. The number of layers indeed has important
+inﬂuence on the images synthesized by the generator. Thus, some
+experiments are needed to study the effects of different numbers
+of fully connected layers on the quality of the synthetic images.
+The generative model was trained on the image data of
+Melanoma, which shows the signiﬁcant differences within the
+same class as can be seen in Fig. 12 (e), so it is a great challenge
+for the generative model to learn the key features. According to the
+results in Table 8, deep mapping networks seem to cause a decline
+in diversity (recall score). Considering all the quantitative evaluation metrics, 4-layer mapping network can generate higher-quality
+melanoma images.
+The generative model with only 2 fully connected layers is
+easy to generate images contaminated by scattered defects, just
+like the last four images in Fig. 12 (a). But these scattered defects can be well eliminated by increasing the number of layers.
+The generative model with 4 fully connected layers has generated
+many melanoma images with light color and irregular shape, leading to its relatively rich diversity. But there are still a few scattered defects in the images, as shown in the last two samples in
+Fig. 12 (b). One obvious problem of generative model with 6 fully
+connected layers is that this model tends to generate images with
+dark melanoma in the middle, which means the mode falls into
+monotony, making it obtain the lowest recall score. Diversity issue is also one of the problems faced by the generative model
+with 8-layer mapping network, although it can generate realistic
+images. In general, fewer fully connected layers will result in defects in generated images, while more fully connected layers may
+cause a decline in diversity. The model with 4-layer mapping network needs to be improved to eliminate the scattered defects in a
+
+14
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Fig. 12. Melanoma images generated by the proposed skin lesion style-based GANs with different structure of mapping network. (a) Mapping network with 2 fully connected
+layers. The synthetic images are prone to scattered defects. (b) Mapping network with 4 fully connected layers. Good diversity and the defects appeared in (a) are greatly
+eliminated. (c) Mapping network with 6 fully connected layers. The images are prone to a single mode. (d) Mapping network with 8 fully connected layers. The model may
+be affected by special training data to produce some inferior styles. (e) The real melanoma images. These images show the signiﬁcant differences within the same class.
+
+few images, and the model with 8-layer mapping network needs
+an improvement in diversity.
+Although the skin lesion images generated by the proposed
+SL-StyleGAN outperformed GAN, DCGAN and StyleGAN in highresolution skin lesion image synthesis, its recall score is not good
+enough, indicating the diversity of the synthetic images needs to
+be further improved. Synthetic images with insuﬃcient diversity,
+single mode or some kind of artifacts cannot be effectively applied to the classiﬁcation task to help improve the performance of
+the classiﬁer. For one thing, it is necessary to study on the methods to solve the insuﬃcient diversity of some categories of synthetic images, for another, it is important to decide the category
+and amount of supplementary data when using GAN-based data
+augmentation for downstream classiﬁcation task.
+In order to provide a new perspective to display the effect of
+the image synthesis, the work of using different feature extraction
+methods to extract features of generated images and classify them
+based on SVM classiﬁer has been carried out. Classiﬁcation experiments were conducted on the image data generated by the proposed SL-StyleGAN. The generated dataset, including 500 samples
+in each diagnostic category (7 diagnostic categories in total), was
+
+divided into training set and test set by the proportion of 8:2. In
+order to better analyze the characteristics of the generated images,
+color features and texture features were extracted by HSI (Hue,
+Saturation, Intensity) color histogram method and Local Binary Pattern (LBP) method respectively. Color is the most obvious visual
+feature, which can directly reﬂect the information of the image.
+The visual information expressed by HSI color model is more consistent with human visual perception, so HIS color histogram was
+selected as color feature extractor. As for texture feature extraction, LBP was employed. It is a texture feature extraction method
+based on structure, which can not only reﬂect the global change
+of texture, but also express the local gray change effectively. Support Vector Machine (SVM) was chosen as the basic classiﬁer. As
+can be seen in Table 9, there are 5 groups of comparative experiments. End-to-end classiﬁcation by CNN, feature extraction using
+CNN, HIS color histogram, LBP methods, and classiﬁcation through
+SVM. All these methods were implemented both on the generated
+dataset and the ISIC 2018 dataset. Fig. 13 demonstrates the confusion matrix of the synthetic dataset classiﬁcation results.
+Overall, CNN demonstrates a strong feature extraction capacity,
+especially in the case of more complex and diverse image features,
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+15
+
+Table 9
+Classiﬁcation results of synthesized images.
+Classiﬁcation
+Model
+
+Accuracy
+Syn
+Ori
+
+Sensitivity
+Syn
+Ori
+
+Speciﬁcity
+Syn
+Ori
+
+Precision
+Syn
+Ori
+
+BMA
+Syn
+
+Ori
+
+CNN
+CNN+SVM
+Hist+SVM
+LBP+SVM
+Hist+LBP+SVM
+
+0.977
+0.987
+0.896
+0.981
+0.984
+
+0.919
+0.953
+0.637
+0.934
+0.944
+
+0.986
+0.992
+0.940
+0.989
+0.991
+
+0.930
+0.953
+0.667
+0.937
+0.947
+
+0.919
+0.953
+0.637
+0.934
+0.944
+
+0.776
+0.789
+0.704
+0.712
+0.742
+
+0.936
+0.940
+0.915
+0.918
+0.926
+
+0.499
+0.510
+0.241
+0.234
+0.326
+
+0.930
+0.936
+0.885
+0.892
+0.908
+
+0.631
+0.582
+0.524
+0.310
+0.561
+
+Hist means using HIS color histogram as feature extraction method. LBP means using Local Binary Pattern as feature
+extraction method. Syn represents the classiﬁcation of synthesized images and Ori represents the original images
+from ISIC 2018 dataset. Bold value in each column represents the best score of the evaluation metric.
+
+Fig. 13. Confusion matrix of the synthetic dataset classiﬁcation results by different feature extraction methods. (a) Feature extraction based on CNN. (b) Feature extraction
+based on HIS color histogram. (c) Feature extraction based on local binary pattern. (d) Feature extraction based on HIS color histogram and local binary pattern. The vertical
+axis of confusion matrix is the real label, and the horizontal axis is the predicted label. Each value represents the number of predicted samples, and the diagonal is the
+correctly predicted sample number of each class. The darker the color, the larger the value.
+
+16
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Table 10
+Classiﬁcation performance comparison of state-of-the-art methods on ISIC 2018
+dataset.
+Method / Authors
+
+Accuracy
+
+Sensitivity
+
+Speciﬁcity
+
+AP
+
+BMA
+
+Nozdryn et al.
+Zhuang et al.
+Zhuang et al.
+Deep-CLASS [54]
+Khan et al. [55]
+Al-masni et al. [56]
+Proposed method
+
+0.958
+0.968
+0.967
+0.886
+0.898
+0.954
+0.952
+
+0.833
+0.804
+0.789
+0.537
+0.897
+0.742
+0.743
+
+0.986
+0.980
+0.978
+0.924
+–
+0.962
+0.966
+
+0.917
+0.891
+0.883
+–
+–
+–
+0.831
+
+0.885
+0.845
+0.824
+0.599
+–
+0.840
+0.832
+
+CNN has more obvious advantages. Furthermore, feature extraction
+using CNN and classifying by SVM are helpful for the improvement
+of classiﬁcation accuracy. The integration of CNN and classic machine learning is favored by many researchers. Image features are
+comprehensive, including color, texture, shape and other features.
+By using different techniques to extract features and fusing these
+features, the classiﬁcation performance can be further improved.
+As a comparison, the classiﬁcation results on the synthetic
+dataset are better than those on the original ISIC 2018 dataset. It
+indicates that data imbalance has a great impact on the classiﬁcation results. Due to the balance among the categories of the synthetic data, the methods can focus on the features of each category in a balanced way and perform good feature extraction and
+classiﬁcation. The texture features of each diagnostic category in
+the generated images are very differentiated, and LBP method can
+achieve good results. This shows that the proposed image synthesis method can synthesize the signiﬁcant features of the original
+images, making these features learned by classiﬁcation methods
+easily. But at the same time, in terms of the complexity of image content, the synthetic dataset is not as complex as the original
+dataset, that is, the diversity of the generated images needs to be
+further improved in the future to cover the clinical complicated
+cases. The low classiﬁcation sensitivity for the original dataset also
+provides an example for the above discussion. Data imbalance in
+the original ISIC 2018 dataset negatively affects the feature extraction and classiﬁcation of different types of skin lesion images, especially those techniques focusing on simple feature modes. Another reason is that ISIC 2018 dataset is more complex than the
+synthetic dataset. There may be signiﬁcant differences within the
+same class, while the similarity between classes may be large. The
+color features extracted by HIS color histogram method and the
+texture features extracted by LBP method are not adequate to well
+distinguish each type of images. In this situation, more powerful
+feature extraction techniques are needed, and advanced deep CNN
+architecture is suitable for such comprehensive feature learning.
+That’s why the Transfer-ResNet50 is employed in this article, and
+the sensitivity gains more than 20% compared to CNN (as shown
+in Table 5).
+To summarize, the classiﬁcation of synthetic dataset has further
+shown the advantage of the image synthesis technique, which can
+synthesize the signiﬁcant features related to the disease information in the original images. However, there is still much room for
+improvement in the diversity of the generated images.
+As for the classiﬁcation of the original dataset, the performance
+of the proposed classiﬁer based on transfer learning leaps to a
+
+high level by adding the high-quality images synthesized by SLStyleGAN to the training data. Table 10 is a comparison of stateof-the-art methods on ISIC 2018 dataset, including the winners of
+ISIC Challenge 2018 [39] and the representative approaches in literature [54,55,56]. The ﬁrst four rows are challenge winners from
+the leaderboard, which show the highest level in this classiﬁcation
+problem. It should be noted that, the Challenge provided special
+test data, which is not included in the original dataset. Meanwhile,
+different dataset division methods were used in literature although
+they competed on the same dataset. Therefore, the metrics in the
+table can only supply a reference for comparing the overall level of
+various methods.
+Interestingly, methods have pros and cons according to different evaluation metrics, which also reﬂects the diﬃculty of ISIC
+2018 dataset. Balanced multiclass accuracy (BMA), avoiding classiﬁers from over-ﬁtting the imbalances of the dataset, was chosen
+as the ranking metric of the Challenge [39]. The top three in the
+leaderboard are the same team, who used external data and applied proprietary dataset (37807 images) to assist model training.
+They assembled multiple models trained for the classiﬁcation to
+achieve high accuracy, but they also admitted that such a large ensemble model was not practical in real-world scenario at all. Team
+of Zhuang ranked the ﬁrst without using external data, and they
+also learned from the idea of ensemble model by combining SENet
+[57] and PNASNet [58] for predicting. According to BMA metric, the
+method proposed in this article beat the second method raised by
+team of Zhuang, reaching the second place without using external data in the leaderboard. Table 11 lists the sensitivity of each
+diagnostic category. The results demonstrate the high sensitivity
+gained by the proposed method in most categories due to the
+supplement of high-quality images generated by SL-StyleGAN. This
+indicates that the selective addition of high-quality images can
+make the model learn more distinguishing features, which helps
+to strengthen the identiﬁcation of speciﬁc categories. The low sensitivity of AKIEC means that there is more room for improvement
+of this category in both image synthesis and feature extraction.
+Participants in the Challenge usually made efforts to improve
+classiﬁcation performance in two aspects, one is to collect more
+data to train the model, the other is to optimize the feature extraction with the help of the ensemble of various pre-trained
+deep models. In the literature, authors often fused special devise
+with pre-trained deep neural network for feature extraction. Almasni et al. [56] performed segmentation to extract prominent
+features of skin lesions and utilized a pre-trained deep model
+for classiﬁcation, achieving excellent results. Compared with the
+above techniques, the proposed method in this article achieved
+comparable results in a different but general way. The classiﬁer
+has been constructed on a single deep transfer model without
+other feature extraction operations. The key and most important
+contribution of this article is to build a skin lesion style-based
+GANs model based on the advanced style-based GANs architecture and synthesize high-quality skin lesion images. This GANbased data augmentation provides great ﬂexibility for downstream
+classiﬁcation, that is, the established process can be employed
+in all feature extraction methods and classiﬁers to improve their
+performance.
+
+Table 11
+Comparison of sensitivity for seven diagnostic categories.
+Method / Authors
+
+AKIEC
+
+BCC
+
+BKL
+
+DF
+
+NV
+
+MEL
+
+VASC
+
+Nozdryn et al.
+Zhuang et al.
+Zhuang et al.
+Deep-CLASS [54]
+Al-masni et al. [56]
+Proposed method
+
+0.721
+0.744
+0.721
+0.167
+0.662
+0.354
+
+0.882
+0.871
+0.860
+0.524
+0.757
+0.660
+
+0.751
+0.779
+0.747
+0.427
+0.632
+0.796
+
+0.932
+0.750
+0.750
+0.087
+0.739
+0.870
+
+0.789
+0.923
+0.932
+0.694
+0.928
+0.878
+
+0.760
+0.702
+0.684
+0.471
+0.619
+0.785
+
+1.000
+0.857
+0.829
+0.138
+0.857
+0.821
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+6. Conclusion
+In this study, the framework of medical image analysis using GAN-based data augmentation technology to improve the skin
+lesion classiﬁcation performance has been constructed. For image synthesis, a skin lesion style-based GANs model has been
+proposed based on the original architecture of style-based GANs.
+By redesigning the structures of the generator and discriminator, the proposed model is superior to GAN, DCGAN and StyleGAN in different quantitative evaluation metrics and can generate high-quality skin lesion images eﬃciently. Moreover, synthetic
+images are further applied to the skin lesion classiﬁcation of ISIC
+2018 dataset. The classiﬁer Transfer-ResNet50 is constructed based
+on deep transfer neural network, using transfer learning method.
+The classiﬁcation results show that the Transfer-ResNet50 performs
+well in the classiﬁcation task, and its capability can be further improved by the proposed GAN-based data augmentation method.
+The whole process including image synthesis, classiﬁcation model
+construction, data augmentation and image classiﬁcation is applicable for the analysis of medical images, especially those scenarios
+with insuﬃcient labeled data or class-imbalanced data.
+In future work, research and experiments will focus on solving
+the mode monotony of some diagnostic categories in synthetic images. Meanwhile, another focus is to improve the performance of
+the classiﬁer to a higher level by designing a better feature extraction method of deep transfer neural network.
+Declaration of Competing Interest
+
+17
+
+check on the synthesized images and the original images. The following is the overall evaluation from the dermatologist:
+“In general, the skin lesion images synthesized by the researchers have obvious differentiations between various categories,
+which include the differences between the lesion tissues and the
+surrounding normal tissues, and these differences are one of the
+bases of clinical diagnosis of skin diseases. In the clinical screening
+and diagnosis of these skin diseases, dermatologists will make a
+comprehensive judgment from the position, shape, convexity, color,
+size of the lesion tissue, fading and itching or not when pressed.
+According to the time of onset, disease inducement and characteristics of skin lesions, we can make a preliminary clinical diagnosis.
+Usually, pathological examination such as biopsy is carried out to
+get the gold standard of diagnosis.”
+For some speciﬁc image samples, the dermatologist has made
+corresponding analysis and evaluation:
+Melanocytic nevi (NV)
+“The quality of these images (NV) is good. The most representative images are those with concentrated color, clear edge and regular shape.”
+Melanoma (MEL)
+“There are many different forms. This kind of serious skin disease usually needs pathological examination to make a deﬁnite diagnosis. The images of lesions are realistic, but the skin texture
+around the lesion is fuzzy and lack of contrast in some samples.”
+
+The authors have no conﬂict of interest.
+Vascular skin lesions (VASC)
+Acknowledgement
+This research beneﬁts from the high-quality dermoscopy images
+provided by the International Skin Imaging Collaboration (ISIC).
+ISIC has made great contributions to the computer-aided diagnosis of skin diseases in the world.
+Supplementary materials
+
+“The representative ones are red or purple blocks with clear
+edges. The region of lesion looks realistic, but still, the skin texture
+around the lesion is fuzzy and lack of contrast in some samples.”
+Other diagnostic categories (AKIEC, BCC, BKL, DF)
+
+It is also important to provide the evaluation of synthesized images from the perspective of expert dermatologists. Therefore, we
+have consulted a dermatologist with many years of work experience in the local hospital. The dermatologist performed a contrast
+
+“Some representative images look realistic, correctly reﬂect the
+characteristics of the diseases. Like light red bulge in Dermatoﬁbroma and erythema with irregular shape in Solar Keratoses.”
+According to the dermatologist’s evaluation, the synthesized
+images correctly reﬂect the most signiﬁcant features of the 7 types
+of skin diseases, but there is still room for improvement in the details of some images. The dermatologist has noted that:
+“In the clinical diagnosis, the situation is more complicated.
+Image-based visual inspection is a preliminary diagnosis. Many serious types need to be biopsied to get the diagnostic gold standard.
+In addition, the types of common skin diseases vary from place to
+
+Fig. 14. Images of Melanocytic nevi generated by SL-StyleGAN.
+
+Fig. 16. Images of Vascular skin lesions generated by SL-StyleGAN.
+
+Supplementary material associated with this article can be
+found, in the online version, at doi:10.1016/j.cmpb.2020.105568.
+Appendix. Evaluation of synthesized images by dermatologist
+
+Fig. 15. Images of Melanoma generated by SL-StyleGAN.
+
+18
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+
+Fig. 17. Images of other skin lesions generated by SL-StyleGAN.
+
+place. The incidence rate of malignant melanoma in Europe and
+America is higher, which is related to the activities in these areas,
+like sunbathing and other activities exposure to sunlight. In the
+local area, the incidence of benign skin lesions and allergic skin
+lesions is higher.” In this article, the ISIC 2018 dataset used was
+collected from Australia and Austria, so the patterns of malignant
+melanoma are more diversiﬁed (Figs. 14-17).
+References
+[1] W. Chen, R. Zheng, P.D. Baade, S. Zhang, H. Zeng, F. Bray, A. Jemal, X. Yu, J. He,
+Cancer statistics in China, 2015, Cancer J. Clin. 66 (2) (2016) 115–132.
+[2] R.L. Siegel, K.D. Miller, A. Jemal, Cancer statistics, 2017, Cancer J. Clin. 69 (1)
+(2019) 7–34.
+[3] American Cancer Society, Cancer Facts and Figures 2018, American Cancer Society, Atlanta, 2018.
+[4] M.S. Brady, S.A. Oliveria, P.J. Christos, M. Berwick, D.G. Coit, J. Katz,
+A.C. Halpern, Patterns of detection in patients with cutaneous melanoma, Cancer 89 (2) (20 0 0) 342–347.
+[5] M.E. Vestergaard, P.H.P.M. Macaskill, P.E. Holt, S.W. Menzies, Dermoscopy compared with naked eye examination for the diagnosis of primary melanoma: a
+meta-analysis of studies performed in a clinical setting, Br. J. Dermatol 159 (3)
+(2008) 669–676.
+[6] H. Kittler, H. Pehamberger, K. Wolff, M. Binder, Diagnostic accuracy of dermoscopy, Lancet Oncol 3 (3) (2002) 159–165.
+[7] S.C. Lo, S.L. Lou, J.S. Lin, M.T. Freedman, M.V. Chien, S.K. Mun, Artiﬁcial convolution neural network techniques and applications for lung nodule detection,
+IEEE Trans. Med. Imaging 14 (1995) 711–718.
+[8] S.J. Pan, Q. Yang, A survey on transfer learning, IEEE Trans. Knowl. Data Eng 22
+(2010) 1345–1359.
+[9] A. Esteva, B. Kuprel, R.A. Novoa, J. Ko, S.M. Swetter, H.M. Blau, S. Thrun, Dermatologist-level classiﬁcation of skin cancer with deep neural networks, Nature
+542 (7639) (2017) 115–118.
+[10] C. Szegedy, V. Vanhoucke, S. Ioffe, J. Shlens, Z. Wojna, Rethinking the inception
+architecture for computer vision, in arXiv:1512.00567, 2015.
+[11] O. Russakovsky, J. Deng, H. Su, J. Krause, S. Satheesh, S. Ma, Z. Huang, A. Karpathy, A. Khosla, M. Bernstein, A.C. Berg, F. Li, ImageNet large scale visual recognition challenge, Int. J. Comput. Vis. 115 (3) (2015) 211–252.
+[12] A.R. Lopez, X. Giro-I-Nieto, J. Burdick, O. Marques, Skin lesion classiﬁcation
+from dermoscopic Images using deep learning techniques, in: Proceedings of
+the 13th IASTED International Conference on Biomedical Engineering (BioMed),
+Innsbruck, Australia, 2017.
+[13] K. Simonyan, A. Zisserman, Very deep convolutional networks for large-scale
+image recognition, in arXiv:1409.1556, 2014.
+[14] D. Gutman, N.C.F. Codella, E. Celebi, B. Helba, M. Marchetti, N. Mishra, A.
+Halpern, Skin lesion analysis toward melanoma detection: a challenge at the
+international symposium on biomedical imaging (ISBI) 2016, hosted by the international skin imaging collaboration (ISIC), in arXiv:1605.01397, 2016.
+[15] A. Mahbod, G. Schaefer, C. Wang, R. Ecker, I. Ellinger, Skin lesion classiﬁcation
+using hybrid deep neural networks, in arXiv:1702.08434, 2017.
+[16] A. Krizhevsky, I. Sutskever, G.E. Hinton, ImageNet classiﬁcation with deep
+convolutional neural networks, Adv Neural Inf Process Syst 25 (2) (2012)
+1097–1105.
+[17] K. He, X. Zhang, S. Ren, J. Sun, Deep residual learning for image recognition,
+in: Proceedings of the 2016 IEEE Conference on Computer Vision and Pattern
+Recognition (CVPR), 2016.
+[18] N. Codella, D. Gutman, M.E. Celebi, B. Helba, M.A. Marchetti, S.W. Dusza,
+A. Kalloo, K. Liopyris, N. Mishra, H. Kittler, A. Halpern, Skin lesion analysis toward melanoma detection: a challenge at the international symposium
+on biomedical imaging (ISBI) 2017, hosted by the international skin imaging
+collaboration (ISIC), 2018 IEEE 15th International Symposium on Biomedical
+Imaging (ISBI 2018), 2018.
+[19] A. Hekler, J.S. Utikal, A.H. Enk, A. Hauschild, M. Weichenthal, R.C. Maron, et al.,
+Superior skin cancer classiﬁcation by the combination of human and artiﬁcial
+intelligence, Eur. J. Cancer 120 (2019) 114–121.
+[20] T. Chen, C. Guestrin, XGBoost: a scalable tree boosting system, in
+arXiv:1603.02754, 2016.
+[21] E. Ayan, H.M. Ünver, Data augmentation importance for classiﬁcation of skin
+lesions via deep learning, 2018 Electric Electronics, Computer Science, Biomedical Engineerings’ Meeting (EBBT), 2018.
+[22] J. Zhang, Y. Xie, Q. Wu, et al., Skin lesion classiﬁcation in dermoscopy images
+using synergic deep learning, in: Proceedings of 21st International Conference
+
+on Medical Image Computing and Computer-Assisted Intervention (MICCAI),
+Granada, Spain, 2018, pp. 12–20.
+[23] M. Frid-Adar, I. Diamant, E. Klang, M. Amitai, J. Goldberger, H. Greenspan,
+GAN-based synthetic medical image augmentation for increased CNN performance in liver lesion classiﬁcation, Neurocomputing (2018).
+[24] D.P. Kingma, M. Welling, Auto-encoding variational bayes, in: Proceedings of
+the 2nd International Conference on Learning Representations (ICLR 2014),
+2014.
+[25] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley, S. Ozair,
+A. Courville, Y. Bengio, Generative adversarial nets, in: Proceedings of the 27th
+International Conference on Neural Information Processing Systems (NIPS),
+2014, pp. 2672–2680.
+[26] X. Yi, E. Walia, P. Babyn, Generative adversarial network in medical imaging: a
+review, Med. Image Anal (2018) 58.
+[27] S. Kazeminia, C. Baur, A. Kuijper, B. Ginneken, N. Navab, S. Albarqouni, A.
+Mukhopadhyay, GANs for Medical Image Analysis, in arXiv:1809.06222, 2018.
+[28] X. Yi, E. Walia, P. Babyn, Unsupervised and semi-supervised learning with categorical generative adversarial networks assisted by wasserstein distance for
+dermoscopy image Classiﬁcation, in arXiv:1804.03700, 2018.
+[29] J.T. Springenberg, Unsupervised and semi-supervised learning with categorical
+generative adversarial networks, in arXiv:1511.06390, 2015.
+[30] I. Gulrajani, F. Ahmed, M. Arjovsky, V. Dumoulin, A. Courville, Improved training of wasserstein GANs, in arXiv:1704.0 0 028, 2017.
+[31] C. Baur, S. Albarqouni, N. Navab, MelanoGANs: high resolution skin lesion synthesis with GANs, in arXiv:1804.04338, 2018.
+[32] A. Radford, L. Metz, S. Chintala, Unsupervised representation learning with
+deep convolutional generative adversarial networks, in arXiv:1511.06434, 2015.
+[33] E.L. Denton, S. Chintala, A. Szalm, R. Fergus, Deep generative image models using a Laplacian pyramid of adversarial networks, in: Proceedings of the 28th
+International Conference on Neural Information Processing Systems (NIPS),
+2015, pp. 1486–1494.
+[34] C. Baur, S. Albarqouni, N. Navab, Generating highly realistic images of skin lesions with GANs, in arXiv:1809.01410, 2018.
+[35] T. Karras, T. Aila, S. Laine, J. Lehtinen, Progressive growing of GANs for improved quality, stability, and variation, in: Proceedings of the 6th International
+Conference on Learning Representations (ICLR 2018), 2018.
+[36] A. Bissoto, F. Perez, E. Valle, S. Avila, Skin lesion synthesis with generative adversarial networks, in arXiv:1902.03253, 2019.
+[37] T. Wang, M. Liu, J. Zhu, A. Tao, J. Kautz, B. Catanzaro, High-resolution image
+synthesis and semantic manipulation with conditional GANs, IEEE Conference
+on Computer Vision and Pattern Recognition (CVPR), 2018.
+[38] H. Rashid, M.A. Tanveer, H.A. Khan, Skin lesion classiﬁcation using GAN based
+data augmentation, in: Proceedings of the 41st Annual International Conference of the IEEE Engineering in Medicine & Biology Society (EMBC), 2019.
+[39] N. Codella, V. Rotemberg, P. Tschandl, M.E. Celebi, S. Dusza, D.A. Gutman, B.
+Helba, A. Kalloo, K. Liopyris, M. Marchetti, H. Kittler, A. Halpern, Skin lesion
+analysis toward melanoma detection 2018: a challenge hosted by the international skin imaging collaboration (ISIC), in arXiv:1902.03368, 2019.
+[40] P. Tschandl, C. Rosendahl, H. Kittler, The HAM10 0 0 0 dataset, a large collection
+of multi-source dermatoscopic images of common pigmented skin lesions, Sci.
+Data 5 (2018) 180 -161.
+[41] G. Huang, Z. Liu, L.V.D. Maaten, K.Q. Weinberger, Densely connected convolutional networks, 2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2017.
+[42] Y. Hong, U. Hwang, J. Yoo, S. Yoon, How generative adversarial networks and
+their variants work: an overview, in arXiv:1711.05914, 2019.
+[43] T. Karras, S. Laine, T. Aila, A Style-based generator architecture for generative
+adversarial networks, in arXiv:1812.04948, 2018.
+[44] K. He, X. Zhang, S. Ren, J. Sun, Delving deep into rectiﬁers: surpassing human-level performance on ImageNet classiﬁcation, 2015 IEEE International
+Conference on Computer Vision (ICCV), 2015.
+[45] K. Weiss, T.M. Khoshgoftaar, D. Wang, A survey of transfer learning, Journal of
+Big Data 3 (1) (2016) 9.
+[46] D. Oscar, M.K. Taghi, A survey on heterogeneous transfer learning, Journal of
+Big Data 4 (1) (2017) 29.
+[47] J. Yosinski, J. Clune, Y. Bengio, H. Lipson, How transferable are features in deep
+neural networks? in: Proceedings of the 27th International Conference on Neural Information Processing Systems (NIPS), 2014, pp. 3320–3328.
+[48] Q. Xu, G. Huang, Y. Yuan, C. Guo, Y. Sun, F. Wu, K. Weinberger, An empirical study on evaluation metrics of generative adversarial networks, in
+arXiv:1806.07755, 2018.
+[49] A. Borji, Pros and cons of GAN evaluation measures, in arXiv:1802.03446, 2018.
+[50] T. Salimans, W. Goodfellow, W. Zaremba, V. Cheung, A. Radford, X. Chen, Improved techniques for training GANs, in arXiv:1606.03498, 2016.
+
+Z. Qin, Z. Liu and P. Zhu et al. / Computer Methods and Programs in Biomedicine 195 (2020) 105568
+[51] M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, S. Hochreiter, GANs
+trained by a two time-scale update rule converge to a local nash equilibrium, in: Advances in Neural Information Processing Systems (NIPS 2017),
+2017, pp. 6629–6640.
+[52] M. Lucic, K. Kurach, M. Michalski, S. Gelly, O. Bousquet, Are GANs created
+equal? a large-scale study, in arXiv:1711.10337, 2017.
+[53] P. Molchanov, S. Tyree, T. Karras, T. Aila, J. Kautz, Pruning Convolutional Neural
+Networks for Resource Eﬃcient Inference, in arXiv:1611.06440, 2016.
+[54] S. Nasiri, M. Jung, J. Helsper, M. Fathi, Deep-CLASS at ISIC Maching Learning
+Challenge 2018, in arXiv:1807.08993, 2018.
+
+19
+
+[55] M.A. Khan, M.Y. Javed, M. Sharif, T. Saba, A. Rehman, Multi-Model Deep Neural
+Network based Features Extraction and Optimal Selection Approach for Skin
+Lesion Classiﬁcation, 2019 International Conference on Computer and Information Sciences (ICCIS), 2019.
+[56] M.A. Al-masni, I.D.H. Kim, T.S. Kim, Multiple skin lesions diagnostics via integrated deep convolutional networks for segmentation and classiﬁcation, Comp.
+Methods Progr. Biomed. (2020) 190.
+[57] J. Hu, L. Shen, S. Albanie, G. Sun, E. Wu, Squeeze-and-Excitation Networks, in
+arXiv:1709.01507, 2017.
+[58] C. Liu, B. Zoph, M. Neumann, et al., Progressive Neural Architecture Search, in
+arXiv:1712.00559, 2017.
+
+
