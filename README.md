@@ -15,9 +15,8 @@ A full-stack cybersecurity recommendation system powered by Anthropic's Claude a
 ### Prerequisites
 
 - Python 3.10 or higher
-- Poetry package manager (recommended) or pip
+- Poetry package manager 
 - Anthropic API key (for Claude)
-- OpenAI API key (for embeddings)
 
 ### Installation with Poetry
 
@@ -40,12 +39,6 @@ poetry self add poetry-plugin-shell
 ```bash
 poetry install
 poetry shell
-```
-
-### Installation with pip
-
-```bash
-pip install -r requirements.txt
 ```
 
 ### Environment Setup
@@ -94,8 +87,6 @@ Run the bot with:
 ```bash
 python src/main.py
 ```
-
-When prompted, enter the path to your knowledge base directory or file.
 
 The bot will:
 1. Ask for your cybersecurity question or concern
