@@ -47,7 +47,6 @@ Create a `.env` file in the project root with your API keys:
 
 ```
 ANTHROPIC_API_KEY=your_anthropic_api_key
-OPENAI_API_KEY=your_openai_api_key
 ```
 
 ## Preparing Your Knowledge Base
